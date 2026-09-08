@@ -64,6 +64,10 @@ class AuditInstallationsMapper {
       marque: model.marque,
       modele: model.modele,
       annee: model.annee,
+      sectionCablePhase: model.sectionCablePhase,
+      sectionCableNeutre: model.sectionCableNeutre,
+      conducteursPhase: model.conducteursPhase,
+      conducteursNeutre: model.conducteursNeutre,
     );
   }
 
@@ -91,6 +95,10 @@ class AuditInstallationsMapper {
       marque: entity.marque,
       modele: entity.modele,
       annee: entity.annee,
+      sectionCablePhase: entity.sectionCablePhase,
+      sectionCableNeutre: entity.sectionCableNeutre,
+      conducteursPhase: entity.conducteursPhase,
+      conducteursNeutre: entity.conducteursNeutre,
     );
   }
 

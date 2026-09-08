@@ -2428,6 +2428,11 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
   
   String? _celluleGamme;
   String? _celluleSectionCables;
+  String? _celluleSectionCablePhase;
+  String? _celluleSectionCableNeutre;
+  final _celluleConducteursPhaseController = TextEditingController();
+  final _celluleConducteursNeutreController = TextEditingController();
+  bool _celluleNeutreManuallyModified = false;
   String? _celluleNatureReseau;
   String? _cellulePresenceIacm;
   String? _celluleTensionService;
@@ -2457,6 +2462,7 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
   String? _transfoSectionCableNeutre;
   final _transfoConducteursPhaseController = TextEditingController();
   final _transfoConducteursNeutreController = TextEditingController();
+  bool _transfoNeutreManuallyModified = false;
   final _transfoIntensiteNominaleController = TextEditingController();
   String? _transfoCouplage;
   String? _transfoTypeReseau;
@@ -2567,6 +2573,11 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
     _celluleCalibreDisjoncteurController.clear();
     _celluleGamme = null;
     _celluleSectionCables = null;
+    _celluleSectionCablePhase = null;
+    _celluleSectionCableNeutre = null;
+    _celluleConducteursPhaseController.clear();
+    _celluleConducteursNeutreController.clear();
+    _celluleNeutreManuallyModified = false;
     _celluleNatureReseau = null;
     _cellulePresenceIacm = null;
     _celluleTensionService = null;
@@ -2600,6 +2611,11 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
     _transfoRegimeController.text = '';
     _transfoCalibreDisjoncteurController.clear();
     _transfoSectionCables = null;
+    _transfoSectionCablePhase = null;
+    _transfoSectionCableNeutre = null;
+    _transfoConducteursPhaseController.clear();
+    _transfoConducteursNeutreController.clear();
+    _transfoNeutreManuallyModified = false;
     _transfoIntensiteNominaleController.clear();
     _transfoCouplage = null;
     _transfoTypeReseau = null;
@@ -2633,6 +2649,11 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
     _celluleCalibreDisjoncteurController.text = cellule.calibreDisjoncteur ?? '';
     _celluleGamme = cellule.gamme;
     _celluleSectionCables = cellule.sectionCables;
+    _celluleSectionCablePhase = (cellule.effectiveSectionCablePhase?.isNotEmpty == true) ? cellule.effectiveSectionCablePhase : null;
+    _celluleSectionCableNeutre = (cellule.effectiveSectionCableNeutre?.isNotEmpty == true) ? cellule.effectiveSectionCableNeutre : null;
+    _celluleConducteursPhaseController.text = (cellule.effectiveConducteursPhase ?? 1).toString();
+    _celluleConducteursNeutreController.text = (cellule.effectiveConducteursNeutre ?? 1).toString();
+    _celluleNeutreManuallyModified = true;
     _celluleNatureReseau = cellule.natureReseau;
     _cellulePresenceIacm = cellule.presenceIacm;
     _celluleTensionService = cellule.tensionService;
@@ -2674,6 +2695,11 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
     // Nouveaux champs
     _transfoCalibreDisjoncteurController.text = transfo.calibreDisjoncteur ?? '';
     _transfoSectionCables = transfo.sectionCables;
+    _transfoSectionCablePhase = (transfo.effectiveSectionCablePhase?.isNotEmpty == true) ? transfo.effectiveSectionCablePhase : null;
+    _transfoSectionCableNeutre = (transfo.effectiveSectionCableNeutre?.isNotEmpty == true) ? transfo.effectiveSectionCableNeutre : null;
+    _transfoConducteursPhaseController.text = (transfo.effectiveConducteursPhase ?? 1).toString();
+    _transfoConducteursNeutreController.text = (transfo.effectiveConducteursNeutre ?? 1).toString();
+    _transfoNeutreManuallyModified = true;
     _transfoIntensiteNominaleController.text = transfo.intensiteNominale ?? '';
     _transfoCouplage = transfo.couplage;
     _transfoTypeReseau = transfo.typeReseau;
@@ -2809,7 +2835,15 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
       elementsVerifies: _celluleElements,
       gamme: _celluleGamme,
       calibreDisjoncteur: _celluleCalibreDisjoncteurController.text.trim(),
-      sectionCables: _celluleSectionCables,
+      sectionCables: _celluleSectionCablePhase ?? _celluleSectionCables,
+      sectionCablePhase: _celluleSectionCablePhase,
+      sectionCableNeutre: _celluleSectionCableNeutre,
+      conducteursPhase: (_celluleSectionCablePhase != null && _celluleSectionCablePhase!.isNotEmpty && _celluleSectionCablePhase != '-')
+          ? int.tryParse(_celluleConducteursPhaseController.text.trim())
+          : null,
+      conducteursNeutre: (_celluleSectionCableNeutre != null && _celluleSectionCableNeutre!.isNotEmpty && _celluleSectionCableNeutre != '-')
+          ? int.tryParse(_celluleConducteursNeutreController.text.trim())
+          : null,
       natureReseau: _celluleNatureReseau,
       presenceIacm: _cellulePresenceIacm,
       tensionService: _celluleTensionService,
@@ -2990,7 +3024,15 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
       regimeNeutre: _transfoRegimeController.text,
       elementsVerifies: _transfoElements,
       calibreDisjoncteur: _transfoCalibreDisjoncteurController.text.trim(),
-      sectionCables: _transfoSectionCables,
+      sectionCables: _transfoSectionCablePhase ?? _transfoSectionCables,
+      sectionCablePhase: _transfoSectionCablePhase,
+      sectionCableNeutre: _transfoSectionCableNeutre,
+      conducteursPhase: (_transfoSectionCablePhase != null && _transfoSectionCablePhase!.isNotEmpty && _transfoSectionCablePhase != '-')
+          ? int.tryParse(_transfoConducteursPhaseController.text.trim())
+          : null,
+      conducteursNeutre: (_transfoSectionCableNeutre != null && _transfoSectionCableNeutre!.isNotEmpty && _transfoSectionCableNeutre != '-')
+          ? int.tryParse(_transfoConducteursNeutreController.text.trim())
+          : null,
       observations: _transfoObservations,
       syncId: finalSyncId,
       intensiteNominale: _transfoIntensiteNominaleController.text.trim(),
@@ -3362,8 +3404,24 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
                   _buildInfoRow('Tension assignée', cellule.tensionAssignee, isSmallScreen),
                 if (cellule.calibreDisjoncteur != null && cellule.calibreDisjoncteur!.isNotEmpty)
                   _buildInfoRow('Calibre disjoncteur', cellule.calibreDisjoncteur!, isSmallScreen),
-                if (cellule.sectionCables != null && cellule.sectionCables!.isNotEmpty)
+                if (cellule.effectiveSectionCablePhase != null && cellule.effectiveSectionCablePhase!.isNotEmpty && cellule.effectiveSectionCablePhase != '-')
+                  _buildInfoRow(
+                    'Section Phase',
+                    cellule.effectiveConducteursPhase != null
+                        ? '${cellule.effectiveConducteursPhase} × ${cellule.effectiveSectionCablePhase}'
+                        : cellule.effectiveSectionCablePhase!,
+                    isSmallScreen,
+                  )
+                else if (cellule.sectionCables != null && cellule.sectionCables!.isNotEmpty)
                   _buildInfoRow('Section câbles', cellule.sectionCables!, isSmallScreen),
+                if (cellule.effectiveSectionCableNeutre != null && cellule.effectiveSectionCableNeutre!.isNotEmpty && cellule.effectiveSectionCableNeutre != '-')
+                  _buildInfoRow(
+                    'Section Neutre',
+                    cellule.effectiveConducteursNeutre != null
+                        ? '${cellule.effectiveConducteursNeutre} × ${cellule.effectiveSectionCableNeutre}'
+                        : cellule.effectiveSectionCableNeutre!,
+                    isSmallScreen,
+                  ),
                 if (cellule.natureReseau != null && cellule.natureReseau!.isNotEmpty)
                   _buildInfoRow('Nature réseau', '${cellule.natureReseau!}${cellule.presenceIacm == 'Oui' ? ' (IACM)' : ''}', isSmallScreen),
                 if (cellule.observations != null && cellule.observations!.isNotEmpty)
@@ -3482,6 +3540,24 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
                   _buildInfoRow('Puissance', transfo.puissanceAssignee, isSmallScreen),
                 if (transfo.regimeNeutre.isNotEmpty)
                   _buildInfoRow('Régime neutre', transfo.regimeNeutre, isSmallScreen),
+                if (transfo.effectiveSectionCablePhase != null && transfo.effectiveSectionCablePhase!.isNotEmpty && transfo.effectiveSectionCablePhase != '-')
+                  _buildInfoRow(
+                    'Section Phase',
+                    transfo.effectiveConducteursPhase != null
+                        ? '${transfo.effectiveConducteursPhase} × ${transfo.effectiveSectionCablePhase}'
+                        : transfo.effectiveSectionCablePhase!,
+                    isSmallScreen,
+                  )
+                else if (transfo.sectionCables != null && transfo.sectionCables!.isNotEmpty)
+                  _buildInfoRow('Section câbles', transfo.sectionCables!, isSmallScreen),
+                if (transfo.effectiveSectionCableNeutre != null && transfo.effectiveSectionCableNeutre!.isNotEmpty && transfo.effectiveSectionCableNeutre != '-')
+                  _buildInfoRow(
+                    'Section Neutre',
+                    transfo.effectiveConducteursNeutre != null
+                        ? '${transfo.effectiveConducteursNeutre} × ${transfo.effectiveSectionCableNeutre}'
+                        : transfo.effectiveSectionCableNeutre!,
+                    isSmallScreen,
+                  ),
                 if (transfo.elementsVerifies.isNotEmpty)
                   Padding(
                     padding: EdgeInsets.only(top: isSmallScreen ? 8 : 10),
@@ -3703,13 +3779,78 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
           ),
           SizedBox(height: isSmallScreen ? 12 : 16),
           _buildDropdownVal(
-            _celluleSectionCables,
-            'Section des câbles',
+            _celluleSectionCablePhase,
+            'Section de câble phase',
             _sectionCableOptions,
             isSmallScreen,
-            (value) => setState(() => _celluleSectionCables = value),
+            (value) {
+              setState(() {
+                _celluleSectionCablePhase = value;
+                _celluleSectionCables = value;
+                if (value != null && value.isNotEmpty && value != '-') {
+                  if (_celluleConducteursPhaseController.text.trim().isEmpty) {
+                    _celluleConducteursPhaseController.text = '1';
+                  }
+                  // Auto-remplissage Phase -> Neutre si non modifié manuellement
+                  if (!_celluleNeutreManuallyModified) {
+                    _celluleSectionCableNeutre = value;
+                    if (_celluleConducteursNeutreController.text.trim().isEmpty) {
+                      _celluleConducteursNeutreController.text = '1';
+                    }
+                  }
+                } else {
+                  _celluleConducteursPhaseController.text = '';
+                }
+              });
+            },
             optional: true,
           ),
+          if (_celluleSectionCablePhase != null && _celluleSectionCablePhase!.isNotEmpty && _celluleSectionCablePhase != '-') ...[
+            SizedBox(height: isSmallScreen ? 12 : 16),
+            _buildTextField(
+              _celluleConducteursPhaseController,
+              'Nombre de conducteurs phase',
+              isSmallScreen,
+              optional: false,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            ),
+          ],
+          SizedBox(height: isSmallScreen ? 12 : 16),
+          _buildDropdownVal(
+            _celluleSectionCableNeutre,
+            'Section de câble neutre',
+            _sectionCableOptions,
+            isSmallScreen,
+            (value) {
+              setState(() {
+                _celluleNeutreManuallyModified = true;
+                _celluleSectionCableNeutre = value;
+                if (value != null && value.isNotEmpty && value != '-') {
+                  if (_celluleConducteursNeutreController.text.trim().isEmpty) {
+                    _celluleConducteursNeutreController.text = '1';
+                  }
+                } else {
+                  _celluleConducteursNeutreController.text = '';
+                }
+              });
+            },
+            optional: true,
+          ),
+          if (_celluleSectionCableNeutre != null && _celluleSectionCableNeutre!.isNotEmpty && _celluleSectionCableNeutre != '-') ...[
+            SizedBox(height: isSmallScreen ? 12 : 16),
+            _buildTextField(
+              _celluleConducteursNeutreController,
+              'Nombre de conducteurs neutre',
+              isSmallScreen,
+              optional: false,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              onChanged: (_) {
+                _celluleNeutreManuallyModified = true;
+              },
+            ),
+          ],
           SizedBox(height: isSmallScreen ? 12 : 16),
           _buildDropdownVal(
             _celluleNatureReseau,
@@ -4477,13 +4618,78 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
 
           // 15. Section des câbles
           _buildDropdownVal(
-            _transfoSectionCables,
-            'Section des câbles',
+            _transfoSectionCablePhase,
+            'Section de câble phase',
             _sectionCableOptions,
             isSmallScreen,
-            (value) => setState(() => _transfoSectionCables = value),
+            (value) {
+              setState(() {
+                _transfoSectionCablePhase = value;
+                _transfoSectionCables = value;
+                if (value != null && value.isNotEmpty && value != '-') {
+                  if (_transfoConducteursPhaseController.text.trim().isEmpty) {
+                    _transfoConducteursPhaseController.text = '1';
+                  }
+                  // Auto-remplissage Phase -> Neutre si non modifié manuellement
+                  if (!_transfoNeutreManuallyModified) {
+                    _transfoSectionCableNeutre = value;
+                    if (_transfoConducteursNeutreController.text.trim().isEmpty) {
+                      _transfoConducteursNeutreController.text = '1';
+                    }
+                  }
+                } else {
+                  _transfoConducteursPhaseController.text = '';
+                }
+              });
+            },
             optional: true,
           ),
+          if (_transfoSectionCablePhase != null && _transfoSectionCablePhase!.isNotEmpty && _transfoSectionCablePhase != '-') ...[
+            SizedBox(height: isSmallScreen ? 12 : 16),
+            _buildTextField(
+              _transfoConducteursPhaseController,
+              'Nombre de conducteurs phase',
+              isSmallScreen,
+              optional: false,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            ),
+          ],
+          SizedBox(height: isSmallScreen ? 12 : 16),
+          _buildDropdownVal(
+            _transfoSectionCableNeutre,
+            'Section de câble neutre',
+            _sectionCableOptions,
+            isSmallScreen,
+            (value) {
+              setState(() {
+                _transfoNeutreManuallyModified = true;
+                _transfoSectionCableNeutre = value;
+                if (value != null && value.isNotEmpty && value != '-') {
+                  if (_transfoConducteursNeutreController.text.trim().isEmpty) {
+                    _transfoConducteursNeutreController.text = '1';
+                  }
+                } else {
+                  _transfoConducteursNeutreController.text = '';
+                }
+              });
+            },
+            optional: true,
+          ),
+          if (_transfoSectionCableNeutre != null && _transfoSectionCableNeutre!.isNotEmpty && _transfoSectionCableNeutre != '-') ...[
+            SizedBox(height: isSmallScreen ? 12 : 16),
+            _buildTextField(
+              _transfoConducteursNeutreController,
+              'Nombre de conducteurs neutre',
+              isSmallScreen,
+              optional: false,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              onChanged: (_) {
+                _transfoNeutreManuallyModified = true;
+              },
+            ),
+          ],
           SizedBox(height: isSmallScreen ? 16 : 20),
 
           // Photo du transformateur
@@ -5189,6 +5395,8 @@ Widget _buildPrioriteButton({
     _celluleNumerotationController.dispose();
     _celluleParafoudresController.dispose();
     _celluleCalibreDisjoncteurController.dispose();
+    _celluleConducteursPhaseController.dispose();
+    _celluleConducteursNeutreController.dispose();
     _transfoNomController.dispose();
     _transfoTypeController.dispose();
     _transfoMarqueController.dispose();
@@ -5201,6 +5409,8 @@ Widget _buildPrioriteButton({
     _transfoRefroidissementController.dispose();
     _transfoRegimeController.dispose();
     _transfoCalibreDisjoncteurController.dispose();
+    _transfoConducteursPhaseController.dispose();
+    _transfoConducteursNeutreController.dispose();
     // Libérer les controllers d'observation
     for (final c in _obsControllersCellule.values) c.dispose();
     for (final c in _obsControllersTransfo.values) c.dispose();

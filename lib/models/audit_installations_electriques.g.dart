@@ -439,13 +439,17 @@ class CelluleAdapter extends TypeAdapter<Cellule> {
       marque: fields[20] as String?,
       modele: fields[21] as String?,
       annee: fields[22] as String?,
+      sectionCablePhase: fields[25] as String?,
+      sectionCableNeutre: fields[26] as String?,
+      conducteursPhase: fields[27] as int?,
+      conducteursNeutre: fields[28] as int?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Cellule obj) {
     writer
-      ..writeByte(25)
+      ..writeByte(29)
       ..writeByte(0)
       ..write(obj.fonction)
       ..writeByte(1)
@@ -495,7 +499,15 @@ class CelluleAdapter extends TypeAdapter<Cellule> {
       ..writeByte(23)
       ..write(obj.createdAt)
       ..writeByte(24)
-      ..write(obj.updatedAt);
+      ..write(obj.updatedAt)
+      ..writeByte(25)
+      ..write(obj.sectionCablePhase)
+      ..writeByte(26)
+      ..write(obj.sectionCableNeutre)
+      ..writeByte(27)
+      ..write(obj.conducteursPhase)
+      ..writeByte(28)
+      ..write(obj.conducteursNeutre);
   }
 
   @override
@@ -548,13 +560,17 @@ class TransformateurMTBTAdapter extends TypeAdapter<TransformateurMTBT> {
       anneeFabrication: fields[23] as String?,
       typeImmersion: fields[24] as String?,
       presenceDGPT2: fields[25] as String?,
+      sectionCablePhase: fields[28] as String?,
+      sectionCableNeutre: fields[29] as String?,
+      conducteursPhase: fields[30] as int?,
+      conducteursNeutre: fields[31] as int?,
     );
   }
 
   @override
   void write(BinaryWriter writer, TransformateurMTBT obj) {
     writer
-      ..writeByte(28)
+      ..writeByte(32)
       ..writeByte(0)
       ..write(obj.typeTransformateur)
       ..writeByte(1)
@@ -610,7 +626,15 @@ class TransformateurMTBTAdapter extends TypeAdapter<TransformateurMTBT> {
       ..writeByte(26)
       ..write(obj.createdAt)
       ..writeByte(27)
-      ..write(obj.updatedAt);
+      ..write(obj.updatedAt)
+      ..writeByte(28)
+      ..write(obj.sectionCablePhase)
+      ..writeByte(29)
+      ..write(obj.sectionCableNeutre)
+      ..writeByte(30)
+      ..write(obj.conducteursPhase)
+      ..writeByte(31)
+      ..write(obj.conducteursNeutre);
   }
 
   @override
@@ -800,13 +824,15 @@ class DepartEquipementAdapter extends TypeAdapter<DepartEquipement> {
       ddr: fields[10] == null ? '' : fields[10] as String,
       nombreCables: fields[11] as String?,
       sectionCableNeutre: fields[12] as String?,
+      conducteursPhase: fields[13] as int?,
+      conducteursNeutre: fields[14] as int?,
     );
   }
 
   @override
   void write(BinaryWriter writer, DepartEquipement obj) {
     writer
-      ..writeByte(13)
+      ..writeByte(15)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -832,7 +858,11 @@ class DepartEquipementAdapter extends TypeAdapter<DepartEquipement> {
       ..writeByte(11)
       ..write(obj.nombreCables)
       ..writeByte(12)
-      ..write(obj.sectionCableNeutre);
+      ..write(obj.sectionCableNeutre)
+      ..writeByte(13)
+      ..write(obj.conducteursPhase)
+      ..writeByte(14)
+      ..write(obj.conducteursNeutre);
   }
 
   @override
@@ -870,13 +900,15 @@ class CircuitTerminalEquipementAdapter extends TypeAdapter<CircuitTerminalEquipe
       ddr: fields[10] == null ? '' : fields[10] as String,
       nombreCables: fields[11] as String?,
       sectionCableNeutre: fields[12] as String?,
+      conducteursPhase: fields[13] as int?,
+      conducteursNeutre: fields[14] as int?,
     );
   }
 
   @override
   void write(BinaryWriter writer, CircuitTerminalEquipement obj) {
     writer
-      ..writeByte(13)
+      ..writeByte(15)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -902,7 +934,11 @@ class CircuitTerminalEquipementAdapter extends TypeAdapter<CircuitTerminalEquipe
       ..writeByte(11)
       ..write(obj.nombreCables)
       ..writeByte(12)
-      ..write(obj.sectionCableNeutre);
+      ..write(obj.sectionCableNeutre)
+      ..writeByte(13)
+      ..write(obj.conducteursPhase)
+      ..writeByte(14)
+      ..write(obj.conducteursNeutre);
   }
 
   @override
@@ -941,13 +977,15 @@ class AlimentationAdapter extends TypeAdapter<Alimentation> {
       icc3Max: fields[10] as String?,
       nombreCables: fields[11] as String?,
       sectionCableNeutre: fields[12] as String?,
+      conducteursPhase: fields[13] as int?,
+      conducteursNeutre: fields[14] as int?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Alimentation obj) {
     writer
-      ..writeByte(13)
+      ..writeByte(15)
       ..writeByte(0)
       ..write(obj.typeProtection)
       ..writeByte(1)
@@ -973,7 +1011,11 @@ class AlimentationAdapter extends TypeAdapter<Alimentation> {
       ..writeByte(11)
       ..write(obj.nombreCables)
       ..writeByte(12)
-      ..write(obj.sectionCableNeutre);
+      ..write(obj.sectionCableNeutre)
+      ..writeByte(13)
+      ..write(obj.conducteursPhase)
+      ..writeByte(14)
+      ..write(obj.conducteursNeutre);
   }
 
   @override

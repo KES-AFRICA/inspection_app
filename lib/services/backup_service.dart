@@ -795,11 +795,26 @@ class BackupService {
         'fonction': c.fonction,
         'type': c.type,
         'marqueModeleAnnee': c.marqueModeleAnnee,
+        'marque': c.marque,
+        'modele': c.modele,
+        'annee': c.annee,
+        'gamme': c.gamme,
         'tensionAssignee': c.tensionAssignee,
         'pouvoirCoupure': c.pouvoirCoupure,
         'numerotation': c.numerotation,
         'parafoudres': c.parafoudres,
         'photos': c.photos,
+        'calibreDisjoncteur': c.calibreDisjoncteur,
+        'sectionCables': c.sectionCables,
+        'sectionCablePhase': c.sectionCablePhase,
+        'sectionCableNeutre': c.sectionCableNeutre,
+        'conducteursPhase': c.conducteursPhase,
+        'conducteursNeutre': c.conducteursNeutre,
+        'natureReseau': c.natureReseau,
+        'presenceIacm': c.presenceIacm,
+        'nom': c.nom,
+        'repere': c.repere,
+        'photo': c.photo,
         'elementsVerifies':
             c.elementsVerifies.map(_serializeElement).toList(),
       };
@@ -821,6 +836,10 @@ class BackupService {
         'photos': t.photos,
         'calibreDisjoncteur': t.calibreDisjoncteur,
         'sectionCables': t.sectionCables,
+        'sectionCablePhase': t.sectionCablePhase,
+        'sectionCableNeutre': t.sectionCableNeutre,
+        'conducteursPhase': t.conducteursPhase,
+        'conducteursNeutre': t.conducteursNeutre,
         'observations': t.observations?.map(_serializeElement).toList(),
         'syncId': t.syncId,
         'intensiteNominale': t.intensiteNominale,
@@ -898,6 +917,8 @@ class BackupService {
         'marque': d.marque,
         'nombreCables': d.nombreCables,
         'sectionCableNeutre': d.sectionCableNeutre,
+        'conducteursPhase': d.conducteursPhase,
+        'conducteursNeutre': d.conducteursNeutre,
       };
 
   static Map<String, dynamic> _serializeCircuit(CircuitTerminalEquipement c) => {
@@ -914,6 +935,8 @@ class BackupService {
         'marque': c.marque,
         'nombreCables': c.nombreCables,
         'sectionCableNeutre': c.sectionCableNeutre,
+        'conducteursPhase': c.conducteursPhase,
+        'conducteursNeutre': c.conducteursNeutre,
       };
 
   static Map<String, dynamic> _serializeAlim(Alimentation a) => {
@@ -929,6 +952,8 @@ class BackupService {
         'photos': a.photos,
         'nombreCables': a.nombreCables,
         'sectionCableNeutre': a.sectionCableNeutre,
+        'conducteursPhase': a.conducteursPhase,
+        'conducteursNeutre': a.conducteursNeutre,
       };
 
   static Map<String, dynamic> _serializePoint(PointVerification p) => {
@@ -2538,51 +2563,76 @@ class BackupService {
     }).toList();
   }
 
-  static Cellule _parseCellule(Map<String, dynamic> d) => Cellule(
-        fonction: d['fonction'] as String? ?? '',
-        type: d['type'] as String? ?? '',
-        marqueModeleAnnee: d['marqueModeleAnnee'] as String? ?? '',
-        marque: d['marque'] as String?,
-        modele: d['modele'] as String?,
-        annee: d['annee'] as String?,
-        tensionAssignee: d['tensionAssignee'] as String? ?? '',
-        pouvoirCoupure: d['pouvoirCoupure'] as String? ?? '',
-        numerotation: d['numerotation'] as String? ?? '',
-        parafoudres: d['parafoudres'] as String? ?? '',
-        photos: _strList(d['photos']),
-        elementsVerifies: _parseElements(d['elementsVerifies']),
-      );
+  static Cellule _parseCellule(Map<String, dynamic> d) {
+    final legacySection = d['sectionCables'] as String?;
+    final secPhase = d['sectionCablePhase'] as String? ?? legacySection;
+    final secNeutre = d['sectionCableNeutre'] as String? ?? legacySection;
+    return Cellule(
+      fonction: d['fonction'] as String? ?? '',
+      type: d['type'] as String? ?? '',
+      marqueModeleAnnee: d['marqueModeleAnnee'] as String? ?? '',
+      marque: d['marque'] as String?,
+      modele: d['modele'] as String?,
+      annee: d['annee'] as String?,
+      tensionAssignee: d['tensionAssignee'] as String? ?? '',
+      pouvoirCoupure: d['pouvoirCoupure'] as String? ?? '',
+      numerotation: d['numerotation'] as String? ?? '',
+      parafoudres: d['parafoudres'] as String? ?? '',
+      photos: _strList(d['photos']),
+      elementsVerifies: _parseElements(d['elementsVerifies']),
+      gamme: d['gamme'] as String?,
+      calibreDisjoncteur: d['calibreDisjoncteur'] as String?,
+      sectionCables: legacySection ?? secPhase,
+      sectionCablePhase: secPhase,
+      sectionCableNeutre: secNeutre,
+      conducteursPhase: d['conducteursPhase'] as int?,
+      conducteursNeutre: d['conducteursNeutre'] as int?,
+      natureReseau: d['natureReseau'] as String?,
+      presenceIacm: d['presenceIacm'] as String?,
+      nom: d['nom'] as String?,
+      repere: d['repere'] as String?,
+      photo: d['photo'] as String?,
+    );
+  }
 
-  static TransformateurMTBT _parseTransformateur(Map<String, dynamic> d) =>
-      TransformateurMTBT(
-        typeTransformateur: d['typeTransformateur'] as String? ?? '',
-        marqueAnnee: d['marqueAnnee'] as String? ?? '',
-        marque: d['marque'] as String?,
-        anneeFabrication: d['anneeFabrication'] as String?,
-        puissanceAssignee: d['puissanceAssignee'] as String? ?? '',
-        tensionPrimaireSecondaire:
-            d['tensionPrimaireSecondaire'] as String? ?? '',
-        relaisBuchholz: d['relaisBuchholz'] as String? ?? '',
-        typeImmersion: d['typeImmersion'] as String?,
-        presenceDGPT2: d['presenceDGPT2'] as String?,
-        typeRefroidissement: d['typeRefroidissement'] as String? ?? '',
-        regimeNeutre: d['regimeNeutre'] as String? ?? '',
-        photos: _strList(d['photos']),
-        calibreDisjoncteur: d['calibreDisjoncteur'] as String?,
-        sectionCables: d['sectionCables'] as String?,
-        observations: _parseElements(d['observations']),
-        syncId: d['syncId'] as String?,
-        intensiteNominale: d['intensiteNominale'] as String?,
-        couplage: d['couplage'] as String?,
-        typeReseau: d['typeReseau'] as String?,
-        pccAmont: d['pccAmont'] as String?,
-        puissanceUcc: d['puissanceUcc'] as String?,
-        ik3Max: d['ik3Max'] as String?,
-        elementsVerifies: _parseElements(d['elementsVerifies']),
-        nom: d['nom'] as String?,
-        photo: d['photo'] as String?,
-        repere: d['repere'] as String?,
-      );
+  static TransformateurMTBT _parseTransformateur(Map<String, dynamic> d) {
+    final legacySection = d['sectionCables'] as String?;
+    final secPhase = d['sectionCablePhase'] as String? ?? legacySection;
+    final secNeutre = d['sectionCableNeutre'] as String? ?? legacySection;
+    return TransformateurMTBT(
+      typeTransformateur: d['typeTransformateur'] as String? ?? '',
+      marqueAnnee: d['marqueAnnee'] as String? ?? '',
+      marque: d['marque'] as String?,
+      anneeFabrication: d['anneeFabrication'] as String?,
+      puissanceAssignee: d['puissanceAssignee'] as String? ?? '',
+      tensionPrimaireSecondaire:
+          d['tensionPrimaireSecondaire'] as String? ?? '',
+      relaisBuchholz: d['relaisBuchholz'] as String? ?? '',
+      typeImmersion: d['typeImmersion'] as String?,
+      presenceDGPT2: d['presenceDGPT2'] as String?,
+      typeRefroidissement: d['typeRefroidissement'] as String? ?? '',
+      regimeNeutre: d['regimeNeutre'] as String? ?? '',
+      photos: _strList(d['photos']),
+      calibreDisjoncteur: d['calibreDisjoncteur'] as String?,
+      sectionCables: legacySection ?? secPhase,
+      sectionCablePhase: secPhase,
+      sectionCableNeutre: secNeutre,
+      conducteursPhase: d['conducteursPhase'] as int?,
+      conducteursNeutre: d['conducteursNeutre'] as int?,
+      observations: _parseElements(d['observations']),
+      syncId: d['syncId'] as String?,
+      intensiteNominale: d['intensiteNominale'] as String?,
+      couplage: d['couplage'] as String?,
+      typeReseau: d['typeReseau'] as String?,
+      pccAmont: d['pccAmont'] as String?,
+      puissanceUcc: d['puissanceUcc'] as String?,
+      ik3Max: d['ik3Max'] as String?,
+      elementsVerifies: _parseElements(d['elementsVerifies']),
+      nom: d['nom'] as String?,
+      photo: d['photo'] as String?,
+      repere: d['repere'] as String?,
+    );
+  }
 
   static List<CoffretArmoire> _parseCoffrets(dynamic raw) {
     if (raw == null) return [];
@@ -2657,6 +2707,8 @@ class BackupService {
         marque: d['marque'] as String? ?? '',
         nombreCables: d['nombreCables'] as String?,
         sectionCableNeutre: d['sectionCableNeutre'] as String?,
+        conducteursPhase: d['conducteursPhase'] as int?,
+        conducteursNeutre: d['conducteursNeutre'] as int?,
       );
 
   static CircuitTerminalEquipement _parseCircuit(Map<String, dynamic> d) => CircuitTerminalEquipement(
@@ -2673,6 +2725,8 @@ class BackupService {
         marque: d['marque'] as String? ?? '',
         nombreCables: d['nombreCables'] as String?,
         sectionCableNeutre: d['sectionCableNeutre'] as String?,
+        conducteursPhase: d['conducteursPhase'] as int?,
+        conducteursNeutre: d['conducteursNeutre'] as int?,
       );
 
   static Alimentation _parseAlim(Map<String, dynamic> d) => Alimentation(
@@ -2688,6 +2742,8 @@ class BackupService {
         photos: _strList(d['photos']),
         nombreCables: d['nombreCables'] as String?,
         sectionCableNeutre: d['sectionCableNeutre'] as String?,
+        conducteursPhase: d['conducteursPhase'] as int?,
+        conducteursNeutre: d['conducteursNeutre'] as int?,
       );
 
   static PointVerification _parsePoint(Map<String, dynamic> d) {

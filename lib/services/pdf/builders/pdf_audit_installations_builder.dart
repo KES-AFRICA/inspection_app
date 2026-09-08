@@ -56,6 +56,10 @@ class PdfAuditInstallationsBuilder {
       return (du: 'DU COFFRET', deCe: 'DE CE COFFRET');
     } else if (t == 'INVERSEUR') {
       return (du: "DE L'INVERSEUR", deCe: "DE L'INVERSEUR");
+    } else if (t == 'CELLULE') {
+      return (du: 'DE LA CELLULE', deCe: 'DE CETTE CELLULE');
+    } else if (t == 'TRANSFORMATEUR') {
+      return (du: 'DU TRANSFORMATEUR', deCe: 'DE CE TRANSFORMATEUR');
     }
     return (du: "DE L'ÉQUIPEMENT", deCe: "DE CET ÉQUIPEMENT");
   }
@@ -233,6 +237,15 @@ class PdfAuditInstallationsBuilder {
   static pw.Widget _protectionCell(String typeProtection, String? marque) =>
       buildProtectionCell(typeProtection, marque);
 
+  static String formatSectionWithConducteurs(String? section, int? conducteurs) {
+    final cleanSec = PdfReportStyles.stripUnitFromValue(section, 'mm²').trim();
+    if (cleanSec.isEmpty || cleanSec == '-') return '-';
+    if (conducteurs != null && conducteurs > 0) {
+      return '$conducteurs × $cleanSec';
+    }
+    return cleanSec;
+  }
+
   static pw.Widget buildProtectionCell(
     String typeProtection,
     String? marque, {
@@ -242,12 +255,36 @@ class PdfAuditInstallationsBuilder {
     final typeClean = typeProtection.trim();
     final marqueClean = marque?.trim() ?? '';
 
-    if (typeClean.isEmpty || typeClean.toLowerCase() == '-aucun-' || typeClean.toLowerCase() == 'aucun') {
+    if (typeClean.isEmpty || typeClean.toLowerCase() == '-aucun-' || typeClean.toLowerCase() == 'aucun' || typeClean == '-') {
       return valueCell('absent');
     }
 
-    if (marqueClean.isEmpty || typeClean.toLowerCase().contains(marqueClean.toLowerCase())) {
-      return valueCell(typeClean);
+    if (marqueClean.isEmpty) {
+      return pw.Container(
+        alignment: pw.Alignment.center,
+        padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+        child: pw.Column(
+          mainAxisSize: pw.MainAxisSize.min,
+          mainAxisAlignment: pw.MainAxisAlignment.center,
+          crossAxisAlignment: pw.CrossAxisAlignment.center,
+          children: [
+            pw.Text(
+              typeClean,
+              style: pw.TextStyle(font: fRegular, fontSize: PdfReportStyles.fsSmall),
+              textAlign: pw.TextAlign.center,
+            ),
+            pw.Text(
+              '(Non défini)',
+              style: pw.TextStyle(
+                font: fRegular,
+                fontSize: PdfReportStyles.fsSmall,
+                color: PdfColors.red,
+              ),
+              textAlign: pw.TextAlign.center,
+            ),
+          ],
+        ),
+      );
     }
 
     return pw.Container(
@@ -1795,8 +1832,13 @@ class PdfAuditInstallationsBuilder {
           alt: false,
         ),
         tableDataRowInfo(
-          'Section des câbles (mm²)',
-          safe(PdfReportStyles.stripUnitFromValue(cellule.sectionCables, 'mm²')),
+          'Section de câble phase (mm²)',
+          safe(formatSectionWithConducteurs(cellule.effectiveSectionCablePhase, cellule.effectiveConducteursPhase)),
+          alt: false,
+        ),
+        tableDataRowInfo(
+          'Section de câble neutre (mm²)',
+          safe(formatSectionWithConducteurs(cellule.effectiveSectionCableNeutre, cellule.effectiveConducteursNeutre)),
           alt: false,
         ),
         tableDataRowInfo(
@@ -2130,10 +2172,29 @@ class PdfAuditInstallationsBuilder {
       children: dataRows,
     );
 
+    final complianceBanner = pw.Container(
+      width: double.infinity,
+      alignment: pw.Alignment.center,
+      padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: pw.BoxDecoration(
+        color: PdfReportStyles.accentColor,
+      ),
+      child: pw.Text(
+        'VERIFICATION DE CONFORMITE DE LA CELLULE',
+        textAlign: pw.TextAlign.center,
+        style: pw.TextStyle(
+          font: fontBold,
+          fontSize: PdfReportStyles.fsSmall,
+          color: PdfColors.white,
+        ),
+      ),
+    );
+
     return [
       pw.SizedBox(height: 6),
       titleTable,
       topSectionTable,
+      complianceBanner,
       headerTable,
       dataTable,
       pw.SizedBox(height: 5),
@@ -2319,8 +2380,13 @@ class PdfAuditInstallationsBuilder {
           alt: false,
         ),
         tableDataRowInfo(
-          'Section des câbles (mm²)',
-          safe(PdfReportStyles.stripUnitFromValue(transfo.sectionCables, 'mm²')),
+          'Section de câble phase (mm²)',
+          safe(formatSectionWithConducteurs(transfo.effectiveSectionCablePhase, transfo.effectiveConducteursPhase)),
+          alt: false,
+        ),
+        tableDataRowInfo(
+          'Section de câble neutre (mm²)',
+          safe(formatSectionWithConducteurs(transfo.effectiveSectionCableNeutre, transfo.effectiveConducteursNeutre)),
           alt: false,
         ),
         tableDataRowInfo('Couplage', safe(transfo.couplage ?? ''), alt: false),
@@ -2686,10 +2752,29 @@ class PdfAuditInstallationsBuilder {
       children: dataRows,
     );
 
+    final complianceBanner = pw.Container(
+      width: double.infinity,
+      alignment: pw.Alignment.center,
+      padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: pw.BoxDecoration(
+        color: PdfReportStyles.accentColor,
+      ),
+      child: pw.Text(
+        'VERIFICATION DE CONFORMITE DU TRANSFORMATEUR',
+        textAlign: pw.TextAlign.center,
+        style: pw.TextStyle(
+          font: fontBold,
+          fontSize: PdfReportStyles.fsSmall,
+          color: PdfColors.white,
+        ),
+      ),
+    );
+
     return [
       pw.SizedBox(height: 6),
       titleTable,
       topSectionTable,
+      complianceBanner,
       headerTable,
       dataTable,
       pw.SizedBox(height: 5),
@@ -3265,8 +3350,8 @@ class PdfAuditInstallationsBuilder {
                     _valueCell(a.icc3Max != null && a.icc3Max!.isNotEmpty ? a.icc3Max! : '-'),
                     _valueCell(PdfReportStyles.stripUnitFromValue(a.calibre, 'A')),
                     _valueCell(PdfReportStyles.stripUnitFromValue(a.ddr, 'mA')),
-                    _valueCell(PdfReportStyles.stripUnitFromValue(a.sectionCablePhase, 'mm²')),
-                    _valueCell(PdfReportStyles.stripUnitFromValue(a.effectiveSectionCableNeutre, 'mm²')),
+                    _valueCell(formatSectionWithConducteurs(a.effectiveSectionCablePhase, a.effectiveConducteursPhase)),
+                    _valueCell(formatSectionWithConducteurs(a.effectiveSectionCableNeutre, a.effectiveConducteursNeutre)),
                   ],
                 ),
               );
@@ -3344,8 +3429,8 @@ class PdfAuditInstallationsBuilder {
                     _valueCell(s.icc3Max != null && s.icc3Max!.isNotEmpty ? s.icc3Max! : '-'),
                     _valueCell(PdfReportStyles.stripUnitFromValue(s.calibre, 'A')),
                     _valueCell(PdfReportStyles.stripUnitFromValue(s.ddr, 'mA')),
-                    _valueCell(PdfReportStyles.stripUnitFromValue(s.sectionCablePhase, 'mm²')),
-                    _valueCell(PdfReportStyles.stripUnitFromValue(s.effectiveSectionCableNeutre, 'mm²')),
+                    _valueCell(formatSectionWithConducteurs(s.effectiveSectionCablePhase, s.effectiveConducteursPhase)),
+                    _valueCell(formatSectionWithConducteurs(s.effectiveSectionCableNeutre, s.effectiveConducteursNeutre)),
                   ],
                 ),
               );
@@ -3415,8 +3500,8 @@ class PdfAuditInstallationsBuilder {
                   _valueCell(a.icc3Max != null && a.icc3Max!.isNotEmpty ? a.icc3Max! : '-'),
                   _valueCell(PdfReportStyles.stripUnitFromValue(a.calibre, 'A')),
                   _valueCell(PdfReportStyles.stripUnitFromValue(a.ddr, 'mA')),
-                  _valueCell(PdfReportStyles.stripUnitFromValue(a.sectionCablePhase, 'mm²')),
-                  _valueCell(PdfReportStyles.stripUnitFromValue(a.effectiveSectionCableNeutre, 'mm²')),
+                  _valueCell(formatSectionWithConducteurs(a.effectiveSectionCablePhase, a.effectiveConducteursPhase)),
+                  _valueCell(formatSectionWithConducteurs(a.effectiveSectionCableNeutre, a.effectiveConducteursNeutre)),
                 ],
               ),
             );
@@ -3503,8 +3588,8 @@ class PdfAuditInstallationsBuilder {
                 _valueCell(isAvecProtection ? ((pt.icc3Max != null && pt.icc3Max!.isNotEmpty) ? pt.icc3Max! : '-') : '-'),
                 _valueCell(isAvecProtection ? PdfReportStyles.stripUnitFromValue(pt.calibre, 'A') : '-'),
                 _valueCell(isAvecProtection ? PdfReportStyles.stripUnitFromValue(pt.ddr, 'mA') : '-'),
-                _valueCell(PdfReportStyles.stripUnitFromValue(pt.sectionCablePhase, 'mm²')),
-                _valueCell(PdfReportStyles.stripUnitFromValue(pt.effectiveSectionCableNeutre, 'mm²')),
+                _valueCell(formatSectionWithConducteurs(pt.effectiveSectionCablePhase, pt.effectiveConducteursPhase)),
+                _valueCell(formatSectionWithConducteurs(pt.effectiveSectionCableNeutre, pt.effectiveConducteursNeutre)),
               ],
             ),
           ],
@@ -3576,8 +3661,8 @@ class PdfAuditInstallationsBuilder {
               _valueCell(dep.icc3Max.isNotEmpty ? dep.icc3Max : '-'),
               _valueCell(PdfReportStyles.stripUnitFromValue(dep.calibre, 'A')),
               _valueCell(PdfReportStyles.stripUnitFromValue(dep.ddr, 'mA')),
-              _valueCell(PdfReportStyles.stripUnitFromValue(dep.sectionCablePhase, 'mm²')),
-              _valueCell(PdfReportStyles.stripUnitFromValue(dep.effectiveSectionCableNeutre, 'mm²')),
+              _valueCell(formatSectionWithConducteurs(dep.effectiveSectionCablePhase, dep.effectiveConducteursPhase)),
+              _valueCell(formatSectionWithConducteurs(dep.effectiveSectionCableNeutre, dep.effectiveConducteursNeutre)),
             ],
           ),
         );
@@ -3667,8 +3752,8 @@ class PdfAuditInstallationsBuilder {
               _valueCell(ct.icc3Max.isNotEmpty ? ct.icc3Max : '-'),
               _valueCell(PdfReportStyles.stripUnitFromValue(ct.calibre, 'A')),
               _valueCell(PdfReportStyles.stripUnitFromValue(ct.ddr, 'mA')),
-              _valueCell(PdfReportStyles.stripUnitFromValue(ct.sectionCablePhase, 'mm²')),
-              _valueCell(PdfReportStyles.stripUnitFromValue(ct.effectiveSectionCableNeutre, 'mm²')),
+              _valueCell(formatSectionWithConducteurs(ct.effectiveSectionCablePhase, ct.effectiveConducteursPhase)),
+              _valueCell(formatSectionWithConducteurs(ct.effectiveSectionCableNeutre, ct.effectiveConducteursNeutre)),
             ],
           ),
         );
@@ -3770,11 +3855,11 @@ class PdfAuditInstallationsBuilder {
   }
 
   static String formatTypeProtectionWithMarque(String typeProtection, String? marqueDisjoncteur) {
-    if (typeProtection.trim().isEmpty || typeProtection == '-') return typeProtection;
+    if (typeProtection.trim().isEmpty || typeProtection == '-') return 'absent';
     if (marqueDisjoncteur != null && marqueDisjoncteur.trim().isNotEmpty) {
       return '$typeProtection\n(${marqueDisjoncteur.trim()})';
     }
-    return typeProtection;
+    return '$typeProtection\n(Non défini)';
   }
 
   /// Cellule valeur (police normale, centrée horizontalement et verticalement)

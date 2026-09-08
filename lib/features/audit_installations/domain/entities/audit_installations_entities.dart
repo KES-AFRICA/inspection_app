@@ -49,6 +49,10 @@ class CelluleEntity {
   final String? marque;
   final String? modele;
   final String? annee;
+  final String? sectionCablePhase;
+  final String? sectionCableNeutre;
+  final int? conducteursPhase;
+  final int? conducteursNeutre;
 
   const CelluleEntity({
     required this.fonction,
@@ -73,6 +77,10 @@ class CelluleEntity {
     this.marque,
     this.modele,
     this.annee,
+    this.sectionCablePhase,
+    this.sectionCableNeutre,
+    this.conducteursPhase,
+    this.conducteursNeutre,
   });
 
   CelluleEntity copyWith({
@@ -98,6 +106,10 @@ class CelluleEntity {
     String? marque,
     String? modele,
     String? annee,
+    String? sectionCablePhase,
+    String? sectionCableNeutre,
+    int? conducteursPhase,
+    int? conducteursNeutre,
   }) {
     return CelluleEntity(
       fonction: fonction ?? this.fonction,
@@ -122,6 +134,10 @@ class CelluleEntity {
       marque: marque ?? this.marque,
       modele: modele ?? this.modele,
       annee: annee ?? this.annee,
+      sectionCablePhase: sectionCablePhase ?? this.sectionCablePhase,
+      sectionCableNeutre: sectionCableNeutre ?? this.sectionCableNeutre,
+      conducteursPhase: conducteursPhase ?? this.conducteursPhase,
+      conducteursNeutre: conducteursNeutre ?? this.conducteursNeutre,
     );
   }
 }

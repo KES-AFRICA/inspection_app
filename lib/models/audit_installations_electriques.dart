@@ -1293,6 +1293,7 @@ class Alimentation {
 
   /// Getter rétrocompatible pour la section phase (réutilise le champ historique sectionCable)
   String get sectionCablePhase => sectionCable;
+  String get effectiveSectionCablePhase => sectionCablePhase;
   set sectionCablePhase(String val) => sectionCable = val;
 
   /// Getter rétrocompatible pour la section neutre (avec fallback auto sur sectionCable Phase si absent)
@@ -1589,6 +1590,7 @@ class DepartEquipement {
 
   /// Getter rétrocompatible pour la section phase (réutilise le champ historique sectionCable)
   String get sectionCablePhase => sectionCable;
+  String get effectiveSectionCablePhase => sectionCablePhase;
   set sectionCablePhase(String val) => sectionCable = val;
 
   /// Getter rétrocompatible pour la section neutre (avec fallback auto sur sectionCable Phase si absent)
@@ -1716,6 +1718,7 @@ class CircuitTerminalEquipement {
 
   /// Getter rétrocompatible pour la section phase (réutilise le champ historique sectionCable)
   String get sectionCablePhase => sectionCable;
+  String get effectiveSectionCablePhase => sectionCablePhase;
   set sectionCablePhase(String val) => sectionCable = val;
 
   /// Getter rétrocompatible pour la section neutre (avec fallback auto sur sectionCable Phase si absent)

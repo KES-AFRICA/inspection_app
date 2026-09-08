@@ -2176,9 +2176,33 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
         case 'sectionCable':
         case 'sectionCablePhase':
           a.sectionCable = value;
+          if (value.trim().isNotEmpty && value.trim() != '-') {
+            a.conducteursPhase ??= 1;
+            final key = isProtectionTete ? 'prot_cond_phase' : 'alim${index}_cond_phase';
+            if (_controllers.containsKey(key)) _controllers[key]!.text = a.conducteursPhase.toString();
+          } else {
+            a.conducteursPhase = null;
+          }
+          break;
+        case 'conducteursPhase':
+          a.conducteursPhase = int.tryParse(value);
+          final keyCondP = isProtectionTete ? 'prot_cond_phase' : 'alim${index}_cond_phase';
+          if (_controllers.containsKey(keyCondP) && _controllers[keyCondP]!.text != value) _controllers[keyCondP]!.text = value;
           break;
         case 'sectionCableNeutre':
           a.sectionCableNeutre = value;
+          if (value.trim().isNotEmpty && value.trim() != '-') {
+            a.conducteursNeutre ??= 1;
+            final key = isProtectionTete ? 'prot_cond_neutre' : 'alim${index}_cond_neutre';
+            if (_controllers.containsKey(key)) _controllers[key]!.text = a.conducteursNeutre.toString();
+          } else {
+            a.conducteursNeutre = null;
+          }
+          break;
+        case 'conducteursNeutre':
+          a.conducteursNeutre = int.tryParse(value);
+          final keyCondN = isProtectionTete ? 'prot_cond_neutre' : 'alim${index}_cond_neutre';
+          if (_controllers.containsKey(keyCondN) && _controllers[keyCondN]!.text != value) _controllers[keyCondN]!.text = value;
           break;
         case 'source':
           a.source = value;
@@ -2214,8 +2238,36 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
             if (_controllers.containsKey(key) && _controllers[key]!.text != value) _controllers[key]!.text = value;
             break;
           case 'sectionCable':
-          case 'sectionCablePhase': widget.protectionTete!.sectionCable = value; break;
-          case 'sectionCableNeutre': widget.protectionTete!.sectionCableNeutre = value; break;
+          case 'sectionCablePhase':
+            widget.protectionTete!.sectionCable = value;
+            if (value.trim().isNotEmpty && value.trim() != '-') {
+              widget.protectionTete!.conducteursPhase ??= 1;
+              const key = 'prot_cond_phase';
+              if (_controllers.containsKey(key)) _controllers[key]!.text = widget.protectionTete!.conducteursPhase.toString();
+            } else {
+              widget.protectionTete!.conducteursPhase = null;
+            }
+            break;
+          case 'conducteursPhase':
+            widget.protectionTete!.conducteursPhase = int.tryParse(value);
+            const keyCondP = 'prot_cond_phase';
+            if (_controllers.containsKey(keyCondP) && _controllers[keyCondP]!.text != value) _controllers[keyCondP]!.text = value;
+            break;
+          case 'sectionCableNeutre':
+            widget.protectionTete!.sectionCableNeutre = value;
+            if (value.trim().isNotEmpty && value.trim() != '-') {
+              widget.protectionTete!.conducteursNeutre ??= 1;
+              const key = 'prot_cond_neutre';
+              if (_controllers.containsKey(key)) _controllers[key]!.text = widget.protectionTete!.conducteursNeutre.toString();
+            } else {
+              widget.protectionTete!.conducteursNeutre = null;
+            }
+            break;
+          case 'conducteursNeutre':
+            widget.protectionTete!.conducteursNeutre = int.tryParse(value);
+            const keyCondN = 'prot_cond_neutre';
+            if (_controllers.containsKey(keyCondN) && _controllers[keyCondN]!.text != value) _controllers[keyCondN]!.text = value;
+            break;
           case 'source': widget.protectionTete!.source = value; break;
           case 'sourceKnown': widget.protectionTete!.sourceKnown = value; break;
           case 'marqueDisjoncteur': widget.protectionTete!.marqueDisjoncteur = value; break;
@@ -2585,8 +2637,32 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
             ],
           ],
           _buildModernDropdown(context, label: 'Section de câble phase', value: a.sectionCable, items: _sectionCableOptions, onChanged: (v) => onChanged('sectionCable', v), readOnly: isLocked),
+          if (a.sectionCable.trim().isNotEmpty && a.sectionCable.trim() != '-') ...[
+            SizedBox(height: context.spacingS),
+            _buildModernTextField(
+              context,
+              label: 'Nombre de conducteurs phase',
+              controller: _getController(isProtectionTete ? 'prot_cond_phase' : 'alim${index}_cond_phase', (a.conducteursPhase ?? 1).toString()),
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              onChanged: (v) => onChanged('conducteursPhase', v),
+              readOnly: isLocked,
+            ),
+          ],
           SizedBox(height: context.spacingS),
           _buildModernDropdown(context, label: 'Section de câble neutre', value: a.effectiveSectionCableNeutre, items: _sectionCableOptions, onChanged: (v) => onChanged('sectionCableNeutre', v), readOnly: isLocked),
+          if (a.effectiveSectionCableNeutre.trim().isNotEmpty && a.effectiveSectionCableNeutre.trim() != '-') ...[
+            SizedBox(height: context.spacingS),
+            _buildModernTextField(
+              context,
+              label: 'Nombre de conducteurs neutre',
+              controller: _getController(isProtectionTete ? 'prot_cond_neutre' : 'alim${index}_cond_neutre', (a.conducteursNeutre ?? 1).toString()),
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              onChanged: (v) => onChanged('conducteursNeutre', v),
+              readOnly: isLocked,
+            ),
+          ],
           SizedBox(height: context.spacingS),
           _buildModernTextField(
             context,
@@ -6700,8 +6776,37 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
                     isExpanded: true,
                     decoration: const InputDecoration(labelText: 'Section de câble phase (mm²)', isDense: true, border: OutlineInputBorder()),
                     items: _sectionCableOptions.map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis))).toList(),
-                    onChanged: (v) { setState(() { dep.sectionCable = v ?? ''; }); widget.onDataChanged(); },
+                    onChanged: (v) {
+                      setState(() {
+                        dep.sectionCable = v ?? '';
+                        if (dep.sectionCable.trim().isNotEmpty && dep.sectionCable.trim() != '-') {
+                          dep.conducteursPhase ??= 1;
+                        } else {
+                          dep.conducteursPhase = null;
+                        }
+                      });
+                      widget.onDataChanged();
+                    },
                   ),
+                  if (dep.sectionCable.trim().isNotEmpty && dep.sectionCable.trim() != '-') ...[
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      key: ValueKey('dep_${dep.id}_cond_phase_${dep.conducteursPhase}'),
+                      initialValue: (dep.conducteursPhase ?? 1).toString(),
+                      decoration: const InputDecoration(
+                        labelText: 'Nombre de conducteurs phase',
+                        hintText: 'Ex: 1, 2, 3...',
+                        isDense: true,
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      onChanged: (v) {
+                        dep.conducteursPhase = int.tryParse(v.trim());
+                        widget.onDataChanged();
+                      },
+                    ),
+                  ],
                   const SizedBox(height: 12),
 
                   DropdownButtonFormField<String>(
@@ -6709,8 +6814,37 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
                     isExpanded: true,
                     decoration: const InputDecoration(labelText: 'Section de câble neutre (mm²)', isDense: true, border: OutlineInputBorder()),
                     items: _sectionCableOptions.map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis))).toList(),
-                    onChanged: (v) { setState(() { dep.sectionCableNeutre = v ?? ''; }); widget.onDataChanged(); },
+                    onChanged: (v) {
+                      setState(() {
+                        dep.sectionCableNeutre = v ?? '';
+                        if (dep.sectionCableNeutre!.trim().isNotEmpty && dep.sectionCableNeutre!.trim() != '-') {
+                          dep.conducteursNeutre ??= 1;
+                        } else {
+                          dep.conducteursNeutre = null;
+                        }
+                      });
+                      widget.onDataChanged();
+                    },
                   ),
+                  if (dep.effectiveSectionCableNeutre.trim().isNotEmpty && dep.effectiveSectionCableNeutre.trim() != '-') ...[
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      key: ValueKey('dep_${dep.id}_cond_neutre_${dep.conducteursNeutre}'),
+                      initialValue: (dep.conducteursNeutre ?? 1).toString(),
+                      decoration: const InputDecoration(
+                        labelText: 'Nombre de conducteurs neutre',
+                        hintText: 'Ex: 1, 2, 3...',
+                        isDense: true,
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      onChanged: (v) {
+                        dep.conducteursNeutre = int.tryParse(v.trim());
+                        widget.onDataChanged();
+                      },
+                    ),
+                  ],
                   const SizedBox(height: 12),
 
                   TextFormField(
@@ -7042,8 +7176,37 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
                     isExpanded: true,
                     decoration: const InputDecoration(labelText: 'Section de câble phase (mm²)', isDense: true, border: OutlineInputBorder()),
                     items: _sectionCableOptions.map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis))).toList(),
-                    onChanged: (v) { setState(() { ct.sectionCable = v ?? ''; }); widget.onDataChanged(); },
+                    onChanged: (v) {
+                      setState(() {
+                        ct.sectionCable = v ?? '';
+                        if (ct.sectionCable.trim().isNotEmpty && ct.sectionCable.trim() != '-') {
+                          ct.conducteursPhase ??= 1;
+                        } else {
+                          ct.conducteursPhase = null;
+                        }
+                      });
+                      widget.onDataChanged();
+                    },
                   ),
+                  if (ct.sectionCable.trim().isNotEmpty && ct.sectionCable.trim() != '-') ...[
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      key: ValueKey('ct_${ct.id}_cond_phase_${ct.conducteursPhase}'),
+                      initialValue: (ct.conducteursPhase ?? 1).toString(),
+                      decoration: const InputDecoration(
+                        labelText: 'Nombre de conducteurs phase',
+                        hintText: 'Ex: 1, 2, 3...',
+                        isDense: true,
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      onChanged: (v) {
+                        ct.conducteursPhase = int.tryParse(v.trim());
+                        widget.onDataChanged();
+                      },
+                    ),
+                  ],
                   const SizedBox(height: 12),
 
                   DropdownButtonFormField<String>(
@@ -7051,8 +7214,37 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
                     isExpanded: true,
                     decoration: const InputDecoration(labelText: 'Section de câble neutre (mm²)', isDense: true, border: OutlineInputBorder()),
                     items: _sectionCableOptions.map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis))).toList(),
-                    onChanged: (v) { setState(() { ct.sectionCableNeutre = v ?? ''; }); widget.onDataChanged(); },
+                    onChanged: (v) {
+                      setState(() {
+                        ct.sectionCableNeutre = v ?? '';
+                        if (ct.sectionCableNeutre!.trim().isNotEmpty && ct.sectionCableNeutre!.trim() != '-') {
+                          ct.conducteursNeutre ??= 1;
+                        } else {
+                          ct.conducteursNeutre = null;
+                        }
+                      });
+                      widget.onDataChanged();
+                    },
                   ),
+                  if (ct.effectiveSectionCableNeutre.trim().isNotEmpty && ct.effectiveSectionCableNeutre.trim() != '-') ...[
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      key: ValueKey('ct_${ct.id}_cond_neutre_${ct.conducteursNeutre}'),
+                      initialValue: (ct.conducteursNeutre ?? 1).toString(),
+                      decoration: const InputDecoration(
+                        labelText: 'Nombre de conducteurs neutre',
+                        hintText: 'Ex: 1, 2, 3...',
+                        isDense: true,
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      onChanged: (v) {
+                        ct.conducteursNeutre = int.tryParse(v.trim());
+                        widget.onDataChanged();
+                      },
+                    ),
+                  ],
                   const SizedBox(height: 12),
 
                   TextFormField(

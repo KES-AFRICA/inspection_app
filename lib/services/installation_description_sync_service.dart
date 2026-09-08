@@ -526,7 +526,8 @@ class InstallationDescriptionSyncService {
           : getFieldWithAlias(existingData, 'POUVOIR DE COUPURE ASSIGNE(KA)', _celluleAliases);
       String valCalibre = cellule.calibreDisjoncteur ??
           getFieldWithAlias(existingData, 'Calibre Du Disjoncteur', _celluleAliases);
-      String valSection = cellule.sectionCables ??
+      String valSection = cellule.effectiveSectionCablePhase ??
+          cellule.sectionCables ??
           getFieldWithAlias(existingData, 'SECTION DU CABLE(mm2)', _celluleAliases);
       String valNature = cellule.natureReseau ??
           getFieldWithAlias(existingData, 'NATURE DU RESEAU', _celluleAliases);
@@ -627,7 +628,8 @@ class InstallationDescriptionSyncService {
       String valCalibre = transfo.calibreDisjoncteur ??
           getFieldWithAlias(
               existingData, 'CALIBRE DU DISJONCTEUR SORTIE TRANSFORMATEUR', _transfoAliases);
-      String valSection = transfo.sectionCables ??
+      String valSection = transfo.effectiveSectionCablePhase ??
+          transfo.sectionCables ??
           getFieldWithAlias(existingData, 'SECTION DU CABLE', _transfoAliases);
       String valTension = transfo.tensionPrimaireSecondaire.isNotEmpty
           ? transfo.tensionPrimaireSecondaire
