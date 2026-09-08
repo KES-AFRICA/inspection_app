@@ -2670,6 +2670,7 @@ static Future<bool> addLocalToBasseTensionZone({
     String? zoneId,
     int? fallbackZoneIndex,
     int? fallbackLocalIndex,
+    bool skipDescriptionSync = false,
   }) async {
     return PersistenceQueue.enqueue('audit_$missionId', () async {
       try {
@@ -2852,7 +2853,7 @@ static Future<bool> addLocalToBasseTensionZone({
           }
         }
 
-        await saveAuditInstallations(audit);
+        await saveAuditInstallations(audit, skipDescriptionSync: skipDescriptionSync);
         return true;
       } catch (e) {
         if (kDebugMode) {

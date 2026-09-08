@@ -5397,6 +5397,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
           isInZone: widget.isInZone,
           fallbackZoneIndex: widget.zoneIndex,
           fallbackLocalIndex: _resolvedLocalIndex,
+          skipDescriptionSync: true,
         );
         nouveauLocal = localData;
       } else {
@@ -5411,12 +5412,15 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
           isInZone: true,
           fallbackZoneIndex: widget.zoneIndex,
           fallbackLocalIndex: _resolvedLocalIndex,
+          skipDescriptionSync: true,
         );
         nouveauLocal = localData;
       }
 
-      // Synchronisation directe vers DescriptionInstallations
-      await InstallationDescriptionSyncService.repairAndSyncDescriptions(widget.mission.id);
+      // Synchronisation différée en arrière-plan sans bloquer le thread UI interactif
+      Future.microtask(() {
+        InstallationDescriptionSyncService.repairAndSyncDescriptions(widget.mission.id);
+      });
 
       // Suppression de l'éventuel draft résiduel car le local est définitivement enregistré
       if (_draftLocalId != null && HiveService.hasActiveLocalDraft(_draftLocalId!)) {
@@ -6408,6 +6412,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     
     try {
       final nouveauLocal = await _persisterEquipementEtLocalImmediatement();
+      await InstallationDescriptionSyncService.repairAndSyncDescriptions(widget.mission.id);
       
       setState(() => _isLoading = false);
       

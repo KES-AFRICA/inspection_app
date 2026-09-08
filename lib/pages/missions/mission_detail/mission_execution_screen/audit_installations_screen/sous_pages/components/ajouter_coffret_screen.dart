@@ -3053,6 +3053,37 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
         ));
       }
     }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _syncIpIkPoints();
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant _EtapePointsVerification oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.indiceIpIk != widget.indiceIpIk) {
+      _syncIpIkPoints();
+    }
+  }
+
+  void _syncIpIkPoints() {
+    final parentState = context.findAncestorStateOfType<_AjouterCoffretScreenState>();
+    final tempCoffret = CoffretArmoire(
+      qrCode: parentState?._qrCodeController.text ?? '',
+      nom: parentState?._nomController.text ?? '',
+      type: parentState?._selectedType ?? 'COFFRET',
+      indiceIpIk: parentState?._indiceIpIkController.text.trim(),
+      repere: parentState?._repereController.text.trim(),
+      pointsVerification: widget.pointsVerification,
+    );
+    IpIkEvaluatorService.syncIpIkPoint(
+      coffret: tempCoffret,
+      missionId: widget.missionId,
+      parentName: parentState?._getParentLocationName(),
+    );
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   void _buildSlides() {
@@ -3456,21 +3487,6 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
 
   Widget _buildConformiteToggle(BuildContext context, PointVerification point, int pointIndex) {
     if (IpIkEvaluatorService.isIpIkPoint(point.pointVerification)) {
-      final parentState = context.findAncestorStateOfType<_AjouterCoffretScreenState>();
-      final tempCoffret = CoffretArmoire(
-        qrCode: parentState?._qrCodeController.text ?? '',
-        nom: parentState?._nomController.text ?? '',
-        type: parentState?._selectedType ?? 'COFFRET',
-        indiceIpIk: parentState?._indiceIpIkController.text.trim(),
-        repere: parentState?._repereController.text.trim(),
-        pointsVerification: [point],
-      );
-      IpIkEvaluatorService.syncIpIkPoint(
-        coffret: tempCoffret,
-        missionId: widget.missionId,
-        parentName: parentState?._getParentLocationName(),
-      );
-
       final isConforme = point.conformite.toLowerCase().trim() == 'oui';
       if (!isConforme) {
         widget.hasObservation[pointIndex] = true;
@@ -3776,8 +3792,10 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
   GlobalKey<_EtapeDepartsEtCircuitsState>? _etapeDepartsCircuitsKey;
 
   bool _isSaving = false;
-  bool _isAutoSaving = false;
-  bool _lastAutoSaveError = false;
+  final ValueNotifier<bool> _isAutoSavingNotifier = ValueNotifier<bool>(false);
+  bool get _isAutoSaving => _isAutoSavingNotifier.value;
+  final ValueNotifier<bool> _lastAutoSaveErrorNotifier = ValueNotifier<bool>(false);
+  bool get _lastAutoSaveError => _lastAutoSaveErrorNotifier.value;
   bool _hasUnsavedChanges = false;
   Timer? _autoSaveTimer;
   String? _draftQrCode;
@@ -4001,7 +4019,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
   void _scheduleAutoSave() {
     if (!mounted) return;
     _autoSaveTimer?.cancel();
-    _autoSaveTimer = Timer(const Duration(milliseconds: 600), () {
+    _autoSaveTimer = Timer(const Duration(milliseconds: 1200), () {
       if (!mounted) return;
       if (widget.isEdition && widget.coffret != null) {
         _autoSaveEdition();
@@ -4013,10 +4031,8 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
 
   Future<void> _autoSaveEdition() async {
     if (!mounted || widget.coffret == null) return;
-    setState(() {
-      _isAutoSaving = true;
-      _lastAutoSaveError = false;
-    });
+    _isAutoSavingNotifier.value = true;
+    _lastAutoSaveErrorNotifier.value = false;
     try {
       final now = DateTime.now().toUtc();
       final nouveauCoffret = CoffretArmoire(
@@ -4066,21 +4082,17 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         oldNom: widget.coffret!.nom,
       );
       if (mounted) {
-        setState(() {
-          _isAutoSaving = false;
-          _lastAutoSaveError = !ok;
-          if (ok) {
-            _hasUnsavedChanges = false;
-          }
-        });
+        _isAutoSavingNotifier.value = false;
+        _lastAutoSaveErrorNotifier.value = !ok;
+        if (ok) {
+          _hasUnsavedChanges = false;
+        }
       }
     } catch (e) {
       if (kDebugMode) print('⚠️ [AUTO SAVE EDITION EXCEPTION] $e');
       if (mounted) {
-        setState(() {
-          _isAutoSaving = false;
-          _lastAutoSaveError = true;
-        });
+        _isAutoSavingNotifier.value = false;
+        _lastAutoSaveErrorNotifier.value = true;
       }
     }
   }
@@ -4218,6 +4230,8 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
   @override
   void dispose() {
     _autoSaveTimer?.cancel();
+    _isAutoSavingNotifier.dispose();
+    _lastAutoSaveErrorNotifier.dispose();
     _pointDebounceTimers.forEach((key, timer) => timer?.cancel());
     _nomController.dispose();
     _numeroEquipementController.dispose();
@@ -5273,33 +5287,44 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
           ),
           actions: [
             if (widget.isEdition) ...[
-              if (_isAutoSaving)
-                const Center(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 8.0),
-                    child: SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              ValueListenableBuilder<bool>(
+                valueListenable: _isAutoSavingNotifier,
+                builder: (context, isAutoSaving, _) {
+                  if (isAutoSaving) {
+                    return const Center(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 8.0),
+                        child: SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                )
-              else if (_lastAutoSaveError)
-                IconButton(
-                  icon: const Icon(Icons.sync_problem, color: Colors.amber),
-                  tooltip: 'Erreur de sauvegarde automatique - Cliquer pour réessayer',
-                  onPressed: _autoSaveEdition,
-                )
-              else
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 6.0),
-                  child: Center(
-                    child: Icon(Icons.cloud_done, size: 18, color: Colors.white70),
-                  ),
-                ),
+                    );
+                  }
+                  return ValueListenableBuilder<bool>(
+                    valueListenable: _lastAutoSaveErrorNotifier,
+                    builder: (context, lastError, _) {
+                      if (lastError) {
+                        return IconButton(
+                          icon: const Icon(Icons.sync_problem, color: Colors.amber),
+                          tooltip: 'Erreur de sauvegarde automatique - Cliquer pour réessayer',
+                          onPressed: _autoSaveEdition,
+                        );
+                      }
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 6.0),
+                        child: Center(
+                          child: Icon(Icons.cloud_done, size: 18, color: Colors.white70),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
               IconButton(icon: const Icon(Icons.check), onPressed: _sauvegarder, tooltip: 'Enregistrer les modifications'),
             ],
           ],
@@ -5445,7 +5470,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
                       currentEquipmentId: widget.coffret?.equipmentId,
                       equipmentType: _selectedType,
                       onDataChanged: () {
-                        setState(() {});
+                        _hasUnsavedChanges = true;
                         _scheduleAutoSave();
                       },
                     ),
