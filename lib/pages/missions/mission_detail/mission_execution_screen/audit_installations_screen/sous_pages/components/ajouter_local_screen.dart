@@ -2431,6 +2431,8 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
   String? _celluleNatureReseau;
   String? _cellulePresenceIacm;
   String? _celluleTensionService;
+  final _celluleTensionServiceCustomController = TextEditingController();
+  final Set<String> _customSaisirFields = <String>{};
   String? _cellulePhoto;
   List<ElementControle> _celluleObservations = [];
   List<String> _cellulePhotos = [];
@@ -2564,6 +2566,9 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
     _celluleNatureReseau = null;
     _cellulePresenceIacm = null;
     _celluleTensionService = null;
+    _celluleTensionServiceCustomController.clear();
+    _customSaisirFields.remove('celluleTensionService');
+    _customSaisirFields.remove('celluleTensionAssignee');
     _cellulePhoto = null;
     _celluleObservations = [];
     _cellulePhotos = [];
@@ -2582,6 +2587,8 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
     _transfoAnneeController.clear();
     _transfoPuissanceController.clear();
     _transfoTensionController.clear();
+    _customSaisirFields.remove('transfoPuissanceAssignee');
+    _customSaisirFields.remove('transfoTension');
     _transfoBuchholzController.text = '';
     _transfoTypeImmersionController.text = '';
     _transfoDgpt2Controller.text = '';
@@ -2625,6 +2632,20 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
     _celluleNatureReseau = cellule.natureReseau;
     _cellulePresenceIacm = cellule.presenceIacm;
     _celluleTensionService = cellule.tensionService;
+    _celluleTensionServiceCustomController.text = cellule.tensionService ?? '';
+    if (cellule.tensionService != null &&
+        cellule.tensionService!.isNotEmpty &&
+        !InstallationFieldsRegistry.tensionDeServiceOptions.contains(cellule.tensionService)) {
+      _customSaisirFields.add('celluleTensionService');
+    } else {
+      _customSaisirFields.remove('celluleTensionService');
+    }
+    if (cellule.tensionAssignee.isNotEmpty &&
+        !InstallationFieldsRegistry.tensionAssigneeOptions.contains(cellule.tensionAssignee)) {
+      _customSaisirFields.add('celluleTensionAssignee');
+    } else {
+      _customSaisirFields.remove('celluleTensionAssignee');
+    }
     _cellulePhoto = cellule.photo;
     _celluleObservations = List.from(cellule.observations ?? []);
     _cellulePhotos = List.from(cellule.photos);
@@ -2649,6 +2670,18 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
     _transfoAnneeController.text = transfo.effectiveAnneeFabrication;
     _transfoPuissanceController.text = transfo.puissanceAssignee;
     _transfoTensionController.text = transfo.tensionPrimaireSecondaire;
+    if (transfo.puissanceAssignee.isNotEmpty &&
+        !InstallationFieldsRegistry.puissanceTransformateurOptions.contains(transfo.puissanceAssignee)) {
+      _customSaisirFields.add('transfoPuissanceAssignee');
+    } else {
+      _customSaisirFields.remove('transfoPuissanceAssignee');
+    }
+    if (transfo.tensionPrimaireSecondaire.isNotEmpty &&
+        !InstallationFieldsRegistry.tensionPrimaireSecondaireOptions.contains(transfo.tensionPrimaireSecondaire)) {
+      _customSaisirFields.add('transfoTension');
+    } else {
+      _customSaisirFields.remove('transfoTension');
+    }
     _transfoBuchholzController.text = transfo.relaisBuchholz;
     _transfoTypeImmersionController.text = transfo.typeImmersion ?? '';
     _transfoDgpt2Controller.text = transfo.presenceDGPT2 ?? '';
@@ -3627,23 +3660,32 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
           ),
           
           SizedBox(height: isSmallScreen ? 12 : 16),
-          _buildDropdownVal(
-            _celluleTensionService,
-            'Tension de service',
-            InstallationFieldsRegistry.tensionDeServiceOptions,
-            isSmallScreen,
-            (value) => setState(() => _celluleTensionService = value),
+          _buildSelectOrCustomInput(
+            fieldKey: 'celluleTensionService',
+            label: 'Tension de service',
+            standardOptions: InstallationFieldsRegistry.tensionDeServiceOptions,
+            currentValue: _celluleTensionService,
+            customController: _celluleTensionServiceCustomController,
+            isSmallScreen: isSmallScreen,
+            onValueChanged: (val) => setState(() => _celluleTensionService = val),
+            suffixText: 'kV',
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*[\.\,]?\d*'))],
             optional: true,
           ),
           SizedBox(height: isSmallScreen ? 12 : 16),
-          _buildTextField(
-            _celluleTensionController,
-            'Tension assignée',
-            isSmallScreen,
-            optional: true,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+          _buildSelectOrCustomInput(
+            fieldKey: 'celluleTensionAssignee',
+            label: 'Tension assignée',
+            standardOptions: InstallationFieldsRegistry.tensionAssigneeOptions,
+            currentValue: _celluleTensionController.text,
+            customController: _celluleTensionController,
+            isSmallScreen: isSmallScreen,
+            onValueChanged: (val) => setState(() => _celluleTensionController.text = val ?? ''),
             suffixText: 'kV',
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*[\.\,]?\d*'))],
+            optional: true,
           ),
           SizedBox(height: isSmallScreen ? 12 : 16),
           _buildTextField(
@@ -4304,17 +4346,22 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
           SizedBox(height: isSmallScreen ? 12 : 16),
 
           // 3. Puissance assignée (kVA)
-          _buildDropdownVal(
-            _transfoPuissanceController.text.isNotEmpty ? _transfoPuissanceController.text : null,
-            'Puissance Transformateur (kVA)',
-            InstallationFieldsRegistry.puissanceTransformateurOptions,
-            isSmallScreen,
-            (value) {
+          _buildSelectOrCustomInput(
+            fieldKey: 'transfoPuissanceAssignee',
+            label: 'Puissance Transformateur',
+            standardOptions: InstallationFieldsRegistry.puissanceTransformateurOptions,
+            currentValue: _transfoPuissanceController.text,
+            customController: _transfoPuissanceController,
+            isSmallScreen: isSmallScreen,
+            onValueChanged: (val) {
               setState(() {
-                _transfoPuissanceController.text = value ?? '';
+                _transfoPuissanceController.text = val ?? '';
                 recalculateIk3Max();
               });
             },
+            suffixText: 'kVA',
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*[\.\,]?\d*'))],
             optional: true,
           ),
           SizedBox(height: isSmallScreen ? 12 : 16),
@@ -4332,14 +4379,21 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
           SizedBox(height: isSmallScreen ? 12 : 16),
 
           // 5. Tension primaire / secondaire
-          _buildTextField(
-            _transfoTensionController,
-            'Tension MT / BT',
-            isSmallScreen,
-            optional: true,
+          _buildSelectOrCustomInput(
+            fieldKey: 'transfoTension',
+            label: 'Tension MT / BT',
+            standardOptions: InstallationFieldsRegistry.tensionPrimaireSecondaireOptions,
+            currentValue: _transfoTensionController.text,
+            customController: _transfoTensionController,
+            isSmallScreen: isSmallScreen,
+            onValueChanged: (val) {
+              setState(() {
+                _transfoTensionController.text = val ?? '';
+              });
+            },
             keyboardType: TextInputType.text,
             inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9/*.,\s\-\+kKvV]'))],
-            suffixText: 'V',
+            optional: true,
           ),
           SizedBox(height: isSmallScreen ? 12 : 16),
 
@@ -4789,12 +4843,14 @@ Widget _buildPrioriteButton({
     TextInputType? keyboardType,
     List<TextInputFormatter>? inputFormatters,
     String? suffixText,
+    void Function(String)? onChanged,
   }) {
     final labelText = optional ? label : '$label *';
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
       inputFormatters: inputFormatters,
+      onChanged: onChanged,
       style: TextStyle(fontSize: isSmallScreen ? 13 : 14),
       decoration: InputDecoration(
         labelText: labelText,
@@ -4805,6 +4861,119 @@ Widget _buildPrioriteButton({
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10)),
         contentPadding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 12 : 16, vertical: isSmallScreen ? 12 : 14),
       ),
+    );
+  }
+
+  Widget _buildSelectOrCustomInput({
+    required String fieldKey,
+    required String label,
+    required List<String> standardOptions,
+    required String? currentValue,
+    required TextEditingController customController,
+    required bool isSmallScreen,
+    required void Function(String?) onValueChanged,
+    String? suffixText,
+    TextInputType keyboardType = TextInputType.text,
+    List<TextInputFormatter>? inputFormatters,
+    bool optional = true,
+  }) {
+    final cleanVal = currentValue?.trim() ?? '';
+    final isKnownStandard = cleanVal.isNotEmpty && standardOptions.contains(cleanVal);
+    final isCustom = _customSaisirFields.contains(fieldKey) || (cleanVal.isNotEmpty && !isKnownStandard);
+
+    final dropdownValue = isCustom
+        ? 'Saisir'
+        : (isKnownStandard ? cleanVal : '');
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        DropdownButtonFormField<String>(
+          value: dropdownValue,
+          isExpanded: true,
+          decoration: InputDecoration(
+            labelText: optional ? label : '$label *',
+            labelStyle: TextStyle(fontSize: isSmallScreen ? 12 : 13, color: Colors.grey.shade600),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10)),
+            contentPadding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 12 : 16, vertical: isSmallScreen ? 12 : 14),
+          ),
+          items: [
+            DropdownMenuItem<String>(
+              value: '',
+              child: Text(
+                '— Non renseigné —',
+                style: TextStyle(
+                  fontSize: isSmallScreen ? 13 : 14,
+                  color: Colors.grey.shade500,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
+            ...standardOptions.map(
+              (opt) => DropdownMenuItem<String>(
+                value: opt,
+                child: Text(
+                  (suffixText != null && !opt.contains(suffixText)) ? '$opt $suffixText' : opt,
+                  style: TextStyle(fontSize: isSmallScreen ? 13 : 14),
+                ),
+              ),
+            ),
+            DropdownMenuItem<String>(
+              value: 'Saisir',
+              child: Row(
+                children: [
+                  const Icon(Icons.edit_outlined, size: 16, color: AppTheme.primaryBlue),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Saisir...',
+                    style: TextStyle(
+                      fontSize: isSmallScreen ? 13 : 14,
+                      color: AppTheme.primaryBlue,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          onChanged: (val) {
+            if (val == 'Saisir') {
+              setState(() {
+                _customSaisirFields.add(fieldKey);
+                if (isKnownStandard) {
+                  customController.text = '';
+                  onValueChanged('');
+                }
+              });
+            } else if (val != null && val.isNotEmpty) {
+              setState(() {
+                _customSaisirFields.remove(fieldKey);
+                customController.text = val;
+                onValueChanged(val);
+              });
+            } else {
+              setState(() {
+                _customSaisirFields.remove(fieldKey);
+                customController.text = '';
+                onValueChanged(null);
+              });
+            }
+          },
+        ),
+        if (isCustom) ...[
+          SizedBox(height: isSmallScreen ? 8 : 10),
+          _buildTextField(
+            customController,
+            '$label (saisie libre)',
+            isSmallScreen,
+            optional: optional,
+            keyboardType: keyboardType,
+            inputFormatters: inputFormatters,
+            suffixText: suffixText,
+            onChanged: (text) => onValueChanged(text.trim()),
+          ),
+        ],
+      ],
     );
   }
   
@@ -4967,6 +5136,7 @@ Widget _buildPrioriteButton({
     _celluleModeleController.dispose();
     _celluleAnneeController.dispose();
     _celluleTensionController.dispose();
+    _celluleTensionServiceCustomController.dispose();
     _cellulePouvoirController.dispose();
     _celluleNumerotationController.dispose();
     _celluleParafoudresController.dispose();

@@ -557,13 +557,7 @@ class PdfDescriptionBuilder {
               ...finalOrder.map((key) {
                 final raw = _resolveInstallationValue(e.value, key, sectionKey);
                 final unit = _unitForField(key);
-                final display =
-                    (raw != '-' &&
-                        raw.isNotEmpty &&
-                        unit.isNotEmpty &&
-                        !raw.toLowerCase().contains(unit.toLowerCase()))
-                    ? '$raw $unit'
-                    : raw;
+                final display = PdfReportStyles.stripUnitFromValue(raw, unit);
                 return PdfReportStyles.cell(display, isHeader: false, centered: true);
               }),
             ],
@@ -791,12 +785,7 @@ class PdfDescriptionBuilder {
                 ...finalOrder.map((key) {
                   final raw = row.getValueForColumn(key, sectionKey);
                   final unit = _unitForField(key);
-                  final display = (raw != '-' &&
-                          raw.isNotEmpty &&
-                          unit.isNotEmpty &&
-                          !raw.toLowerCase().contains(unit.toLowerCase()))
-                      ? '$raw $unit'
-                      : raw;
+                  final display = PdfReportStyles.stripUnitFromValue(raw, unit);
                   return pw.Container(
                     decoration: pw.BoxDecoration(
                       color: rowBg,
@@ -938,7 +927,7 @@ class PdfDescriptionBuilder {
     final natureReseau = safeVal(desc.natureReseauAlimentationSite);
     final tensionRaw = desc.tensionAlimentationSite?.trim();
     final tension = (tensionRaw != null && tensionRaw.isNotEmpty)
-        ? (tensionRaw.toLowerCase().contains('kv') ? tensionRaw : '$tensionRaw kV')
+        ? PdfReportStyles.stripUnitFromValue(tensionRaw, 'kV')
         : '-';
     final nombre = safeVal(desc.nombreAlimentationSite);
     final presenceIacm = safeVal(desc.presenceIacmAlimentationSite);
@@ -946,7 +935,7 @@ class PdfDescriptionBuilder {
     final headers = [
       'N°',
       'Nature du réseau',
-      'Tension d\'alimentation',
+      'Tension d\'alimentation (kV)',
       'Nombre d\'alimentation',
       'Présence de l\'IACM',
     ];

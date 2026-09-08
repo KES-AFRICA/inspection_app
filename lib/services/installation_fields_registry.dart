@@ -122,6 +122,33 @@ class InstallationFieldsRegistry {
   ];
   static const List<String> puissanceUccOptions = ['4 %', '6 %', '8 %'];
   static const List<String> tensionDeServiceOptions = ['15', '20', '30', '33'];
+  static const List<String> tensionAssigneeOptions = ['7.2', '12', '17.5', '24', '36'];
+  static const List<String> tensionPrimaireSecondaireOptions = [
+    '15 kV / 400 V',
+    '20 kV / 400 V',
+    '30 kV / 400 V',
+    '33 kV / 400 V',
+  ];
+  static const List<String> tensionAlimentationSiteOptions = [
+    'Aucun',
+    '15',
+    '20',
+    '30',
+    '33',
+  ];
+  static const List<String> naturePriseTerreOptions = [
+    'Piquet de terre',
+    'Fond de fouille interconnecté',
+    'Prise de terre paratonnerre',
+    'Autre',
+  ];
+  static const List<String> methodeMesureTerreOptions = [
+    'Méthode des 62 %',
+    'Méthode des trois piquets en triangle',
+    'Méthode par mesure de boucle de défaut',
+    'Méthode des deux pinces',
+    'Méthode des quatre piquets (Wenner)',
+  ];
 
   // Map des unités par clé canonique
   static const Map<String, String> numericFieldsWithUnit = {

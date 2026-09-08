@@ -46,6 +46,20 @@ class PdfAuditInstallationsBuilder {
     return fontRegular;
   }
 
+  static ({String du, String deCe}) _getEquipmentGrammar(String? type) {
+    final t = (type ?? '').trim().toUpperCase();
+    if (t == 'TGBT') {
+      return (du: 'DU TGBT', deCe: 'DE CE TGBT');
+    } else if (t == 'ARMOIRE') {
+      return (du: "DE L'ARMOIRE", deCe: 'DE CETTE ARMOIRE');
+    } else if (t == 'COFFRET') {
+      return (du: 'DU COFFRET', deCe: 'DE CE COFFRET');
+    } else if (t == 'INVERSEUR') {
+      return (du: "DE L'INVERSEUR", deCe: "DE L'INVERSEUR");
+    }
+    return (du: "DE L'ÉQUIPEMENT", deCe: "DE CET ÉQUIPEMENT");
+  }
+
   static pw.Widget _resultBox(String text) {
     final lower = text.toLowerCase();
     final isOk = lower.contains('satisfaisant') && !lower.contains('non');
@@ -1762,27 +1776,27 @@ class PdfAuditInstallationsBuilder {
         ),
         tableDataRowInfo(
           'Tension service (kV)',
-          safe(cellule.tensionService ?? ''),
+          safe(PdfReportStyles.stripUnitFromValue(cellule.tensionService, 'kV')),
           alt: false,
         ),
         tableDataRowInfo(
           'Tension assignée (kV)',
-          safe(cellule.tensionAssignee),
+          safe(PdfReportStyles.stripUnitFromValue(cellule.tensionAssignee, 'kV')),
           alt: false,
         ),
         tableDataRowInfo(
           'Pouvoir de coupure assigné (kA)',
-          safe(cellule.pouvoirCoupure),
+          safe(PdfReportStyles.stripUnitFromValue(cellule.pouvoirCoupure, 'kA')),
           alt: false,
         ),
         tableDataRowInfo(
           'Intensité (A)',
-          safe(cellule.calibreDisjoncteur ?? ''),
+          safe(PdfReportStyles.stripUnitFromValue(cellule.calibreDisjoncteur, 'A')),
           alt: false,
         ),
         tableDataRowInfo(
           'Section des câbles (mm²)',
-          safe(cellule.sectionCables ?? ''),
+          safe(PdfReportStyles.stripUnitFromValue(cellule.sectionCables, 'mm²')),
           alt: false,
         ),
         tableDataRowInfo(
@@ -2286,7 +2300,7 @@ class PdfAuditInstallationsBuilder {
         ),
         tableDataRowInfo(
           'Puissance assignée (kVA)',
-          safe(transfo.puissanceAssignee),
+          safe(PdfReportStyles.stripUnitFromValue(transfo.puissanceAssignee, 'kVA')),
           alt: false,
         ),
         tableDataRowInfo(
@@ -2296,17 +2310,17 @@ class PdfAuditInstallationsBuilder {
         ),
         tableDataRowInfo(
           'Intensité nominale (A)',
-          safe(transfo.intensiteNominale ?? ''),
+          safe(PdfReportStyles.stripUnitFromValue(transfo.intensiteNominale, 'A')),
           alt: false,
         ),
         tableDataRowInfo(
           'Calibre du disjoncteur sortie transformateur (A)',
-          safe(transfo.calibreDisjoncteur ?? ''),
+          safe(PdfReportStyles.stripUnitFromValue(transfo.calibreDisjoncteur, 'A')),
           alt: false,
         ),
         tableDataRowInfo(
           'Section des câbles (mm²)',
-          safe(transfo.sectionCables ?? ''),
+          safe(PdfReportStyles.stripUnitFromValue(transfo.sectionCables, 'mm²')),
           alt: false,
         ),
         tableDataRowInfo('Couplage', safe(transfo.couplage ?? ''), alt: false),
@@ -2317,7 +2331,7 @@ class PdfAuditInstallationsBuilder {
         ),
         tableDataRowInfo(
           'PCC amont (MVA)',
-          safe(transfo.pccAmont ?? ''),
+          safe(PdfReportStyles.stripUnitFromValue(transfo.pccAmont, 'MVA')),
           alt: false,
         ),
         tableDataRowInfo(
@@ -2327,7 +2341,7 @@ class PdfAuditInstallationsBuilder {
         ),
         tableDataRowInfo(
           'IK3 MAX (kA)',
-          safe(transfo.ik3Max ?? ''),
+          safe(PdfReportStyles.stripUnitFromValue(transfo.ik3Max, 'kA')),
           alt: false,
         ),
         if (transfo.typeImmersion == InstallationFieldsRegistry.immersionConservateur)
@@ -3186,27 +3200,26 @@ class PdfAuditInstallationsBuilder {
     // ══════════════════════════════════════════════════════════════════════
     if (coffret.alimentations.isNotEmpty || coffret.protectionTete != null || !coffret.isDepartPrisAvecProtection) {
       widgets.add(pw.SizedBox(height: 3));
-      if (coffret.type != 'INVERSEUR') {
-        widgets.add(
-          pw.Container(
-            width: double.infinity,
-            alignment: pw.Alignment.center,
-            padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-            decoration: pw.BoxDecoration(
-              color: PdfReportStyles.accentColor,
-            ),
-            child: pw.Text(
-              'IDENTIFICATION DE LA SOURCE D\'ALIMENTATION ET DU DISPOSITIF DE TETE DU TGBT/ARMOIRE/COFFRET',
-              textAlign: pw.TextAlign.center,
-              style: pw.TextStyle(
-                font: fontBold,
-                fontSize: PdfReportStyles.fsSmall,
-                color: PdfColors.white,
-              ),
+      final grammar = _getEquipmentGrammar(coffret.type);
+      widgets.add(
+        pw.Container(
+          width: double.infinity,
+          alignment: pw.Alignment.center,
+          padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+          decoration: pw.BoxDecoration(
+            color: PdfReportStyles.accentColor,
+          ),
+          child: pw.Text(
+            'IDENTIFICATION DE LA SOURCE D\'ALIMENTATION ET DU DISPOSITIF DE TETE ${grammar.du}',
+            textAlign: pw.TextAlign.center,
+            style: pw.TextStyle(
+              font: fontBold,
+              fontSize: PdfReportStyles.fsSmall,
+              color: PdfColors.white,
             ),
           ),
-        );
-      }
+        ),
+      );
       final List<pw.Widget> tables = <pw.Widget>[];
 
       if (coffret.alimentations.isNotEmpty) {
@@ -3230,8 +3243,8 @@ class PdfAuditInstallationsBuilder {
                   _thCell('Icc3 max (kA)'),
                   _thCell('Calibre (A)'),
                   _thCell('DDR (I\u0394n(mA))'),
-                  _thCell('Section de câble phase'),
-                  _thCell('Section de câble neutre'),
+                  _thCell('Section de câble phase (mm²)'),
+                  _thCell('Section de câble neutre (mm²)'),
                 ],
               ),
             );
@@ -3250,10 +3263,10 @@ class PdfAuditInstallationsBuilder {
                     _valueCell(a.courbe != null && a.courbe!.isNotEmpty ? a.courbe! : '-'),
                     _valueCell(a.pdcKA.isNotEmpty ? a.pdcKA : '-'),
                     _valueCell(a.icc3Max != null && a.icc3Max!.isNotEmpty ? a.icc3Max! : '-'),
-                    _valueCell(a.calibre.isNotEmpty ? a.calibre : '-'),
-                    _valueCell(a.ddr != null && a.ddr!.isNotEmpty ? (a.ddr!.contains('mA') ? a.ddr! : '${a.ddr!} mA') : '-'),
-                    _valueCell(a.sectionCablePhase.isNotEmpty ? a.sectionCablePhase : '-'),
-                    _valueCell(a.effectiveSectionCableNeutre.isNotEmpty ? a.effectiveSectionCableNeutre : '-'),
+                    _valueCell(PdfReportStyles.stripUnitFromValue(a.calibre, 'A')),
+                    _valueCell(PdfReportStyles.stripUnitFromValue(a.ddr, 'mA')),
+                    _valueCell(PdfReportStyles.stripUnitFromValue(a.sectionCablePhase, 'mm²')),
+                    _valueCell(PdfReportStyles.stripUnitFromValue(a.effectiveSectionCableNeutre, 'mm²')),
                   ],
                 ),
               );
@@ -3309,8 +3322,8 @@ class PdfAuditInstallationsBuilder {
                   _thCell('Icc3 max (kA)'),
                   _thCell('Calibre (A)'),
                   _thCell('DDR (I\u0394n(mA))'),
-                  _thCell('Section de câble phase'),
-                  _thCell('Section de câble neutre'),
+                  _thCell('Section de câble phase (mm²)'),
+                  _thCell('Section de câble neutre (mm²)'),
                 ],
               ),
             );
@@ -3329,10 +3342,10 @@ class PdfAuditInstallationsBuilder {
                     _valueCell(s.courbe != null && s.courbe!.isNotEmpty ? s.courbe! : '-'),
                     _valueCell(s.pdcKA.isNotEmpty ? s.pdcKA : '-'),
                     _valueCell(s.icc3Max != null && s.icc3Max!.isNotEmpty ? s.icc3Max! : '-'),
-                    _valueCell(s.calibre.isNotEmpty ? s.calibre : '-'),
-                    _valueCell(s.ddr != null && s.ddr!.isNotEmpty ? (s.ddr!.contains('mA') ? s.ddr! : '${s.ddr!} mA') : '-'),
-                    _valueCell(s.sectionCablePhase.isNotEmpty ? s.sectionCablePhase : '-'),
-                    _valueCell(s.effectiveSectionCableNeutre.isNotEmpty ? s.effectiveSectionCableNeutre : '-'),
+                    _valueCell(PdfReportStyles.stripUnitFromValue(s.calibre, 'A')),
+                    _valueCell(PdfReportStyles.stripUnitFromValue(s.ddr, 'mA')),
+                    _valueCell(PdfReportStyles.stripUnitFromValue(s.sectionCablePhase, 'mm²')),
+                    _valueCell(PdfReportStyles.stripUnitFromValue(s.effectiveSectionCableNeutre, 'mm²')),
                   ],
                 ),
               );
@@ -3379,8 +3392,8 @@ class PdfAuditInstallationsBuilder {
                 _thCell('Icc3 max (kA)'),
                 _thCell('Calibre (A)'),
                 _thCell('DDR (I\u0394n(mA))'),
-                _thCell('Section de câble phase'),
-                _thCell('Section de câble neutre'),
+                _thCell('Section de câble phase (mm²)'),
+                _thCell('Section de câble neutre (mm²)'),
               ],
             ),
           );
@@ -3400,10 +3413,10 @@ class PdfAuditInstallationsBuilder {
                   _valueCell(a.courbe != null && a.courbe!.isNotEmpty ? a.courbe! : '-'),
                   _valueCell(a.pdcKA.isNotEmpty ? a.pdcKA : '-'),
                   _valueCell(a.icc3Max != null && a.icc3Max!.isNotEmpty ? a.icc3Max! : '-'),
-                  _valueCell(a.calibre.isNotEmpty ? a.calibre : '-'),
-                  _valueCell(a.ddr != null && a.ddr!.isNotEmpty ? (a.ddr!.contains('mA') ? a.ddr! : '${a.ddr!} mA') : '-'),
-                  _valueCell(a.sectionCablePhase.isNotEmpty ? a.sectionCablePhase : '-'),
-                  _valueCell(a.effectiveSectionCableNeutre.isNotEmpty ? a.effectiveSectionCableNeutre : '-'),
+                  _valueCell(PdfReportStyles.stripUnitFromValue(a.calibre, 'A')),
+                  _valueCell(PdfReportStyles.stripUnitFromValue(a.ddr, 'mA')),
+                  _valueCell(PdfReportStyles.stripUnitFromValue(a.sectionCablePhase, 'mm²')),
+                  _valueCell(PdfReportStyles.stripUnitFromValue(a.effectiveSectionCableNeutre, 'mm²')),
                 ],
               ),
             );
@@ -3475,10 +3488,10 @@ class PdfAuditInstallationsBuilder {
                 _thCell('Courbe'),
                 _thCell('PDC kA'),
                 _thCell('Icc3 max (kA)'),
-                _thCell('Calibre'),
+                _thCell('Calibre (A)'),
                 _thCell('DDR (I\u0394n(mA))'),
-                _thCell('Section de câble phase'),
-                _thCell('Section de câble neutre'),
+                _thCell('Section de câble phase (mm²)'),
+                _thCell('Section de câble neutre (mm²)'),
               ],
             ),
             pw.TableRow(
@@ -3488,10 +3501,10 @@ class PdfAuditInstallationsBuilder {
                 _valueCell(isAvecProtection ? ((pt.courbe != null && pt.courbe!.isNotEmpty) ? pt.courbe! : '-') : '-'),
                 _valueCell(isAvecProtection ? (pt.pdcKA.isNotEmpty ? pt.pdcKA : '-') : '-'),
                 _valueCell(isAvecProtection ? ((pt.icc3Max != null && pt.icc3Max!.isNotEmpty) ? pt.icc3Max! : '-') : '-'),
-                _valueCell(isAvecProtection ? (pt.calibre.isNotEmpty ? pt.calibre : '-') : '-'),
-                _valueCell(isAvecProtection ? ((pt.ddr != null && pt.ddr!.isNotEmpty) ? (pt.ddr!.contains('mA') ? pt.ddr! : '${pt.ddr!} mA') : '-') : '-'),
-                _valueCell(pt.sectionCablePhase.isNotEmpty ? pt.sectionCablePhase : '-'),
-                _valueCell(pt.effectiveSectionCableNeutre.isNotEmpty ? pt.effectiveSectionCableNeutre : '-'),
+                _valueCell(isAvecProtection ? PdfReportStyles.stripUnitFromValue(pt.calibre, 'A') : '-'),
+                _valueCell(isAvecProtection ? PdfReportStyles.stripUnitFromValue(pt.ddr, 'mA') : '-'),
+                _valueCell(PdfReportStyles.stripUnitFromValue(pt.sectionCablePhase, 'mm²')),
+                _valueCell(PdfReportStyles.stripUnitFromValue(pt.effectiveSectionCableNeutre, 'mm²')),
               ],
             ),
           ],
@@ -3511,6 +3524,7 @@ class PdfAuditInstallationsBuilder {
     // ══════════════════════════════════════════════════════════════════════
     if (coffret.type != 'INVERSEUR' && coffret.effectiveDepartures.isNotEmpty) {
       widgets.add(pw.SizedBox(height: 4));
+      final grammar = _getEquipmentGrammar(coffret.type);
       widgets.add(
         pw.Container(
           width: double.infinity,
@@ -3520,7 +3534,7 @@ class PdfAuditInstallationsBuilder {
             color: PdfReportStyles.accentColor,
           ),
           child: pw.Text(
-            'IDENTIFICATION DES DÉPARTS ISSUS DE CE TGBT/ARMOIRE/COFFRET',
+            'IDENTIFICATION DES DÉPARTS ISSUS ${grammar.deCe}',
             textAlign: pw.TextAlign.center,
             style: pw.TextStyle(
               font: fontBold,
@@ -3543,10 +3557,10 @@ class PdfAuditInstallationsBuilder {
             _thCell('Courbe'),
             _thCell('PDC kA'),
             _thCell('Icc3 max (kA)'),
-            _thCell('Calibre'),
+            _thCell('Calibre (A)'),
             _thCell('DDR (I\u0394n (mA))'),
-            _thCell('Section de câble phase'),
-            _thCell('Section de câble neutre'),
+            _thCell('Section de câble phase (mm²)'),
+            _thCell('Section de câble neutre (mm²)'),
           ],
         ),
       );
@@ -3560,10 +3574,10 @@ class PdfAuditInstallationsBuilder {
               _valueCell(dep.courbe.isNotEmpty ? dep.courbe : '-'),
               _valueCell(dep.pdcKA.isNotEmpty ? dep.pdcKA : '-'),
               _valueCell(dep.icc3Max.isNotEmpty ? dep.icc3Max : '-'),
-              _valueCell(dep.calibre.isNotEmpty ? dep.calibre : '-'),
-              _valueCell(dep.ddr.isNotEmpty ? (dep.ddr.contains('mA') ? dep.ddr : '${dep.ddr} mA') : '-'),
-              _valueCell(dep.sectionCablePhase.isNotEmpty ? dep.sectionCablePhase : '-'),
-              _valueCell(dep.effectiveSectionCableNeutre.isNotEmpty ? dep.effectiveSectionCableNeutre : '-'),
+              _valueCell(PdfReportStyles.stripUnitFromValue(dep.calibre, 'A')),
+              _valueCell(PdfReportStyles.stripUnitFromValue(dep.ddr, 'mA')),
+              _valueCell(PdfReportStyles.stripUnitFromValue(dep.sectionCablePhase, 'mm²')),
+              _valueCell(PdfReportStyles.stripUnitFromValue(dep.effectiveSectionCableNeutre, 'mm²')),
             ],
           ),
         );
@@ -3601,6 +3615,7 @@ class PdfAuditInstallationsBuilder {
     // ══════════════════════════════════════════════════════════════════════
     if (coffret.type != 'INVERSEUR' && coffret.effectiveTerminalCircuits.isNotEmpty) {
       widgets.add(pw.SizedBox(height: 4));
+      final grammar = _getEquipmentGrammar(coffret.type);
       widgets.add(
         pw.Container(
           width: double.infinity,
@@ -3610,7 +3625,7 @@ class PdfAuditInstallationsBuilder {
             color: PdfReportStyles.accentColor,
           ),
           child: pw.Text(
-            'IDENTIFICATION DES CIRCUITS TERMINAUX ISSUS DE CE TGBT/ARMOIRE/COFFRET',
+            'IDENTIFICATION DES CIRCUITS TERMINAUX ISSUS ${grammar.deCe}',
             textAlign: pw.TextAlign.center,
             style: pw.TextStyle(
               font: fontBold,
@@ -3633,10 +3648,10 @@ class PdfAuditInstallationsBuilder {
             _thCell('Courbe'),
             _thCell('PDC kA'),
             _thCell('Icc3 max (kA)'),
-            _thCell('Calibre'),
+            _thCell('Calibre (A)'),
             _thCell('DDR (I\u0394n (mA))'),
-            _thCell('Section de câble phase'),
-            _thCell('Section de câble neutre'),
+            _thCell('Section de câble phase (mm²)'),
+            _thCell('Section de câble neutre (mm²)'),
           ],
         ),
       );
@@ -3650,10 +3665,10 @@ class PdfAuditInstallationsBuilder {
               _valueCell(ct.courbe.isNotEmpty ? ct.courbe : '-'),
               _valueCell(ct.pdcKA.isNotEmpty ? ct.pdcKA : '-'),
               _valueCell(ct.icc3Max.isNotEmpty ? ct.icc3Max : '-'),
-              _valueCell(ct.calibre.isNotEmpty ? ct.calibre : '-'),
-              _valueCell(ct.ddr.isNotEmpty ? (ct.ddr.contains('mA') ? ct.ddr : '${ct.ddr} mA') : '-'),
-              _valueCell(ct.sectionCablePhase.isNotEmpty ? ct.sectionCablePhase : '-'),
-              _valueCell(ct.effectiveSectionCableNeutre.isNotEmpty ? ct.effectiveSectionCableNeutre : '-'),
+              _valueCell(PdfReportStyles.stripUnitFromValue(ct.calibre, 'A')),
+              _valueCell(PdfReportStyles.stripUnitFromValue(ct.ddr, 'mA')),
+              _valueCell(PdfReportStyles.stripUnitFromValue(ct.sectionCablePhase, 'mm²')),
+              _valueCell(PdfReportStyles.stripUnitFromValue(ct.effectiveSectionCableNeutre, 'mm²')),
             ],
           ),
         );
@@ -3707,27 +3722,26 @@ class PdfAuditInstallationsBuilder {
         parentName: parentName,
       );
       widgets.add(pw.SizedBox(height: 3));
-      if (coffret.type != 'INVERSEUR') {
-        widgets.add(
-          pw.Container(
-            width: double.infinity,
-            alignment: pw.Alignment.center,
-            padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-            decoration: pw.BoxDecoration(
-              color: PdfReportStyles.accentColor,
-            ),
-            child: pw.Text(
-              'VERIFICATION DE CONFORMITE DU TGBT/ARMOIRE/COFFRET',
-              textAlign: pw.TextAlign.center,
-              style: pw.TextStyle(
-                font: fontBold,
-                fontSize: PdfReportStyles.fsSmall,
-                color: PdfColors.white,
-              ),
+      final grammar = _getEquipmentGrammar(coffret.type);
+      widgets.add(
+        pw.Container(
+          width: double.infinity,
+          alignment: pw.Alignment.center,
+          padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+          decoration: pw.BoxDecoration(
+            color: PdfReportStyles.accentColor,
+          ),
+          child: pw.Text(
+            'VERIFICATION DE CONFORMITE ${grammar.du}',
+            textAlign: pw.TextAlign.center,
+            style: pw.TextStyle(
+              font: fontBold,
+              fontSize: PdfReportStyles.fsSmall,
+              color: PdfColors.white,
             ),
           ),
-        );
-      }
+        ),
+      );
       widgets.add(
         _buildPointsVerificationTable(
           coffret.pointsVerification,

@@ -773,23 +773,23 @@ class PdfReportStyles {
     'MT': [
       'TYPE DE CELLULE',
       'TENSION DE SERVICE (kV)',
-      'TENSION ASSIGNEE(KV)',
-      'POUVOIR DE COUPURE ASSIGNE(KA)',
-      'SECTION DU CABLE(mm2)',
-      'NATURE DU RESEAU',
+      'TENSION ASSIGNÉE (kV)',
+      'POUVOIR DE COUPURE ASSIGNÉ (kA)',
+      'SECTION DU CÂBLE (mm²)',
+      'NATURE DU RÉSEAU',
     ],
     'BT': [
-      'PUISSANCE TRANSFORMATEUR(KVA)',
+      'PUISSANCE TRANSFORMATEUR (kVA)',
       'TYPE DE TRANSFORMATEUR',
       'INTENSITE NOMINALE (A)',
-      'CALIBRE DU DISJONCTEUR SORTIE TRANSFORMATEUR(A)',
-      'SECTION DU CABLE(mm2)',
-      'TENSION MT/BT(KV)',
+      'CALIBRE DU DISJONCTEUR SORTIE TRANSFORMATEUR (A)',
+      'SECTION DU CÂBLE (mm²)',
+      'TENSION MT/BT (KV/V)',
       'COUPLAGE',
       'REGIME DE NEUTRE',
-      'PCC AMONT(MVA)',
-      'UCC EN(%)',
-      'IK3 MAX(KA)',
+      'PCC AMONT (MVA)',
+      'UCC (%)',
+      'IK3 MAX (kA)',
     ],
     'GROUPE': [
       'N°',
@@ -901,6 +901,46 @@ class PdfReportStyles {
       alignment: alignment,
       child: textWidget,
     );
+  }
+
+  /// Nettoie une valeur de cellule en retirant l'unité de mesure résiduelle
+  /// pour respecter la règle : l'unité figure dans le titre de colonne uniquement.
+  static String stripUnitFromValue(String? raw, [String? expectedUnit]) {
+    if (raw == null) return '-';
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty || trimmed == '-') return '-';
+
+    // Si c'est un texte long ou une observation, ne pas altérer
+    if (trimmed.length > 40 && !trimmed.contains(RegExp(r'^\d'))) {
+      return trimmed;
+    }
+
+    String result = trimmed;
+    if (expectedUnit != null && expectedUnit.trim().isNotEmpty) {
+      final unitClean = expectedUnit.trim();
+      final regex = RegExp(r'\s*' + RegExp.escape(unitClean) + r'\b', caseSensitive: false);
+      result = result.replaceAll(regex, '').trim();
+    }
+
+    // Traitement spécifique des fractions de tension : ex: "20 kV / 400 V" -> "20 / 400"
+    if (result.contains(RegExp(r'\d+\s*k?V\s*/\s*\d+\s*k?V', caseSensitive: false))) {
+      result = result.replaceAll(RegExp(r'\s*k?V\b', caseSensitive: false), '').trim();
+    }
+
+    // Nettoyage générique des unités courantes si la chaîne se termine par une unité
+    final genericUnitsRegex = RegExp(
+      r'^(.*?)\s*(?:k?V|kVA|mm²|mm2|kA|MVA|mA|A|V|L|m|%)\s*$',
+      caseSensitive: false,
+    );
+    final match = genericUnitsRegex.firstMatch(result);
+    if (match != null) {
+      final prefix = match.group(1)?.trim();
+      if (prefix != null && prefix.isNotEmpty && RegExp(r'\d').hasMatch(prefix)) {
+        result = prefix;
+      }
+    }
+
+    return result.isNotEmpty ? result : '-';
   }
 }
 

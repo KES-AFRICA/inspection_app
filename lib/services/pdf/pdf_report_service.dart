@@ -3180,6 +3180,7 @@ class PdfReportService {
         pageTheme: _buildInnerPageTheme(
           pageOffset: currentOffset,
           overrideTotalPages: overrideTotalPages,
+          pageFormat: PdfPageFormat.a4.landscape,
         ),
         build: (ctx) => _buildFoudre(
           audit,

@@ -83,6 +83,8 @@ class InstallationDescriptionSyncService {
     normalizeKey(InstallationFieldsRegistry.keyTensionPrimaireSecondaire): InstallationFieldsRegistry.keyTensionPrimaireSecondaire,
     normalizeKey('TENSION MT/BT'): InstallationFieldsRegistry.keyTensionPrimaireSecondaire,
     normalizeKey('TENSION MT/BT(KV)'): InstallationFieldsRegistry.keyTensionPrimaireSecondaire,
+    normalizeKey('TENSION MT/BT (KV/V)'): InstallationFieldsRegistry.keyTensionPrimaireSecondaire,
+    normalizeKey('TENSION MT/BT(KV/V)'): InstallationFieldsRegistry.keyTensionPrimaireSecondaire,
     normalizeKey('Tension primaire / secondaire'): InstallationFieldsRegistry.keyTensionPrimaireSecondaire,
     normalizeKey('Tension primaire/secondaire'): InstallationFieldsRegistry.keyTensionPrimaireSecondaire,
     normalizeKey(InstallationFieldsRegistry.keyCouplage): InstallationFieldsRegistry.keyCouplage,

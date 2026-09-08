@@ -5243,6 +5243,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
                       terminalCircuits: _terminalCircuits,
                       missionId: widget.mission.id,
                       currentEquipmentId: widget.coffret?.equipmentId,
+                      equipmentType: _selectedType,
                       onDataChanged: () {
                         setState(() {});
                         _scheduleAutoSave();
@@ -5665,6 +5666,7 @@ class _EtapeDepartsEtCircuits extends StatefulWidget {
   final List<CircuitTerminalEquipement> terminalCircuits;
   final String missionId;
   final String? currentEquipmentId;
+  final String? equipmentType;
   final VoidCallback onDataChanged;
 
   const _EtapeDepartsEtCircuits({
@@ -5673,6 +5675,7 @@ class _EtapeDepartsEtCircuits extends StatefulWidget {
     required this.terminalCircuits,
     required this.missionId,
     this.currentEquipmentId,
+    this.equipmentType,
     required this.onDataChanged,
   });
 
@@ -5684,6 +5687,20 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
   int _currentSubSlide = 0; // 0: Départs, 1: Circuits Terminaux
   String? _expandedDepartId;
   String? _expandedCircuitId;
+
+  String _getEquipmentGrammarDu() {
+    final t = (widget.equipmentType ?? '').trim().toUpperCase();
+    if (t == 'TGBT') {
+      return 'DU TGBT';
+    } else if (t == 'ARMOIRE') {
+      return "DE L'ARMOIRE";
+    } else if (t == 'COFFRET') {
+      return 'DU COFFRET';
+    } else if (t == 'INVERSEUR') {
+      return "DE L'INVERSEUR";
+    }
+    return "DE CET ÉQUIPEMENT";
+  }
 
   int get currentSubSlide => _currentSubSlide;
 
@@ -5986,14 +6003,14 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
               if (isDepartSubSlide)
                 _buildSectionHeader(
                   context,
-                  title: 'IDENTIFICATION DES DÉPARTS ISSUS DE CE TGBT/ARMOIRE/COFFRET',
+                  title: 'IDENTIFICATION DES DÉPARTS ISSUS ${_getEquipmentGrammarDu()}',
                   count: widget.departures.length,
                   color: Colors.blue.shade800,
                 )
               else
                 _buildSectionHeader(
                   context,
-                  title: 'IDENTIFICATION DES CIRCUITS TERMINAUX ISSUS DE CE TGBT/ARMOIRE/COFFRET',
+                  title: 'IDENTIFICATION DES CIRCUITS TERMINAUX ISSUS ${_getEquipmentGrammarDu()}',
                   count: widget.terminalCircuits.length,
                   color: Colors.teal.shade800,
                 ),

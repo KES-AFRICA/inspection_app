@@ -10,6 +10,7 @@ import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/features/mesures_essais/presentation/providers/mesures_essais_provider.dart';
 import 'package:inspec_app/services/hive_service.dart';
+import 'package:inspec_app/services/installation_fields_registry.dart';
 import 'package:inspec_app/utils/image_compress_helper.dart';
 
 class PrisesTerreScreen extends ConsumerStatefulWidget {
@@ -375,19 +376,9 @@ class _AjouterPriseTerreScreenState extends State<_AjouterPriseTerreScreen> {
 
   List<String> _localisationsOptions = [];
 
-  final List<String> _natureOptions = [
-    'Piquet de terre',
-    'Fond de fouille interconnecté',
-    'Autre',
-  ];
+  List<String> get _natureOptions => InstallationFieldsRegistry.naturePriseTerreOptions;
 
-  final List<String> _methodeOptions = [
-    'Impédance de boucle',
-    'Résistance de terre',
-    'Méthode des 62%',
-    'Méthode de chute de potentiel',
-    'Autre',
-  ];
+  List<String> get _methodeOptions => InstallationFieldsRegistry.methodeMesureTerreOptions;
 
   @override
   void initState() {

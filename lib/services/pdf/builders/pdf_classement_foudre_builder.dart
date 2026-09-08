@@ -15,6 +15,9 @@ class PdfParafoudreEquipementRow {
   final String localName;
   final String equipementName;
   final String repere;
+  final String pointVerification;
+  final String referenceNormative;
+  final String criticite;
   final String observation;
   final List<String> photoPaths;
   final String identityKey;
@@ -24,6 +27,9 @@ class PdfParafoudreEquipementRow {
     this.localName = '',
     this.equipementName = '',
     required this.repere,
+    this.pointVerification = '-',
+    this.referenceNormative = '-',
+    this.criticite = '-',
     required this.observation,
     List<String>? photoPaths,
     required this.identityKey,
@@ -968,6 +974,9 @@ class PdfClassementFoudreBuilder {
 
       void addRow({
         required String observation,
+        String pointVerification = '-',
+        String referenceNormative = '-',
+        String criticite = '-',
         List<String>? photoPaths,
         required String key,
       }) {
@@ -975,7 +984,7 @@ class PdfClassementFoudreBuilder {
         if (textTrim.isEmpty) return;
 
         final photosKey = (photoPaths ?? []).join(',');
-        final contentKey = '${resolvedZone.toLowerCase()}_${resolvedLocal.toLowerCase()}_${equipementName.toLowerCase()}_${textTrim.toLowerCase()}_$photosKey';
+        final contentKey = '${resolvedZone.toLowerCase()}_${resolvedLocal.toLowerCase()}_${equipementName.toLowerCase()}_${pointVerification.toLowerCase()}_${textTrim.toLowerCase()}_$photosKey';
         if (seenKeys.contains(contentKey)) return;
         seenKeys.add(contentKey);
 
@@ -985,6 +994,9 @@ class PdfClassementFoudreBuilder {
             localName: resolvedLocal,
             equipementName: equipementName,
             repere: repere,
+            pointVerification: pointVerification.trim().isNotEmpty ? pointVerification.trim() : '-',
+            referenceNormative: referenceNormative.trim().isNotEmpty ? referenceNormative.trim() : '-',
+            criticite: criticite.trim().isNotEmpty ? criticite.trim() : '-',
             observation: textTrim,
             photoPaths: photoPaths ?? [],
             identityKey: contentKey,
@@ -999,6 +1011,9 @@ class PdfClassementFoudreBuilder {
             ? obs.observation!
             : obs.elementControle;
         addRow(
+          pointVerification: obs.elementControle.isNotEmpty ? obs.elementControle : 'Parafoudre',
+          referenceNormative: obs.referenceNormativeEffective ?? obs.referenceNormative ?? '-',
+          criticite: obs.criticite ?? '-',
           observation: text,
           photoPaths: obs.photos,
           key: 'enrich_${identityHashCode(obs)}',
@@ -1008,6 +1023,9 @@ class PdfClassementFoudreBuilder {
       // 2. Observations Slide 3 (Simples)
       for (var obs in c.observationsParafoudre) {
         addRow(
+          pointVerification: 'Parafoudre',
+          referenceNormative: obs.referenceNormative ?? '-',
+          criticite: obs.criticite ?? '-',
           observation: obs.texte,
           photoPaths: obs.photos,
           key: 'pf_${identityHashCode(obs)}',
@@ -1024,6 +1042,9 @@ class PdfClassementFoudreBuilder {
         if (isRelated) {
           if (pv.observation != null && pv.observation!.trim().isNotEmpty) {
             addRow(
+              pointVerification: pv.pointVerification.isNotEmpty ? pv.pointVerification : 'Parafoudre',
+              referenceNormative: pv.referenceNormative ?? '-',
+              criticite: pv.criticite ?? '-',
               observation: pv.observation!,
               photoPaths: pv.photos,
               key: 'pv_${identityHashCode(pv)}',
@@ -1035,6 +1056,9 @@ class PdfClassementFoudreBuilder {
                   ? el.observation!
                   : el.elementControle;
               addRow(
+                pointVerification: el.elementControle.isNotEmpty ? el.elementControle : pv.pointVerification,
+                referenceNormative: el.referenceNormativeEffective ?? el.referenceNormative ?? pv.referenceNormative ?? '-',
+                criticite: el.criticite ?? pv.criticite ?? '-',
                 observation: text,
                 photoPaths: el.photos,
                 key: 'pvel_${identityHashCode(el)}',
@@ -1048,6 +1072,9 @@ class PdfClassementFoudreBuilder {
       for (var obs in c.observationsLibres) {
         if (isParafoudreRelated(obs.texte)) {
           addRow(
+            pointVerification: 'Observation libre',
+            referenceNormative: obs.referenceNormative ?? '-',
+            criticite: obs.criticite ?? '-',
             observation: obs.texte,
             photoPaths: obs.photos,
             key: 'obslibre_${identityHashCode(obs)}',
@@ -1409,7 +1436,16 @@ class PdfClassementFoudreBuilder {
         final tableRows = <pw.TableRow>[];
 
         tableRows.add(
-          PdfReportStyles.tableHeaderRow(['Zone', 'Repère', 'N°', 'Équipement', 'Observation', 'Photo']),
+          PdfReportStyles.tableHeaderRow([
+            'ZONE',
+            'REPÈRE',
+            'N°',
+            'POINTS DE VÉRIFICATION',
+            'RÉF. NORMATIVE',
+            'CRITICITÉ',
+            'OBSERVATION',
+            'PHOTO',
+          ]),
         );
 
         int zoneRowIndex = 0;
@@ -1490,27 +1526,29 @@ class PdfClassementFoudreBuilder {
                   pw.TableRow(
                     decoration: pw.BoxDecoration(color: equipBg),
                     children: [
-                      // Cellule 0 : Zone
+                      // Cellule 0 : ZONE
                       PdfReportStyles.buildGroupedCellWidget(
                         currentIndex: currentZoneRowIdx,
                         totalRows: totalZoneItems,
-                        text: zoneGroup.zoneName,
+                        text: zoneGroup.zoneName.isNotEmpty ? zoneGroup.zoneName : '-',
                         style: pw.TextStyle(font: fontBold, fontSize: 8.0, color: PdfReportStyles.headerColor),
                         border: zoneBorder,
                         padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                       ),
 
-                      // Cellule 1 : Repère / Local
+                      // Cellule 1 : REPÈRE
                       PdfReportStyles.buildGroupedCellWidget(
                         currentIndex: currentLocalRowIdx,
                         totalRows: totalLocalItems,
-                        text: localGroup.localName,
+                        text: localGroup.localName.isNotEmpty
+                            ? localGroup.localName
+                            : (o.repere.isNotEmpty && o.repere != '-' ? o.repere : '-'),
                         style: pw.TextStyle(font: fontBold, fontSize: 8.0, color: PdfReportStyles.headerColor),
                         border: localBorder,
                         padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                       ),
 
-                      // Cellule 2 : N° d'Équipement
+                      // Cellule 2 : N°
                       PdfReportStyles.buildGroupedCellWidget(
                         currentIndex: currentEquipRowIdx,
                         totalRows: totalEquipItems,
@@ -1520,17 +1558,46 @@ class PdfClassementFoudreBuilder {
                         padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 4),
                       ),
 
-                      // Cellule 3 : Nom de l'Équipement
-                      PdfReportStyles.buildGroupedCellWidget(
-                        currentIndex: currentEquipRowIdx,
-                        totalRows: totalEquipItems,
-                        text: equipGroup.equipementName,
-                        style: pw.TextStyle(font: fontBold, fontSize: 8.0, color: PdfReportStyles.headerColor),
-                        border: equipBorder,
+                      // Cellule 3 : POINTS DE VÉRIFICATION
+                      pw.Container(
+                        decoration: pw.BoxDecoration(border: obsBorder),
                         padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                        alignment: pw.Alignment.centerLeft,
+                        child: pw.Text(
+                          _normalizeText(o.pointVerification),
+                          style: pw.TextStyle(font: fontBold, fontSize: 8.0, color: PdfReportStyles.headerColor),
+                        ),
                       ),
 
-                      // Cellule 4 : Observation
+                      // Cellule 4 : RÉF. NORMATIVE
+                      pw.Container(
+                        decoration: pw.BoxDecoration(border: obsBorder),
+                        padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
+                        alignment: pw.Alignment.center,
+                        child: pw.Text(
+                          _normalizeText(o.referenceNormative),
+                          style: pw.TextStyle(font: fontRegular, fontSize: 8.0),
+                          textAlign: pw.TextAlign.center,
+                        ),
+                      ),
+
+                      // Cellule 5 : CRITICITÉ
+                      pw.Container(
+                        decoration: pw.BoxDecoration(border: obsBorder),
+                        padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+                        alignment: pw.Alignment.center,
+                        child: pw.Text(
+                          o.criticite,
+                          style: pw.TextStyle(
+                            font: fontBold,
+                            fontSize: 8.0,
+                            color: PdfReportStyles.getCriticitePdfColor(o.criticite),
+                          ),
+                          textAlign: pw.TextAlign.center,
+                        ),
+                      ),
+
+                      // Cellule 6 : OBSERVATION
                       pw.Container(
                         decoration: pw.BoxDecoration(border: obsBorder),
                         padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
@@ -1541,7 +1608,7 @@ class PdfClassementFoudreBuilder {
                         ),
                       ),
 
-                      // Cellule 5 : Photo
+                      // Cellule 7 : PHOTO
                       pw.Container(
                         decoration: pw.BoxDecoration(border: obsBorder),
                         padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
@@ -1576,12 +1643,14 @@ class PdfClassementFoudreBuilder {
               horizontalInside: pw.BorderSide.none,
             ),
             columnWidths: const {
-              0: pw.FlexColumnWidth(1.2), // Zone
-              1: pw.FlexColumnWidth(1.5), // Repère
+              0: pw.FlexColumnWidth(1.2), // ZONE
+              1: pw.FlexColumnWidth(1.3), // REPÈRE
               2: pw.FlexColumnWidth(0.5), // N°
-              3: pw.FlexColumnWidth(1.8), // Équipement
-              4: pw.FlexColumnWidth(3.8), // Observation
-              5: pw.FlexColumnWidth(1.2), // Photo
+              3: pw.FlexColumnWidth(2.2), // POINTS DE VÉRIFICATION
+              4: pw.FlexColumnWidth(1.4), // RÉF. NORMATIVE
+              5: pw.FlexColumnWidth(1.0), // CRITICITÉ
+              6: pw.FlexColumnWidth(3.4), // OBSERVATION
+              7: pw.FlexColumnWidth(1.1), // PHOTO
             },
             children: tableRows,
           ),

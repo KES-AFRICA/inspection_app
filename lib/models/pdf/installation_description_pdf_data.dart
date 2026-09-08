@@ -352,6 +352,8 @@ class InstallationDescriptionPdfData {
     addField('Section Du Cable', t.sectionCables ?? '');
     addField('TENSION MT/BT', t.tensionPrimaireSecondaire);
     addField('TENSION MT/BT(KV)', t.tensionPrimaireSecondaire);
+    addField('TENSION MT/BT (KV/V)', t.tensionPrimaireSecondaire);
+    addField('TENSION MT/BT(KV/V)', t.tensionPrimaireSecondaire);
     addField('Tension', t.tensionPrimaireSecondaire);
     addField('COUPLAGE', t.couplage ?? '');
     addField('Couplage', t.couplage ?? '');

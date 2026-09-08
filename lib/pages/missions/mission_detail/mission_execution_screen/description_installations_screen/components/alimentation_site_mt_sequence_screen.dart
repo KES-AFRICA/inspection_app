@@ -7,6 +7,8 @@ import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/features/description_installations/presentation/providers/description_installations_provider.dart';
 import 'package:inspec_app/models/mission.dart';
 
+import 'package:inspec_app/services/installation_fields_registry.dart';
+
 class AlimentationSiteMtSequenceScreen extends ConsumerStatefulWidget {
   final Mission mission;
   final Function(String) onComplete;
@@ -26,10 +28,10 @@ class AlimentationSiteMtSequenceScreen extends ConsumerStatefulWidget {
 
 class _AlimentationSiteMtSequenceScreenState
     extends ConsumerState<AlimentationSiteMtSequenceScreen> {
-  final _tensionController = TextEditingController();
   final _nombreController = TextEditingController();
 
   String? _natureReseau;
+  String? _tensionAlimentation;
   String? _presenceIacm;
   bool _isFirstLoad = true;
 
@@ -38,7 +40,6 @@ class _AlimentationSiteMtSequenceScreenState
 
   @override
   void dispose() {
-    _tensionController.dispose();
     _nombreController.dispose();
     super.dispose();
   }
@@ -77,9 +78,9 @@ class _AlimentationSiteMtSequenceScreenState
       data: (desc) {
         if (_isFirstLoad) {
           _natureReseau = desc.natureReseauAlimentationSite;
-          if (_tensionController.text.isEmpty) {
-            _tensionController.text = desc.tensionAlimentationSite ?? '';
-          }
+          final rawTension = desc.tensionAlimentationSite?.trim() ?? '';
+          final cleanTension = rawTension.replaceAll(RegExp(r'\s*kV\b', caseSensitive: false), '').trim();
+          _tensionAlimentation = cleanTension.isNotEmpty ? cleanTension : null;
           if (_nombreController.text.isEmpty) {
             _nombreController.text = desc.nombreAlimentationSite ?? '';
           }
@@ -87,13 +88,19 @@ class _AlimentationSiteMtSequenceScreenState
           _isFirstLoad = false;
         } else {
           _natureReseau ??= desc.natureReseauAlimentationSite;
-          if (_tensionController.text.isEmpty && desc.tensionAlimentationSite != null) {
-            _tensionController.text = desc.tensionAlimentationSite!;
+          if (_tensionAlimentation == null && desc.tensionAlimentationSite != null) {
+            final cleanTension = desc.tensionAlimentationSite!.trim().replaceAll(RegExp(r'\s*kV\b', caseSensitive: false), '').trim();
+            _tensionAlimentation = cleanTension.isNotEmpty ? cleanTension : null;
           }
           if (_nombreController.text.isEmpty && desc.nombreAlimentationSite != null) {
             _nombreController.text = desc.nombreAlimentationSite!;
           }
           _presenceIacm ??= desc.presenceIacmAlimentationSite;
+        }
+
+        final availableTensionOptions = List<String>.from(InstallationFieldsRegistry.tensionAlimentationSiteOptions);
+        if (_tensionAlimentation != null && _tensionAlimentation!.isNotEmpty && !availableTensionOptions.contains(_tensionAlimentation)) {
+          availableTensionOptions.add(_tensionAlimentation!);
         }
 
         return GestureDetector(
@@ -136,36 +143,36 @@ class _AlimentationSiteMtSequenceScreenState
 
                 // 2. Tension alimentation (kV)
                 _buildSectionCard(
-                  title: 'Tension alimentation',
+                  title: 'Tension alimentation (kV)',
                   child: Padding(
                     padding: const EdgeInsets.all(12),
-                    child: TextField(
-                      controller: _tensionController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(RegExp(r'^\d*[\.\,]?\d*')),
-                      ],
+                    child: DropdownButtonFormField<String>(
+                      value: availableTensionOptions.contains(_tensionAlimentation) ? _tensionAlimentation : null,
                       decoration: InputDecoration(
-                        hintText: 'Ex: 15 ou 20',
+                        hintText: 'Sélectionner la tension (kV)',
                         hintStyle: TextStyle(
                           color: Colors.grey.shade400,
                           fontSize: 14,
                         ),
-                        suffixText: 'kV',
-                        suffixStyle: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.primaryBlue,
-                        ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                       ),
+                      items: availableTensionOptions.map((opt) {
+                        return DropdownMenuItem<String>(
+                          value: opt,
+                          child: Text(
+                            opt == 'Aucun' ? 'Aucun' : '$opt kV',
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                        );
+                      }).toList(),
                       onChanged: (val) {
-                        _saveField('tension_alim_site', val.trim());
-                      },
-                      onSubmitted: (val) {
-                        FocusScope.of(context).unfocus();
-                        _saveField('tension_alim_site', val.trim());
+                        if (val != null) {
+                          setState(() => _tensionAlimentation = val);
+                          _saveField('tension_alim_site', val);
+                        }
                       },
                     ),
                   ),
