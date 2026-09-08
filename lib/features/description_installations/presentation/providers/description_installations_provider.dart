@@ -14,6 +14,7 @@ final descriptionInstallationsProvider = StateNotifierProvider.family
       AsyncValue<DescriptionInstallations>,
       String
     >((ref, missionId) {
+      ref.keepAlive();
       return DescriptionInstallationsNotifier(ref: ref, missionId: missionId);
     });
 
@@ -24,7 +25,7 @@ class DescriptionInstallationsNotifier
 
   DescriptionInstallationsNotifier({required this.ref, required this.missionId})
     : super(const AsyncValue.loading()) {
-    load();
+    load().then<void>((_) {}, onError: (_, __) {});
   }
 
   Future<DescriptionInstallations> load({
@@ -32,7 +33,7 @@ class DescriptionInstallationsNotifier
     bool showLoading = true,
   }) async {
     try {
-      if (showLoading && !state.hasValue) {
+      if (showLoading && !state.hasValue && mounted) {
         state = const AsyncValue.loading();
       }
       if (syncWithAudit) {
@@ -41,10 +42,14 @@ class DescriptionInstallationsNotifier
       final getUseCase = ref.read(getDescriptionInstallationsUseCaseProvider);
       final entity = await getUseCase(missionId);
       final model = DescriptionInstallationsMapper.toModel(entity);
-      state = AsyncValue.data(model);
+      if (mounted) {
+        state = AsyncValue.data(model);
+      }
       return model;
     } catch (e, stackTrace) {
-      state = AsyncValue.error(e, stackTrace);
+      if (mounted) {
+        state = AsyncValue.error(e, stackTrace);
+      }
       rethrow;
     }
   }
@@ -139,7 +144,9 @@ class DescriptionInstallationsNotifier
       final getUseCase = ref.read(getDescriptionInstallationsUseCaseProvider);
       final entity = await getUseCase(missionId);
       final model = DescriptionInstallationsMapper.toModel(entity);
-      state = AsyncValue.data(model);
+      if (mounted) {
+        state = AsyncValue.data(model);
+      }
       return true;
     } catch (e) {
       return false;
@@ -152,7 +159,9 @@ class DescriptionInstallationsNotifier
       final getUseCase = ref.read(getDescriptionInstallationsUseCaseProvider);
       final entity = await getUseCase(missionId);
       final model = DescriptionInstallationsMapper.toModel(entity);
-      state = AsyncValue.data(model);
+      if (mounted) {
+        state = AsyncValue.data(model);
+      }
       return true;
     } catch (e) {
       return false;

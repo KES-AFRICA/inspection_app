@@ -10,6 +10,7 @@ final mesuresEssaisProvider = StateNotifierProvider.family
       AsyncValue<MesuresEssais>,
       String
     >((ref, missionId) {
+      ref.keepAlive();
       return MesuresEssaisNotifier(ref: ref, missionId: missionId);
     });
 
@@ -19,19 +20,25 @@ class MesuresEssaisNotifier extends StateNotifier<AsyncValue<MesuresEssais>> {
 
   MesuresEssaisNotifier({required this.ref, required this.missionId})
     : super(const AsyncValue.loading()) {
-    load();
+    load().then<void>((_) {}, onError: (_, __) {});
   }
 
   Future<MesuresEssais> load() async {
     try {
-      state = const AsyncValue.loading();
+      if (mounted) {
+        state = const AsyncValue.loading();
+      }
       final getUseCase = ref.read(getMesuresEssaisUseCaseProvider);
       final entity = await getUseCase(missionId);
       final model = MesuresEssaisMapper.toModel(entity);
-      state = AsyncValue.data(model);
+      if (mounted) {
+        state = AsyncValue.data(model);
+      }
       return model;
     } catch (e, stackTrace) {
-      state = AsyncValue.error(e, stackTrace);
+      if (mounted) {
+        state = AsyncValue.error(e, stackTrace);
+      }
       rethrow;
     }
   }
@@ -41,7 +48,9 @@ class MesuresEssaisNotifier extends StateNotifier<AsyncValue<MesuresEssais>> {
       final saveUseCase = ref.read(saveMesuresEssaisUseCaseProvider);
       final entity = MesuresEssaisMapper.toEntity(mesures);
       await saveUseCase(entity);
-      state = AsyncValue.data(mesures);
+      if (mounted) {
+        state = AsyncValue.data(mesures);
+      }
       return true;
     } catch (e, stackTrace) {
       print('❌ Erreur saveMesures pour mission $missionId: $e');

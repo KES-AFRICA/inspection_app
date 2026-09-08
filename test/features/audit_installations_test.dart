@@ -1,10 +1,16 @@
 // test/features/audit_installations_test.dart
+import 'dart:async';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
 import 'package:inspec_app/features/audit_installations/data/mappers/audit_installations_mapper.dart';
+import 'package:inspec_app/features/audit_installations/domain/entities/audit_installations_entities.dart';
+import 'package:inspec_app/features/audit_installations/domain/repositories/audit_installations_repository.dart';
 import 'package:inspec_app/features/audit_installations/domain/usecases/get_audit_installations_use_case.dart';
 import 'package:inspec_app/features/audit_installations/domain/usecases/save_audit_installations_use_case.dart';
+import 'package:inspec_app/core/providers/audit_installations_providers.dart';
+import 'package:inspec_app/features/audit_installations/presentation/providers/audit_installations_provider.dart';
 import 'package:inspec_app/core/di/injection_container.dart' as di;
 
 void main() {
@@ -125,4 +131,116 @@ void main() {
       expect(saveUseCase, isNotNull);
     });
   });
+
+  group('AuditInstallationsNotifier Lifecycle & Mounted Tests', () {
+    test('Should not throw StateError if disposed while load() is in flight', () async {
+      final completer = Completer<AuditInstallationsElectriquesEntity>();
+      final fakeGetUseCase = _FakeGetAuditInstallationsUseCase(completer);
+      final fakeSaveUseCase = _FakeSaveAuditInstallationsUseCase();
+
+      final container = ProviderContainer(
+        overrides: [
+          getAuditInstallationsUseCaseProvider.overrideWithValue(fakeGetUseCase),
+          saveAuditInstallationsUseCaseProvider.overrideWithValue(fakeSaveUseCase),
+        ],
+      );
+
+      final notifier = container.read(auditInstallationsProvider('mission_dispose_test').notifier);
+      expect(notifier.mounted, isTrue);
+
+      // Dispose the container while load() is awaiting
+      container.dispose();
+      expect(notifier.mounted, isFalse);
+
+      // Complete the future now that notifier is disposed
+      // It must NOT throw StateError (Bad state: Tried to use AuditInstallationsNotifier after dispose)
+      completer.complete(
+        AuditInstallationsElectriquesEntity(
+          missionId: 'mission_dispose_test',
+          updatedAt: DateTime.now(),
+        ),
+      );
+
+      // Give event loop time to process the completion
+      await Future.delayed(Duration.zero);
+    });
+
+    test('Should not throw StateError if error occurs after notifier is disposed', () async {
+      final completer = Completer<AuditInstallationsElectriquesEntity>();
+      final fakeGetUseCase = _FakeGetAuditInstallationsUseCase(completer);
+      final fakeSaveUseCase = _FakeSaveAuditInstallationsUseCase();
+
+      final container = ProviderContainer(
+        overrides: [
+          getAuditInstallationsUseCaseProvider.overrideWithValue(fakeGetUseCase),
+          saveAuditInstallationsUseCaseProvider.overrideWithValue(fakeSaveUseCase),
+        ],
+      );
+
+      final notifier = container.read(auditInstallationsProvider('mission_error_test').notifier);
+      container.dispose();
+      expect(notifier.mounted, isFalse);
+
+      // Fail the future while disposed
+      completer.completeError(Exception('Network error'));
+
+      await Future.delayed(Duration.zero);
+    });
+
+    test('Should safely return false without throwing when saveAudit() is called on disposed notifier', () async {
+      final fakeGetUseCase = _FakeGetAuditInstallationsUseCase(
+        Completer()..complete(
+          AuditInstallationsElectriquesEntity(
+            missionId: 'mission_save_test',
+            updatedAt: DateTime.now(),
+          ),
+        ),
+      );
+      final fakeSaveUseCase = _FakeSaveAuditInstallationsUseCase();
+
+      final container = ProviderContainer(
+        overrides: [
+          getAuditInstallationsUseCaseProvider.overrideWithValue(fakeGetUseCase),
+          saveAuditInstallationsUseCaseProvider.overrideWithValue(fakeSaveUseCase),
+        ],
+      );
+
+      final notifier = container.read(auditInstallationsProvider('mission_save_test').notifier);
+      await Future.delayed(Duration.zero);
+
+      container.dispose();
+      expect(notifier.mounted, isFalse);
+
+      final result = await notifier.saveAudit(
+        AuditInstallationsElectriques(
+          missionId: 'mission_save_test',
+          updatedAt: DateTime.now(),
+        ),
+      );
+      expect(result, isFalse);
+    });
+  });
+}
+
+class _FakeGetAuditInstallationsUseCase implements GetAuditInstallationsUseCase {
+  final Completer<AuditInstallationsElectriquesEntity> completer;
+  _FakeGetAuditInstallationsUseCase(this.completer);
+
+  @override
+  AuditInstallationsRepository get repository => throw UnimplementedError();
+
+  @override
+  Future<AuditInstallationsElectriquesEntity> call(String missionId) {
+    return completer.future;
+  }
+}
+
+class _FakeSaveAuditInstallationsUseCase implements SaveAuditInstallationsUseCase {
+  @override
+  AuditInstallationsRepository get repository => throw UnimplementedError();
+
+  @override
+  Future<bool> call(AuditInstallationsElectriquesEntity audit) async {
+    return true;
+  }
 }

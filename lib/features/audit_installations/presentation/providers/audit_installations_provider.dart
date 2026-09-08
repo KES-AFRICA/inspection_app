@@ -10,6 +10,7 @@ final auditInstallationsProvider = StateNotifierProvider.family
       AsyncValue<AuditInstallationsElectriques>,
       String
     >((ref, missionId) {
+      ref.keepAlive();
       return AuditInstallationsNotifier(ref: ref, missionId: missionId);
     });
 
@@ -20,19 +21,25 @@ class AuditInstallationsNotifier
 
   AuditInstallationsNotifier({required this.ref, required this.missionId})
     : super(const AsyncValue.loading()) {
-    load();
+    load().then<void>((_) {}, onError: (_, __) {});
   }
 
   Future<AuditInstallationsElectriques> load() async {
     try {
-      state = const AsyncValue.loading();
+      if (mounted) {
+        state = const AsyncValue.loading();
+      }
       final getUseCase = ref.read(getAuditInstallationsUseCaseProvider);
       final entity = await getUseCase(missionId);
       final model = AuditInstallationsMapper.toModel(entity);
-      state = AsyncValue.data(model);
+      if (mounted) {
+        state = AsyncValue.data(model);
+      }
       return model;
     } catch (e, stackTrace) {
-      state = AsyncValue.error(e, stackTrace);
+      if (mounted) {
+        state = AsyncValue.error(e, stackTrace);
+      }
       rethrow;
     }
   }
@@ -42,7 +49,7 @@ class AuditInstallationsNotifier
       final saveUseCase = ref.read(saveAuditInstallationsUseCaseProvider);
       final entity = AuditInstallationsMapper.toEntity(audit);
       final success = await saveUseCase(entity);
-      if (success) {
+      if (success && mounted) {
         state = AsyncValue.data(audit);
       }
       return success;
