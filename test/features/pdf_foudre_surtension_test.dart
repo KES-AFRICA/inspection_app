@@ -250,5 +250,62 @@ void main() {
       expect(rows.first.repere, contains('AG-01'));
       expect(rows.first.observation, contains('détérioré suite à un impact de foudre'));
     });
+
+    test('Cas 10: Consolidation Slide 3 + PV standard avec référence normative par défaut et criticité Majeure', () {
+      final coffret = CoffretArmoire(
+        nom: 'TGBT arrivée inverseur',
+        type: 'TGBT',
+        qrCode: 'QR_TGBT',
+        repere: 'TGBT-INV',
+        observationsParafoudre: [
+          ObservationLibre(texte: 'Témoin parafoudre hors service'),
+        ],
+        pointsVerification: [
+          PointVerification(
+            pointVerification: 'Dispositif de protection contre les surtensions (parafoudre)',
+            conformite: 'Non conforme',
+            observation: 'Absence de protection amont du parafoudre',
+          ),
+        ],
+      );
+
+      final audit = AuditInstallationsElectriques(
+        missionId: 'm1',
+        updatedAt: DateTime.now(),
+        basseTensionZones: [
+          BasseTensionZone(
+            nom: 'Zone Principale',
+            locaux: [
+              BasseTensionLocal(
+                nom: 'Local TGBT',
+                type: 'Local',
+                coffrets: [coffret],
+              ),
+            ],
+          ),
+        ],
+      );
+
+      final rows = PdfReportService.collectParafoudreRowsForTest(audit);
+
+      expect(rows.length, equals(2));
+      // Ligne 1: Slide 3
+      expect(rows[0].equipementName, equals('TGBT arrivée inverseur'));
+      expect(rows[0].localName, equals('Local TGBT'));
+      expect(rows[0].zoneName, equals('Zone Principale'));
+      expect(rows[0].pointVerification, equals('Parafoudre'));
+      expect(rows[0].referenceNormative, equals('NF C 15-100-1:2024 – art 443 et art 534'));
+      expect(rows[0].criticite, equals('Majeure'));
+      expect(rows[0].observation, equals('Témoin parafoudre hors service'));
+
+      // Ligne 2: PV
+      expect(rows[1].equipementName, equals('TGBT arrivée inverseur'));
+      expect(rows[1].localName, equals('Local TGBT'));
+      expect(rows[1].zoneName, equals('Zone Principale'));
+      expect(rows[1].pointVerification, equals('Dispositif de protection contre les surtensions (parafoudre)'));
+      expect(rows[1].referenceNormative, equals('NF C 15-100-1:2024 – art 443 et art 534'));
+      expect(rows[1].criticite, equals('Majeure'));
+      expect(rows[1].observation, equals('Absence de protection amont du parafoudre'));
+    });
   });
 }

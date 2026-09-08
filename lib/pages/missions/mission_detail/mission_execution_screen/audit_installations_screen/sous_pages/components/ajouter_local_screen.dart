@@ -3669,8 +3669,7 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
             isSmallScreen: isSmallScreen,
             onValueChanged: (val) => setState(() => _celluleTensionService = val),
             suffixText: 'kV',
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*[\.\,]?\d*'))],
+            keyboardType: TextInputType.text,
             optional: true,
           ),
           SizedBox(height: isSmallScreen ? 12 : 16),
@@ -3683,8 +3682,7 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
             isSmallScreen: isSmallScreen,
             onValueChanged: (val) => setState(() => _celluleTensionController.text = val ?? ''),
             suffixText: 'kV',
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*[\.\,]?\d*'))],
+            keyboardType: TextInputType.text,
             optional: true,
           ),
           SizedBox(height: isSmallScreen ? 12 : 16),
@@ -4360,8 +4358,7 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
               });
             },
             suffixText: 'kVA',
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*[\.\,]?\d*'))],
+            keyboardType: TextInputType.text,
             optional: true,
           ),
           SizedBox(height: isSmallScreen ? 12 : 16),
@@ -4392,7 +4389,6 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
               });
             },
             keyboardType: TextInputType.text,
-            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9/*.,\s\-\+kKvV]'))],
             optional: true,
           ),
           SizedBox(height: isSmallScreen ? 12 : 16),
@@ -4879,11 +4875,78 @@ Widget _buildPrioriteButton({
   }) {
     final cleanVal = currentValue?.trim() ?? '';
     final isKnownStandard = cleanVal.isNotEmpty && standardOptions.contains(cleanVal);
-    final isCustom = _customSaisirFields.contains(fieldKey) || (cleanVal.isNotEmpty && !isKnownStandard);
+    final isCustomValue = cleanVal.isNotEmpty && !isKnownStandard;
+    final isSaisirActive = _customSaisirFields.contains(fieldKey);
+    final showInputField = isSaisirActive || isCustomValue;
 
-    final dropdownValue = isCustom
-        ? 'Saisir'
-        : (isKnownStandard ? cleanVal : '');
+    // Déterminer la valeur sélectionnée dans le Dropdown
+    final String dropdownValue;
+    if (isSaisirActive) {
+      dropdownValue = '__SAISIR__';
+    } else if (cleanVal.isNotEmpty) {
+      dropdownValue = cleanVal;
+    } else {
+      dropdownValue = '';
+    }
+
+    // Construire la liste des options du Dropdown
+    final items = <DropdownMenuItem<String>>[
+      DropdownMenuItem<String>(
+        value: '',
+        child: Text(
+          '— Non renseigné —',
+          style: TextStyle(
+            fontSize: isSmallScreen ? 13 : 14,
+            color: Colors.grey.shade500,
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+      ),
+      ...standardOptions.map(
+        (opt) => DropdownMenuItem<String>(
+          value: opt,
+          child: Text(
+            (suffixText != null && !opt.contains(suffixText)) ? '$opt $suffixText' : opt,
+            style: TextStyle(fontSize: isSmallScreen ? 13 : 14),
+          ),
+        ),
+      ),
+    ];
+
+    // Si une valeur personnalisée ou legacy existe et n'est pas dans les options standard,
+    // on l'ajoute comme option valide dans le dropdown pour qu'elle s'affiche fidèlement
+    if (isCustomValue) {
+      items.add(
+        DropdownMenuItem<String>(
+          value: cleanVal,
+          child: Text(
+            (suffixText != null && !cleanVal.contains(suffixText)) ? '$cleanVal $suffixText' : cleanVal,
+            style: TextStyle(fontSize: isSmallScreen ? 13 : 14, fontWeight: FontWeight.w600),
+          ),
+        ),
+      );
+    }
+
+    // Option "Saisir..." pour saisie libre
+    items.add(
+      DropdownMenuItem<String>(
+        value: '__SAISIR__',
+        child: Row(
+          children: [
+            const Icon(Icons.edit_outlined, size: 16, color: AppTheme.primaryBlue),
+            const SizedBox(width: 6),
+            Text(
+              'Saisir...',
+              style: TextStyle(
+                fontSize: isSmallScreen ? 13 : 14,
+                color: AppTheme.primaryBlue,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -4897,52 +4960,16 @@ Widget _buildPrioriteButton({
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10)),
             contentPadding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 12 : 16, vertical: isSmallScreen ? 12 : 14),
           ),
-          items: [
-            DropdownMenuItem<String>(
-              value: '',
-              child: Text(
-                '— Non renseigné —',
-                style: TextStyle(
-                  fontSize: isSmallScreen ? 13 : 14,
-                  color: Colors.grey.shade500,
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
-            ),
-            ...standardOptions.map(
-              (opt) => DropdownMenuItem<String>(
-                value: opt,
-                child: Text(
-                  (suffixText != null && !opt.contains(suffixText)) ? '$opt $suffixText' : opt,
-                  style: TextStyle(fontSize: isSmallScreen ? 13 : 14),
-                ),
-              ),
-            ),
-            DropdownMenuItem<String>(
-              value: 'Saisir',
-              child: Row(
-                children: [
-                  const Icon(Icons.edit_outlined, size: 16, color: AppTheme.primaryBlue),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Saisir...',
-                    style: TextStyle(
-                      fontSize: isSmallScreen ? 13 : 14,
-                      color: AppTheme.primaryBlue,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+          items: items,
           onChanged: (val) {
-            if (val == 'Saisir') {
+            if (val == '__SAISIR__') {
               setState(() {
                 _customSaisirFields.add(fieldKey);
                 if (isKnownStandard) {
                   customController.text = '';
                   onValueChanged('');
+                } else if (cleanVal.isNotEmpty && customController.text.isEmpty) {
+                  customController.text = cleanVal;
                 }
               });
             } else if (val != null && val.isNotEmpty) {
@@ -4960,7 +4987,7 @@ Widget _buildPrioriteButton({
             }
           },
         ),
-        if (isCustom) ...[
+        if (showInputField) ...[
           SizedBox(height: isSmallScreen ? 8 : 10),
           _buildTextField(
             customController,
