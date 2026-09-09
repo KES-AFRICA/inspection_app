@@ -1291,6 +1291,16 @@ class Alimentation {
   @HiveField(14)
   int? conducteursNeutre;
 
+  @HiveField(15)
+  String? id;
+
+  /// Identifiant technique stable (généré automatiquement si absent)
+  String get alimentationId {
+    if (id != null && id!.trim().isNotEmpty) return id!;
+    id = 'alim_${DateTime.now().microsecondsSinceEpoch}_${typeProtection.hashCode.abs()}';
+    return id!;
+  }
+
   /// Getter rétrocompatible pour la section phase (réutilise le champ historique sectionCable)
   String get sectionCablePhase => sectionCable;
   String get effectiveSectionCablePhase => sectionCablePhase;
@@ -1318,6 +1328,7 @@ class Alimentation {
   String get effectiveSourceKnown => SourceStatusResolver.resolve(typeProtection);
 
   Alimentation({
+    String? id,
     required this.typeProtection,
     this.courbe = '',
     this.ddr,
@@ -1333,10 +1344,14 @@ class Alimentation {
     this.sectionCableNeutre,
     this.conducteursPhase,
     this.conducteursNeutre,
-  })  : photos = photos ?? [],
+  })  : id = (id != null && id.trim().isNotEmpty)
+            ? id
+            : 'alim_${DateTime.now().microsecondsSinceEpoch}_${typeProtection.hashCode.abs()}',
+        photos = photos ?? [],
         sourceKnown = sourceKnown ?? SourceStatusResolver.resolve(typeProtection);
 
   Alimentation copyWith({
+    String? id,
     String? typeProtection,
     String? courbe,
     String? ddr,
@@ -1354,6 +1369,7 @@ class Alimentation {
     int? conducteursNeutre,
   }) {
     return Alimentation(
+      id: id ?? this.id,
       typeProtection: typeProtection ?? this.typeProtection,
       courbe: courbe ?? this.courbe,
       ddr: ddr ?? this.ddr,

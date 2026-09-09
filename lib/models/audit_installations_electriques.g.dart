@@ -964,6 +964,7 @@ class AlimentationAdapter extends TypeAdapter<Alimentation> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return Alimentation(
+      id: fields[15] as String?,
       typeProtection: fields[0] as String,
       courbe: fields[6] as String?,
       ddr: fields[7] as String?,
@@ -985,7 +986,7 @@ class AlimentationAdapter extends TypeAdapter<Alimentation> {
   @override
   void write(BinaryWriter writer, Alimentation obj) {
     writer
-      ..writeByte(15)
+      ..writeByte(16)
       ..writeByte(0)
       ..write(obj.typeProtection)
       ..writeByte(1)
@@ -1015,7 +1016,9 @@ class AlimentationAdapter extends TypeAdapter<Alimentation> {
       ..writeByte(13)
       ..write(obj.conducteursPhase)
       ..writeByte(14)
-      ..write(obj.conducteursNeutre);
+      ..write(obj.conducteursNeutre)
+      ..writeByte(15)
+      ..write(obj.id);
   }
 
   @override

@@ -311,13 +311,18 @@ class EssaiDeclenchementDifferentielAdapter
       tempoText: fields[10] as String?,
       createdAt: fields[21] as DateTime?,
       updatedAt: fields[22] as DateTime?,
+      elementId: fields[23] as String?,
+      precision: fields[24] as String?,
+      equipementId: fields[25] as String?,
+      zone: fields[26] as String?,
+      repere: fields[27] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, EssaiDeclenchementDifferentiel obj) {
     writer
-      ..writeByte(14)
+      ..writeByte(19)
       ..writeByte(0)
       ..write(obj.localisation)
       ..writeByte(1)
@@ -345,7 +350,17 @@ class EssaiDeclenchementDifferentielAdapter
       ..writeByte(21)
       ..write(obj.createdAt)
       ..writeByte(22)
-      ..write(obj.updatedAt);
+      ..write(obj.updatedAt)
+      ..writeByte(23)
+      ..write(obj.elementId)
+      ..writeByte(24)
+      ..write(obj.precision)
+      ..writeByte(25)
+      ..write(obj.equipementId)
+      ..writeByte(26)
+      ..write(obj.zone)
+      ..writeByte(27)
+      ..write(obj.repere);
   }
 
   @override

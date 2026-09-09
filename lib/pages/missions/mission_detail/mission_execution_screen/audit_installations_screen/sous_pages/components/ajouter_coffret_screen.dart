@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:inspec_app/models/mesures_essais.dart';
 import 'package:inspec_app/services/gallery_photo_service.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/essais_declenchement_screen.dart';
 import 'package:inspec_app/services/dispositions_constructives_registry.dart';
@@ -28,6 +29,8 @@ import 'package:inspec_app/components/normative_search_suggestions_widget.dart';
 import 'package:inspec_app/services/normative_search_service.dart';
 import 'package:inspec_app/services/equipment_source_search_service.dart';
 import 'package:inspec_app/services/ip_ik_evaluator_service.dart';
+import 'package:inspec_app/services/document_generation/essai_declenchement_helper.dart';
+import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/essai_declenchement_modal.dart';
 
 // ================================================================
 // EXTENSION RESPONSIVE
@@ -1967,6 +1970,211 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
 }
 
 // ================================================================
+// BOUTON UNIFIÉ : ESSAI DE DÉCLENCHEMENT DIFFÉRENTIEL
+// ================================================================
+Widget buildEssaiDeclenchementButton({
+  required BuildContext context,
+  required String missionId,
+  required String elementId,
+  required String equipementId,
+  required String zone,
+  required String repere,
+  required String designation,
+  required String precision,
+  required String typeDispositif,
+  required String calibre,
+  required String ddr,
+  required VoidCallback onEssaiChanged,
+}) {
+  final mesures = HiveService.getMesuresEssaisByMissionId(missionId);
+  EssaiDeclenchementDifferentiel? existingEssai;
+  if (mesures != null) {
+    for (final e in mesures.essaisDeclenchement) {
+      if ((e.elementId != null && e.elementId == elementId) ||
+          (elementId.isNotEmpty && e.elementId == elementId) ||
+          (equipementId.isNotEmpty &&
+              e.equipementId == equipementId &&
+              e.precision != null &&
+              e.precision!.trim().toLowerCase() == precision.trim().toLowerCase())) {
+        existingEssai = e;
+        break;
+      }
+    }
+  }
+
+  final bool hasEssai = existingEssai != null;
+  final bool isSatisfaisant = hasEssai &&
+      (existingEssai.essai == 'OK' ||
+          existingEssai.essai == 'Satisfaisant' ||
+          existingEssai.essai.toLowerCase().contains('sat'));
+
+  final String statusLabel = isSatisfaisant ? 'Satisfaisant' : 'Non satisfaisant';
+
+  return Container(
+    margin: const EdgeInsets.only(top: 14),
+    width: double.infinity,
+    child: Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () async {
+          await EssaiDeclenchementModal.show(
+            context,
+            missionId: missionId,
+            elementId: elementId,
+            equipementId: equipementId,
+            zone: zone,
+            repere: repere,
+            designation: designation,
+            precision: precision,
+            typeDispositif: typeDispositif,
+            calibre: calibre,
+            ddr: ddr,
+            existingEssai: existingEssai,
+          );
+          onEssaiChanged();
+        },
+        borderRadius: BorderRadius.circular(10),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+          decoration: BoxDecoration(
+            color: hasEssai
+                ? (isSatisfaisant ? const Color(0xFFE8F5E9) : const Color(0xFFFFEBEE))
+                : AppTheme.primaryBlue.withOpacity(0.04),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: hasEssai
+                  ? (isSatisfaisant ? Colors.green.shade600 : Colors.red.shade600)
+                  : AppTheme.primaryBlue.withOpacity(0.5),
+              width: hasEssai ? 1.6 : 1.2,
+            ),
+            boxShadow: hasEssai
+                ? [
+                    BoxShadow(
+                      color: (isSatisfaisant ? Colors.green : Colors.red).withOpacity(0.12),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: hasEssai
+                      ? (isSatisfaisant ? Colors.green.shade100 : Colors.red.shade100)
+                      : AppTheme.primaryBlue.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  hasEssai
+                      ? (isSatisfaisant ? Icons.check_circle : Icons.cancel)
+                      : Icons.speed,
+                  size: 20,
+                  color: hasEssai
+                      ? (isSatisfaisant ? Colors.green.shade700 : Colors.red.shade700)
+                      : AppTheme.primaryBlue,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            hasEssai
+                                ? 'ESSAI RÉALISÉ : $statusLabel'.toUpperCase()
+                                : 'Essai de déclenchement',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: hasEssai ? 12 : 13,
+                              color: hasEssai
+                                  ? (isSatisfaisant ? Colors.green.shade900 : Colors.red.shade900)
+                                  : AppTheme.primaryBlue,
+                              letterSpacing: hasEssai ? 0.3 : 0,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (hasEssai) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                            decoration: BoxDecoration(
+                              color: isSatisfaisant ? Colors.green.shade700 : Colors.red.shade700,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Text(
+                              'ENREGISTRÉ',
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      hasEssai
+                          ? 'DDR : $ddr mA • Tempo : ${existingEssai.tempoText ?? "Réglage d\'origine."}'
+                          : 'Cliquez pour consigner le test différentiel ($ddr mA)',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: hasEssai
+                            ? (isSatisfaisant ? Colors.green.shade800 : Colors.red.shade800)
+                            : Colors.grey.shade600,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: hasEssai
+                      ? (isSatisfaisant ? Colors.green.shade700 : Colors.red.shade700)
+                      : AppTheme.primaryBlue,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      hasEssai ? Icons.edit : Icons.add,
+                      size: 13,
+                      color: Colors.white,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      hasEssai ? 'Modifier' : 'Tester',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+// ================================================================
 // ÉTAPE 3 : ALIMENTATIONS (avec option "Aucun" et unité A)
 // ================================================================
 class _EtapeAlimentations extends StatefulWidget {
@@ -1981,6 +2189,9 @@ class _EtapeAlimentations extends StatefulWidget {
   final Function(int index)? onDeleteSortie;
   final String missionId;
   final String? currentEquipmentId;
+  final String? equipmentNom;
+  final String? zoneName;
+  final String? repereName;
   final String? sourceNomComplet;
   final String? sourceDepartId;
   final Function(String? equipmentId, String displayName, String? departId)? onSourceSelected;
@@ -1998,6 +2209,9 @@ class _EtapeAlimentations extends StatefulWidget {
     this.onDeleteSortie,
     required this.missionId,
     this.currentEquipmentId,
+    this.equipmentNom,
+    this.zoneName,
+    this.repereName,
     this.sourceNomComplet,
     this.sourceDepartId,
     this.onSourceSelected,
@@ -2673,6 +2887,37 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
             onChanged: (v) => onChanged('nombreCables', v),
             readOnly: isLocked,
           ),
+          ...() {
+            final bool isSortieInverseur = widget.selectedType == 'INVERSEUR' && index >= 2;
+            final bool isProtTeteEligible = widget.selectedType != 'INVERSEUR' && isProtectionTete;
+            if ((isSortieInverseur || isProtTeteEligible) &&
+                EssaiDeclenchementHelper.isEligibleForEssai(typeProtection: a.typeProtection, ddr: a.ddr)) {
+              final precision = isSortieInverseur
+                  ? EssaiDeclenchementHelper.precisionSortieInverseur
+                  : EssaiDeclenchementHelper.precisionProtectionTete;
+              final elementId = isSortieInverseur
+                  ? '${widget.currentEquipmentId}_sortie_${a.alimentationId}'
+                  : '${widget.currentEquipmentId}_prot_tete';
+              return [
+                SizedBox(height: context.spacingM),
+                buildEssaiDeclenchementButton(
+                  context: context,
+                  missionId: widget.missionId,
+                  elementId: elementId,
+                  equipementId: widget.currentEquipmentId ?? '',
+                  zone: widget.zoneName ?? '',
+                  repere: widget.repereName ?? '',
+                  designation: widget.equipmentNom ?? 'Équipement',
+                  precision: precision,
+                  typeDispositif: a.typeProtection,
+                  calibre: a.calibre,
+                  ddr: a.ddr ?? '',
+                  onEssaiChanged: () => setState(() {}),
+                ),
+              ];
+            }
+            return <Widget>[];
+          }(),
         ],
       ),
     );
@@ -3791,6 +4036,7 @@ class AjouterCoffretScreen extends ConsumerStatefulWidget {
 
 class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
   final _formKey = GlobalKey<FormState>();
+  late final String _draftEquipmentId;
   final _nomController = TextEditingController();
   final _numeroEquipementController = TextEditingController();
   final _repereController = TextEditingController();
@@ -3885,6 +4131,8 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
   @override
   void initState() {
     super.initState();
+    _draftEquipmentId = widget.coffret?.equipmentId ??
+        'equip_${DateTime.now().microsecondsSinceEpoch}';
     _etapePointsKey = GlobalKey<_EtapePointsVerificationState>();
     _etapeAlimentationsKey = GlobalKey<_EtapeAlimentationsState>();
     _etapeDepartsCircuitsKey = GlobalKey<_EtapeDepartsEtCircuitsState>();
@@ -4301,6 +4549,18 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
       else if (!widget.isMoyenneTension && widget.parentIndex < audit.basseTensionZones.length) return audit.basseTensionZones[widget.parentIndex].nom;
     }
     return _repereController.text.trim();
+  }
+
+  ({String zone, String repere}) _resolveCurrentLocation() {
+    final audit = HiveService.getAuditInstallationsByMissionId(widget.mission.id);
+    return EssaiDeclenchementHelper.resolveZoneAndRepere(
+      audit: audit,
+      parentType: widget.parentType,
+      parentIndex: widget.parentIndex,
+      zoneIndex: widget.zoneIndex,
+      isMoyenneTension: widget.isMoyenneTension,
+      fallbackRepere: _repereController.text.trim(),
+    );
   }
 
   @override
@@ -4757,7 +5017,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
       final toutesPhotos = [..._coffretPhotosExterne, ..._coffretPhotosInterne];
       final now = DateTime.now().toUtc();
       final nouveauCoffret = CoffretArmoire(
-        id: widget.coffret?.equipmentId,
+        id: widget.coffret?.equipmentId ?? _draftEquipmentId,
         createdAt: widget.coffret?.createdAt ?? (widget.isEdition ? null : now),
         updatedAt: now,
         qrCode: _qrCodeController.text.trim(),
@@ -4847,29 +5107,31 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
               ? nouveauCoffret.repere!.trim()
               : (localisation.isNotEmpty ? localisation : 'Localisation non définie');
 
-          final String? typeProtPredefini = nouveauCoffret.protectionTete?.typeProtection.isNotEmpty == true
-              ? nouveauCoffret.protectionTete!.typeProtection
-              : (nouveauCoffret.alimentations.isNotEmpty && nouveauCoffret.alimentations.first.typeProtection.isNotEmpty
-                  ? nouveauCoffret.alimentations.first.typeProtection
-                  : null);
+          // Synchronisation du nom et repère des essais liés à cet équipement
+          try {
+            final mesures = await ref.read(mesuresEssaisProvider(widget.mission.id).notifier).load();
+            bool hasEssaisToUpdate = false;
+            for (final es in mesures.essaisDeclenchement) {
+              if (es.equipementId == nouveauCoffret.equipmentId) {
+                if (es.coffret != nouveauCoffret.nom) {
+                  es.coffret = nouveauCoffret.nom;
+                  hasEssaisToUpdate = true;
+                }
+                if (es.localisation != repereEffective) {
+                  es.localisation = repereEffective;
+                  hasEssaisToUpdate = true;
+                }
+              }
+            }
+            if (hasEssaisToUpdate) {
+              await ref.read(mesuresEssaisProvider(widget.mission.id).notifier).saveMesures(mesures);
+            }
+          } catch (_) {}
 
-          final String? ddrPredefini = nouveauCoffret.protectionTete?.ddr?.isNotEmpty == true
-              ? nouveauCoffret.protectionTete!.ddr
-              : (nouveauCoffret.alimentations.isNotEmpty ? nouveauCoffret.alimentations.first.ddr : null);
-
-          await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => AjouterEssaiDeclenchementScreen(
-                mission: widget.mission,
-                localisationPredefinie: repereEffective,
-                coffretPredefini: nouveauCoffret.nom,
-                typeDispositifPredefini: typeProtPredefini,
-                reglageIAnPredefini: ddrPredefini,
-              ),
-            ),
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Équipement créé avec succès'), backgroundColor: Colors.green),
           );
-          Navigator.pop(context, true);
+          Navigator.pop(context, nouveauCoffret);
         }
       } else {
         if (kDebugMode) {
@@ -5517,7 +5779,10 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
                       protectionTete: _protectionTete,
                       departPrisAvecProtection: _departPrisAvecProtection,
                       missionId: widget.mission.id,
-                      currentEquipmentId: widget.coffret?.equipmentId,
+                      currentEquipmentId: widget.coffret?.equipmentId ?? _draftEquipmentId,
+                      equipmentNom: _nomController.text.trim().isNotEmpty ? _nomController.text.trim() : 'Équipement',
+                      zoneName: _resolveCurrentLocation().zone,
+                      repereName: _resolveCurrentLocation().repere,
                       sourceNomComplet: _sourceNomComplet,
                       sourceDepartId: _sourceDepartId,
                       onSourceSelected: (equipId, displayName, departId) {
@@ -5543,7 +5808,10 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
                       departures: _departures,
                       terminalCircuits: _terminalCircuits,
                       missionId: widget.mission.id,
-                      currentEquipmentId: widget.coffret?.equipmentId,
+                      currentEquipmentId: widget.coffret?.equipmentId ?? _draftEquipmentId,
+                      equipmentNom: _nomController.text.trim().isNotEmpty ? _nomController.text.trim() : 'Équipement',
+                      zoneName: _resolveCurrentLocation().zone,
+                      repereName: _resolveCurrentLocation().repere,
                       equipmentType: _selectedType,
                       onDataChanged: () {
                         _hasUnsavedChanges = true;
@@ -5968,6 +6236,9 @@ class _EtapeDepartsEtCircuits extends StatefulWidget {
   final String missionId;
   final String? currentEquipmentId;
   final String? equipmentType;
+  final String? equipmentNom;
+  final String? zoneName;
+  final String? repereName;
   final VoidCallback onDataChanged;
 
   const _EtapeDepartsEtCircuits({
@@ -5977,6 +6248,9 @@ class _EtapeDepartsEtCircuits extends StatefulWidget {
     required this.missionId,
     this.currentEquipmentId,
     this.equipmentType,
+    this.equipmentNom,
+    this.zoneName,
+    this.repereName,
     required this.onDataChanged,
   });
 
@@ -6859,6 +7133,23 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     onChanged: (v) { dep.nombreCables = v.trim().isEmpty ? null : v.trim(); widget.onDataChanged(); },
                   ),
+                  if (EssaiDeclenchementHelper.isEligibleForEssai(typeProtection: dep.typeProtection, ddr: dep.ddr)) ...[
+                    const SizedBox(height: 16),
+                    buildEssaiDeclenchementButton(
+                      context: context,
+                      missionId: widget.missionId,
+                      elementId: dep.id,
+                      equipementId: widget.currentEquipmentId ?? '',
+                      zone: widget.zoneName ?? '',
+                      repere: widget.repereName ?? '',
+                      designation: widget.equipmentNom ?? 'Équipement',
+                      precision: EssaiDeclenchementHelper.precisionDepart,
+                      typeDispositif: dep.typeProtection,
+                      calibre: dep.calibre,
+                      ddr: dep.ddr,
+                      onEssaiChanged: () => setState(() {}),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -7259,6 +7550,23 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     onChanged: (v) { ct.nombreCables = v.trim().isEmpty ? null : v.trim(); widget.onDataChanged(); },
                   ),
+                  if (EssaiDeclenchementHelper.isEligibleForEssai(typeProtection: ct.typeProtection, ddr: ct.ddr)) ...[
+                    const SizedBox(height: 16),
+                    buildEssaiDeclenchementButton(
+                      context: context,
+                      missionId: widget.missionId,
+                      elementId: ct.id,
+                      equipementId: widget.currentEquipmentId ?? '',
+                      zone: widget.zoneName ?? '',
+                      repere: widget.repereName ?? '',
+                      designation: widget.equipmentNom ?? 'Équipement',
+                      precision: EssaiDeclenchementHelper.precisionCircuit,
+                      typeDispositif: ct.typeProtection,
+                      calibre: ct.calibre,
+                      ddr: ct.ddr,
+                      onEssaiChanged: () => setState(() {}),
+                    ),
+                  ],
                 ],
               ),
             ),

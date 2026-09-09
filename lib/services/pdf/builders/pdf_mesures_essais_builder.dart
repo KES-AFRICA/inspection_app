@@ -1589,8 +1589,8 @@ class PdfMesuresEssaisBuilder {
                   _thHeaderCell("ZONE"),
                   _thHeaderCell("REPÈRE"),
                   _thHeaderCell("N°"),
-                  _thHeaderCell("ÉQUIPEMENT"),
-                  _thHeaderCell("Désignation circuit"),
+                  _thHeaderCell("Désignation"),
+                  _thHeaderCell("Précision"),
                   _thHeaderCell("Type de dispositif"),
                   _thHeaderCell("Calibre du dispositif (A)"),
                   pw.Column(
@@ -1780,11 +1780,14 @@ class PdfMesuresEssaisBuilder {
                       essaiColor = null;
                     }
 
-                    final hasCircuit = es.designationCircuit != null && es.designationCircuit!.trim().isNotEmpty;
-                    final circuitText = hasCircuit ? es.designationCircuit!.trim() : '-';
+                    final precisionVal = (es.precision != null && es.precision!.trim().isNotEmpty)
+                        ? es.precision!.trim()
+                        : (es.designationCircuit != null && es.designationCircuit!.trim().isNotEmpty
+                            ? es.designationCircuit!.trim()
+                            : '-');
 
                     final calibreDisplay = es.calibre != null
-                        ? '${es.calibre! % 1 == 0 ? es.calibre!.toInt() : es.calibre} A'
+                        ? '${es.calibre! % 1 == 0 ? es.calibre!.toInt() : es.calibre}'
                         : '-';
 
                     ddrTableRows.add(
@@ -1824,7 +1827,7 @@ class PdfMesuresEssaisBuilder {
                             ),
                           ),
 
-                          // Cellule 3 : Équipement
+                          // Cellule 3 : Désignation
                           _buildGroupedCellWidget(
                             currentIndex: currentEqItemIdx,
                             totalRows: eqCount,
@@ -1834,13 +1837,13 @@ class PdfMesuresEssaisBuilder {
                             padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                           ),
 
-                          // Cellule 4 : Désignation circuit
+                          // Cellule 4 : Précision
                           pw.Container(
                             decoration: pw.BoxDecoration(color: bg, border: itemBorder),
                             padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                             alignment: pw.Alignment.center,
                             child: pw.Text(
-                              circuitText,
+                              precisionVal,
                               style: pw.TextStyle(font: _fontRegular, fontSize: 8.5),
                               textAlign: pw.TextAlign.center,
                             ),

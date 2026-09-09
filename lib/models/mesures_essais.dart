@@ -289,6 +289,21 @@ class EssaiDeclenchementDifferentiel {
   @HiveField(22)
   DateTime? updatedAt;
 
+  @HiveField(23)
+  String? elementId; // ID stable de l'élément (ex: dep.id, ct.id, etc.)
+
+  @HiveField(24)
+  String? precision; // "sortie inverseur", "protection de tête de départ", "départ", "circuit"
+
+  @HiveField(25)
+  String? equipementId; // ID stable de l'équipement (ex: coffret.equipmentId)
+
+  @HiveField(26)
+  String? zone; // Zone résolue de l'équipement
+
+  @HiveField(27)
+  String? repere; // Repère / local résolu de l'équipement
+
   String get essaiId {
     if (id != null && id!.trim().isNotEmpty) return id!;
     id = 'essai_ddr_${DateTime.now().microsecondsSinceEpoch}_${localisation.hashCode.abs()}';
@@ -310,9 +325,58 @@ class EssaiDeclenchementDifferentiel {
     this.tempoText,
     this.createdAt,
     this.updatedAt,
+    this.elementId,
+    this.precision,
+    this.equipementId,
+    this.zone,
+    this.repere,
   }) : id = (id != null && id.trim().isNotEmpty)
             ? id
             : 'essai_ddr_${DateTime.now().microsecondsSinceEpoch}_${localisation.hashCode.abs()}';
+
+  EssaiDeclenchementDifferentiel copyWith({
+    String? id,
+    String? localisation,
+    String? coffret,
+    String? designationCircuit,
+    String? typeDispositif,
+    double? reglageIAn,
+    double? tempo,
+    double? isolement,
+    String? essai,
+    String? observation,
+    double? calibre,
+    String? tempoText,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    String? elementId,
+    String? precision,
+    String? equipementId,
+    String? zone,
+    String? repere,
+  }) {
+    return EssaiDeclenchementDifferentiel(
+      id: id ?? this.id,
+      localisation: localisation ?? this.localisation,
+      coffret: coffret ?? this.coffret,
+      designationCircuit: designationCircuit ?? this.designationCircuit,
+      typeDispositif: typeDispositif ?? this.typeDispositif,
+      reglageIAn: reglageIAn ?? this.reglageIAn,
+      tempo: tempo ?? this.tempo,
+      isolement: isolement ?? this.isolement,
+      essai: essai ?? this.essai,
+      observation: observation ?? this.observation,
+      calibre: calibre ?? this.calibre,
+      tempoText: tempoText ?? this.tempoText,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      elementId: elementId ?? this.elementId,
+      precision: precision ?? this.precision,
+      equipementId: equipementId ?? this.equipementId,
+      zone: zone ?? this.zone,
+      repere: repere ?? this.repere,
+    );
+  }
 
   factory EssaiDeclenchementDifferentiel.create({
     required String localisation,
