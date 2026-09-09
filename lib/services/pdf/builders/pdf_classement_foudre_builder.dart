@@ -983,6 +983,14 @@ class PdfClassementFoudreBuilder {
         repereDisplay = '-';
       }
 
+      final String? cid = c.id;
+      final String equipKey = (cid != null && cid.trim().isNotEmpty)
+          ? cid.trim()
+          : '${resolvedZone.toLowerCase()}_${resolvedLocal.toLowerCase()}_${equipementName.toLowerCase()}';
+      if (seenKeys.contains(equipKey)) return;
+
+      bool equipObservationAdded = false;
+
       void addRow({
         required String observation,
         String pointVerification = '-',
@@ -991,6 +999,8 @@ class PdfClassementFoudreBuilder {
         List<String>? photoPaths,
         required String key,
       }) {
+        if (equipObservationAdded || seenKeys.contains(equipKey)) return;
+
         final textTrim = observation.trim();
         if (textTrim.isEmpty) return;
 
@@ -1008,11 +1018,8 @@ class PdfClassementFoudreBuilder {
         // "Dispositif de protection contre les surtensions (parafoudre)"
         const finalPv = defaultParafoudrePointPV;
 
-        final sourceTag = key.split('_').first;
-        final photosKey = (photoPaths ?? []).join(',');
-        final contentKey = '${resolvedZone.toLowerCase()}_${resolvedLocal.toLowerCase()}_${equipementName.toLowerCase()}_${sourceTag.toLowerCase()}_${pointVerification.trim().toLowerCase()}_${textTrim.toLowerCase()}_$photosKey';
-        if (seenKeys.contains(contentKey)) return;
-        seenKeys.add(contentKey);
+        seenKeys.add(equipKey);
+        equipObservationAdded = true;
 
         rows.add(
           PdfParafoudreEquipementRow(
@@ -1025,13 +1032,15 @@ class PdfClassementFoudreBuilder {
             criticite: finalCrit,
             observation: textTrim,
             photoPaths: photoPaths ?? [],
-            identityKey: contentKey,
+            identityKey: equipKey,
           ),
         );
       }
 
       // Points de vérification liés au parafoudre / surtension (strictement réservés aux observations par équipement)
       for (var pv in c.pointsVerification) {
+        if (equipObservationAdded) break;
+
         final isRelated = isParafoudreRelated(pv.pointVerification) ||
             isParafoudreRelated(pv.familleRisque ?? '') ||
             isParafoudreRelated(pv.referenceNormative ?? '') ||
@@ -1049,17 +1058,25 @@ class PdfClassementFoudreBuilder {
               : defaultParafoudreCriticite;
 
           if (pv.observation != null && pv.observation!.trim().isNotEmpty) {
+            final allPhotos = <String>[...pv.photos];
+            if (pv.observations != null) {
+              for (var el in pv.observations!) {
+                for (var p in el.photos) {
+                  if (!allPhotos.contains(p)) allPhotos.add(p);
+                }
+              }
+            }
             addRow(
               pointVerification: pvTitle,
               referenceNormative: pvRef,
               criticite: pvCrit,
               observation: pv.observation!,
-              photoPaths: pv.photos,
+              photoPaths: allPhotos,
               key: 'pv_${identityHashCode(pv)}',
             );
-          }
-          if (pv.observations != null) {
+          } else if (pv.observations != null && pv.observations!.isNotEmpty) {
             for (var el in pv.observations!) {
+              if (equipObservationAdded) break;
               final text = el.observation?.isNotEmpty == true
                   ? el.observation!
                   : el.elementControle;
@@ -1081,17 +1098,20 @@ class PdfClassementFoudreBuilder {
         }
       }
 
-      // 4. Observations libres spécifiques au parafoudre sur le coffret
-      for (var obs in c.observationsLibres) {
-        if (isParafoudreRelated(obs.texte)) {
-          addRow(
-            pointVerification: defaultParafoudrePointSlide3,
-            referenceNormative: obs.referenceNormative ?? defaultParafoudreRefNormative,
-            criticite: obs.criticite ?? defaultParafoudreCriticite,
-            observation: obs.texte,
-            photoPaths: obs.photos,
-            key: 'obslibre_${identityHashCode(obs)}',
-          );
+      // 4. Observations libres spécifiques au parafoudre sur le coffret (si aucune observation n'a été ajoutée)
+      if (!equipObservationAdded) {
+        for (var obs in c.observationsLibres) {
+          if (equipObservationAdded) break;
+          if (isParafoudreRelated(obs.texte)) {
+            addRow(
+              pointVerification: defaultParafoudrePointSlide3,
+              referenceNormative: obs.referenceNormative ?? defaultParafoudreRefNormative,
+              criticite: obs.criticite ?? defaultParafoudreCriticite,
+              observation: obs.texte,
+              photoPaths: obs.photos,
+              key: 'obslibre_${identityHashCode(obs)}',
+            );
+          }
         }
       }
     }
