@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/features/mesures_essais/presentation/providers/mesures_essais_provider.dart';
 import 'package:inspec_app/models/mesures_essais.dart';
+import 'package:inspec_app/services/hive_service.dart';
 
 /// Modal bottom sheet pour saisir ou modifier un essai de déclenchement différentiel
 class EssaiDeclenchementModal extends ConsumerStatefulWidget {
@@ -89,14 +90,42 @@ class _EssaiDeclenchementModalState extends ConsumerState<EssaiDeclenchementModa
   // Par défaut "Satisfaisant"
   String _selectedResultat = 'Satisfaisant';
   bool _isSaving = false;
+  EssaiDeclenchementDifferentiel? _resolvedEssai;
 
-  bool get isEdition => widget.existingEssai != null;
+  bool get isEdition => _resolvedEssai != null || widget.existingEssai != null;
 
   @override
   void initState() {
     super.initState();
+    _initData();
+  }
+
+  void _initData() {
+    _resolvedEssai = widget.existingEssai;
+    if (_resolvedEssai == null) {
+      final mesures = HiveService.getMesuresEssaisByMissionId(widget.missionId);
+      if (mesures != null) {
+        for (final e in mesures.essaisDeclenchement) {
+          if ((widget.elementId.isNotEmpty && e.elementId == widget.elementId) ||
+              (widget.equipementId.isNotEmpty &&
+                  e.equipementId == widget.equipementId &&
+                  e.precision != null &&
+                  e.precision!.trim().toLowerCase() == widget.precision.trim().toLowerCase()) ||
+              (widget.precision.isNotEmpty &&
+                  e.designationCircuit != null &&
+                  e.designationCircuit!.trim().toLowerCase() == widget.precision.trim().toLowerCase() &&
+                  widget.designation.isNotEmpty &&
+                  e.coffret != null &&
+                  e.coffret!.trim().toLowerCase() == widget.designation.trim().toLowerCase())) {
+            _resolvedEssai = e;
+            break;
+          }
+        }
+      }
+    }
+
     if (isEdition) {
-      final e = widget.existingEssai!;
+      final e = _resolvedEssai ?? widget.existingEssai!;
       _tempoController.text = e.displayTempo.isNotEmpty && e.displayTempo != '-'
           ? e.displayTempo
           : "Réglage d'origine.";
@@ -141,19 +170,35 @@ class _EssaiDeclenchementModalState extends ConsumerState<EssaiDeclenchementModa
 
       EssaiDeclenchementDifferentiel savedEssai;
 
-      // Recherche si un essai existe déjà avec cet elementId ou id
-      final existingIndex = widget.existingEssai != null
-          ? mesures.essaisDeclenchement.indexWhere(
-              (e) => e.elementId == widget.elementId || e.id == widget.existingEssai!.id,
-            )
-          : mesures.essaisDeclenchement.indexWhere(
-              (e) => e.elementId == widget.elementId,
-            );
+      int existingIndex = -1;
+      final targetId = _resolvedEssai?.id ?? widget.existingEssai?.id;
+      final targetElementId = widget.elementId.isNotEmpty ? widget.elementId : null;
+
+      existingIndex = mesures.essaisDeclenchement.indexWhere((e) {
+        if (targetId != null && targetId.isNotEmpty && e.id == targetId) return true;
+        if (targetElementId != null && e.elementId == targetElementId) return true;
+        if (widget.equipementId.isNotEmpty &&
+            e.equipementId == widget.equipementId &&
+            e.precision != null &&
+            e.precision!.trim().toLowerCase() == widget.precision.trim().toLowerCase()) {
+          return true;
+        }
+        if (widget.precision.isNotEmpty &&
+            e.designationCircuit != null &&
+            e.designationCircuit!.trim().toLowerCase() == widget.precision.trim().toLowerCase() &&
+            widget.designation.isNotEmpty &&
+            e.coffret != null &&
+            e.coffret!.trim().toLowerCase() == widget.designation.trim().toLowerCase()) {
+          return true;
+        }
+        return false;
+      });
 
       if (existingIndex != -1) {
         // Mode modification
         final prev = mesures.essaisDeclenchement[existingIndex];
         savedEssai = prev.copyWith(
+          id: prev.id,
           localisation: widget.repere.isNotEmpty ? widget.repere : (widget.zone.isNotEmpty ? widget.zone : prev.localisation),
           coffret: widget.designation.isNotEmpty ? widget.designation : prev.coffret,
           designationCircuit: widget.precision,
@@ -165,11 +210,11 @@ class _EssaiDeclenchementModalState extends ConsumerState<EssaiDeclenchementModa
           essai: essaiValue,
           observation: _observationController.text.trim().isNotEmpty ? _observationController.text.trim() : null,
           updatedAt: now,
-          elementId: widget.elementId,
-          precision: widget.precision,
-          equipementId: widget.equipementId,
-          zone: widget.zone,
-          repere: widget.repere,
+          elementId: widget.elementId.isNotEmpty ? widget.elementId : prev.elementId,
+          precision: widget.precision.isNotEmpty ? widget.precision : prev.precision,
+          equipementId: widget.equipementId.isNotEmpty ? widget.equipementId : prev.equipementId,
+          zone: widget.zone.isNotEmpty ? widget.zone : prev.zone,
+          repere: widget.repere.isNotEmpty ? widget.repere : prev.repere,
         );
         mesures.essaisDeclenchement[existingIndex] = savedEssai;
       } else {
@@ -197,6 +242,7 @@ class _EssaiDeclenchementModalState extends ConsumerState<EssaiDeclenchementModa
       }
 
       final success = await ref.read(mesuresEssaisProvider(widget.missionId).notifier).saveMesures(mesures);
+      await HiveService.saveMesuresEssais(mesures);
 
       if (mounted) {
         setState(() => _isSaving = false);

@@ -37,6 +37,7 @@ class MesuresEssaisMapper {
       ),
       essaisDeclenchement: model.essaisDeclenchement.map((ed) {
         return EssaiDeclenchementDifferentielEntity(
+          id: ed.id,
           localisation: ed.localisation,
           coffret: ed.coffret,
           designationCircuit: ed.designationCircuit,
@@ -48,6 +49,13 @@ class MesuresEssaisMapper {
           observation: ed.observation,
           calibre: ed.calibre,
           tempoText: ed.tempoText,
+          createdAt: ed.createdAt,
+          updatedAt: ed.updatedAt,
+          elementId: ed.elementId,
+          precision: ed.precision,
+          equipementId: ed.equipementId,
+          zone: ed.zone,
+          repere: ed.repere,
         );
       }).toList(),
       essaisIsolement: model.essaisIsolement.map((ei) {
@@ -139,6 +147,7 @@ class MesuresEssaisMapper {
       ),
       essaisDeclenchement: entity.essaisDeclenchement.map((ed) {
         return EssaiDeclenchementDifferentiel(
+          id: ed.id,
           localisation: ed.localisation,
           coffret: ed.coffret,
           designationCircuit: ed.designationCircuit,
@@ -150,6 +159,13 @@ class MesuresEssaisMapper {
           observation: ed.observation,
           calibre: ed.calibre,
           tempoText: ed.tempoText,
+          createdAt: ed.createdAt,
+          updatedAt: ed.updatedAt,
+          elementId: ed.elementId,
+          precision: ed.precision,
+          equipementId: ed.equipementId,
+          zone: ed.zone,
+          repere: ed.repere,
         );
       }).toList(),
       essaisIsolement: entity.essaisIsolement.map((ei) {

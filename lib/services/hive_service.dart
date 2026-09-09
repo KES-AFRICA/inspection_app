@@ -4984,7 +4984,17 @@ static Future<MesuresEssais> getOrCreateMesuresEssais(String missionId) async {
 static Future<void> saveMesuresEssais(MesuresEssais mesures) async {
   final box = Hive.box<MesuresEssais>(_mesuresEssaisBox);
   mesures.updatedAt = DateTime.now();
-  await mesures.save();
+  if (mesures.isInBox) {
+    await mesures.save();
+  } else {
+    final existingIndex = box.values.toList().indexWhere((m) => m.missionId == mesures.missionId);
+    if (existingIndex != -1) {
+      final existingKey = box.keyAt(existingIndex);
+      await box.put(existingKey, mesures);
+    } else {
+      await box.add(mesures);
+    }
+  }
   if (kDebugMode) print('✅ MesuresEssais sauvegardé pour mission: ${mesures.missionId}');
 }
 

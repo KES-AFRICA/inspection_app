@@ -1990,12 +1990,17 @@ Widget buildEssaiDeclenchementButton({
   EssaiDeclenchementDifferentiel? existingEssai;
   if (mesures != null) {
     for (final e in mesures.essaisDeclenchement) {
-      if ((e.elementId != null && e.elementId == elementId) ||
-          (elementId.isNotEmpty && e.elementId == elementId) ||
+      if ((elementId.isNotEmpty && e.elementId == elementId) ||
           (equipementId.isNotEmpty &&
               e.equipementId == equipementId &&
               e.precision != null &&
-              e.precision!.trim().toLowerCase() == precision.trim().toLowerCase())) {
+              e.precision!.trim().toLowerCase() == precision.trim().toLowerCase()) ||
+          (precision.isNotEmpty &&
+              e.designationCircuit != null &&
+              e.designationCircuit!.trim().toLowerCase() == precision.trim().toLowerCase() &&
+              designation.isNotEmpty &&
+              e.coffret != null &&
+              e.coffret!.trim().toLowerCase() == designation.trim().toLowerCase())) {
         existingEssai = e;
         break;
       }

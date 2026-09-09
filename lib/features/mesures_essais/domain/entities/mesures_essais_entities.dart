@@ -55,6 +55,7 @@ class AvisMesuresTerreEntity {
 }
 
 class EssaiDeclenchementDifferentielEntity {
+  final String? id;
   final String localisation;
   final String? coffret;
   final String? designationCircuit;
@@ -66,8 +67,16 @@ class EssaiDeclenchementDifferentielEntity {
   final String? observation;
   final double? calibre;
   final String? tempoText;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
+  final String? elementId;
+  final String? precision;
+  final String? equipementId;
+  final String? zone;
+  final String? repere;
 
   const EssaiDeclenchementDifferentielEntity({
+    this.id,
     required this.localisation,
     this.coffret,
     this.designationCircuit,
@@ -79,6 +88,13 @@ class EssaiDeclenchementDifferentielEntity {
     this.observation,
     this.calibre,
     this.tempoText,
+    this.createdAt,
+    this.updatedAt,
+    this.elementId,
+    this.precision,
+    this.equipementId,
+    this.zone,
+    this.repere,
   });
 }
 
