@@ -2039,19 +2039,19 @@ Widget buildEssaiDeclenchementButton({
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
           decoration: BoxDecoration(
             color: hasEssai
-                ? (isSatisfaisant ? const Color(0xFFE8F5E9) : const Color(0xFFFFEBEE))
+                ? const Color(0xFFE8F5E9)
                 : AppTheme.primaryBlue.withOpacity(0.04),
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
               color: hasEssai
-                  ? (isSatisfaisant ? Colors.green.shade600 : Colors.red.shade600)
+                  ? Colors.green.shade600
                   : AppTheme.primaryBlue.withOpacity(0.5),
               width: hasEssai ? 1.6 : 1.2,
             ),
             boxShadow: hasEssai
                 ? [
                     BoxShadow(
-                      color: (isSatisfaisant ? Colors.green : Colors.red).withOpacity(0.12),
+                      color: Colors.green.withOpacity(0.12),
                       blurRadius: 6,
                       offset: const Offset(0, 2),
                     ),
@@ -2064,17 +2064,17 @@ Widget buildEssaiDeclenchementButton({
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
                   color: hasEssai
-                      ? (isSatisfaisant ? Colors.green.shade100 : Colors.red.shade100)
+                      ? Colors.green.shade100
                       : AppTheme.primaryBlue.withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
                   hasEssai
-                      ? (isSatisfaisant ? Icons.check_circle : Icons.cancel)
+                      ? (isSatisfaisant ? Icons.check_circle : Icons.warning_amber_rounded)
                       : Icons.speed,
                   size: 20,
                   color: hasEssai
-                      ? (isSatisfaisant ? Colors.green.shade700 : Colors.red.shade700)
+                      ? (isSatisfaisant ? Colors.green.shade700 : Colors.orange.shade800)
                       : AppTheme.primaryBlue,
                 ),
               ),
@@ -2106,7 +2106,7 @@ Widget buildEssaiDeclenchementButton({
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
                             decoration: BoxDecoration(
-                              color: isSatisfaisant ? Colors.green.shade700 : Colors.red.shade700,
+                              color: Colors.green.shade700,
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: const Text(
@@ -2129,7 +2129,7 @@ Widget buildEssaiDeclenchementButton({
                       style: TextStyle(
                         fontSize: 11,
                         color: hasEssai
-                            ? (isSatisfaisant ? Colors.green.shade800 : Colors.red.shade800)
+                            ? Colors.green.shade800
                             : Colors.grey.shade600,
                       ),
                       overflow: TextOverflow.ellipsis,
@@ -2142,7 +2142,7 @@ Widget buildEssaiDeclenchementButton({
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
                   color: hasEssai
-                      ? (isSatisfaisant ? Colors.green.shade700 : Colors.red.shade700)
+                      ? Colors.green.shade700
                       : AppTheme.primaryBlue,
                   borderRadius: BorderRadius.circular(6),
                 ),
@@ -2150,13 +2150,13 @@ Widget buildEssaiDeclenchementButton({
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      hasEssai ? Icons.edit : Icons.add,
+                      hasEssai ? Icons.visibility : Icons.add,
                       size: 13,
                       color: Colors.white,
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      hasEssai ? 'Modifier' : 'Tester',
+                      hasEssai ? 'Voir' : 'Tester',
                       style: const TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
