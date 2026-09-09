@@ -918,202 +918,171 @@ class PdfClassementFoudreBuilder {
     final rows = <PdfParafoudreEquipementRow>[];
     if (audit == null) return rows;
 
-    final seenKeys = <String>{};
+    final seenCoffretKeys = <String>{};
 
-    bool isParafoudreRelated(String text) {
+    bool isParafoudrePoint(String text) {
       final lower = text.toLowerCase();
-      return lower.contains('parafoudre') ||
-          lower.contains('surtension') ||
-          lower.contains('foudre') ||
-          lower.contains('limiteur');
+      return lower.contains('parafoudre') || lower.contains('surtension');
     }
 
-    void processCoffret(CoffretArmoire c, {String zoneName = '', String localName = ''}) {
-      final cRepere = (c.repere != null && c.repere!.trim().isNotEmpty) ? c.repere!.trim() : '';
+    void processCoffret(
+      CoffretArmoire c, {
+      String zoneName = '',
+      String localName = '',
+    }) {
       final cNom = c.nom.trim();
-      final cNum = c.numeroEquipement?.trim() ?? '';
+      final cRep = (c.repere != null && c.repere!.trim().isNotEmpty) ? c.repere!.trim() : '';
+      final cId = (c.id != null && c.id!.trim().isNotEmpty) ? c.id!.trim() : '';
 
-      final String equipementName;
-      if (cNom.isNotEmpty) {
-        equipementName = cNom;
-      } else if (cRepere.isNotEmpty) {
-        equipementName = cRepere;
-      } else if (cNum.isNotEmpty) {
-        equipementName = cNum;
-      } else {
-        equipementName = '-';
+      // Clé unique par équipement physique pour garantir une seule occurrence
+      final String equipKey = cId.isNotEmpty
+          ? cId
+          : (cRep.isNotEmpty || cNom.isNotEmpty)
+              ? '${cRep.toLowerCase()}__${cNom.toLowerCase()}'
+              : '${zoneName.trim().toLowerCase()}__${localName.trim().toLowerCase()}';
+
+      if (seenCoffretKeys.contains(equipKey)) return;
+      seenCoffretKeys.add(equipKey);
+
+      // 1. Rechercher le point de vérification parafoudre non conforme
+      PointVerification? pvParafoudre;
+      for (final pv in c.pointsVerification) {
+        if (isParafoudrePoint(pv.pointVerification) || isParafoudrePoint(pv.familleRisque ?? '')) {
+          final isNonConforme = pv.normalizedConformite == 'non' ||
+              (pv.observations != null && pv.observations!.any((el) => el.conforme == false));
+          if (isNonConforme) {
+            pvParafoudre = pv;
+            break;
+          }
+        }
       }
 
-      String resolvedZone = zoneName.trim();
-      String resolvedLocal = localName.trim();
+      // Vérifier également s'il y a des observations directes parafoudre non conformes (Slide 3)
+      final enrichies = c.observationsParafoudreEnrichies;
+      final bool hasEnrichiesNonConformes = enrichies != null && enrichies.any((e) => e.conforme == false);
+      final bool hasObsSlide3 = c.observationsParafoudre.isNotEmpty || hasEnrichiesNonConformes;
 
-      if (resolvedZone.isEmpty && resolvedLocal.isEmpty) {
-        final targetLoc = cRepere.isNotEmpty ? cRepere : cNom;
-        if (targetLoc.isNotEmpty) {
-          final emp = HiveService.getEmplacementByNom(audit.missionId, targetLoc);
-          if (emp != null) {
-            if (emp.typeEmplacement == 'zone') {
-              resolvedZone = emp.localisation.trim();
-            } else {
-              resolvedLocal = emp.localisation.trim();
-              if (emp.zone != null && emp.zone!.trim().isNotEmpty) {
-                resolvedZone = emp.zone!.trim();
-              }
+      // Vérifier également les observations libres parafoudre
+      ObservationLibre? obsLibreParafoudre;
+      for (final obs in c.observationsLibres) {
+        if (isParafoudrePoint(obs.texte)) {
+          obsLibreParafoudre = obs;
+          break;
+        }
+      }
+
+      // Si le parafoudre n'est PAS non conforme et aucune observation parafoudre -> ignoré
+      if (pvParafoudre == null && !hasObsSlide3 && obsLibreParafoudre == null) {
+        return;
+      }
+
+      String obsText = '';
+      String pvRef = defaultParafoudreRefNormative;
+      String pvCrit = defaultParafoudreCriticite;
+      final photos = <String>[];
+
+      if (pvParafoudre != null) {
+        if (pvParafoudre.referenceNormative?.trim().isNotEmpty == true) {
+          pvRef = pvParafoudre.referenceNormative!.trim();
+        }
+        if (pvParafoudre.criticite?.trim().isNotEmpty == true) {
+          pvCrit = pvParafoudre.criticite!.trim();
+        }
+
+        if (pvParafoudre.observation != null && pvParafoudre.observation!.trim().isNotEmpty) {
+          obsText = pvParafoudre.observation!.trim();
+        } else if (pvParafoudre.observations != null) {
+          for (final el in pvParafoudre.observations!) {
+            final t = (el.observation?.trim().isNotEmpty == true)
+                ? el.observation!.trim()
+                : (el.conforme == false ? el.elementControle.trim() : '');
+            if (t.isNotEmpty) {
+              obsText = t;
+              break;
+            }
+          }
+        }
+
+        for (final p in pvParafoudre.photos) {
+          if (!photos.contains(p)) photos.add(p);
+        }
+        if (pvParafoudre.observations != null) {
+          for (final el in pvParafoudre.observations!) {
+            for (final p in el.photos) {
+              if (!photos.contains(p)) photos.add(p);
             }
           }
         }
       }
 
-      if (resolvedLocal.isEmpty && cRepere.isNotEmpty && cRepere != cNom) {
-        resolvedLocal = cRepere;
-      }
-
-      final String repereDisplay;
-      if (cRepere.isNotEmpty && cNom.isNotEmpty && cRepere != cNom) {
-        repereDisplay = '$cRepere - $cNom';
-      } else if (cRepere.isNotEmpty) {
-        repereDisplay = cRepere;
-      } else if (resolvedLocal.isNotEmpty) {
-        repereDisplay = resolvedLocal;
-      } else if (cNom.isNotEmpty) {
-        repereDisplay = cNom;
-      } else if (cNum.isNotEmpty) {
-        repereDisplay = cNum;
-      } else {
-        repereDisplay = '-';
-      }
-
-      final String? cid = c.id;
-      final String equipKey = (cid != null && cid.trim().isNotEmpty)
-          ? cid.trim()
-          : '${resolvedZone.toLowerCase()}_${resolvedLocal.toLowerCase()}_${equipementName.toLowerCase()}';
-      if (seenKeys.contains(equipKey)) return;
-
-      bool equipObservationAdded = false;
-
-      void addRow({
-        required String observation,
-        String pointVerification = '-',
-        String referenceNormative = '-',
-        String criticite = '-',
-        List<String>? photoPaths,
-        required String key,
-      }) {
-        if (equipObservationAdded || seenKeys.contains(equipKey)) return;
-
-        final textTrim = observation.trim();
-        if (textTrim.isEmpty) return;
-
-        final refNormTrim = referenceNormative.trim();
-        final finalRef = (refNormTrim.isEmpty || refNormTrim == '-')
-            ? defaultParafoudreRefNormative
-            : refNormTrim;
-
-        final critTrim = criticite.trim();
-        final finalCrit = (critTrim.isEmpty || critTrim == '-')
-            ? defaultParafoudreCriticite
-            : critTrim;
-
-        // La colonne POINT DE VÉRIFICATION doit TOUJOURS contenir strictement:
-        // "Dispositif de protection contre les surtensions (parafoudre)"
-        const finalPv = defaultParafoudrePointPV;
-
-        seenKeys.add(equipKey);
-        equipObservationAdded = true;
-
-        rows.add(
-          PdfParafoudreEquipementRow(
-            zoneName: resolvedZone,
-            localName: resolvedLocal,
-            equipementName: equipementName,
-            repere: repereDisplay,
-            pointVerification: finalPv,
-            referenceNormative: finalRef,
-            criticite: finalCrit,
-            observation: textTrim,
-            photoPaths: photoPaths ?? [],
-            identityKey: equipKey,
-          ),
-        );
-      }
-
-      // Points de vérification liés au parafoudre / surtension (strictement réservés aux observations par équipement)
-      for (var pv in c.pointsVerification) {
-        if (equipObservationAdded) break;
-
-        final isRelated = isParafoudreRelated(pv.pointVerification) ||
-            isParafoudreRelated(pv.familleRisque ?? '') ||
-            isParafoudreRelated(pv.referenceNormative ?? '') ||
-            isParafoudreRelated(pv.observation ?? '');
-
-        if (isRelated) {
-          final pvTitle = pv.pointVerification.trim().isNotEmpty
-              ? pv.pointVerification.trim()
-              : defaultParafoudrePointPV;
-          final pvRef = pv.referenceNormative?.trim().isNotEmpty == true
-              ? pv.referenceNormative!.trim()
-              : defaultParafoudreRefNormative;
-          final pvCrit = pv.criticite?.trim().isNotEmpty == true
-              ? pv.criticite!.trim()
-              : defaultParafoudreCriticite;
-
-          if (pv.observation != null && pv.observation!.trim().isNotEmpty) {
-            final allPhotos = <String>[...pv.photos];
-            if (pv.observations != null) {
-              for (var el in pv.observations!) {
-                for (var p in el.photos) {
-                  if (!allPhotos.contains(p)) allPhotos.add(p);
-                }
-              }
+      if (hasObsSlide3) {
+        final obsSimple = c.observationsParafoudre.isNotEmpty ? c.observationsParafoudre.first : null;
+        ElementControle? obsEnrichie;
+        if (enrichies != null) {
+          for (final e in enrichies) {
+            if (e.conforme == false) {
+              obsEnrichie = e;
+              break;
             }
-            addRow(
-              pointVerification: pvTitle,
-              referenceNormative: pvRef,
-              criticite: pvCrit,
-              observation: pv.observation!,
-              photoPaths: allPhotos,
-              key: 'pv_${identityHashCode(pv)}',
-            );
-          } else if (pv.observations != null && pv.observations!.isNotEmpty) {
-            for (var el in pv.observations!) {
-              if (equipObservationAdded) break;
-              final text = el.observation?.isNotEmpty == true
-                  ? el.observation!
-                  : el.elementControle;
-              final elPoint = el.elementControle.trim().isNotEmpty
-                  ? el.elementControle.trim()
-                  : pvTitle;
-              addRow(
-                pointVerification: elPoint,
-                referenceNormative: el.referenceNormativeEffective ??
-                    el.referenceNormative ??
-                    pvRef,
-                criticite: el.criticite ?? pvCrit,
-                observation: text,
-                photoPaths: el.photos,
-                key: 'pvel_${identityHashCode(el)}',
-              );
-            }
+          }
+          obsEnrichie ??= enrichies.isNotEmpty ? enrichies.first : null;
+        }
+
+        if (obsText.isEmpty) {
+          obsText = (obsSimple != null && obsSimple.texte.trim().isNotEmpty)
+              ? obsSimple.texte.trim()
+              : ((obsEnrichie != null && obsEnrichie.observation?.trim().isNotEmpty == true)
+                  ? obsEnrichie.observation!.trim()
+                  : (obsEnrichie != null ? obsEnrichie.elementControle.trim() : ''));
+        }
+
+        if (obsSimple != null) {
+          for (final p in obsSimple.photos) {
+            if (!photos.contains(p)) photos.add(p);
+          }
+        }
+        if (obsEnrichie != null) {
+          for (final p in obsEnrichie.photos) {
+            if (!photos.contains(p)) photos.add(p);
           }
         }
       }
 
-      // 4. Observations libres spécifiques au parafoudre sur le coffret (si aucune observation n'a été ajoutée)
-      if (!equipObservationAdded) {
-        for (var obs in c.observationsLibres) {
-          if (equipObservationAdded) break;
-          if (isParafoudreRelated(obs.texte)) {
-            addRow(
-              pointVerification: defaultParafoudrePointSlide3,
-              referenceNormative: obs.referenceNormative ?? defaultParafoudreRefNormative,
-              criticite: obs.criticite ?? defaultParafoudreCriticite,
-              observation: obs.texte,
-              photoPaths: obs.photos,
-              key: 'obslibre_${identityHashCode(obs)}',
-            );
-          }
+      if (obsText.isEmpty && obsLibreParafoudre != null) {
+        obsText = obsLibreParafoudre.texte.trim();
+        if (obsLibreParafoudre.referenceNormative?.trim().isNotEmpty == true) {
+          pvRef = obsLibreParafoudre.referenceNormative!.trim();
+        }
+        if (obsLibreParafoudre.criticite?.trim().isNotEmpty == true) {
+          pvCrit = obsLibreParafoudre.criticite!.trim();
+        }
+        for (final p in obsLibreParafoudre.photos) {
+          if (!photos.contains(p)) photos.add(p);
         }
       }
+
+      if (obsText.isEmpty) {
+        obsText = 'Non conforme';
+      }
+
+      final equipName = cNom.isNotEmpty ? cNom : (cRep.isNotEmpty ? cRep : '-');
+      final repereDisplay = cRep.isNotEmpty ? cRep : (cNom.isNotEmpty ? cNom : '-');
+      final zoneDisplay = zoneName.trim().isNotEmpty ? zoneName.trim() : '-';
+
+      rows.add(
+        PdfParafoudreEquipementRow(
+          zoneName: zoneDisplay,
+          localName: localName.trim(),
+          equipementName: equipName,
+          repere: repereDisplay,
+          pointVerification: defaultParafoudrePointPV,
+          referenceNormative: pvRef,
+          criticite: pvCrit,
+          observation: obsText,
+          photoPaths: photos,
+          identityKey: equipKey,
+        ),
+      );
     }
 
     // 1. Locaux MT (Hors zone)
@@ -1469,7 +1438,6 @@ class PdfClassementFoudreBuilder {
       if (equipRows.isEmpty) {
         widgets.add(PdfReportStyles.bodyText('Aucune observation parafoudre par équipement disponible.'));
       } else {
-        final zoneGroups = _groupByZoneLocalEquipFoudre(equipRows);
         final tableRows = <pw.TableRow>[];
 
         tableRows.add(
@@ -1485,209 +1453,123 @@ class PdfClassementFoudreBuilder {
           ]),
         );
 
-        int zoneRowIndex = 0;
+        for (int i = 0; i < equipRows.length; i++) {
+          final o = equipRows[i];
+          final equipBg = i % 2 == 1 ? PdfColor.fromInt(0xFFF8FAFC) : PdfColors.white;
+          final photoLabel = _getFormattedPhotoLabel(o.photoPaths, photoRegistry);
 
-        for (final zoneGroup in zoneGroups) {
-          final totalZoneItems = zoneGroup.localGroups.fold<int>(
-            0,
-            (sum, lg) => sum + lg.equipGroups.fold<int>(0, (s, eg) => s + eg.items.length),
-          );
-
-          int localRowIndex = 0;
-
-          for (int lIdx = 0; lIdx < zoneGroup.localGroups.length; lIdx++) {
-            final localGroup = zoneGroup.localGroups[lIdx];
-            final totalLocalItems = localGroup.equipGroups.fold<int>(
-              0,
-              (s, eg) => s + eg.items.length,
-            );
-
-            for (int eIdx = 0; eIdx < localGroup.equipGroups.length; eIdx++) {
-              final equipGroup = localGroup.equipGroups[eIdx];
-              final totalEquipItems = equipGroup.items.length;
-
-              final equipBg = eIdx % 2 == 0 ? PdfColors.white : PdfColor.fromInt(0xFFF8FAFC);
-
-              for (int i = 0; i < totalEquipItems; i++) {
-                final o = equipGroup.items[i];
-                final currentZoneRowIdx = zoneRowIndex++;
-                final currentLocalRowIdx = localRowIndex++;
-                final currentEquipRowIdx = i;
-
-                final isEndOfEquip = (currentEquipRowIdx == totalEquipItems - 1);
-                final isEndOfLocal = (currentLocalRowIdx == totalLocalItems - 1);
-                final isEndOfZone = (currentZoneRowIdx == totalZoneItems - 1);
-
-                final zoneBorder = pw.Border(
-                  bottom: isEndOfZone
-                      ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
-                      : pw.BorderSide.none,
-                );
-
-                final localBorder = pw.Border(
-                  bottom: isEndOfZone
-                      ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
-                      : (isEndOfLocal
-                          ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 0.8)
-                          : pw.BorderSide.none),
-                );
-
-                final equipBorder = pw.Border(
-                  bottom: isEndOfZone
-                      ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
-                      : (isEndOfLocal
-                          ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 0.8)
-                          : (isEndOfEquip
-                              ? const pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.6)
-                              : pw.BorderSide.none)),
-                );
-
-                final obsBorder = pw.Border(
-                  bottom: isEndOfZone
-                      ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
-                      : (isEndOfLocal
-                          ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 0.8)
-                          : (isEndOfEquip
-                              ? const pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.6)
-                              : const pw.BorderSide(color: PdfColor.fromInt(0xFFCBD5E1), width: 0.4))),
-                );
-
-                final photoLabel = _getFormattedPhotoLabel(o.photoPaths, photoRegistry);
-
-                tableRows.add(
-                  pw.TableRow(
-                    decoration: pw.BoxDecoration(color: equipBg),
-                    children: [
-                      // Cellule 0 : ZONE (centré)
-                      PdfReportStyles.buildGroupedCellWidget(
-                        currentIndex: currentZoneRowIdx,
-                        totalRows: totalZoneItems,
-                        text: zoneGroup.zoneName.isNotEmpty ? zoneGroup.zoneName : '-',
-                        style: pw.TextStyle(font: fontBold, fontSize: 8.0, color: PdfReportStyles.headerColor),
-                        border: zoneBorder,
-                        padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                        alignment: pw.Alignment.center,
-                        textAlign: pw.TextAlign.center,
-                      ),
-
-                      // Cellule 1 : REPÈRE (centré)
-                      PdfReportStyles.buildGroupedCellWidget(
-                        currentIndex: currentLocalRowIdx,
-                        totalRows: totalLocalItems,
-                        text: localGroup.localName.isNotEmpty
-                            ? localGroup.localName
-                            : (o.repere.isNotEmpty && o.repere != '-' ? o.repere : '-'),
-                        style: pw.TextStyle(font: fontBold, fontSize: 8.0, color: PdfReportStyles.headerColor),
-                        border: localBorder,
-                        padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                        alignment: pw.Alignment.center,
-                        textAlign: pw.TextAlign.center,
-                      ),
-
-                      // Cellule 2 : DÉSIGNATION (centré)
-                      PdfReportStyles.buildGroupedCellWidget(
-                        currentIndex: currentEquipRowIdx,
-                        totalRows: totalEquipItems,
-                        text: equipGroup.equipementName.isNotEmpty
-                            ? equipGroup.equipementName
-                            : (o.equipementName.isNotEmpty && o.equipementName != '-' ? o.equipementName : '-'),
-                        style: pw.TextStyle(font: fontBold, fontSize: 8.0, color: PdfReportStyles.headerColor),
-                        border: equipBorder,
-                        padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
-                        alignment: pw.Alignment.center,
-                        textAlign: pw.TextAlign.center,
-                      ),
-
-                      // Cellule 3 : POINT DE VÉRIFICATION (centré)
-                      pw.Container(
-                        decoration: pw.BoxDecoration(border: obsBorder),
-                        padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                        alignment: pw.Alignment.center,
-                        child: pw.Text(
-                          _normalizeText(o.pointVerification),
-                          style: pw.TextStyle(font: fontBold, fontSize: 8.0, color: PdfReportStyles.headerColor),
-                          textAlign: pw.TextAlign.center,
-                        ),
-                      ),
-
-                      // Cellule 4 : RÉF. NORMATIVE (centré)
-                      pw.Container(
-                        decoration: pw.BoxDecoration(border: obsBorder),
-                        padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
-                        alignment: pw.Alignment.center,
-                        child: pw.Text(
-                          _normalizeText(o.referenceNormative),
-                          style: pw.TextStyle(font: fontRegular, fontSize: 8.0),
-                          textAlign: pw.TextAlign.center,
-                        ),
-                      ),
-
-                      // Cellule 5 : CRITICITÉ (centré)
-                      pw.Container(
-                        decoration: pw.BoxDecoration(border: obsBorder),
-                        padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 4),
-                        alignment: pw.Alignment.center,
-                        child: pw.Text(
-                          o.criticite,
-                          style: pw.TextStyle(
-                            font: fontBold,
-                            fontSize: 8.0,
-                            color: PdfReportStyles.getCriticitePdfColor(o.criticite),
-                          ),
-                          textAlign: pw.TextAlign.center,
-                        ),
-                      ),
-
-                      // Cellule 6 : OBSERVATION (centré)
-                      pw.Container(
-                        decoration: pw.BoxDecoration(border: obsBorder),
-                        padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
-                        alignment: pw.Alignment.center,
-                        child: pw.Text(
-                          _normalizeText(o.observation),
-                          style: pw.TextStyle(font: fontRegular, fontSize: 8.5),
-                          textAlign: pw.TextAlign.center,
-                        ),
-                      ),
-
-                      // Cellule 7 : PHOTO (centré)
-                      pw.Container(
-                        decoration: pw.BoxDecoration(border: obsBorder),
-                        padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                        alignment: pw.Alignment.center,
-                        child: pw.Text(
-                          photoLabel,
-                          style: pw.TextStyle(
-                            font: photoLabel != '-' ? fontBold : fontRegular,
-                            fontSize: 8.5,
-                            color: photoLabel != '-' ? PdfColor.fromInt(0xFF1D4ED8) : PdfColors.black,
-                          ),
-                          textAlign: pw.TextAlign.center,
-                        ),
-                      ),
-                    ],
+          tableRows.add(
+            pw.TableRow(
+              decoration: pw.BoxDecoration(color: equipBg),
+              children: [
+                // Cellule 0 : ZONE
+                pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 5),
+                  alignment: pw.Alignment.center,
+                  child: pw.Text(
+                    o.zoneName.isNotEmpty ? o.zoneName : '-',
+                    style: pw.TextStyle(font: fontBold, fontSize: 8.0, color: PdfReportStyles.headerColor),
+                    textAlign: pw.TextAlign.center,
                   ),
-                );
-              }
-            }
-          }
+                ),
+
+                // Cellule 1 : REPÈRE
+                pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 5),
+                  alignment: pw.Alignment.center,
+                  child: pw.Text(
+                    o.repere.isNotEmpty ? o.repere : '-',
+                    style: pw.TextStyle(font: fontBold, fontSize: 8.0, color: PdfReportStyles.headerColor),
+                    textAlign: pw.TextAlign.center,
+                  ),
+                ),
+
+                // Cellule 2 : DÉSIGNATION
+                pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 5),
+                  alignment: pw.Alignment.center,
+                  child: pw.Text(
+                    o.equipementName.isNotEmpty ? o.equipementName : '-',
+                    style: pw.TextStyle(font: fontBold, fontSize: 8.0, color: PdfReportStyles.headerColor),
+                    textAlign: pw.TextAlign.center,
+                  ),
+                ),
+
+                // Cellule 3 : POINT DE VÉRIFICATION
+                pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 5),
+                  alignment: pw.Alignment.center,
+                  child: pw.Text(
+                    _normalizeText(o.pointVerification),
+                    style: pw.TextStyle(font: fontBold, fontSize: 8.0, color: PdfReportStyles.headerColor),
+                    textAlign: pw.TextAlign.center,
+                  ),
+                ),
+
+                // Cellule 4 : RÉF. NORMATIVE
+                pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 5),
+                  alignment: pw.Alignment.center,
+                  child: pw.Text(
+                    _normalizeText(o.referenceNormative),
+                    style: pw.TextStyle(font: fontRegular, fontSize: 8.0),
+                    textAlign: pw.TextAlign.center,
+                  ),
+                ),
+
+                // Cellule 5 : CRITICITÉ
+                pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 5),
+                  alignment: pw.Alignment.center,
+                  child: pw.Text(
+                    o.criticite,
+                    style: pw.TextStyle(
+                      font: fontBold,
+                      fontSize: 8.0,
+                      color: PdfReportStyles.getCriticitePdfColor(o.criticite),
+                    ),
+                    textAlign: pw.TextAlign.center,
+                  ),
+                ),
+
+                // Cellule 6 : OBSERVATION
+                pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+                  alignment: pw.Alignment.center,
+                  child: pw.Text(
+                    _normalizeText(o.observation),
+                    style: pw.TextStyle(font: fontRegular, fontSize: 8.5),
+                    textAlign: pw.TextAlign.center,
+                  ),
+                ),
+
+                // Cellule 7 : PHOTO
+                pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 5),
+                  alignment: pw.Alignment.center,
+                  child: pw.Text(
+                    photoLabel,
+                    style: pw.TextStyle(
+                      font: photoLabel != '-' ? fontBold : fontRegular,
+                      fontSize: 8.5,
+                      color: photoLabel != '-' ? const PdfColor.fromInt(0xFF1D4ED8) : PdfColors.black,
+                    ),
+                    textAlign: pw.TextAlign.center,
+                  ),
+                ),
+              ],
+            ),
+          );
         }
 
         widgets.add(
           pw.Table(
             defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
-            border: const pw.TableBorder(
-              left: pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.5),
-              right: pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.5),
-              top: pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.5),
-              bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.5),
-              verticalInside: pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.5),
-              horizontalInside: pw.BorderSide.none,
-            ),
+            border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.4),
             columnWidths: const {
               0: pw.FlexColumnWidth(1.1), // ZONE
               1: pw.FlexColumnWidth(1.2), // REPÈRE
-              2: pw.FlexColumnWidth(1.5), // ÉQUIPEMENT
+              2: pw.FlexColumnWidth(1.5), // DÉSIGNATION
               3: pw.FlexColumnWidth(2.0), // POINT DE VÉRIFICATION
               4: pw.FlexColumnWidth(1.4), // RÉF. NORMATIVE
               5: pw.FlexColumnWidth(0.9), // CRITICITÉ

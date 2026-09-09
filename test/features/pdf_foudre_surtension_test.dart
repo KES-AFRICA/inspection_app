@@ -76,14 +76,12 @@ void main() {
 
       final rows = PdfReportService.collectParafoudreRowsForTest(audit);
 
-      expect(rows.length, equals(2));
+      expect(rows.length, equals(1));
       expect(rows[0].repere, contains('REP-02'));
       expect(rows[0].observation, equals('Parafoudre déconnecté suite à surtension'));
-      expect(rows[1].repere, contains('REP-02'));
-      expect(rows[1].observation, equals('Câble de terre du limiteur sectionné'));
     });
 
-    test('Cas 3: Cumul Slide 3 (Enrichie/Simple) + Points de vérification -> toutes les observations apparaissent', () {
+    test('Cas 3: Cumul Slide 3 (Enrichie/Simple) + Points de vérification -> 1 seule observation par équipement', () {
       final coffret = CoffretArmoire(
         nom: 'Coffret Distribution',
         type: 'Coffret',
@@ -119,9 +117,8 @@ void main() {
 
       final rows = PdfReportService.collectParafoudreRowsForTest(audit);
 
-      expect(rows.length, equals(2));
-      expect(rows[0].observation, equals('Cartouche usée'));
-      expect(rows[1].observation, equals('Disjoncteur de déconnexion parafoudre absent'));
+      expect(rows.length, equals(1));
+      expect(rows[0].observation, equals('Disjoncteur de déconnexion parafoudre absent'));
     });
 
     test('Cas 4: Observation avec une seule photo -> format Photo X', () {
@@ -290,24 +287,14 @@ void main() {
 
       final rows = PdfReportService.collectParafoudreRowsForTest(audit);
 
-      expect(rows.length, equals(2));
-      // Ligne 1: Slide 3
+      expect(rows.length, equals(1));
       expect(rows[0].equipementName, equals('TGBT arrivée inverseur'));
       expect(rows[0].localName, equals('Local TGBT'));
       expect(rows[0].zoneName, equals('Zone Principale'));
       expect(rows[0].pointVerification, equals('Dispositif de protection contre les surtensions (parafoudre)'));
       expect(rows[0].referenceNormative, equals('NF C 15-100-1:2024 – art 443 et art 534'));
       expect(rows[0].criticite, equals('Majeure'));
-      expect(rows[0].observation, equals('Témoin parafoudre hors service'));
-
-      // Ligne 2: PV
-      expect(rows[1].equipementName, equals('TGBT arrivée inverseur'));
-      expect(rows[1].localName, equals('Local TGBT'));
-      expect(rows[1].zoneName, equals('Zone Principale'));
-      expect(rows[1].pointVerification, equals('Dispositif de protection contre les surtensions (parafoudre)'));
-      expect(rows[1].referenceNormative, equals('NF C 15-100-1:2024 – art 443 et art 534'));
-      expect(rows[1].criticite, equals('Majeure'));
-      expect(rows[1].observation, equals('Absence de protection amont du parafoudre'));
+      expect(rows[0].observation, equals('Absence de protection amont du parafoudre'));
     });
 
     test('Cas IX.1 & IX.2: Normalisation stricte de POINT DE VÉRIFICATION pour Slide 3 et Point de vérification', () {
@@ -357,7 +344,7 @@ void main() {
       expect(rows[1].observation, equals('Cartouche rouge signalée'));
     });
 
-    test('Cas IX.3: Deux sources simultanément sur le même équipement sans perte ni déduplication', () {
+    test('Cas IX.3: Deux sources simultanément sur le même équipement -> consolidation stricte en 1 seule ligne', () {
       final coffret = CoffretArmoire(
         nom: 'Armoire Climatisation',
         type: 'Armoire',
@@ -370,7 +357,7 @@ void main() {
           PointVerification(
             pointVerification: 'Dispositif de protection contre les surtensions (parafoudre)',
             conformite: 'Non conforme',
-            observation: 'Défaut voyant parafoudre', // Même observation textuelle entre les deux sources
+            observation: 'Défaut voyant parafoudre',
           ),
         ],
       );
@@ -388,12 +375,10 @@ void main() {
 
       final rows = PdfReportService.collectParafoudreRowsForTest(audit);
 
-      // Les 2 lignes doivent exister (non dédupliquées à tort malgré un texte identique)
-      expect(rows.length, equals(2));
+      // Un équipement (désignation) ne peut avoir qu'une seule observation
+      expect(rows.length, equals(1));
       expect(rows[0].pointVerification, equals('Dispositif de protection contre les surtensions (parafoudre)'));
-      expect(rows[1].pointVerification, equals('Dispositif de protection contre les surtensions (parafoudre)'));
       expect(rows[0].observation, equals('Défaut voyant parafoudre'));
-      expect(rows[1].observation, equals('Défaut voyant parafoudre'));
     });
 
     test('Cas IX.4: Plusieurs types d\'équipements (TGBT, Armoire, Coffret, Inverseur)', () {
