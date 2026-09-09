@@ -1980,6 +1980,7 @@ Widget buildEssaiDeclenchementButton({
   required String zone,
   required String repere,
   required String designation,
+  String? circuitName,
   required String precision,
   required String typeDispositif,
   required String calibre,
@@ -1990,19 +1991,36 @@ Widget buildEssaiDeclenchementButton({
   EssaiDeclenchementDifferentiel? existingEssai;
   if (mesures != null) {
     for (final e in mesures.essaisDeclenchement) {
-      if ((elementId.isNotEmpty && e.elementId == elementId) ||
-          (equipementId.isNotEmpty &&
-              e.equipementId == equipementId &&
-              e.precision != null &&
-              e.precision!.trim().toLowerCase() == precision.trim().toLowerCase()) ||
-          (precision.isNotEmpty &&
-              e.designationCircuit != null &&
-              e.designationCircuit!.trim().toLowerCase() == precision.trim().toLowerCase() &&
-              designation.isNotEmpty &&
-              e.coffret != null &&
-              e.coffret!.trim().toLowerCase() == designation.trim().toLowerCase())) {
+      // 1. Priorité absolue : correspondance par elementId
+      if (elementId.isNotEmpty && e.elementId == elementId) {
         existingEssai = e;
         break;
+      }
+      // 2. Fallback rétrocompatible si elementId absent
+      if (e.elementId == null || e.elementId!.isEmpty) {
+        if (precision == EssaiDeclenchementHelper.precisionProtectionTete) {
+          if (equipementId.isNotEmpty &&
+              e.equipementId == equipementId &&
+              e.precision != null &&
+              e.precision!.trim().toLowerCase() == precision.trim().toLowerCase()) {
+            existingEssai = e;
+            break;
+          }
+        } else {
+          final targetCircuit = (circuitName != null && circuitName.trim().isNotEmpty)
+              ? circuitName.trim().toLowerCase()
+              : null;
+          if (equipementId.isNotEmpty &&
+              e.equipementId == equipementId &&
+              e.precision != null &&
+              e.precision!.trim().toLowerCase() == precision.trim().toLowerCase() &&
+              targetCircuit != null &&
+              e.designationCircuit != null &&
+              e.designationCircuit!.trim().toLowerCase() == targetCircuit) {
+            existingEssai = e;
+            break;
+          }
+        }
       }
     }
   }
@@ -2024,6 +2042,7 @@ Widget buildEssaiDeclenchementButton({
             zone: zone,
             repere: repere,
             designation: designation,
+            circuitName: circuitName,
             precision: precision,
             typeDispositif: typeDispositif,
             calibre: calibre,
@@ -2596,7 +2615,7 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
     bool canDelete = false,
     VoidCallback? onDelete,
   }) {
-    final bool effectiveIsDepartPrisAvecProtection = widget.selectedType == 'INVERSEUR'
+    final bool effectiveIsDepartPrisAvecProtection = (widget.selectedType == 'INVERSEUR' && index < 2)
         ? true
         : isDepartPrisAvecProtectionFromType(a.typeProtection);
 
@@ -2774,7 +2793,7 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
             ),
             SizedBox(height: context.spacingS),
           ],
-          if (isProtectionTete || widget.selectedType != 'INVERSEUR') ...[
+          if (isProtectionTete || widget.selectedType != 'INVERSEUR' || (widget.selectedType == 'INVERSEUR' && index >= 2)) ...[
             _buildModernDropdown(
               context,
               label: 'Type de protection',
@@ -2869,6 +2888,9 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
               final elementId = isSortieInverseur
                   ? '${widget.currentEquipmentId}_sortie_${a.alimentationId}'
                   : '${widget.currentEquipmentId}_prot_tete';
+              final circuitName = isSortieInverseur
+                  ? (a.source.trim().isNotEmpty ? a.source.trim() : 'Sortie inverseur ${index - 1}')
+                  : 'Protection de tête';
               return [
                 SizedBox(height: context.spacingM),
                 buildEssaiDeclenchementButton(
@@ -2879,6 +2901,7 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
                   zone: widget.zoneName ?? '',
                   repere: widget.repereName ?? '',
                   designation: widget.equipmentNom ?? 'Équipement',
+                  circuitName: circuitName,
                   precision: precision,
                   typeDispositif: a.typeProtection,
                   calibre: a.calibre,
@@ -6707,7 +6730,19 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
   }
 
   Widget _buildDepartCard(BuildContext context, DepartEquipement dep, int index) {
+    if (dep.id.trim().isEmpty) {
+      dep.id = 'dep_${widget.currentEquipmentId ?? "equip"}_${index}_${DateTime.now().millisecondsSinceEpoch}';
+    }
     final isExpanded = _expandedDepartId == dep.id;
+    final bool isEligible = EssaiDeclenchementHelper.isEligibleForEssai(typeProtection: dep.typeProtection, ddr: dep.ddr);
+    final circuitDesignation = dep.identification.trim().isNotEmpty ? dep.identification.trim() : 'Départ ${index + 1}';
+    final mesures = HiveService.getMesuresEssaisByMissionId(widget.missionId);
+    final hasEssai = isEligible && (mesures?.essaisDeclenchement.any((e) =>
+        (dep.id.isNotEmpty && e.elementId == dep.id) ||
+        (e.equipementId == widget.currentEquipmentId &&
+            e.precision == EssaiDeclenchementHelper.precisionDepart &&
+            e.designationCircuit != null &&
+            e.designationCircuit!.trim().toLowerCase() == circuitDesignation.toLowerCase())) ?? false);
 
     final typeProtItems = [..._typeProtectionOptions];
     if (dep.typeProtection.isNotEmpty && !typeProtItems.contains(dep.typeProtection)) {
@@ -6848,12 +6883,52 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
                       ),
                     ],
                   ),
-                  if (!isExpanded && (summarySpecs.isNotEmpty || cableSpecs.isNotEmpty)) ...[
+                  if (!isExpanded && (summarySpecs.isNotEmpty || cableSpecs.isNotEmpty || isEligible)) ...[
                     const SizedBox(height: 6),
                     Wrap(
                       spacing: 6,
                       runSpacing: 4,
                       children: [
+                        if (hasEssai)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.green.shade50,
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: Colors.green.shade300),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.check_circle, size: 12, color: Colors.green.shade700),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Essai réalisé',
+                                  style: TextStyle(fontSize: 11, color: Colors.green.shade900, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                          )
+                        else if (isEligible)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryBlue.withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: AppTheme.primaryBlue.withOpacity(0.3)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.speed, size: 12, color: AppTheme.primaryBlue),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Essai différentiel (${dep.ddr} mA)',
+                                  style: TextStyle(fontSize: 11, color: AppTheme.primaryBlue, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                          ),
                         if (summarySpecs.isNotEmpty)
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -7104,13 +7179,14 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     onChanged: (v) { dep.nombreCables = v.trim().isEmpty ? null : v.trim(); widget.onDataChanged(); },
                   ),
-                  if (EssaiDeclenchementHelper.isEligibleForEssai(typeProtection: dep.typeProtection, ddr: dep.ddr)) ...[
+                  if (isEligible) ...[
                     const SizedBox(height: 16),
                     buildEssaiDeclenchementButton(
                       context: context,
                       missionId: widget.missionId,
                       elementId: dep.id,
                       equipementId: widget.currentEquipmentId ?? '',
+                      circuitName: circuitDesignation,
                       zone: widget.zoneName ?? '',
                       repere: widget.repereName ?? '',
                       designation: widget.equipmentNom ?? 'Équipement',
@@ -7133,7 +7209,19 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
   }
 
   Widget _buildTerminalCircuitCard(BuildContext context, CircuitTerminalEquipement ct, int index) {
+    if (ct.id.trim().isEmpty) {
+      ct.id = 'ct_${widget.currentEquipmentId ?? "equip"}_${index}_${DateTime.now().millisecondsSinceEpoch}';
+    }
     final isExpanded = _expandedCircuitId == ct.id;
+    final bool isEligible = EssaiDeclenchementHelper.isEligibleForEssai(typeProtection: ct.typeProtection, ddr: ct.ddr);
+    final circuitDesignation = ct.identification.trim().isNotEmpty ? ct.identification.trim() : 'Circuit ${index + 1}';
+    final mesures = HiveService.getMesuresEssaisByMissionId(widget.missionId);
+    final hasEssai = isEligible && (mesures?.essaisDeclenchement.any((e) =>
+        (ct.id.isNotEmpty && e.elementId == ct.id) ||
+        (e.equipementId == widget.currentEquipmentId &&
+            e.precision == EssaiDeclenchementHelper.precisionCircuit &&
+            e.designationCircuit != null &&
+            e.designationCircuit!.trim().toLowerCase() == circuitDesignation.toLowerCase())) ?? false);
 
     final typeProtItems = [..._typeProtectionOptions];
     if (ct.typeProtection.isNotEmpty && !typeProtItems.contains(ct.typeProtection)) {
@@ -7273,12 +7361,52 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
                       ),
                     ],
                   ),
-                  if (!isExpanded && (summarySpecs.isNotEmpty || cableSpecs.isNotEmpty)) ...[
+                  if (!isExpanded && (summarySpecs.isNotEmpty || cableSpecs.isNotEmpty || isEligible)) ...[
                     const SizedBox(height: 6),
                     Wrap(
                       spacing: 6,
                       runSpacing: 4,
                       children: [
+                        if (hasEssai)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.green.shade50,
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: Colors.green.shade300),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.check_circle, size: 12, color: Colors.green.shade700),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Essai réalisé',
+                                  style: TextStyle(fontSize: 11, color: Colors.green.shade900, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                          )
+                        else if (isEligible)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.teal.shade50,
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: Colors.teal.shade300),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.speed, size: 12, color: Colors.teal.shade700),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Essai différentiel (${ct.ddr} mA)',
+                                  style: TextStyle(fontSize: 11, color: Colors.teal.shade800, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                          ),
                         if (summarySpecs.isNotEmpty)
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -7521,13 +7649,14 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     onChanged: (v) { ct.nombreCables = v.trim().isEmpty ? null : v.trim(); widget.onDataChanged(); },
                   ),
-                  if (EssaiDeclenchementHelper.isEligibleForEssai(typeProtection: ct.typeProtection, ddr: ct.ddr)) ...[
+                  if (isEligible) ...[
                     const SizedBox(height: 16),
                     buildEssaiDeclenchementButton(
                       context: context,
                       missionId: widget.missionId,
                       elementId: ct.id,
                       equipementId: widget.currentEquipmentId ?? '',
+                      circuitName: circuitDesignation,
                       zone: widget.zoneName ?? '',
                       repere: widget.repereName ?? '',
                       designation: widget.equipmentNom ?? 'Équipement',

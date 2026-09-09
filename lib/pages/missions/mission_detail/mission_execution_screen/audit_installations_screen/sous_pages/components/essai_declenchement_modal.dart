@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/features/mesures_essais/presentation/providers/mesures_essais_provider.dart';
 import 'package:inspec_app/models/mesures_essais.dart';
+import 'package:inspec_app/services/document_generation/essai_declenchement_helper.dart';
 import 'package:inspec_app/services/hive_service.dart';
 
 /// Modal bottom sheet pour saisir ou modifier un essai de déclenchement différentiel
@@ -15,6 +16,7 @@ class EssaiDeclenchementModal extends ConsumerStatefulWidget {
   final String zone;
   final String repere;
   final String designation;
+  final String? circuitName;
   final String precision;
   final String typeDispositif;
   final String calibre;
@@ -29,6 +31,7 @@ class EssaiDeclenchementModal extends ConsumerStatefulWidget {
     required this.zone,
     required this.repere,
     required this.designation,
+    this.circuitName,
     required this.precision,
     required this.typeDispositif,
     required this.calibre,
@@ -44,6 +47,7 @@ class EssaiDeclenchementModal extends ConsumerStatefulWidget {
     required String zone,
     required String repere,
     required String designation,
+    String? circuitName,
     required String precision,
     required String typeDispositif,
     required String calibre,
@@ -68,6 +72,7 @@ class EssaiDeclenchementModal extends ConsumerStatefulWidget {
             zone: zone,
             repere: repere,
             designation: designation,
+            circuitName: circuitName,
             precision: precision,
             typeDispositif: typeDispositif,
             calibre: calibre,
@@ -106,19 +111,36 @@ class _EssaiDeclenchementModalState extends ConsumerState<EssaiDeclenchementModa
       final mesures = HiveService.getMesuresEssaisByMissionId(widget.missionId);
       if (mesures != null) {
         for (final e in mesures.essaisDeclenchement) {
-          if ((widget.elementId.isNotEmpty && e.elementId == widget.elementId) ||
-              (widget.equipementId.isNotEmpty &&
-                  e.equipementId == widget.equipementId &&
-                  e.precision != null &&
-                  e.precision!.trim().toLowerCase() == widget.precision.trim().toLowerCase()) ||
-              (widget.precision.isNotEmpty &&
-                  e.designationCircuit != null &&
-                  e.designationCircuit!.trim().toLowerCase() == widget.precision.trim().toLowerCase() &&
-                  widget.designation.isNotEmpty &&
-                  e.coffret != null &&
-                  e.coffret!.trim().toLowerCase() == widget.designation.trim().toLowerCase())) {
+          // 1. Priorité absolue : correspondance par elementId
+          if (widget.elementId.isNotEmpty && e.elementId == widget.elementId) {
             _resolvedEssai = e;
             break;
+          }
+          // 2. Fallback rétrocompatible si elementId absent
+          if (e.elementId == null || e.elementId!.isEmpty) {
+            if (widget.precision == EssaiDeclenchementHelper.precisionProtectionTete) {
+              if (widget.equipementId.isNotEmpty &&
+                  e.equipementId == widget.equipementId &&
+                  e.precision != null &&
+                  e.precision!.trim().toLowerCase() == widget.precision.trim().toLowerCase()) {
+                _resolvedEssai = e;
+                break;
+              }
+            } else {
+              final targetCircuit = (widget.circuitName != null && widget.circuitName!.trim().isNotEmpty)
+                  ? widget.circuitName!.trim().toLowerCase()
+                  : null;
+              if (widget.equipementId.isNotEmpty &&
+                  e.equipementId == widget.equipementId &&
+                  e.precision != null &&
+                  e.precision!.trim().toLowerCase() == widget.precision.trim().toLowerCase() &&
+                  targetCircuit != null &&
+                  e.designationCircuit != null &&
+                  e.designationCircuit!.trim().toLowerCase() == targetCircuit) {
+                _resolvedEssai = e;
+                break;
+              }
+            }
           }
         }
       }
@@ -177,22 +199,35 @@ class _EssaiDeclenchementModalState extends ConsumerState<EssaiDeclenchementModa
       existingIndex = mesures.essaisDeclenchement.indexWhere((e) {
         if (targetId != null && targetId.isNotEmpty && e.id == targetId) return true;
         if (targetElementId != null && e.elementId == targetElementId) return true;
-        if (widget.equipementId.isNotEmpty &&
-            e.equipementId == widget.equipementId &&
-            e.precision != null &&
-            e.precision!.trim().toLowerCase() == widget.precision.trim().toLowerCase()) {
-          return true;
-        }
-        if (widget.precision.isNotEmpty &&
-            e.designationCircuit != null &&
-            e.designationCircuit!.trim().toLowerCase() == widget.precision.trim().toLowerCase() &&
-            widget.designation.isNotEmpty &&
-            e.coffret != null &&
-            e.coffret!.trim().toLowerCase() == widget.designation.trim().toLowerCase()) {
-          return true;
+        if (e.elementId == null || e.elementId!.isEmpty) {
+          if (widget.precision == EssaiDeclenchementHelper.precisionProtectionTete) {
+            if (widget.equipementId.isNotEmpty &&
+                e.equipementId == widget.equipementId &&
+                e.precision != null &&
+                e.precision!.trim().toLowerCase() == widget.precision.trim().toLowerCase()) {
+              return true;
+            }
+          } else {
+            final targetCircuit = (widget.circuitName != null && widget.circuitName!.trim().isNotEmpty)
+                ? widget.circuitName!.trim().toLowerCase()
+                : null;
+            if (widget.equipementId.isNotEmpty &&
+                e.equipementId == widget.equipementId &&
+                e.precision != null &&
+                e.precision!.trim().toLowerCase() == widget.precision.trim().toLowerCase() &&
+                targetCircuit != null &&
+                e.designationCircuit != null &&
+                e.designationCircuit!.trim().toLowerCase() == targetCircuit) {
+              return true;
+            }
+          }
         }
         return false;
       });
+
+      final effectiveCircuitName = (widget.circuitName != null && widget.circuitName!.trim().isNotEmpty)
+          ? widget.circuitName!.trim()
+          : widget.precision;
 
       if (existingIndex != -1) {
         // Mode modification
@@ -201,7 +236,7 @@ class _EssaiDeclenchementModalState extends ConsumerState<EssaiDeclenchementModa
           id: prev.id,
           localisation: widget.repere.isNotEmpty ? widget.repere : (widget.zone.isNotEmpty ? widget.zone : prev.localisation),
           coffret: widget.designation.isNotEmpty ? widget.designation : prev.coffret,
-          designationCircuit: widget.precision,
+          designationCircuit: effectiveCircuitName,
           typeDispositif: widget.typeDispositif.isNotEmpty ? widget.typeDispositif : prev.typeDispositif,
           calibre: calibreDouble ?? prev.calibre,
           reglageIAn: ddrDouble ?? prev.reglageIAn,
@@ -222,7 +257,7 @@ class _EssaiDeclenchementModalState extends ConsumerState<EssaiDeclenchementModa
         savedEssai = EssaiDeclenchementDifferentiel(
           localisation: widget.repere.isNotEmpty ? widget.repere : widget.zone,
           coffret: widget.designation,
-          designationCircuit: widget.precision,
+          designationCircuit: effectiveCircuitName,
           typeDispositif: widget.typeDispositif,
           calibre: calibreDouble,
           reglageIAn: ddrDouble,
@@ -364,7 +399,9 @@ class _EssaiDeclenchementModalState extends ConsumerState<EssaiDeclenchementModa
                   children: [
                     _buildContextRow('Zone', widget.zone.isNotEmpty ? widget.zone : '-'),
                     _buildContextRow('Repère', widget.repere.isNotEmpty ? widget.repere : '-'),
-                    _buildContextRow('Désignation', widget.designation),
+                    _buildContextRow('Équipement', widget.designation),
+                    if (widget.circuitName != null && widget.circuitName!.trim().isNotEmpty)
+                      _buildContextRow('Circuit / Élément', widget.circuitName!.trim()),
                     _buildContextRow('Précision', widget.precision),
                     _buildContextRow('Type dispositif', widget.typeDispositif),
                     _buildContextRow('Calibre', widget.calibre.isNotEmpty ? '${widget.calibre} A' : '-'),

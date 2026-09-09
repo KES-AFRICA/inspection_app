@@ -30,14 +30,16 @@ class EssaiDeclenchementHelper {
     if (typeProtection == null || ddr == null) return false;
 
     final normType = typeProtection.trim().toLowerCase();
-    final isDiff = normType == 'interrupteur différentiel' ||
-        normType == 'interrupteur differentiel' ||
-        normType == 'disjoncteur différentiel' ||
-        normType == 'disjoncteur differentiel';
+    final isDiff = normType.contains('différentiel') ||
+        normType.contains('differentiel') ||
+        normType.contains('ddr') ||
+        normType.contains('idr') ||
+        normType == 'rd' ||
+        normType.contains('relais diff');
 
     if (!isDiff) return false;
 
-    final normDdr = ddr.trim();
+    final normDdr = ddr.trim().replaceAll(',', '.');
     if (normDdr.isEmpty || normDdr == '-' || normDdr.toLowerCase() == 'aucun') {
       return false;
     }
