@@ -20,14 +20,16 @@ class MesuresEssaisNotifier extends StateNotifier<AsyncValue<MesuresEssais>> {
 
   MesuresEssaisNotifier({required this.ref, required this.missionId})
     : super(const AsyncValue.loading()) {
-    load().then<void>((_) {}, onError: (_, __) {});
+    // Différer le chargement initial pour éviter de modifier l'état durant la construction du widget tree
+    Future.microtask(() {
+      if (mounted) {
+        load().catchError((_) => MesuresEssais.create(missionId));
+      }
+    });
   }
 
   Future<MesuresEssais> load() async {
     try {
-      if (mounted) {
-        state = const AsyncValue.loading();
-      }
       final getUseCase = ref.read(getMesuresEssaisUseCaseProvider);
       final entity = await getUseCase(missionId);
       final model = MesuresEssaisMapper.toModel(entity);

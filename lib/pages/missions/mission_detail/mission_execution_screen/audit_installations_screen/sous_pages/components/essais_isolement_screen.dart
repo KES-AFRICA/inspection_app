@@ -65,10 +65,15 @@ class _EssaisIsolementScreenState extends ConsumerState<EssaisIsolementScreen> {
   @override
   void initState() {
     super.initState();
-    _loadEssais();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _loadEssais();
+      }
+    });
   }
 
   Future<void> _loadEssais() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
     try {
       final mesures = await ref.read(mesuresEssaisProvider(widget.mission.id).notifier).load();
@@ -79,11 +84,15 @@ class _EssaisIsolementScreenState extends ConsumerState<EssaisIsolementScreen> {
       );
       await ref.read(mesuresEssaisProvider(widget.mission.id).notifier).saveMesures(mesures);
 
-      _essais = mesures.essaisIsolement;
+      if (mounted) {
+        _essais = mesures.essaisIsolement;
+      }
     } catch (e) {
       debugPrint('❌ Erreur chargement essais isolement: $e');
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 

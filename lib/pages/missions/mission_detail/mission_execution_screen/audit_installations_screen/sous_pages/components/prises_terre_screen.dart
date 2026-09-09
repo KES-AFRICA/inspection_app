@@ -32,20 +32,29 @@ class _PrisesTerreScreenState extends ConsumerState<PrisesTerreScreen> {
   @override
   void initState() {
     super.initState();
-    _loadData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _loadData();
+      }
+    });
   }
 
   Future<void> _loadData() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
     
     try {
       final mesures = await ref.read(mesuresEssaisProvider(widget.mission.id).notifier).load();
-      setState(() {
-        _prisesTerre = List.from(mesures.prisesTerre);
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _prisesTerre = List.from(mesures.prisesTerre);
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 

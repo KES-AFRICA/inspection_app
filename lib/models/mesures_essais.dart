@@ -306,7 +306,8 @@ class EssaiDeclenchementDifferentiel {
 
   String get essaiId {
     if (id != null && id!.trim().isNotEmpty) return id!;
-    id = 'essai_ddr_${DateTime.now().microsecondsSinceEpoch}_${localisation.hashCode.abs()}';
+    final locHash = (localisation != null ? localisation.hashCode : 0).abs();
+    id = 'essai_ddr_${DateTime.now().microsecondsSinceEpoch}_$locHash';
     return id!;
   }
 
@@ -332,7 +333,7 @@ class EssaiDeclenchementDifferentiel {
     this.repere,
   }) : id = (id != null && id.trim().isNotEmpty)
             ? id
-            : 'essai_ddr_${DateTime.now().microsecondsSinceEpoch}_${localisation.hashCode.abs()}';
+            : 'essai_ddr_${DateTime.now().microsecondsSinceEpoch}_${(localisation != null ? localisation.hashCode : 0).abs()}';
 
   EssaiDeclenchementDifferentiel copyWith({
     String? id,
@@ -395,10 +396,11 @@ class EssaiDeclenchementDifferentiel {
 
   // Méthode pour obtenir le texte d'affichage du type de dispositif (avec rétrocompatibilité DDR, IDR, RD)
   String get displayTypeDispositif {
-    final t = typeDispositif.trim();
+    final t = (typeDispositif != null ? typeDispositif.trim() : '');
     if (t == 'DDR') return 'Disjoncteur différentiel';
     if (t == 'IDR') return 'Interrupteur différentiel';
     if (t == 'RD') return '-';
+    if (t.isEmpty) return 'Disjoncteur différentiel';
     return t;
   }
 
@@ -427,14 +429,14 @@ class EssaiDeclenchementDifferentiel {
       case 'OK': return 'Bon fonctionnement';
       case 'NON OK': return 'Fonctionnement incorrect';
       case 'NE': return 'Non essayé';
-      default: return essai;
+      default: return (essai != null && essai.isNotEmpty) ? essai : 'Non essayé';
     }
   }
 
   // Vérifier si l'essai est complet
   bool get isComplete {
     return essai != 'NE' &&
-           typeDispositif.isNotEmpty;
+           (typeDispositif != null && typeDispositif.isNotEmpty);
   }
 }
 

@@ -40,18 +40,27 @@ class _EssaisDeclenchementScreenState extends ConsumerState<EssaisDeclenchementS
   @override
   void initState() {
     super.initState();
-    _loadEssais();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _loadEssais();
+      }
+    });
   }
 
   Future<void> _loadEssais() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
     try {
       final mesures = await ref.read(mesuresEssaisProvider(widget.mission.id).notifier).load();
-      _essais = mesures.essaisDeclenchement;
+      if (mounted) {
+        _essais = mesures.essaisDeclenchement;
+      }
     } catch (e) {
-      print('❌ Erreur chargement essais déclenchement: $e');
+      debugPrint('❌ Erreur chargement essais déclenchement: $e');
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -265,7 +274,7 @@ class _EssaisDeclenchementScreenState extends ConsumerState<EssaisDeclenchementS
                   SizedBox(width: _spacingS(context) * 0.5),
                   Expanded(
                     child: Text(
-                      essai.localisation,
+                      essai.localisation.isNotEmpty ? essai.localisation : 'Non localisé',
                       style: TextStyle(fontSize: _fontSizeM(context), color: Colors.grey.shade600),
                       overflow: TextOverflow.ellipsis,
                       maxLines: 1,
@@ -309,7 +318,7 @@ class _EssaisDeclenchementScreenState extends ConsumerState<EssaisDeclenchementS
                           child: _buildInfoChip(
                             context,
                             label: 'Type',
-                            value: essai.typeDispositif,
+                            value: essai.displayTypeDispositif,
                             icon: Icons.devices_other,
                           ),
                         ),

@@ -131,7 +131,10 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
         );
         fileName = file != null
             ? path.basename(file.path)
-            : PdfReportService.buildElectricalReportFileName(widget.mission.nomClient);
+            : PdfReportService.buildElectricalReportFileName(
+                widget.mission.nomClient,
+                nomSite: widget.mission.nomSite,
+              );
       }
 
       if (loaderController.isCancelled) {

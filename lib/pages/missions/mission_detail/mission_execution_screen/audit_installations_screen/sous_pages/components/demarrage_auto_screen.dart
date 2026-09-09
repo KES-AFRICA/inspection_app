@@ -25,10 +25,15 @@ class _DemarrageAutoScreenState extends ConsumerState<DemarrageAutoScreen> {
   @override
   void initState() {
     super.initState();
-    _loadData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _loadData();
+      }
+    });
   }
 
   Future<void> _loadData() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
     
     try {
@@ -41,7 +46,9 @@ class _DemarrageAutoScreenState extends ConsumerState<DemarrageAutoScreen> {
         });
       }
     } catch (e) {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 

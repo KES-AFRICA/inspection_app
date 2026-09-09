@@ -22,18 +22,27 @@ class _ContinuiteResistanceScreenState extends ConsumerState<ContinuiteResistanc
   @override
   void initState() {
     super.initState();
-    _loadMesures();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _loadMesures();
+      }
+    });
   }
 
   Future<void> _loadMesures() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
     try {
       final mesures = await ref.read(mesuresEssaisProvider(widget.mission.id).notifier).load();
-      _mesures = mesures.continuiteResistances;
+      if (mounted) {
+        _mesures = mesures.continuiteResistances;
+      }
     } catch (e) {
-      print('❌ Erreur chargement continuité/résistance: $e');
+      debugPrint('❌ Erreur chargement continuité/résistance: $e');
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 

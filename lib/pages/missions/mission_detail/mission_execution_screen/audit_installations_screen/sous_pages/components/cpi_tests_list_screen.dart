@@ -25,22 +25,31 @@ class _CpiTestsListScreenState extends ConsumerState<CpiTestsListScreen> {
   @override
   void initState() {
     super.initState();
-    _loadTests();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _loadTests();
+      }
+    });
   }
 
   Future<void> _loadTests() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
     try {
       final mesures = await ref
           .read(mesuresEssaisProvider(widget.mission.id).notifier)
           .load();
-      setState(() {
-        _cpiTests = List.from(mesures.cpiTests);
-      });
+      if (mounted) {
+        setState(() {
+          _cpiTests = List.from(mesures.cpiTests);
+        });
+      }
     } catch (e) {
       debugPrint('❌ Erreur chargement tests CPI: $e');
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 

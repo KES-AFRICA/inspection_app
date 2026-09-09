@@ -3459,17 +3459,22 @@ class PdfReportService {
   }
 
   /// Génère le nom de fichier officiel pour le rapport PDF de Vérification Électrique.
-  /// Format : `Rapport_Verif_elec_<site>_<année>_<timestamp>.pdf`
+  /// Format : `Rapport_Verif_elec_<client>_<site>_<année>_<timestamp>.pdf` (ou sans site si non renseigné)
   static String buildElectricalReportFileName(
     String nomClient, {
+    String? nomSite,
     DateTime? date,
     int? timestamp,
   }) {
     final now = date ?? DateTime.now();
     final year = now.year;
     final ts = timestamp ?? now.millisecondsSinceEpoch;
-    final sanitizedSite = nomClient.trim().replaceAll(RegExp(r'[<>:"/\\|?*]'), '_');
-    return 'Rapport_Verif_elec_${sanitizedSite}_${year}_$ts.pdf';
+    final sanitizedClient = nomClient.trim().replaceAll(RegExp(r'[<>:"/\\|?*]'), '_');
+    final sanitizedSite = nomSite != null && nomSite.trim().isNotEmpty
+        ? nomSite.trim().replaceAll(RegExp(r'[<>:"/\\|?*]'), '_')
+        : '';
+    final sitePart = sanitizedSite.isNotEmpty ? '_$sanitizedSite' : '';
+    return 'Rapport_Verif_elec_${sanitizedClient}${sitePart}_${year}_$ts.pdf';
   }
 
   static Future<File?> generateMissionReport(
@@ -3589,6 +3594,7 @@ class PdfReportService {
       );
       final fileName = buildElectricalReportFileName(
         mission.nomClient,
+        nomSite: mission.nomSite,
         date: generationDate,
         timestamp: DateTime.now().millisecondsSinceEpoch,
       );

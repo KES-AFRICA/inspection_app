@@ -24,27 +24,35 @@ class _AvisMesuresScreenState extends ConsumerState<AvisMesuresScreen> {
   @override
   void initState() {
     super.initState();
-    _loadData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _loadData();
+      }
+    });
   }
 
   Future<void> _loadData() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
     
     try {
       final mesures = await ref.read(mesuresEssaisProvider(widget.mission.id).notifier).load();
-      _totalPrisesTerre = mesures.prisesTerre.length;
-      
-      _satisfaisants = List.from(mesures.avisMesuresTerre.satisfaisants);
-      _nonSatisfaisants = List.from(mesures.avisMesuresTerre.nonSatisfaisants);
-      
-      if (mesures.avisMesuresTerre.observation != null) {
-        _observationController.text = mesures.avisMesuresTerre.observation!;
-        _hasData = true;
+      if (mounted) {
+        _totalPrisesTerre = mesures.prisesTerre.length;
+        _satisfaisants = List.from(mesures.avisMesuresTerre.satisfaisants);
+        _nonSatisfaisants = List.from(mesures.avisMesuresTerre.nonSatisfaisants);
+        
+        if (mesures.avisMesuresTerre.observation != null) {
+          _observationController.text = mesures.avisMesuresTerre.observation!;
+          _hasData = true;
+        }
       }
     } catch (e) {
-      print('❌ Erreur chargement avis mesures: $e');
+      debugPrint('❌ Erreur chargement avis mesures: $e');
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
