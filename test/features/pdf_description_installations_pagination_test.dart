@@ -42,15 +42,15 @@ void main() {
       expect(widgets.first, isA<pw.Table>());
 
       final table = widgets.first as pw.Table;
-      // 2. Le premier rang est l'en-tête et il doit avoir repeat: true
+      // 2. Le premier rang est l'en-tête (repeat: false selon le choix utilisateur pour cette section)
       expect(table.children.isNotEmpty, isTrue);
-      expect(table.children.first.repeat, isTrue);
+      expect(table.children.first.repeat, isFalse);
 
       // 3. Doit contenir 1 rang d'en-tête + 3 rangs de données = 4 rangs
       expect(table.children.length, equals(4));
     });
 
-    test('buildInstallationTableFromRows avec liste vide a repeat: true sur l\'en-tête', () {
+    test('buildInstallationTableFromRows avec liste vide a repeat: false sur l\'en-tête', () {
       final widgets = PdfDescriptionBuilder.buildInstallationTableFromRows(
         [],
         sectionKey: 'MT',
@@ -58,10 +58,10 @@ void main() {
 
       expect(widgets.length, equals(1));
       final table = widgets.first as pw.Table;
-      expect(table.children.first.repeat, isTrue);
+      expect(table.children.first.repeat, isFalse);
     });
 
-    test('buildInstallationTable a repeat: true sur l\'en-tête', () {
+    test('buildInstallationTable a repeat: false sur l\'en-tête', () {
       final items = [
         InstallationItem(data: {'Marque': 'CAT', 'Puissance (Kva)': '500'}),
         InstallationItem(data: {'Marque': 'Volvo', 'Puissance (Kva)': '800'}),
@@ -74,20 +74,20 @@ void main() {
 
       expect(widget, isA<pw.Table>());
       final table = widget as pw.Table;
-      expect(table.children.first.repeat, isTrue);
+      expect(table.children.first.repeat, isFalse);
       expect(table.children.length, equals(3)); // 1 header + 2 items
     });
 
-    test('buildAlimentationSiteMtTable a repeat: true sur l\'en-tête', () {
+    test('buildAlimentationSiteMtTable a repeat: false sur l\'en-tête', () {
       final desc = DescriptionInstallations.create('mission-1');
       final widget = PdfDescriptionBuilder.buildAlimentationSiteMtTable(desc);
 
       expect(widget, isA<pw.Table>());
       final table = widget as pw.Table;
-      expect(table.children.first.repeat, isTrue);
+      expect(table.children.first.repeat, isFalse);
     });
 
-    test('buildCpiTable a repeat: true sur l\'en-tête', () {
+    test('buildCpiTable a repeat: false sur l\'en-tête', () {
       final cpiItems = [
         InstallationItem(data: {'MARQUE': 'Bender', 'TYPE': 'ISOMETER'}),
       ];
@@ -95,7 +95,7 @@ void main() {
 
       expect(widget, isA<pw.Table>());
       final table = widget as pw.Table;
-      expect(table.children.first.repeat, isTrue);
+      expect(table.children.first.repeat, isFalse);
     });
 
     test('buildDescriptionInstallationsMulti intègre des NewPage avec freeSpace anti-orphelin et génère un PDF valide', () async {

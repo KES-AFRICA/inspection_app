@@ -520,7 +520,6 @@ class PdfDescriptionBuilder {
       },
       children: [
         pw.TableRow(
-          repeat: true,
           decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
           children: [
             PdfReportStyles.cell('N\u00B0', isHeader: true, centered: true),
@@ -587,7 +586,6 @@ class PdfDescriptionBuilder {
           columnWidths: headerColumnWidths,
           children: [
             pw.TableRow(
-              repeat: true,
               decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
               children: headers.map((c) => PdfReportStyles.cell(c, isHeader: true, centered: true)).toList(),
             ),
@@ -644,10 +642,9 @@ class PdfDescriptionBuilder {
 
     final allTableRows = <pw.TableRow>[];
 
-    // En-tête du tableau répété sur chaque page
+    // En-tête du tableau
     allTableRows.add(
       pw.TableRow(
-        repeat: true,
         decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
         children: headers.map((c) => PdfReportStyles.cell(c, isHeader: true, centered: true)).toList(),
       ),
@@ -958,7 +955,6 @@ class PdfDescriptionBuilder {
       },
       children: [
         pw.TableRow(
-          repeat: true,
           decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
           children: headers
               .map((h) => PdfReportStyles.cell(h, isHeader: true, centered: true))
@@ -1023,7 +1019,6 @@ class PdfDescriptionBuilder {
       },
       children: [
         pw.TableRow(
-          repeat: true,
           decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
           children: [
             PdfReportStyles.cell('N\u00B0', isHeader: true, centered: true),
