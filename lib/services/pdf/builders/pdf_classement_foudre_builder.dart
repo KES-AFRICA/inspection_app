@@ -909,7 +909,8 @@ class PdfClassementFoudreBuilder {
   static const String defaultParafoudreCriticite = 'Majeure';
   static const String defaultParafoudrePointPV =
       'Dispositif de protection contre les surtensions (parafoudre)';
-  static const String defaultParafoudrePointSlide3 = 'Parafoudre';
+  static const String defaultParafoudrePointSlide3 =
+      'Dispositif de protection contre les surtensions (parafoudre)';
 
   static List<PdfParafoudreEquipementRow> collectParafoudreRows(
     AuditInstallationsElectriques? audit,
@@ -1003,13 +1004,13 @@ class PdfClassementFoudreBuilder {
             ? defaultParafoudreCriticite
             : critTrim;
 
-        final pvTrim = pointVerification.trim();
-        final finalPv = (pvTrim.isEmpty || pvTrim == '-')
-            ? defaultParafoudrePointSlide3
-            : pvTrim;
+        // La colonne POINT DE VÉRIFICATION doit TOUJOURS contenir strictement:
+        // "Dispositif de protection contre les surtensions (parafoudre)"
+        const finalPv = defaultParafoudrePointPV;
 
+        final sourceTag = key.split('_').first;
         final photosKey = (photoPaths ?? []).join(',');
-        final contentKey = '${resolvedZone.toLowerCase()}_${resolvedLocal.toLowerCase()}_${equipementName.toLowerCase()}_${finalPv.toLowerCase()}_${textTrim.toLowerCase()}_$photosKey';
+        final contentKey = '${resolvedZone.toLowerCase()}_${resolvedLocal.toLowerCase()}_${equipementName.toLowerCase()}_${sourceTag.toLowerCase()}_${pointVerification.trim().toLowerCase()}_${textTrim.toLowerCase()}_$photosKey';
         if (seenKeys.contains(contentKey)) return;
         seenKeys.add(contentKey);
 
@@ -1487,7 +1488,7 @@ class PdfClassementFoudreBuilder {
           PdfReportStyles.tableHeaderRow([
             'ZONE',
             'REPÈRE',
-            'ÉQUIPEMENT',
+            'DÉSIGNATION',
             'POINT DE VÉRIFICATION',
             'RÉF. NORMATIVE',
             'CRITICITÉ',
@@ -1595,7 +1596,7 @@ class PdfClassementFoudreBuilder {
                         textAlign: pw.TextAlign.center,
                       ),
 
-                      // Cellule 2 : ÉQUIPEMENT (centré)
+                      // Cellule 2 : DÉSIGNATION (centré)
                       PdfReportStyles.buildGroupedCellWidget(
                         currentIndex: currentEquipRowIdx,
                         totalRows: totalEquipItems,

@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
 import 'package:inspec_app/services/pdf/pdf_report_service.dart';
+import 'package:inspec_app/services/pdf/builders/pdf_classement_foudre_builder.dart';
+import 'package:pdf/widgets.dart' as pw;
 
 void main() {
   group('Audit & Génération PDF — Section FOUDRE ET SURTENSION', () {
@@ -293,7 +295,7 @@ void main() {
       expect(rows[0].equipementName, equals('TGBT arrivée inverseur'));
       expect(rows[0].localName, equals('Local TGBT'));
       expect(rows[0].zoneName, equals('Zone Principale'));
-      expect(rows[0].pointVerification, equals('Parafoudre'));
+      expect(rows[0].pointVerification, equals('Dispositif de protection contre les surtensions (parafoudre)'));
       expect(rows[0].referenceNormative, equals('NF C 15-100-1:2024 – art 443 et art 534'));
       expect(rows[0].criticite, equals('Majeure'));
       expect(rows[0].observation, equals('Témoin parafoudre hors service'));
@@ -306,6 +308,203 @@ void main() {
       expect(rows[1].referenceNormative, equals('NF C 15-100-1:2024 – art 443 et art 534'));
       expect(rows[1].criticite, equals('Majeure'));
       expect(rows[1].observation, equals('Absence de protection amont du parafoudre'));
+    });
+
+    test('Cas IX.1 & IX.2: Normalisation stricte de POINT DE VÉRIFICATION pour Slide 3 et Point de vérification', () {
+      final coffretSlide3 = CoffretArmoire(
+        nom: 'Coffret Éclairage',
+        type: 'Coffret',
+        qrCode: 'QR_C1',
+        repere: 'COFF-01',
+        observationsParafoudre: [
+          ObservationLibre(texte: 'Parafoudre détérioré'),
+        ],
+      );
+
+      final coffretPV = CoffretArmoire(
+        nom: 'Coffret Force',
+        type: 'Coffret',
+        qrCode: 'QR_C2',
+        repere: 'COFF-02',
+        pointsVerification: [
+          PointVerification(
+            pointVerification: 'Dispositif de protection contre les surtensions (parafoudre)',
+            conformite: 'Non conforme',
+            observation: 'Cartouche rouge signalée',
+          ),
+        ],
+      );
+
+      final audit = AuditInstallationsElectriques(
+        missionId: 'm1',
+        updatedAt: DateTime.now(),
+        basseTensionZones: [
+          BasseTensionZone(
+            nom: 'Zone Usine',
+            coffretsDirects: [coffretSlide3, coffretPV],
+          ),
+        ],
+      );
+
+      final rows = PdfReportService.collectParafoudreRowsForTest(audit);
+
+      expect(rows.length, equals(2));
+      // Cas 1 (Slide 3)
+      expect(rows[0].pointVerification, equals('Dispositif de protection contre les surtensions (parafoudre)'));
+      expect(rows[0].observation, equals('Parafoudre détérioré'));
+      // Cas 2 (PV)
+      expect(rows[1].pointVerification, equals('Dispositif de protection contre les surtensions (parafoudre)'));
+      expect(rows[1].observation, equals('Cartouche rouge signalée'));
+    });
+
+    test('Cas IX.3: Deux sources simultanément sur le même équipement sans perte ni déduplication', () {
+      final coffret = CoffretArmoire(
+        nom: 'Armoire Climatisation',
+        type: 'Armoire',
+        qrCode: 'QR_ARM_CLIM',
+        repere: 'ARM-CLIM',
+        observationsParafoudre: [
+          ObservationLibre(texte: 'Défaut voyant parafoudre'),
+        ],
+        pointsVerification: [
+          PointVerification(
+            pointVerification: 'Dispositif de protection contre les surtensions (parafoudre)',
+            conformite: 'Non conforme',
+            observation: 'Défaut voyant parafoudre', // Même observation textuelle entre les deux sources
+          ),
+        ],
+      );
+
+      final audit = AuditInstallationsElectriques(
+        missionId: 'm1',
+        updatedAt: DateTime.now(),
+        basseTensionZones: [
+          BasseTensionZone(
+            nom: 'Zone Technique',
+            coffretsDirects: [coffret],
+          ),
+        ],
+      );
+
+      final rows = PdfReportService.collectParafoudreRowsForTest(audit);
+
+      // Les 2 lignes doivent exister (non dédupliquées à tort malgré un texte identique)
+      expect(rows.length, equals(2));
+      expect(rows[0].pointVerification, equals('Dispositif de protection contre les surtensions (parafoudre)'));
+      expect(rows[1].pointVerification, equals('Dispositif de protection contre les surtensions (parafoudre)'));
+      expect(rows[0].observation, equals('Défaut voyant parafoudre'));
+      expect(rows[1].observation, equals('Défaut voyant parafoudre'));
+    });
+
+    test('Cas IX.4: Plusieurs types d\'équipements (TGBT, Armoire, Coffret, Inverseur)', () {
+      final equipements = <CoffretArmoire>[
+        CoffretArmoire(
+          nom: 'TGBT 1',
+          type: 'TGBT',
+          qrCode: 'QR_T1',
+          repere: 'TGBT-1',
+          observationsParafoudre: [ObservationLibre(texte: 'Obs TGBT')],
+        ),
+        CoffretArmoire(
+          nom: 'Armoire 1',
+          type: 'Armoire',
+          qrCode: 'QR_A1',
+          repere: 'ARM-1',
+          observationsParafoudre: [ObservationLibre(texte: 'Obs Armoire')],
+        ),
+        CoffretArmoire(
+          nom: 'Coffret 1',
+          type: 'Coffret',
+          qrCode: 'QR_CF1',
+          repere: 'COF-1',
+          observationsParafoudre: [ObservationLibre(texte: 'Obs Coffret')],
+        ),
+        CoffretArmoire(
+          nom: 'Inverseur Normal/Secours',
+          type: 'Inverseur',
+          qrCode: 'QR_INV1',
+          repere: 'INV-1',
+          observationsParafoudre: [ObservationLibre(texte: 'Obs Inverseur')],
+        ),
+      ];
+
+      final audit = AuditInstallationsElectriques(
+        missionId: 'm1',
+        updatedAt: DateTime.now(),
+        basseTensionZones: [
+          BasseTensionZone(
+            nom: 'Zone Principale',
+            coffretsDirects: equipements,
+          ),
+        ],
+      );
+
+      final rows = PdfReportService.collectParafoudreRowsForTest(audit);
+
+      expect(rows.length, equals(4));
+      for (final r in rows) {
+        expect(r.pointVerification, equals('Dispositif de protection contre les surtensions (parafoudre)'));
+      }
+      expect(rows[0].equipementName, equals('TGBT 1'));
+      expect(rows[1].equipementName, equals('Armoire 1'));
+      expect(rows[2].equipementName, equals('Coffret 1'));
+      expect(rows[3].equipementName, equals('Inverseur Normal/Secours'));
+    });
+
+    test('Cas IX.6: Vérification de l\'en-tête de colonne DÉSIGNATION dans le tableau PDF', () {
+      final coffret = CoffretArmoire(
+        nom: 'TGBT Général',
+        type: 'TGBT',
+        qrCode: 'QR_TGEN',
+        repere: 'TGBT-01',
+        observationsParafoudre: [
+          ObservationLibre(texte: 'Absence de parafoudre de tête'),
+        ],
+      );
+
+      final audit = AuditInstallationsElectriques(
+        missionId: 'm1',
+        updatedAt: DateTime.now(),
+        basseTensionZones: [
+          BasseTensionZone(
+            nom: 'Zone Électrique',
+            coffretsDirects: [coffret],
+          ),
+        ],
+      );
+
+      final widgets = PdfClassementFoudreBuilder.buildFoudre(
+        audit,
+        [],
+        {},
+        afficherTableauFoudre: true,
+      );
+
+      // On recherche la table d'observation par équipement
+      final tables = widgets.whereType<pw.Table>().toList();
+      expect(tables.isNotEmpty, isTrue);
+
+      final foudreTable = tables.last;
+      final headerRow = foudreTable.children.first;
+
+      // Extraire les textes de l'en-tête
+      final headerTexts = <String>[];
+      for (final cell in headerRow.children) {
+        if (cell is pw.Container && cell.child is pw.Text) {
+          headerTexts.add(((cell.child as pw.Text).text as pw.TextSpan).text ?? '');
+        }
+      }
+
+      // Vérifier le libellé DÉSIGNATION (et l'absence de l'ancien libellé ÉQUIPEMENT)
+      expect(headerTexts, contains('DÉSIGNATION'));
+      expect(headerTexts, isNot(contains('ÉQUIPEMENT')));
+      expect(headerTexts, contains('ZONE'));
+      expect(headerTexts, contains('REPÈRE'));
+      expect(headerTexts, contains('POINT DE VÉRIFICATION'));
+      expect(headerTexts, contains('RÉF. NORMATIVE'));
+      expect(headerTexts, contains('CRITICITÉ'));
+      expect(headerTexts, contains('OBSERVATION'));
+      expect(headerTexts, contains('PHOTO'));
     });
   });
 }
