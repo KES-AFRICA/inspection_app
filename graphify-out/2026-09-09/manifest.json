@@ -156,9 +156,9 @@
     "semantic_hash": ""
   },
   "lib/features/audit_installations/data/mappers/audit_installations_mapper.dart": {
-    "mtime": 1788882257.3208158,
-    "seen": 1788883484.5350332,
-    "ast_hash": "daa638bb3db5413c0afc920148964538",
+    "mtime": 1788934753.3725586,
+    "seen": 1788941850.5773466,
+    "ast_hash": "7a1ce60058dce86b90e3fbf38ff3bf95",
     "semantic_hash": ""
   },
   "lib/features/audit_installations/data/repositories/audit_installations_repository_impl.dart": {
@@ -168,9 +168,9 @@
     "semantic_hash": ""
   },
   "lib/features/audit_installations/domain/entities/audit_installations_entities.dart": {
-    "mtime": 1788882239.0002835,
-    "seen": 1788883484.5350392,
-    "ast_hash": "154f8163110eacda64cf4b4642368690",
+    "mtime": 1788934733.027934,
+    "seen": 1788941850.5773506,
+    "ast_hash": "8678acee1a0bcfbab8fca90f873ae44d",
     "semantic_hash": ""
   },
   "lib/features/audit_installations/domain/repositories/audit_installations_repository.dart": {
@@ -600,9 +600,9 @@
     "semantic_hash": ""
   },
   "lib/features/mesures_essais/data/mappers/mesures_essais_mapper.dart": {
-    "mtime": 1788926311.8230426,
-    "seen": 1788929507.1714504,
-    "ast_hash": "f3cd06ac65b6ee1259b4a35cdbeef406",
+    "mtime": 1788934896.9233983,
+    "seen": 1788941850.5774646,
+    "ast_hash": "c8eb63bb7a93f69d331ddcf0454e414d",
     "semantic_hash": ""
   },
   "lib/features/mesures_essais/data/repositories/mesures_essais_repository_impl.dart": {
@@ -612,9 +612,9 @@
     "semantic_hash": ""
   },
   "lib/features/mesures_essais/domain/entities/mesures_essais_entities.dart": {
-    "mtime": 1788926270.5590658,
-    "seen": 1788929507.171454,
-    "ast_hash": "72436ed4b1278e8f85d18cc30e04a842",
+    "mtime": 1788934833.7016149,
+    "seen": 1788941850.5774674,
+    "ast_hash": "0fee7c173a29675db1dda372f4c9a889",
     "semantic_hash": ""
   },
   "lib/features/mesures_essais/domain/repositories/mesures_essais_repository.dart": {
@@ -786,15 +786,15 @@
     "semantic_hash": ""
   },
   "lib/models/audit_installations_electriques.dart": {
-    "mtime": 1788922095.410193,
-    "seen": 1788929507.171496,
-    "ast_hash": "5737a3c5d5255169ccd10c6a0c46b3d4",
+    "mtime": 1788934643.1709116,
+    "seen": 1788941850.5775123,
+    "ast_hash": "a0b795995379ac8a9e9d2b8c22482072",
     "semantic_hash": ""
   },
   "lib/models/audit_installations_electriques.g.dart": {
-    "mtime": 1788922111.0170813,
-    "seen": 1788929507.171497,
-    "ast_hash": "5ccd628b7f265c53e0d4cf7f37d07df3",
+    "mtime": 1788934693.4785712,
+    "seen": 1788941850.5775137,
+    "ast_hash": "3d7a4880f63a6c0f31f08d4bf2ef51e2",
     "semantic_hash": ""
   },
   "lib/models/classement_locaux.dart": {
@@ -888,15 +888,15 @@
     "semantic_hash": ""
   },
   "lib/models/mesures_essais.dart": {
-    "mtime": 1788922063.0981922,
-    "seen": 1788929507.1715198,
-    "ast_hash": "3505cfb7efd4247d72475e9fec286f1c",
+    "mtime": 1788934782.0532036,
+    "seen": 1788941850.577538,
+    "ast_hash": "3dbf8f37027045d653702e56c0be23a1",
     "semantic_hash": ""
   },
   "lib/models/mesures_essais.g.dart": {
-    "mtime": 1788922078.1160736,
-    "seen": 1788929507.171521,
-    "ast_hash": "9da46c6c9e5f7ddd7d7ed678d611d026",
+    "mtime": 1788934805.8047638,
+    "seen": 1788941850.5775397,
+    "ast_hash": "e717f8739b355c52a31cf3083c7f4701",
     "semantic_hash": ""
   },
   "lib/models/mission.dart": {
@@ -1110,9 +1110,9 @@
     "semantic_hash": ""
   },
   "lib/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/ajouter_coffret_screen.dart": {
-    "mtime": 1788931017.5029113,
-    "seen": 1788931087.2491367,
-    "ast_hash": "2ebf68eaee22076589aca12e65c019b4",
+    "mtime": 1788935992.171487,
+    "seen": 1788941850.577594,
+    "ast_hash": "7d7cd5ba70834ef4b03a9250f63eb781",
     "semantic_hash": ""
   },
   "lib/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/ajouter_foudre_screen.dart": {
@@ -1188,9 +1188,9 @@
     "semantic_hash": ""
   },
   "lib/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/essais_isolement_screen.dart": {
-    "mtime": 1788534823.9338157,
-    "seen": 1788698856.7552927,
-    "ast_hash": "8dd6b6c5e7a4fb91a60bc1cae6989633",
+    "mtime": 1788941003.5275228,
+    "seen": 1788941850.5776203,
+    "ast_hash": "50e9232453ed05f32906bf56501678a2",
     "semantic_hash": ""
   },
   "lib/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/observation_enrichie_widget.dart": {
@@ -1620,9 +1620,9 @@
     "semantic_hash": ""
   },
   "lib/services/backup_service.dart": {
-    "mtime": 1788882376.741294,
-    "seen": 1788883484.5355804,
-    "ast_hash": "c65dcdaa3fecade273ce3aa8a853ecd5",
+    "mtime": 1788935078.2228172,
+    "seen": 1788941850.577731,
+    "ast_hash": "deae7457a7d94670935b3f7bf25a8b25",
     "semantic_hash": ""
   },
   "lib/services/cancellation_token.dart": {
@@ -1638,9 +1638,9 @@
     "semantic_hash": ""
   },
   "lib/services/dispositions_constructives_registry.dart": {
-    "mtime": 1788534823.9653854,
-    "seen": 1788698856.7553828,
-    "ast_hash": "9bd9daf59de03dc035b01df9ef098a7e",
+    "mtime": 1788941407.6966186,
+    "seen": 1788941850.5777352,
+    "ast_hash": "6ef239519327f6826b2961cde2c99149",
     "semantic_hash": ""
   },
   "lib/services/email_service.dart": {
@@ -1722,9 +1722,9 @@
     "semantic_hash": ""
   },
   "lib/services/normative_reference_service.dart": {
-    "mtime": 1788534823.9814634,
-    "seen": 1788698856.7553997,
-    "ast_hash": "56024214ef14110b71f80a60a6de4328",
+    "mtime": 1788941675.9562218,
+    "seen": 1788941850.5777583,
+    "ast_hash": "cbb7f25197086d2e0f4d84af76eb97f5",
     "semantic_hash": ""
   },
   "lib/services/normative_search_service.dart": {
@@ -1734,15 +1734,15 @@
     "semantic_hash": ""
   },
   "lib/services/pdf/builders/pdf_audit_installations_builder.dart": {
-    "mtime": 1788908627.8653457,
-    "seen": 1788920576.9543836,
-    "ast_hash": "102a4b85e9841331e691c61989d22db5",
+    "mtime": 1788943811.7724824,
+    "seen": 1788944027.3081138,
+    "ast_hash": "a9c31f9d33834132e8504d5dab59716c",
     "semantic_hash": ""
   },
   "lib/services/pdf/builders/pdf_classement_foudre_builder.dart": {
-    "mtime": 1788910718.6492949,
-    "seen": 1788920576.9543848,
-    "ast_hash": "5ecb3e50b96ac274e05d567bc6e87716",
+    "mtime": 1788946823.4710827,
+    "seen": 1788946946.7915764,
+    "ast_hash": "eb2a519e86d06cc79b83eb113350d761",
     "semantic_hash": ""
   },
   "lib/services/pdf/builders/pdf_cover_builder.dart": {
@@ -1758,9 +1758,9 @@
     "semantic_hash": ""
   },
   "lib/services/pdf/builders/pdf_equipements_synthesis_builder.dart": {
-    "mtime": 1788908627.8602307,
-    "seen": 1788920576.9543893,
-    "ast_hash": "f1877664b0c1a942efa34ad3565d7c5b",
+    "mtime": 1788941551.5372174,
+    "seen": 1788941850.577767,
+    "ast_hash": "6605501734c4634dde8f77f9a7ea3924",
     "semantic_hash": ""
   },
   "lib/services/pdf/builders/pdf_executive_summary_builder.dart": {
@@ -1770,15 +1770,15 @@
     "semantic_hash": ""
   },
   "lib/services/pdf/builders/pdf_mesures_essais_builder.dart": {
-    "mtime": 1788922786.4236224,
-    "seen": 1788929507.171744,
-    "ast_hash": "a001ac88e79e2ead91469ff26c2a89c0",
+    "mtime": 1788941083.345841,
+    "seen": 1788941850.5777698,
+    "ast_hash": "1daec07ae45d4b2b5e3746bce62d4ef3",
     "semantic_hash": ""
   },
   "lib/services/pdf/builders/pdf_observations_recap_builder.dart": {
-    "mtime": 1788682490.9191694,
-    "seen": 1788698856.7554107,
-    "ast_hash": "703cf4227b655fbe02483fdea11d4894",
+    "mtime": 1788941735.576544,
+    "seen": 1788941850.577771,
+    "ast_hash": "6f6d4e954119d1c346d086311a150950",
     "semantic_hash": ""
   },
   "lib/services/pdf/builders/pdf_photos_schemas_builder.dart": {
@@ -1854,9 +1854,9 @@
     "semantic_hash": ""
   },
   "lib/services/pdf/pdf_report_service.dart": {
-    "mtime": 1788908627.861383,
-    "seen": 1788920576.9544122,
-    "ast_hash": "134abc1b56992b3950b0f4444d1eb226",
+    "mtime": 1788941573.4459126,
+    "seen": 1788941850.5777915,
+    "ast_hash": "447bd1cd3cb065b83987c2e95565878d",
     "semantic_hash": ""
   },
   "lib/services/pdf/pdf_report_styles.dart": {
@@ -2364,9 +2364,9 @@
     "semantic_hash": ""
   },
   "test/features/pdf_foudre_surtension_test.dart": {
-    "mtime": 1788920482.5370479,
-    "seen": 1788920576.9545498,
-    "ast_hash": "65bcf67ecac2a18de3c035a38c98a7f2",
+    "mtime": 1788946864.071677,
+    "seen": 1788946946.7917495,
+    "ast_hash": "54807a11a5bc19febdcf646eae735f14",
     "semantic_hash": ""
   },
   "test/features/pdf_grouped_cells_centering_test.dart": {
@@ -3171,6 +3171,18 @@
     "mtime": 1788922966.9499836,
     "seen": 1788929507.1718528,
     "ast_hash": "7acdf343ee2603ed1bb803865ca1d022",
+    "semantic_hash": ""
+  },
+  "lib/utils/normative_reference_cleaner.dart": {
+    "mtime": 1788941178.2611046,
+    "seen": 1788941850.5778263,
+    "ast_hash": "d6ef203c9a094f89454e989de065f6b8",
+    "semantic_hash": ""
+  },
+  "test/utils/normative_reference_cleaner_test.dart": {
+    "mtime": 1788941795.956568,
+    "seen": 1788941850.5780058,
+    "ast_hash": "6f22104f961d445f70def1765e018a9b",
     "semantic_hash": ""
   }
 }

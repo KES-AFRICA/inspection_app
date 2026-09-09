@@ -161,173 +161,150 @@ class PdfDescriptionBuilder {
 
     int descBodyIdx = 1;
 
+    widgets.add(pw.NewPage(freeSpace: 110));
     widgets.add(
-      pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          PageTracker(
-            key: 'desc_alim_site_mt',
-            registry: trackedPages,
-            offset: offset,
-            child: PdfReportStyles.subTitle(
-              '${descBodyIdx++}. Alimentation du site Moyen Tension',
-            ),
-          ),
-          pw.SizedBox(height: 4),
-          _buildAlimentationSiteMtTable(safeDesc),
-        ],
+      PageTracker(
+        key: 'desc_alim_site_mt',
+        registry: trackedPages,
+        offset: offset,
+        child: PdfReportStyles.subTitle(
+          '${descBodyIdx++}. Alimentation du site Moyen Tension',
+        ),
+      ),
+    );
+    widgets.add(pw.SizedBox(height: 4));
+    widgets.add(_buildAlimentationSiteMtTable(safeDesc));
+    widgets.add(pw.SizedBox(height: 8));
+
+    widgets.add(pw.NewPage(freeSpace: 110));
+    widgets.add(
+      PageTracker(
+        key: 'desc_mt',
+        registry: trackedPages,
+        offset: offset,
+        child: PdfReportStyles.subTitle(
+          '${descBodyIdx++}. Caractéristiques de l\'alimentation moyenne tension',
+        ),
+      ),
+    );
+    widgets.add(pw.SizedBox(height: 4));
+    widgets.addAll(_buildInstallationTableFromRows(pdfData.mtRows, sectionKey: 'MT'));
+    widgets.add(pw.SizedBox(height: 8));
+
+    widgets.add(pw.NewPage(freeSpace: 110));
+    widgets.add(
+      PageTracker(
+        key: 'desc_bt',
+        registry: trackedPages,
+        offset: offset,
+        child: PdfReportStyles.subTitle(
+          '${descBodyIdx++}. Caractéristiques de l\'alimentation basse tension sortie transformateur',
+        ),
+      ),
+    );
+    widgets.add(pw.SizedBox(height: 4));
+    widgets.addAll(_buildInstallationTableFromRows(pdfData.btRows, sectionKey: 'BT'));
+    widgets.add(pw.SizedBox(height: 8));
+
+    widgets.add(pw.NewPage(freeSpace: 110));
+    widgets.add(
+      PageTracker(
+        key: 'desc_ge',
+        registry: trackedPages,
+        offset: offset,
+        child: PdfReportStyles.subTitle(
+          '${descBodyIdx++}. Caractéristiques du groupe électrogène',
+        ),
+      ),
+    );
+    widgets.add(pw.SizedBox(height: 4));
+    widgets.add(
+      _buildInstallationTable(
+        safeDesc.groupeElectrogene,
+        sectionKey: 'GROUPE',
+        allGes: safeDesc.groupeElectrogene,
       ),
     );
     widgets.add(pw.SizedBox(height: 8));
 
+    widgets.add(pw.NewPage(freeSpace: 110));
     widgets.add(
-      pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          PageTracker(
-            key: 'desc_mt',
-            registry: trackedPages,
-            offset: offset,
-            child: PdfReportStyles.subTitle(
-              '${descBodyIdx++}. Caractéristiques de l\'alimentation moyenne tension',
-            ),
-          ),
-          pw.SizedBox(height: 4),
-          ..._buildInstallationTableFromRows(pdfData.mtRows, sectionKey: 'MT'),
-        ],
+      PageTracker(
+        key: 'desc_carburant',
+        registry: trackedPages,
+        offset: offset,
+        child: PdfReportStyles.subTitle(
+          '${descBodyIdx++}. Alimentation du groupe électrogène en carburant',
+        ),
+      ),
+    );
+    widgets.add(pw.SizedBox(height: 4));
+    widgets.add(
+      _buildInstallationTable(
+        safeDesc.alimentationCarburant,
+        sectionKey: 'CARBURANT',
+        allGes: safeDesc.groupeElectrogene,
       ),
     );
     widgets.add(pw.SizedBox(height: 8));
 
+    widgets.add(pw.NewPage(freeSpace: 110));
     widgets.add(
-      pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          PageTracker(
-            key: 'desc_bt',
-            registry: trackedPages,
-            offset: offset,
-            child: PdfReportStyles.subTitle(
-              '${descBodyIdx++}. Caractéristiques de l\'alimentation basse tension sortie transformateur',
-            ),
-          ),
-          pw.SizedBox(height: 4),
-          ..._buildInstallationTableFromRows(pdfData.btRows, sectionKey: 'BT'),
-        ],
+      PageTracker(
+        key: 'desc_inverseur',
+        registry: trackedPages,
+        offset: offset,
+        child: PdfReportStyles.subTitle(
+          '${descBodyIdx++}. Caractéristiques de l\'inverseur',
+        ),
+      ),
+    );
+    widgets.add(pw.SizedBox(height: 4));
+    widgets.add(
+      _buildInstallationTable(
+        safeDesc.inverseur,
+        sectionKey: 'INVERSEUR',
+        allGes: safeDesc.groupeElectrogene,
       ),
     );
     widgets.add(pw.SizedBox(height: 8));
 
+    widgets.add(pw.NewPage(freeSpace: 110));
     widgets.add(
-      pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          PageTracker(
-            key: 'desc_ge',
-            registry: trackedPages,
-            offset: offset,
-            child: PdfReportStyles.subTitle(
-              '${descBodyIdx++}. Caractéristiques du groupe électrogène',
-            ),
-          ),
-          pw.SizedBox(height: 4),
-          _buildInstallationTable(
-            safeDesc.groupeElectrogene,
-            sectionKey: 'GROUPE',
-            allGes: safeDesc.groupeElectrogene,
-          ),
-        ],
+      PageTracker(
+        key: 'desc_stabilisateur',
+        registry: trackedPages,
+        offset: offset,
+        child: PdfReportStyles.subTitle(
+          '${descBodyIdx++}. Caractéristiques du stabilisateur',
+        ),
+      ),
+    );
+    widgets.add(pw.SizedBox(height: 4));
+    widgets.add(
+      _buildInstallationTable(
+        safeDesc.stabilisateur,
+        sectionKey: 'STABILISATEUR',
       ),
     );
     widgets.add(pw.SizedBox(height: 8));
 
+    widgets.add(pw.NewPage(freeSpace: 110));
     widgets.add(
-      pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          PageTracker(
-            key: 'desc_carburant',
-            registry: trackedPages,
-            offset: offset,
-            child: PdfReportStyles.subTitle(
-              '${descBodyIdx++}. Alimentation du groupe électrogène en carburant',
-            ),
-          ),
-          pw.SizedBox(height: 4),
-          _buildInstallationTable(
-            safeDesc.alimentationCarburant,
-            sectionKey: 'CARBURANT',
-            allGes: safeDesc.groupeElectrogene,
-          ),
-        ],
+      PageTracker(
+        key: 'desc_onduleurs',
+        registry: trackedPages,
+        offset: offset,
+        child: PdfReportStyles.subTitle(
+          '${descBodyIdx++}. Caractéristiques des onduleurs',
+        ),
       ),
     );
+    widgets.add(pw.SizedBox(height: 4));
+    widgets.add(_buildInstallationTable(safeDesc.onduleurs, sectionKey: 'ONDULEUR'));
     widgets.add(pw.SizedBox(height: 8));
 
-    widgets.add(
-      pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          PageTracker(
-            key: 'desc_inverseur',
-            registry: trackedPages,
-            offset: offset,
-            child: PdfReportStyles.subTitle(
-              '${descBodyIdx++}. Caractéristiques de l\'inverseur',
-            ),
-          ),
-          pw.SizedBox(height: 4),
-          _buildInstallationTable(
-            safeDesc.inverseur,
-            sectionKey: 'INVERSEUR',
-            allGes: safeDesc.groupeElectrogene,
-          ),
-        ],
-      ),
-    );
-    widgets.add(pw.SizedBox(height: 8));
-
-    widgets.add(
-      pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          PageTracker(
-            key: 'desc_stabilisateur',
-            registry: trackedPages,
-            offset: offset,
-            child: PdfReportStyles.subTitle(
-              '${descBodyIdx++}. Caractéristiques du stabilisateur',
-            ),
-          ),
-          pw.SizedBox(height: 4),
-          _buildInstallationTable(
-            safeDesc.stabilisateur,
-            sectionKey: 'STABILISATEUR',
-          ),
-        ],
-      ),
-    );
-    widgets.add(pw.SizedBox(height: 8));
-
-    widgets.add(
-      pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          PageTracker(
-            key: 'desc_onduleurs',
-            registry: trackedPages,
-            offset: offset,
-            child: PdfReportStyles.subTitle(
-              '${descBodyIdx++}. Caractéristiques des onduleurs',
-            ),
-          ),
-          pw.SizedBox(height: 4),
-          _buildInstallationTable(safeDesc.onduleurs, sectionKey: 'ONDULEUR'),
-        ],
-      ),
-    );
-    widgets.add(pw.SizedBox(height: 8));
-
+    widgets.add(pw.NewPage(freeSpace: 50));
     widgets.add(
       PageTracker(
         key: 'desc_regime_neutre',
@@ -364,6 +341,7 @@ class PdfDescriptionBuilder {
     }
     widgets.add(pw.SizedBox(height: 5));
 
+    widgets.add(pw.NewPage(freeSpace: 110));
     widgets.add(
       PageTracker(
         key: 'desc_cpi',
@@ -378,6 +356,7 @@ class PdfDescriptionBuilder {
     widgets.add(_buildCpiTable(safeDesc.cpi));
     widgets.add(pw.SizedBox(height: 8));
 
+    widgets.add(pw.NewPage(freeSpace: 50));
     widgets.add(
       PageTracker(
         key: 'desc_eclairage',
@@ -391,6 +370,7 @@ class PdfDescriptionBuilder {
     widgets.add(PdfReportStyles.bodyText('- $eclairageDisplay'));
     widgets.add(pw.SizedBox(height: 5));
 
+    widgets.add(pw.NewPage(freeSpace: 50));
     widgets.add(
       PageTracker(
         key: 'desc_modifications',
@@ -406,6 +386,7 @@ class PdfDescriptionBuilder {
     widgets.add(PdfReportStyles.bodyText(modsDisplay));
     widgets.add(pw.SizedBox(height: 5));
 
+    widgets.add(pw.NewPage(freeSpace: 50));
     widgets.add(
       PageTracker(
         key: 'desc_note_calcul',
@@ -421,6 +402,7 @@ class PdfDescriptionBuilder {
     widgets.add(PdfReportStyles.bodyText('- $noteDisplay'));
     widgets.add(pw.SizedBox(height: 5));
 
+    widgets.add(pw.NewPage(freeSpace: 50));
     widgets.add(
       PageTracker(
         key: 'desc_paratonnerre',
@@ -446,6 +428,7 @@ class PdfDescriptionBuilder {
     }
     widgets.add(pw.SizedBox(height: 5));
 
+    widgets.add(pw.NewPage(freeSpace: 50));
     widgets.add(
       PageTracker(
         key: 'desc_registre',
@@ -459,6 +442,7 @@ class PdfDescriptionBuilder {
     widgets.add(PdfReportStyles.bodyText('- $regDisplay'));
     widgets.add(pw.SizedBox(height: 5));
 
+    widgets.add(pw.NewPage(freeSpace: 50));
     widgets.add(
       PageTracker(
         key: 'desc_locaux_risques',
@@ -536,6 +520,7 @@ class PdfDescriptionBuilder {
       },
       children: [
         pw.TableRow(
+          repeat: true,
           decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
           children: [
             PdfReportStyles.cell('N\u00B0', isHeader: true, centered: true),
@@ -602,6 +587,7 @@ class PdfDescriptionBuilder {
           columnWidths: headerColumnWidths,
           children: [
             pw.TableRow(
+              repeat: true,
               decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
               children: headers.map((c) => PdfReportStyles.cell(c, isHeader: true, centered: true)).toList(),
             ),
@@ -656,19 +642,14 @@ class PdfDescriptionBuilder {
       }
     }
 
-    final tableWidgets = <pw.Widget>[];
+    final allTableRows = <pw.TableRow>[];
 
-    // En-tête du tableau
-    tableWidgets.add(
-      pw.Table(
-        border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.4),
-        columnWidths: headerColumnWidths,
-        children: [
-          pw.TableRow(
-            decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
-            children: headers.map((c) => PdfReportStyles.cell(c, isHeader: true, centered: true)).toList(),
-          ),
-        ],
+    // En-tête du tableau répété sur chaque page
+    allTableRows.add(
+      pw.TableRow(
+        repeat: true,
+        decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
+        children: headers.map((c) => PdfReportStyles.cell(c, isHeader: true, centered: true)).toList(),
       ),
     );
 
@@ -678,16 +659,12 @@ class PdfDescriptionBuilder {
     for (final zoneGroup in zoneGroups) {
       final totalZoneRows =
           zoneGroup.repereGroups.fold<int>(0, (sum, g) => sum + g.rows.length);
-      final _zoneMidIndex = (totalZoneRows - 1) ~/ 2;
-      final tableRows = <pw.TableRow>[];
 
       int zoneItemIndex = 0;
 
       for (int rIdx = 0; rIdx < zoneGroup.repereGroups.length; rIdx++) {
         final repereGroup = zoneGroup.repereGroups[rIdx];
         final repereCount = repereGroup.rows.length;
-        final _repereMidIndex = (repereCount - 1) ~/ 2;
-        final _isLastRepereInZone = (rIdx == zoneGroup.repereGroups.length - 1);
 
         for (int i = 0; i < repereCount; i++) {
           final row = repereGroup.rows[i];
@@ -740,7 +717,7 @@ class PdfDescriptionBuilder {
                     : const pw.BorderSide(color: PdfColor.fromInt(0xFFCBD5E1), width: 0.4)),
           );
 
-          tableRows.add(
+          allTableRows.add(
             pw.TableRow(
               children: [
                 // Cellule 0 : Nom de la ZONE
@@ -814,25 +791,23 @@ class PdfDescriptionBuilder {
           );
         }
       }
-
-      tableWidgets.add(
-        pw.Table(
-          defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
-          border: pw.TableBorder(
-            left: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.4),
-            right: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.4),
-            top: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.4),
-            bottom: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.4),
-            verticalInside: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.4),
-            horizontalInside: pw.BorderSide.none,
-          ),
-          columnWidths: headerColumnWidths,
-          children: tableRows,
-        ),
-      );
     }
 
-    return tableWidgets;
+    return [
+      pw.Table(
+        defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
+        border: pw.TableBorder(
+          left: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.4),
+          right: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.4),
+          top: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.4),
+          bottom: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.4),
+          verticalInside: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.4),
+          horizontalInside: pw.BorderSide.none,
+        ),
+        columnWidths: headerColumnWidths,
+        children: allTableRows,
+      ),
+    ];
   }
 
   /// Résolution tolérante des valeurs pour un champ de colonne PDF donné
@@ -983,6 +958,7 @@ class PdfDescriptionBuilder {
       },
       children: [
         pw.TableRow(
+          repeat: true,
           decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
           children: headers
               .map((h) => PdfReportStyles.cell(h, isHeader: true, centered: true))
@@ -1047,6 +1023,7 @@ class PdfDescriptionBuilder {
       },
       children: [
         pw.TableRow(
+          repeat: true,
           decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
           children: [
             PdfReportStyles.cell('N\u00B0', isHeader: true, centered: true),
