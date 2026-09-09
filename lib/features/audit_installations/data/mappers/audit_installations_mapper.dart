@@ -189,6 +189,7 @@ class AuditInstallationsMapper {
       sectionCableNeutre: model.sectionCableNeutre,
       conducteursPhase: model.conducteursPhase,
       conducteursNeutre: model.conducteursNeutre,
+      natureCable: model.natureCable,
     );
   }
 
@@ -207,6 +208,7 @@ class AuditInstallationsMapper {
       sectionCableNeutre: entity.sectionCableNeutre,
       conducteursPhase: entity.conducteursPhase,
       conducteursNeutre: entity.conducteursNeutre,
+      natureCable: entity.natureCable,
     );
   }
 

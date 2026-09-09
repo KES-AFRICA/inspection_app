@@ -2038,50 +2038,43 @@ class PdfMesuresEssaisBuilder {
             zGroup.items.add(row);
           }
 
+          String stripMm2(String val) {
+            final clean = val.replaceAll('mm²', '').replaceAll('mm2', '').replaceAll('MM²', '').trim();
+            if (clean.isEmpty || clean == '0') return '-';
+            return clean;
+          }
+
           const isoColumnWidths = <int, pw.TableColumnWidth>{
-            0: pw.FlexColumnWidth(1.3), // ZONE
-            1: pw.FlexColumnWidth(1.6), // Repère du point d'origine
-            2: pw.FixedColumnWidth(24), // N°
-            3: pw.FlexColumnWidth(1.8), // Point A (origine)
-            4: pw.FlexColumnWidth(1.8), // Point B (extrémité)
-            5: pw.FlexColumnWidth(1.3), // Section câble Point A
-            6: pw.FlexColumnWidth(1.3), // Section câble Point B
-            7: pw.FlexColumnWidth(1.1), // Nb. câbles
-            8: pw.FlexColumnWidth(1.2), // Isolement (MΩ)
-            9: pw.FlexColumnWidth(1.5), // Appréciation
+            0: pw.FlexColumnWidth(1.2), // ZONE
+            1: pw.FlexColumnWidth(1.5), // Repère du point d'origine
+            2: pw.FixedColumnWidth(20), // N°
+            3: pw.FlexColumnWidth(1.6), // Point A (origine)
+            4: pw.FlexColumnWidth(1.6), // Point B (extrémité)
+            5: pw.FlexColumnWidth(1.3), // SECTION DE CÂBLE A (mm²)
+            6: pw.FlexColumnWidth(1.3), // SECTION DE CÂBLE B (mm²)
+            7: pw.FlexColumnWidth(1.2), // NATURE DU CÂBLE
+            8: pw.FlexColumnWidth(0.9), // Nb. câbles
+            9: pw.FlexColumnWidth(1.1), // Isolement (MΩ)
+            10: pw.FlexColumnWidth(1.4), // Appréciation
           };
 
-          // 1. Table Header
-          final headerTable = pw.Table(
-            border: const pw.TableBorder(
-              left: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
-              right: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
-              top: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
-              bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
-              verticalInside: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
-              horizontalInside: pw.BorderSide.none,
-            ),
-            columnWidths: isoColumnWidths,
+          final headerRow = pw.TableRow(
+            repeat: true,
+            decoration: pw.BoxDecoration(color: accentColor),
             children: [
-              pw.TableRow(
-                decoration: pw.BoxDecoration(color: accentColor),
-                children: [
-                  _thHeaderCell("ZONE"),
-                  _thHeaderCell("Repère du point d'origine"),
-                  _thHeaderCell("N°"),
-                  _thHeaderCell("Point A (origine)"),
-                  _thHeaderCell("Point B (extrémité)"),
-                  _thHeaderCell("Section câble Point A"),
-                  _thHeaderCell("Section câble Point B"),
-                  _thHeaderCell("Nb. câbles"),
-                  _thHeaderCell("Isolement (MΩ)"),
-                  _thHeaderCell("Appréciation"),
-                ],
-              ),
+              _thHeaderCell("ZONE"),
+              _thHeaderCell("Repère du point d'origine"),
+              _thHeaderCell("N°"),
+              _thHeaderCell("Point A (origine)"),
+              _thHeaderCell("Point B (extrémité)"),
+              _thHeaderCell("SECTION DE CÂBLE A (mm²)"),
+              _thHeaderCell("SECTION DE CÂBLE B (mm²)"),
+              _thHeaderCell("NATURE DU CÂBLE"),
+              _thHeaderCell("Nb. câbles"),
+              _thHeaderCell("Isolement (MΩ)"),
+              _thHeaderCell("Appréciation"),
             ],
           );
-
-          widgets.add(headerTable);
 
           // 2. Table Data Rows
           final isoTableRows = <pw.TableRow>[];
@@ -2192,31 +2185,43 @@ class PdfMesuresEssaisBuilder {
                       ),
                     ),
 
-                    // Cellule 5 : Section câble Point A
+                    // Cellule 5 : SECTION DE CÂBLE A (mm²)
                     pw.Container(
                       decoration: pw.BoxDecoration(color: bg, border: itemBorder),
                       padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
                       alignment: pw.Alignment.center,
                       child: pw.Text(
-                        ei.displaySectionPointA,
+                        stripMm2(ei.displaySectionPointA),
                         style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
                         textAlign: pw.TextAlign.center,
                       ),
                     ),
 
-                    // Cellule 6 : Section câble Point B
+                    // Cellule 6 : SECTION DE CÂBLE B (mm²)
                     pw.Container(
                       decoration: pw.BoxDecoration(color: bg, border: itemBorder),
                       padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
                       alignment: pw.Alignment.center,
                       child: pw.Text(
-                        ei.displaySectionPointB,
+                        stripMm2(ei.displaySectionPointB),
                         style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
                         textAlign: pw.TextAlign.center,
                       ),
                     ),
 
-                    // Cellule 7 : Nb. câbles
+                    // Cellule 7 : NATURE DU CÂBLE
+                    pw.Container(
+                      decoration: pw.BoxDecoration(color: bg, border: itemBorder),
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
+                      alignment: pw.Alignment.center,
+                      child: pw.Text(
+                        (ei.natureCable != null && ei.natureCable!.trim().isNotEmpty) ? ei.natureCable!.trim() : '-',
+                        style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                        textAlign: pw.TextAlign.center,
+                      ),
+                    ),
+
+                    // Cellule 8 : Nb. câbles
                     pw.Container(
                       decoration: pw.BoxDecoration(color: bg, border: itemBorder),
                       padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
@@ -2228,7 +2233,7 @@ class PdfMesuresEssaisBuilder {
                       ),
                     ),
 
-                    // Cellule 8 : Isolement (MΩ)
+                    // Cellule 9 : Isolement (MΩ)
                     pw.Container(
                       decoration: pw.BoxDecoration(color: bg, border: itemBorder),
                       padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
@@ -2240,7 +2245,7 @@ class PdfMesuresEssaisBuilder {
                       ),
                     ),
 
-                    // Cellule 9 : Appréciation
+                    // Cellule 10 : Appréciation
                     pw.Container(
                       decoration: pw.BoxDecoration(color: appBgColor, border: itemBorder),
                       padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
@@ -2263,12 +2268,13 @@ class PdfMesuresEssaisBuilder {
               border: const pw.TableBorder(
                 left: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
                 right: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+                top: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
                 bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
                 verticalInside: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
                 horizontalInside: pw.BorderSide.none,
               ),
               columnWidths: isoColumnWidths,
-              children: isoTableRows,
+              children: [headerRow, ...isoTableRows],
             ),
           );
 

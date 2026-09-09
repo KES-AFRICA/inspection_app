@@ -919,6 +919,7 @@ class BackupService {
         'sectionCableNeutre': d.sectionCableNeutre,
         'conducteursPhase': d.conducteursPhase,
         'conducteursNeutre': d.conducteursNeutre,
+        'natureCable': d.natureCable,
       };
 
   static Map<String, dynamic> _serializeCircuit(CircuitTerminalEquipement c) => {
@@ -937,6 +938,7 @@ class BackupService {
         'sectionCableNeutre': c.sectionCableNeutre,
         'conducteursPhase': c.conducteursPhase,
         'conducteursNeutre': c.conducteursNeutre,
+        'natureCable': c.natureCable,
       };
 
   static Map<String, dynamic> _serializeAlim(Alimentation a) => {
@@ -954,6 +956,7 @@ class BackupService {
         'sectionCableNeutre': a.sectionCableNeutre,
         'conducteursPhase': a.conducteursPhase,
         'conducteursNeutre': a.conducteursNeutre,
+        'natureCable': a.natureCable,
       };
 
   static Map<String, dynamic> _serializePoint(PointVerification p) => {
@@ -1094,6 +1097,7 @@ class BackupService {
                   'zonePointB': ei.zonePointB,
                   'reperePointB': ei.reperePointB,
                   'nomEquipementPointB': ei.nomEquipementPointB,
+                  'natureCable': ei.natureCable,
                 })
             .toList(),
         'cpiTests': m.cpiTests.map((ct) => ct.toMap()).toList(),
@@ -2709,6 +2713,7 @@ class BackupService {
         sectionCableNeutre: d['sectionCableNeutre'] as String?,
         conducteursPhase: d['conducteursPhase'] as int?,
         conducteursNeutre: d['conducteursNeutre'] as int?,
+        natureCable: d['natureCable'] as String?,
       );
 
   static CircuitTerminalEquipement _parseCircuit(Map<String, dynamic> d) => CircuitTerminalEquipement(
@@ -2727,6 +2732,7 @@ class BackupService {
         sectionCableNeutre: d['sectionCableNeutre'] as String?,
         conducteursPhase: d['conducteursPhase'] as int?,
         conducteursNeutre: d['conducteursNeutre'] as int?,
+        natureCable: d['natureCable'] as String?,
       );
 
   static Alimentation _parseAlim(Map<String, dynamic> d) => Alimentation(
@@ -2744,6 +2750,7 @@ class BackupService {
         sectionCableNeutre: d['sectionCableNeutre'] as String?,
         conducteursPhase: d['conducteursPhase'] as int?,
         conducteursNeutre: d['conducteursNeutre'] as int?,
+        natureCable: d['natureCable'] as String?,
       );
 
   static PointVerification _parsePoint(Map<String, dynamic> d) {
@@ -2943,6 +2950,7 @@ class BackupService {
                     zonePointB: m['zonePointB'] as String?,
                     reperePointB: m['reperePointB'] as String?,
                     nomEquipementPointB: m['nomEquipementPointB'] as String?,
+                    natureCable: m['natureCable'] as String?,
                   );
                 })
                 .toList() ??

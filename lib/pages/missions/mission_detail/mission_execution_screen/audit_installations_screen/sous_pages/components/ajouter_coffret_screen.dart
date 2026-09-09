@@ -2286,6 +2286,11 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
     '150 mm²', '185 mm²', '240 mm²', '300 mm²',
   ];
 
+  static const List<String> _natureCableOptions = [
+    'Cuivre',
+    'Aluminium',
+  ];
+
   final Map<String, TextEditingController> _controllers = {};
 
   @override
@@ -2392,6 +2397,9 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
           final key = isProtectionTete ? 'prot_source' : 'alim${index}_source';
           if (_controllers.containsKey(key) && _controllers[key]!.text != value) _controllers[key]!.text = value;
           break;
+        case 'natureCable':
+          a.natureCable = value.trim().isEmpty ? null : value.trim();
+          break;
         case 'sourceKnown': a.sourceKnown = value; break;
         case 'marqueDisjoncteur': a.marqueDisjoncteur = value; break;
       }
@@ -2450,6 +2458,9 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
             widget.protectionTete!.conducteursNeutre = int.tryParse(value);
             const keyCondN = 'prot_cond_neutre';
             if (_controllers.containsKey(keyCondN) && _controllers[keyCondN]!.text != value) _controllers[keyCondN]!.text = value;
+            break;
+          case 'natureCable':
+            widget.protectionTete!.natureCable = value.trim().isEmpty ? null : value.trim();
             break;
           case 'source': widget.protectionTete!.source = value; break;
           case 'sourceKnown': widget.protectionTete!.sourceKnown = value; break;
@@ -2722,6 +2733,7 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
                   onChanged('ddr', '');
                   onChanged('sectionCable', '');
                   onChanged('sectionCableNeutre', '');
+                  onChanged('natureCable', '');
                 }
 
                 if (result != null) {
@@ -2738,6 +2750,7 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
                     onChanged('ddr', dep.ddr);
                     onChanged('sectionCable', dep.sectionCable);
                     onChanged('sectionCableNeutre', dep.effectiveSectionCableNeutre);
+                    onChanged('natureCable', dep.natureCable ?? '');
 
                     widget.onSourceSelected?.call(result.equipmentId, result.displayName, dep.id);
                   } else {
@@ -2846,6 +2859,15 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
               readOnly: isLocked,
             ),
           ],
+          SizedBox(height: context.spacingS),
+          _buildModernDropdown(
+            context,
+            label: 'Nature du câble',
+            value: a.natureCable ?? '',
+            items: _natureCableOptions,
+            onChanged: (v) => onChanged('natureCable', v),
+            readOnly: isLocked,
+          ),
           SizedBox(height: context.spacingS),
           _buildModernTextField(
             context,
@@ -6336,6 +6358,11 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
     '150 mm²', '185 mm²', '240 mm²', '300 mm²',
   ];
 
+  static const List<String> _natureCableOptions = [
+    'Cuivre',
+    'Aluminium',
+  ];
+
   Future<void> _confirmDelete(
     BuildContext context, {
     required String title,
@@ -7148,6 +7175,20 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
                   ],
                   const SizedBox(height: 12),
 
+                  DropdownButtonFormField<String>(
+                    value: dep.natureCable != null && dep.natureCable!.isNotEmpty ? dep.natureCable : null,
+                    isExpanded: true,
+                    decoration: const InputDecoration(labelText: 'Nature du câble', isDense: true, border: OutlineInputBorder()),
+                    items: _natureCableOptions.map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis))).toList(),
+                    onChanged: (v) {
+                      setState(() {
+                        dep.natureCable = v ?? '';
+                      });
+                      widget.onDataChanged();
+                    },
+                  ),
+                  const SizedBox(height: 12),
+
                   TextFormField(
                     initialValue: dep.nombreCables ?? '',
                     decoration: const InputDecoration(
@@ -7618,6 +7659,20 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
                       },
                     ),
                   ],
+                  const SizedBox(height: 12),
+
+                  DropdownButtonFormField<String>(
+                    value: ct.natureCable != null && ct.natureCable!.isNotEmpty ? ct.natureCable : null,
+                    isExpanded: true,
+                    decoration: const InputDecoration(labelText: 'Nature du câble', isDense: true, border: OutlineInputBorder()),
+                    items: _natureCableOptions.map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis))).toList(),
+                    onChanged: (v) {
+                      setState(() {
+                        ct.natureCable = v ?? '';
+                      });
+                      widget.onDataChanged();
+                    },
+                  ),
                   const SizedBox(height: 12),
 
                   TextFormField(

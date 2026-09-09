@@ -612,6 +612,9 @@ class EssaiIsolement {
   @HiveField(25)
   String? nomEquipementPointB; // Nom/Repère propre de l'équipement Point B
 
+  @HiveField(26)
+  String? natureCable; // "Cuivre" ou "Aluminium"
+
   @HiveField(20)
   DateTime? createdAt;
 
@@ -643,6 +646,7 @@ class EssaiIsolement {
     this.zonePointB,
     this.reperePointB,
     this.nomEquipementPointB,
+    this.natureCable,
     this.createdAt,
     this.updatedAt,
   });
@@ -665,6 +669,7 @@ class EssaiIsolement {
     String? zonePointB,
     String? reperePointB,
     String? nomEquipementPointB,
+    String? natureCable,
   }) {
     final now = DateTime.now().toUtc();
     return EssaiIsolement(
@@ -688,6 +693,7 @@ class EssaiIsolement {
       zonePointB: zonePointB,
       reperePointB: reperePointB,
       nomEquipementPointB: nomEquipementPointB,
+      natureCable: natureCable,
       createdAt: now,
       updatedAt: now,
     );

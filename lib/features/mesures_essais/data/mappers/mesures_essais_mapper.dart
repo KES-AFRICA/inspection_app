@@ -84,6 +84,7 @@ class MesuresEssaisMapper {
           zonePointB: ei.zonePointB,
           reperePointB: ei.reperePointB,
           nomEquipementPointB: ei.nomEquipementPointB,
+          natureCable: ei.natureCable,
         );
       }).toList(),
       continuiteResistances: model.continuiteResistances.map((cr) {
@@ -194,6 +195,7 @@ class MesuresEssaisMapper {
           zonePointB: ei.zonePointB,
           reperePointB: ei.reperePointB,
           nomEquipementPointB: ei.nomEquipementPointB,
+          natureCable: ei.natureCable,
         );
       }).toList(),
       continuiteResistances: entity.continuiteResistances.map((cr) {

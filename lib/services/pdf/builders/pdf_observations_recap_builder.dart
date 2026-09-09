@@ -6,6 +6,7 @@ import 'package:inspec_app/services/dispositions_constructives_registry.dart';
 import 'package:inspec_app/services/pdf/pdf_page_tracker.dart';
 import 'package:inspec_app/services/pdf/pdf_report_styles.dart';
 import 'package:inspec_app/services/pdf/builders/pdf_equipements_synthesis_builder.dart';
+import 'package:inspec_app/utils/normative_reference_cleaner.dart';
 
 class PdfLocationInfo {
   final String zoneName;
@@ -49,7 +50,7 @@ class PdfObsRecap {
             : (localisation.contains('/')
                 ? localisation.split('/').sublist(1).join('/').trim()
                 : (zoneName.trim().isEmpty ? localisation.trim() : '')),
-        refNorm = refNorm.replaceAll(RegExp(r'§\s*'), 'art ');
+        refNorm = NormativeReferenceCleaner.clean(refNorm).replaceAll(RegExp(r'§\s*'), 'art ');
 
   String get localisation => zoneName.isNotEmpty && localName.isNotEmpty
       ? '$zoneName / $localName'
@@ -489,7 +490,7 @@ class PdfObservationsRecapBuilder {
                   padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                   alignment: pw.Alignment.centerLeft,
                   child: pw.Text(
-                    'ÉQUIPEMENT : $equipName',
+                    'DÉSIGNATION : $equipName',
                     style: pw.TextStyle(
                       font: fontBold,
                       fontSize: 8.5,

@@ -803,42 +803,30 @@ class PdfEquipementsSynthesisBuilder {
       rGroup.items.add(item);
     }
 
-    final tableWidgets = <pw.Widget>[];
+    final allTableRows = <pw.TableRow>[];
 
     if (showTableHeader) {
-      tableWidgets.add(
-        pw.Table(
-          border: const pw.TableBorder(
-            left: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
-            right: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
-            top: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
-            bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
-            verticalInside: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
-            horizontalInside: pw.BorderSide.none,
-          ),
-          columnWidths: columnWidths,
-          children: [
-            pw.TableRow(
-              decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
-              children: headers
-                  .map(
-                    (h) => pw.Container(
-                      padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 5),
-                      alignment: pw.Alignment.center,
-                      child: pw.Text(
-                        h,
-                        style: pw.TextStyle(
-                          font: fontBold,
-                          fontSize: 8,
-                          color: PdfColors.white,
-                        ),
-                        textAlign: pw.TextAlign.center,
-                      ),
+      allTableRows.add(
+        pw.TableRow(
+          repeat: true,
+          decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
+          children: headers
+              .map(
+                (h) => pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 5),
+                  alignment: pw.Alignment.center,
+                  child: pw.Text(
+                    h,
+                    style: pw.TextStyle(
+                      font: fontBold,
+                      fontSize: 8,
+                      color: PdfColors.white,
                     ),
-                  )
-                  .toList(),
-            ),
-          ],
+                    textAlign: pw.TextAlign.center,
+                  ),
+                ),
+              )
+              .toList(),
         ),
       );
     }
@@ -850,7 +838,6 @@ class PdfEquipementsSynthesisBuilder {
       final totalZoneItems =
           zoneGroup.repereGroups.fold<int>(0, (sum, g) => sum + g.items.length);
       final zoneMidIndex = (totalZoneItems - 1) ~/ 2;
-      final tableRows = <pw.TableRow>[];
 
       int zoneItemIndex = 0;
 
@@ -922,7 +909,7 @@ class PdfEquipementsSynthesisBuilder {
               ? repereGroup.localName
               : (zoneGroup.zoneName.isNotEmpty ? zoneGroup.zoneName : '');
 
-          tableRows.add(
+          allTableRows.add(
             pw.TableRow(
               decoration: pw.BoxDecoration(color: bgColor),
               children: [
@@ -1002,25 +989,23 @@ class PdfEquipementsSynthesisBuilder {
           );
         }
       }
-
-      tableWidgets.add(
-        pw.Table(
-          defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
-          border: const pw.TableBorder(
-            left: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
-            right: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
-            top: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
-            bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
-            verticalInside: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
-            horizontalInside: pw.BorderSide.none,
-          ),
-          columnWidths: columnWidths,
-          children: tableRows,
-        ),
-      );
     }
 
-    return tableWidgets;
+    return [
+      pw.Table(
+        defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
+        border: const pw.TableBorder(
+          left: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+          right: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+          top: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+          bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+          verticalInside: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+          horizontalInside: pw.BorderSide.none,
+        ),
+        columnWidths: columnWidths,
+        children: allTableRows,
+      ),
+    ];
   }
 
   static List<pw.Widget> buildEquipementsTable(
@@ -1111,42 +1096,30 @@ class PdfEquipementsSynthesisBuilder {
       rGroup.items.add(eq);
     }
 
-    final tableWidgets = <pw.Widget>[];
+    final allTableRows = <pw.TableRow>[];
 
     if (showTableHeader) {
-      tableWidgets.add(
-        pw.Table(
-          border: const pw.TableBorder(
-            left: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
-            right: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
-            top: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
-            bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
-            verticalInside: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
-            horizontalInside: pw.BorderSide.none,
-          ),
-          columnWidths: columnWidths,
-          children: [
-            pw.TableRow(
-              decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
-              children: headers
-                  .map(
-                    (h) => pw.Container(
-                      padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 5),
-                      alignment: pw.Alignment.center,
-                      child: pw.Text(
-                        h,
-                        style: pw.TextStyle(
-                          font: fontBold,
-                          fontSize: 8,
-                          color: PdfColors.white,
-                        ),
-                        textAlign: pw.TextAlign.center,
-                      ),
+      allTableRows.add(
+        pw.TableRow(
+          repeat: true,
+          decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
+          children: headers
+              .map(
+                (h) => pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 5),
+                  alignment: pw.Alignment.center,
+                  child: pw.Text(
+                    h,
+                    style: pw.TextStyle(
+                      font: fontBold,
+                      fontSize: 8,
+                      color: PdfColors.white,
                     ),
-                  )
-                  .toList(),
-            ),
-          ],
+                    textAlign: pw.TextAlign.center,
+                  ),
+                ),
+              )
+              .toList(),
         ),
       );
     }
@@ -1158,7 +1131,6 @@ class PdfEquipementsSynthesisBuilder {
       final totalZoneItems =
           zoneGroup.repereGroups.fold<int>(0, (sum, g) => sum + g.items.length);
       final zoneMidIndex = (totalZoneItems - 1) ~/ 2;
-      final tableRows = <pw.TableRow>[];
 
       int zoneItemIndex = 0;
 
@@ -1369,7 +1341,7 @@ class PdfEquipementsSynthesisBuilder {
             ),
           );
 
-          tableRows.add(
+          allTableRows.add(
             pw.TableRow(
               decoration: pw.BoxDecoration(color: bg),
               children: rowCells,
@@ -1377,25 +1349,23 @@ class PdfEquipementsSynthesisBuilder {
           );
         }
       }
-
-      tableWidgets.add(
-        pw.Table(
-          defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
-          border: const pw.TableBorder(
-            left: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
-            right: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
-            top: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
-            bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
-            verticalInside: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
-            horizontalInside: pw.BorderSide.none,
-          ),
-          columnWidths: columnWidths,
-          children: tableRows,
-        ),
-      );
     }
 
-    return tableWidgets;
+    return [
+      pw.Table(
+        defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
+        border: const pw.TableBorder(
+          left: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+          right: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+          top: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+          bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+          verticalInside: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+          horizontalInside: pw.BorderSide.none,
+        ),
+        columnWidths: columnWidths,
+        children: allTableRows,
+      ),
+    ];
   }
 
   }

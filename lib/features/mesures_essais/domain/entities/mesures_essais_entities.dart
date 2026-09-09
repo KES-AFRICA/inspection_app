@@ -139,6 +139,7 @@ class EssaiIsolementEntity {
   final String? zonePointB;
   final String? reperePointB;
   final String? nomEquipementPointB;
+  final String? natureCable;
 
   const EssaiIsolementEntity({
     required this.syncId,
@@ -165,6 +166,7 @@ class EssaiIsolementEntity {
     this.zonePointB,
     this.reperePointB,
     this.nomEquipementPointB,
+    this.natureCable,
   });
 }
 

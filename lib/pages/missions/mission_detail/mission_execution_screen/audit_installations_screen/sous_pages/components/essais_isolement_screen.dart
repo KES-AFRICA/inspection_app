@@ -26,6 +26,11 @@ const List<String> kSectionCableOptions = [
   '300 mm²',
 ];
 
+const List<String> kNatureCableOptions = [
+  'Cuivre',
+  'Aluminium',
+];
+
 // ================================================================
 // ÉCRAN PRINCIPAL : LISTE DES ESSAIS D'ISOLEMENT
 // ================================================================
@@ -385,6 +390,15 @@ class _EssaisIsolementScreenState extends ConsumerState<EssaisIsolementScreen> {
                     ),
                   ),
                   Container(height: 24, width: 1, color: Colors.grey.shade300),
+                  if (essai.natureCable != null && essai.natureCable!.trim().isNotEmpty) ...[
+                    Expanded(
+                      child: _buildMetricItem(
+                        label: 'NATURE',
+                        value: essai.natureCable!,
+                      ),
+                    ),
+                    Container(height: 24, width: 1, color: Colors.grey.shade300),
+                  ],
                   Expanded(
                     child: _buildMetricItem(
                       label: 'CÂBLES',
@@ -539,6 +553,7 @@ class _AjouterEssaiIsolementScreenState extends ConsumerState<AjouterEssaiIsolem
 
   String? _selectedSectionPointA;
   String? _selectedSectionPointB;
+  String? _selectedNatureCable;
   bool _isSectionPointAManual = false;
   bool _isSectionPointBManual = false;
 
@@ -642,6 +657,8 @@ class _AjouterEssaiIsolementScreenState extends ConsumerState<AjouterEssaiIsolem
 
     final secB = essai.sectionCablePointB ?? essai.sectionCable;
     _selectedSectionPointB = (secB != null && secB.trim().isNotEmpty) ? secB.trim() : '0';
+
+    _selectedNatureCable = (essai.natureCable != null && essai.natureCable!.trim().isNotEmpty) ? essai.natureCable!.trim() : null;
 
     _isSectionPointAManual = essai.isSectionPointAManual ?? false;
     _isSectionPointBManual = essai.isSectionPointBManual ?? false;
@@ -770,6 +787,7 @@ class _AjouterEssaiIsolementScreenState extends ConsumerState<AjouterEssaiIsolem
         zonePointB: _selectedPointBItem?.zone,
         reperePointB: _selectedPointBItem?.repere,
         nomEquipementPointB: _selectedPointBItem?.nom,
+        natureCable: _selectedNatureCable,
         nombreCablesTestes: nbCables,
       );
 
@@ -1113,6 +1131,43 @@ class _AjouterEssaiIsolementScreenState extends ConsumerState<AjouterEssaiIsolem
                           setState(() {
                             _selectedSectionPointB = v;
                             _isSectionPointBManual = true;
+                          });
+                        },
+                      ),
+
+                      SizedBox(height: _spacingM),
+
+                      // Nature du câble
+                      Text('Nature du câble', style: TextStyle(fontSize: _fontSizeM, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 6),
+                      DropdownButtonFormField<String?>(
+                        value: (_selectedNatureCable != null && kNatureCableOptions.contains(_selectedNatureCable))
+                            ? _selectedNatureCable
+                            : null,
+                        isExpanded: true,
+                        decoration: InputDecoration(
+                          hintText: 'Choisir la nature du câble',
+                          hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade500, overflow: TextOverflow.ellipsis),
+                          filled: true,
+                          fillColor: Colors.grey.shade50,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        ),
+                        items: [
+                          DropdownMenuItem<String?>(
+                            value: null,
+                            child: Text('Aucune sélection', style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
+                          ),
+                          ...kNatureCableOptions.map((nat) {
+                            return DropdownMenuItem<String?>(
+                              value: nat,
+                              child: Text(nat, style: const TextStyle(fontSize: 13)),
+                            );
+                          }),
+                        ],
+                        onChanged: (v) {
+                          setState(() {
+                            _selectedNatureCable = v;
                           });
                         },
                       ),

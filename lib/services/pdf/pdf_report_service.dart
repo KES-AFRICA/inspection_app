@@ -1632,65 +1632,53 @@ class PdfReportService {
         return;
       }
 
-      const int batchSize = 30;
-      final totalBatches = (items.length / batchSize).ceil();
+      final doc = pw.Document(
+        title: '$sectionTitle - ${mission.nomClient}',
+        author: 'KES INSPECTIONS AND PROJECTS',
+        compress: saveFilesToDisk,
+      );
 
-      for (int b = 0; b < totalBatches; b++) {
-        final startIdx = b * batchSize;
-        final endIdx = ((b + 1) * batchSize).clamp(0, items.length);
-        final batchItems = items.sublist(startIdx, endIdx);
-
-        final doc = pw.Document(
-          title: '$sectionTitle (Part ${b + 1}/$totalBatches) - ${mission.nomClient}',
-          author: 'KES INSPECTIONS AND PROJECTS',
-          compress: saveFilesToDisk,
-        );
-
-        final isFirstBatch = (b == 0);
-        doc.addPage(
-          pw.MultiPage(
-            maxPages: 10000,
-            pageTheme: _buildInnerPageTheme(
-              pageOffset: currentOffset,
-              overrideTotalPages: overrideTotalPages,
-            ),
-            header: (ctx) => _buildPageHeaderWidget(
-              nomSite: nomSite,
-              numeroRapport: numeroRapport,
-            ),
-            build: (ctx) => [
-              if (isFirstBatch) ...[
-                PageTracker(
-                  key: sectionKey,
-                  registry: trackedPages,
-                  offset: currentOffset,
-                  child: _subSectionBar(sectionTitle),
-                ),
-                pw.SizedBox(height: 5),
-              ],
-              ..._buildEquipementsTable(
-                batchItems,
-                startNumber: startIdx + 1,
-                showTableHeader: isFirstBatch,
-                isMT: isMT,
-              ),
-            ],
+      doc.addPage(
+        pw.MultiPage(
+          maxPages: 10000,
+          pageTheme: _buildInnerPageTheme(
+            pageOffset: currentOffset,
+            overrideTotalPages: overrideTotalPages,
           ),
-        );
+          header: (ctx) => _buildPageHeaderWidget(
+            nomSite: nomSite,
+            numeroRapport: numeroRapport,
+          ),
+          build: (ctx) => [
+            PageTracker(
+              key: sectionKey,
+              registry: trackedPages,
+              offset: currentOffset,
+              child: _subSectionBar(sectionTitle),
+            ),
+            pw.SizedBox(height: 5),
+            ..._buildEquipementsTable(
+              items,
+              startNumber: 1,
+              showTableHeader: true,
+              isMT: isMT,
+            ),
+          ],
+        ),
+      );
 
-        final bytes = await doc.save();
-        if (saveFilesToDisk) {
-          final file = File(
-            '${tempDir.path}/pdf_chunk_${chunkPrefix}_p${b + 1}_${mission.id}.pdf',
-          );
-          await file.writeAsBytes(bytes);
-          chunkFiles.add(file);
-        }
-        currentOffset += doc.document.pdfPageList.pages.length;
+      final bytes = await doc.save();
+      if (saveFilesToDisk) {
+        final file = File(
+          '${tempDir.path}/pdf_chunk_${chunkPrefix}_${mission.id}.pdf',
+        );
+        await file.writeAsBytes(bytes);
+        chunkFiles.add(file);
       }
+      currentOffset += doc.document.pdfPageList.pages.length;
     }
 
-    // 2. Équipements MT (découpés par micro-lots de 60)
+    // 2. Équipements MT
     final equipementsMT = _collectEquipementsMT(audit);
     await renderEquipementsSubBatches(
       items: equipementsMT,
@@ -1700,7 +1688,7 @@ class PdfReportService {
       isMT: true,
     );
 
-    // 3. Équipements BT (découpés par micro-lots de 60)
+    // 3. Équipements BT
     final equipementsBT = _collectEquipementsBT(audit, desc);
     await renderEquipementsSubBatches(
       items: equipementsBT,
@@ -1710,64 +1698,52 @@ class PdfReportService {
       isMT: false,
     );
 
-    // 4. Équipements aux sources d'alimentation non identifiées (découpés par micro-lots de 60)
+    // 4. Équipements aux sources d'alimentation non identifiées
     final unknownSources = _collectEquipementsUnknownSource(audit);
     if (unknownSources.isNotEmpty) {
-      const int batchSize = 30;
-      final totalBatches = (unknownSources.length / batchSize).ceil();
+      final sourcesUnknownDoc = pw.Document(
+        title: 'Equipements Sources Inconnues - ${mission.nomClient}',
+        author: 'KES INSPECTIONS AND PROJECTS',
+        compress: saveFilesToDisk,
+      );
 
-      for (int b = 0; b < totalBatches; b++) {
-        final startIdx = b * batchSize;
-        final endIdx = ((b + 1) * batchSize).clamp(0, unknownSources.length);
-        final batchItems = unknownSources.sublist(startIdx, endIdx);
-
-        final sourcesUnknownDoc = pw.Document(
-          title: 'Equipements Sources Inconnues (Part ${b + 1}/$totalBatches) - ${mission.nomClient}',
-          author: 'KES INSPECTIONS AND PROJECTS',
-          compress: saveFilesToDisk,
-        );
-
-        final isFirstBatch = (b == 0);
-        sourcesUnknownDoc.addPage(
-          pw.MultiPage(
-            maxPages: 10000,
-            pageTheme: _buildInnerPageTheme(
-              pageOffset: currentOffset,
-              overrideTotalPages: overrideTotalPages,
-            ),
-            header: (ctx) => _buildPageHeaderWidget(
-              nomSite: nomSite,
-              numeroRapport: numeroRapport,
-            ),
-            build: (ctx) => [
-              if (isFirstBatch) ...[
-                PageTracker(
-                  key: 'liste_recap_equipements_sources_inconnues',
-                  registry: trackedPages,
-                  offset: currentOffset,
-                  child: _sectionBox('LISTE RÉCAPITULATIVE DES ÉQUIPEMENTS AUX SOURCES D’ALIMENTATION NON IDENTIFIÉES'),
-                ),
-                pw.SizedBox(height: 8),
-              ],
-              ..._buildUnknownSourcesTable(
-                batchItems,
-                startNumber: startIdx + 1,
-                showTableHeader: isFirstBatch,
-              ),
-            ],
+      sourcesUnknownDoc.addPage(
+        pw.MultiPage(
+          maxPages: 10000,
+          pageTheme: _buildInnerPageTheme(
+            pageOffset: currentOffset,
+            overrideTotalPages: overrideTotalPages,
           ),
-        );
+          header: (ctx) => _buildPageHeaderWidget(
+            nomSite: nomSite,
+            numeroRapport: numeroRapport,
+          ),
+          build: (ctx) => [
+            PageTracker(
+              key: 'liste_recap_equipements_sources_inconnues',
+              registry: trackedPages,
+              offset: currentOffset,
+              child: _sectionBox('LISTE RÉCAPITULATIVE DES ÉQUIPEMENTS AUX SOURCES D’ALIMENTATION NON IDENTIFIÉES'),
+            ),
+            pw.SizedBox(height: 8),
+            ..._buildUnknownSourcesTable(
+              unknownSources,
+              startNumber: 1,
+              showTableHeader: true,
+            ),
+          ],
+        ),
+      );
 
-        final sourcesBytes = await sourcesUnknownDoc.save();
-        if (saveFilesToDisk) {
-          final sourcesFile = File(
-            '${tempDir.path}/pdf_chunk_equipements_sources_inconnues_p${b + 1}_${mission.id}.pdf',
-          );
-          await sourcesFile.writeAsBytes(sourcesBytes);
-          chunkFiles.add(sourcesFile);
-        }
-        currentOffset += sourcesUnknownDoc.document.pdfPageList.pages.length;
+      final sourcesBytes = await sourcesUnknownDoc.save();
+      if (saveFilesToDisk) {
+        final sourcesFile = File(
+          '${tempDir.path}/pdf_chunk_equipements_sources_inconnues_${mission.id}.pdf',
+        );
+        await sourcesFile.writeAsBytes(sourcesBytes);
+        chunkFiles.add(sourcesFile);
       }
+      currentOffset += sourcesUnknownDoc.document.pdfPageList.pages.length;
     }
 
     return PdfChunkSectionResult(

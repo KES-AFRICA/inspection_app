@@ -464,6 +464,7 @@ class EssaiIsolementAdapter extends TypeAdapter<EssaiIsolement> {
       zonePointB: fields[23] as String?,
       reperePointB: fields[24] as String?,
       nomEquipementPointB: fields[25] as String?,
+      natureCable: fields[26] as String?,
       createdAt: fields[20] as DateTime?,
       updatedAt: fields[21] as DateTime?,
     );
@@ -472,7 +473,7 @@ class EssaiIsolementAdapter extends TypeAdapter<EssaiIsolement> {
   @override
   void write(BinaryWriter writer, EssaiIsolement obj) {
     writer
-      ..writeByte(26)
+      ..writeByte(27)
       ..writeByte(0)
       ..write(obj.syncId)
       ..writeByte(1)
@@ -521,6 +522,8 @@ class EssaiIsolementAdapter extends TypeAdapter<EssaiIsolement> {
       ..write(obj.reperePointB)
       ..writeByte(25)
       ..write(obj.nomEquipementPointB)
+      ..writeByte(26)
+      ..write(obj.natureCable)
       ..writeByte(20)
       ..write(obj.createdAt)
       ..writeByte(21)

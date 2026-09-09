@@ -1294,6 +1294,9 @@ class Alimentation {
   @HiveField(15)
   String? id;
 
+  @HiveField(16)
+  String? natureCable; // "Cuivre" ou "Aluminium"
+
   /// Identifiant technique stable (généré automatiquement si absent)
   String get alimentationId {
     if (id != null && id!.trim().isNotEmpty) return id!;
@@ -1344,6 +1347,7 @@ class Alimentation {
     this.sectionCableNeutre,
     this.conducteursPhase,
     this.conducteursNeutre,
+    this.natureCable,
   })  : id = (id != null && id.trim().isNotEmpty)
             ? id
             : 'alim_${DateTime.now().microsecondsSinceEpoch}_${typeProtection.hashCode.abs()}',
@@ -1367,6 +1371,7 @@ class Alimentation {
     String? sectionCableNeutre,
     int? conducteursPhase,
     int? conducteursNeutre,
+    String? natureCable,
   }) {
     return Alimentation(
       id: id ?? this.id,
@@ -1385,6 +1390,7 @@ class Alimentation {
       sectionCableNeutre: sectionCableNeutre ?? this.sectionCableNeutre,
       conducteursPhase: conducteursPhase ?? this.conducteursPhase,
       conducteursNeutre: conducteursNeutre ?? this.conducteursNeutre,
+      natureCable: natureCable ?? this.natureCable,
     );
   }
 }
@@ -1604,6 +1610,9 @@ class DepartEquipement {
   @HiveField(14)
   int? conducteursNeutre;
 
+  @HiveField(15)
+  String? natureCable; // "Cuivre" ou "Aluminium"
+
   /// Getter rétrocompatible pour la section phase (réutilise le champ historique sectionCable)
   String get sectionCablePhase => sectionCable;
   String get effectiveSectionCablePhase => sectionCablePhase;
@@ -1643,6 +1652,7 @@ class DepartEquipement {
     this.sectionCableNeutre,
     this.conducteursPhase,
     this.conducteursNeutre,
+    this.natureCable,
   }) : id = (id != null && id.trim().isNotEmpty)
             ? id
             : 'dep_${DateTime.now().microsecondsSinceEpoch}_${identification.hashCode.abs()}';
@@ -1663,6 +1673,7 @@ class DepartEquipement {
     String? sectionCableNeutre,
     int? conducteursPhase,
     int? conducteursNeutre,
+    String? natureCable,
   }) {
     return DepartEquipement(
       id: id ?? this.id,
@@ -1680,6 +1691,7 @@ class DepartEquipement {
       sectionCableNeutre: sectionCableNeutre ?? this.sectionCableNeutre,
       conducteursPhase: conducteursPhase ?? this.conducteursPhase,
       conducteursNeutre: conducteursNeutre ?? this.conducteursNeutre,
+      natureCable: natureCable ?? this.natureCable,
     );
   }
 }
@@ -1732,6 +1744,9 @@ class CircuitTerminalEquipement {
   @HiveField(14)
   int? conducteursNeutre;
 
+  @HiveField(15)
+  String? natureCable; // "Cuivre" ou "Aluminium"
+
   /// Getter rétrocompatible pour la section phase (réutilise le champ historique sectionCable)
   String get sectionCablePhase => sectionCable;
   String get effectiveSectionCablePhase => sectionCablePhase;
@@ -1771,6 +1786,7 @@ class CircuitTerminalEquipement {
     this.sectionCableNeutre,
     this.conducteursPhase,
     this.conducteursNeutre,
+    this.natureCable,
   }) : id = (id != null && id.trim().isNotEmpty)
             ? id
             : 'ct_${DateTime.now().microsecondsSinceEpoch}_${identification.hashCode.abs()}';
@@ -1791,6 +1807,7 @@ class CircuitTerminalEquipement {
     String? sectionCableNeutre,
     int? conducteursPhase,
     int? conducteursNeutre,
+    String? natureCable,
   }) {
     return CircuitTerminalEquipement(
       id: id ?? this.id,
@@ -1808,6 +1825,7 @@ class CircuitTerminalEquipement {
       sectionCableNeutre: sectionCableNeutre ?? this.sectionCableNeutre,
       conducteursPhase: conducteursPhase ?? this.conducteursPhase,
       conducteursNeutre: conducteursNeutre ?? this.conducteursNeutre,
+      natureCable: natureCable ?? this.natureCable,
     );
   }
 }

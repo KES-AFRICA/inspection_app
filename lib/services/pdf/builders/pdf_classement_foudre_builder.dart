@@ -1030,39 +1030,7 @@ class PdfClassementFoudreBuilder {
         );
       }
 
-      // 1. Observations Slide 3 (Enrichies)
-      final pfEnrichies = c.observationsParafoudreEnrichies ?? [];
-      for (var obs in pfEnrichies) {
-        final text = obs.observation?.isNotEmpty == true
-            ? obs.observation!
-            : obs.elementControle;
-        addRow(
-          pointVerification: obs.elementControle.trim().isNotEmpty
-              ? obs.elementControle.trim()
-              : defaultParafoudrePointSlide3,
-          referenceNormative: obs.referenceNormativeEffective ??
-              obs.referenceNormative ??
-              defaultParafoudreRefNormative,
-          criticite: obs.criticite ?? defaultParafoudreCriticite,
-          observation: text,
-          photoPaths: obs.photos,
-          key: 'enrich_${identityHashCode(obs)}',
-        );
-      }
-
-      // 2. Observations Slide 3 (Simples)
-      for (var obs in c.observationsParafoudre) {
-        addRow(
-          pointVerification: defaultParafoudrePointSlide3,
-          referenceNormative: obs.referenceNormative ?? defaultParafoudreRefNormative,
-          criticite: obs.criticite ?? defaultParafoudreCriticite,
-          observation: obs.texte,
-          photoPaths: obs.photos,
-          key: 'pf_${identityHashCode(obs)}',
-        );
-      }
-
-      // 3. Points de vérification liés au parafoudre / surtension
+      // Points de vérification liés au parafoudre / surtension (strictement réservés aux observations par équipement)
       for (var pv in c.pointsVerification) {
         final isRelated = isParafoudreRelated(pv.pointVerification) ||
             isParafoudreRelated(pv.familleRisque ?? '') ||

@@ -2,6 +2,8 @@
 library;
 
 import '../models/audit_installations_electriques.dart';
+import '../utils/normative_reference_cleaner.dart';
+
 class DispositionMetadata {
   final String referenceNormative;
   final String familleRisque;
@@ -17,7 +19,9 @@ class DispositionMetadata {
 class DispositionsConstructivesRegistry {
   static String? normalizeNormativeReference(String? ref) {
     if (ref == null || ref.isEmpty) return ref;
-    return ref.replaceAll(RegExp(r'§\s*'), 'art ');
+    final cleaned = NormativeReferenceCleaner.clean(ref);
+    if (cleaned == null || cleaned.isEmpty) return cleaned;
+    return cleaned.replaceAll(RegExp(r'§\s*'), 'art ');
   }
 
   static const Map<String, DispositionMetadata> _registry = {
@@ -619,7 +623,7 @@ class DispositionsConstructivesRegistry {
       criticite: "Majeure",
     ),
     "Présence d'une porte pleine coupe-feu de degré 1 heure, ouvrant vers l'extérieur, munie d'un dispositif antipanique": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – art 421, art 422 et art 513 ; exigences détaillées de porte coupe-feu à compléter par le référentiel bâtiment applicable",
+      referenceNormative: "NF C 15-100-1:2024 – art 421, art 422 et art 513",
       familleRisque: "Incendie / propagation du feu",
       criticite: "Majeure",
     ),
@@ -634,7 +638,7 @@ class DispositionsConstructivesRegistry {
       criticite: "Majeure",
     ),
     "Présence d'une rétention adaptée au stockage et aux fuites de combustible": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – art 551 ; prescriptions du fabricant et réglementation applicable",
+      referenceNormative: "NF C 15-100-1:2024 – art 551",
       familleRisque: "Incendie / brûlure / fuite de combustible",
       criticite: "Critique",
     ),
@@ -644,12 +648,12 @@ class DispositionsConstructivesRegistry {
       criticite: "Critique",
     ),
     "Canalisations du combustible": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – art 551 ; prescriptions du fabricant",
+      referenceNormative: "NF C 15-100-1:2024 – art 551",
       familleRisque: "Incendie / brûlure / fuite de combustible",
       criticite: "Critique",
     ),
     "Absence de canalisations étrangères": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – art 514 ; exigence spécifique de séparation des locaux à confirmer sur le référentiel applicable",
+      referenceNormative: "NF C 15-100-1:2024 – art 514",
       familleRisque: "Sécurité d’exploitation",
       criticite: "Majeure",
     ),
@@ -669,17 +673,17 @@ class DispositionsConstructivesRegistry {
       criticite: "Majeure",
     ),
     "Moyens d'extinction adaptés aux risques électriques et de carburant": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – art 421, art 422 et art 551 ; moyens d'extinction à adapter au risque",
+      referenceNormative: "NF C 15-100-1:2024 – art 421, art 422 et art 551",
       familleRisque: "Incendie / brûlure / fuite de combustible",
       criticite: "Critique",
     ),
     "État et étanchéité des conduites et raccords de combustible": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – art 551 ; prescriptions du fabricant",
+      referenceNormative: "NF C 15-100-1:2024 – art 551",
       familleRisque: "Incendie / brûlure / fuite de combustible",
       criticite: "Critique",
     ),
     "Évacuation des gaz d'échappement vers l'extérieur sans risque pour les occupants": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – art 551 ; prescriptions du fabricant",
+      referenceNormative: "NF C 15-100-1:2024 – art 551",
       familleRisque: "Incendie / brûlure / fuite de combustible",
       criticite: "Critique",
     ),
@@ -704,7 +708,7 @@ class DispositionsConstructivesRegistry {
       criticite: "Critique",
     ),
     "Accès réservé au personnel habilité (habilitation électrique à jour)": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – art 6.5.1.2 ; NF C 18-510 (complémentaire, non fournie)",
+      referenceNormative: "NF C 15-100-1:2024 – art 6.5.1.2 ; NF C 18-510",
       familleRisque: "Sécurité des interventions / risque électrique",
       criticite: "Majeure",
     ),
@@ -714,7 +718,7 @@ class DispositionsConstructivesRegistry {
       criticite: "Critique",
     ),
     "Présence et accessibilité des EPI électriques (gants, visière, tapis)": DispositionMetadata(
-      referenceNormative: "NF C 18-510 (complémentaire, non fournie) ; NF C 15-100-1:2024 – art 6.5.1.2",
+      referenceNormative: "NF C 18-510 ; NF C 15-100-1:2024 – art 6.5.1.2",
       familleRisque: "Sécurité des interventions / risque électrique",
       criticite: "Majeure",
     ),
@@ -729,7 +733,7 @@ class DispositionsConstructivesRegistry {
       criticite: "Majeure",
     ),
     "Présence d'un plan d'intervention et de consignation affiché": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – art 514 ; NF C 18-510 (complémentaire, non fournie)",
+      referenceNormative: "NF C 15-100-1:2024 – art 514 ; NF C 18-510",
       familleRisque: "Sécurité des interventions / risque électrique",
       criticite: "Majeure",
     ),
@@ -744,12 +748,12 @@ class DispositionsConstructivesRegistry {
       criticite: "Majeure",
     ),
     "Contrôle du niveau de carburant, huile et liquide de refroidissement": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – art 551 ; prescriptions du fabricant",
+      referenceNormative: "NF C 15-100-1:2024 – art 551",
       familleRisque: "Incendie / brûlure / fuite de combustible",
       criticite: "Critique",
     ),
     "Absence de fuite de carburant ou d'huile lors de l'exploitation": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – art 551 ; prescriptions du fabricant",
+      referenceNormative: "NF C 15-100-1:2024 – art 551",
       familleRisque: "Incendie / brûlure / fuite de combustible",
       criticite: "Critique",
     ),
@@ -764,12 +768,12 @@ class DispositionsConstructivesRegistry {
       criticite: "Majeure",
     ),
     "Vérification du fonctionnement des alarmes et sécurités moteur": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – art 551.2 ; dispositifs d'alarme/sécurité selon le fabricant",
+      referenceNormative: "NF C 15-100-1:2024 – art 551.2",
       familleRisque: "Défaillance de la source de remplacement / continuité de service",
       criticite: "Majeure",
     ),
     "Matériel de consignation (cadenas, étiquettes, détecteur de tension) disponible": DispositionMetadata(
-      referenceNormative: "NF C 18-510 (complémentaire, non fournie) ; NF C 15-100-1:2024 – art 537",
+      referenceNormative: "NF C 18-510 ; NF C 15-100-1:2024 – art 537",
       familleRisque: "Sécurité des interventions / risque électrique",
       criticite: "Majeure",
     ),
@@ -879,12 +883,12 @@ class DispositionsConstructivesRegistry {
       criticite: "Majeure",
     ),
     "Présence d'une porte pleine, ouvrant vers l'extérieur, munie d'un dispositif anti-panique": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – art 513 ; les exigences détaillées de porte/anti-panique sont à compléter par le référentiel bâtiment/local applicable",
+      referenceNormative: "NF C 15-100-1:2024 – art 513",
       familleRisque: "Sécurité des interventions",
       criticite: "Majeure",
     ),
     "Verrouillage empêchant tout accès non autorisé": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – art 513 et art 514 ; exigence spécifique de verrouillage du local à confirmer sur NF C 15-100-7-729 (non fournie)",
+      referenceNormative: "NF C 15-100-1:2024 – art 513 et art 514",
       familleRisque: "Accès non autorisé / risque électrique",
       criticite: "Majeure",
     ),
@@ -909,7 +913,7 @@ class DispositionsConstructivesRegistry {
       criticite: "Majeure",
     ),
     "Présence et lisibilité des consignes de sécurité": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – art 514 ; NF C 18-510 (référence complémentaire, non fournie)",
+      referenceNormative: "NF C 15-100-1:2024 – art 514 ; NF C 18-510",
       familleRisque: "Sécurité des interventions / risque électrique",
       criticite: "Majeure",
     ),
@@ -974,7 +978,7 @@ class DispositionsConstructivesRegistry {
       criticite: "Critique",
     ),
     "Accès réservé au personnel habilité (habilitation électrique à jour)": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – art 6.5.1.2 ; NF C 18-510 (référence complémentaire pour l'habilitation, non fournie)",
+      referenceNormative: "NF C 15-100-1:2024 – art 6.5.1.2 ; NF C 18-510",
       familleRisque: "Sécurité des interventions / risque électrique",
       criticite: "Majeure",
     ),
@@ -984,7 +988,7 @@ class DispositionsConstructivesRegistry {
       criticite: "Critique",
     ),
     "Présence et accessibilité des EPI électriques (gants, visière, tapis)": DispositionMetadata(
-      referenceNormative: "NF C 18-510 (référence complémentaire, non fournie) ; NF C 15-100-1:2024 – art 6.5.1.2",
+      referenceNormative: "NF C 18-510 ; NF C 15-100-1:2024 – art 6.5.1.2",
       familleRisque: "Sécurité des interventions / risque électrique",
       criticite: "Majeure",
     ),
@@ -1009,7 +1013,7 @@ class DispositionsConstructivesRegistry {
       criticite: "Critique",
     ),
     "Présence d'un plan d'intervention et de consignation affiché": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – art 514 ; NF C 18-510 (complémentaire, non fournie)",
+      referenceNormative: "NF C 15-100-1:2024 – art 514 ; NF C 18-510",
       familleRisque: "Sécurité des interventions / risque électrique",
       criticite: "Majeure",
     ),
@@ -1024,7 +1028,7 @@ class DispositionsConstructivesRegistry {
       criticite: "Majeure",
     ),
     "Matériel de consignation (cadenas, étiquettes, détecteur de tension) disponible": DispositionMetadata(
-      referenceNormative: "NF C 18-510 (référence complémentaire, non fournie) ; NF C 15-100-1:2024 – art 537",
+      referenceNormative: "NF C 18-510 ; NF C 15-100-1:2024 – art 537",
       familleRisque: "Sécurité des interventions / risque électrique",
       criticite: "Majeure",
     ),
@@ -1034,7 +1038,7 @@ class DispositionsConstructivesRegistry {
       criticite: "Majeure",
     ),
     "Disponibilité d'une procédure de consignation électrique": DispositionMetadata(
-      referenceNormative: "NF C 18-510 (référence complémentaire, non fournie) ; NF C 15-100-1:2024 – art 537",
+      referenceNormative: "NF C 18-510 ; NF C 15-100-1:2024 – art 537",
       familleRisque: "Sécurité des interventions / risque électrique",
       criticite: "Majeure",
     ),

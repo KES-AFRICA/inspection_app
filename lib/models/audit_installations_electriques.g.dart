@@ -826,13 +826,14 @@ class DepartEquipementAdapter extends TypeAdapter<DepartEquipement> {
       sectionCableNeutre: fields[12] as String?,
       conducteursPhase: fields[13] as int?,
       conducteursNeutre: fields[14] as int?,
+      natureCable: fields[15] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, DepartEquipement obj) {
     writer
-      ..writeByte(15)
+      ..writeByte(16)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -862,7 +863,9 @@ class DepartEquipementAdapter extends TypeAdapter<DepartEquipement> {
       ..writeByte(13)
       ..write(obj.conducteursPhase)
       ..writeByte(14)
-      ..write(obj.conducteursNeutre);
+      ..write(obj.conducteursNeutre)
+      ..writeByte(15)
+      ..write(obj.natureCable);
   }
 
   @override
@@ -902,13 +905,14 @@ class CircuitTerminalEquipementAdapter extends TypeAdapter<CircuitTerminalEquipe
       sectionCableNeutre: fields[12] as String?,
       conducteursPhase: fields[13] as int?,
       conducteursNeutre: fields[14] as int?,
+      natureCable: fields[15] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, CircuitTerminalEquipement obj) {
     writer
-      ..writeByte(15)
+      ..writeByte(16)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -938,7 +942,9 @@ class CircuitTerminalEquipementAdapter extends TypeAdapter<CircuitTerminalEquipe
       ..writeByte(13)
       ..write(obj.conducteursPhase)
       ..writeByte(14)
-      ..write(obj.conducteursNeutre);
+      ..write(obj.conducteursNeutre)
+      ..writeByte(15)
+      ..write(obj.natureCable);
   }
 
   @override
@@ -980,13 +986,14 @@ class AlimentationAdapter extends TypeAdapter<Alimentation> {
       sectionCableNeutre: fields[12] as String?,
       conducteursPhase: fields[13] as int?,
       conducteursNeutre: fields[14] as int?,
+      natureCable: fields[16] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Alimentation obj) {
     writer
-      ..writeByte(16)
+      ..writeByte(17)
       ..writeByte(0)
       ..write(obj.typeProtection)
       ..writeByte(1)
@@ -1018,7 +1025,9 @@ class AlimentationAdapter extends TypeAdapter<Alimentation> {
       ..writeByte(14)
       ..write(obj.conducteursNeutre)
       ..writeByte(15)
-      ..write(obj.id);
+      ..write(obj.id)
+      ..writeByte(16)
+      ..write(obj.natureCable);
   }
 
   @override

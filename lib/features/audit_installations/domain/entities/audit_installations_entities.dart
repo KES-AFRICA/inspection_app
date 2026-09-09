@@ -288,6 +288,7 @@ class AlimentationEntity {
   final String? sectionCableNeutre;
   final int? conducteursPhase;
   final int? conducteursNeutre;
+  final String? natureCable;
 
   String get effectiveSourceKnown => SourceStatusResolver.resolve(typeProtection);
 
@@ -305,6 +306,7 @@ class AlimentationEntity {
     this.sectionCableNeutre,
     this.conducteursPhase,
     this.conducteursNeutre,
+    this.natureCable,
   });
 }
 
