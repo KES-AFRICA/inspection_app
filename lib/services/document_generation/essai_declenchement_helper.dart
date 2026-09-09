@@ -1,6 +1,7 @@
 // lib/services/document_generation/essai_declenchement_helper.dart
 
 import 'package:inspec_app/models/audit_installations_electriques.dart';
+import 'package:inspec_app/models/mesures_essais.dart';
 
 /// Énumération des blocs éligibles à un essai de déclenchement
 enum BlocOrigineEssai {
@@ -121,5 +122,97 @@ class EssaiDeclenchementHelper {
     }
 
     return (zone: zoneName, repere: repereName);
+  }
+
+  /// Vérifie si un essai existant correspond au même bloc (protection de tête, sortie inverseur, départ, circuit)
+  static bool isSameBlock({
+    required EssaiDeclenchementDifferentiel essai,
+    String? targetId,
+    String? targetElementId,
+    String? equipementId,
+    String? precision,
+    String? circuitName,
+  }) {
+    // 1. Même id d'enregistrement dans la base
+    if (targetId != null && targetId.trim().isNotEmpty && essai.id != null && essai.id == targetId) {
+      return true;
+    }
+
+    // 2. Même identifiant d'élément unique (dep.id, ct.id, sortie_id, etc.)
+    if (targetElementId != null &&
+        targetElementId.trim().isNotEmpty &&
+        essai.elementId != null &&
+        essai.elementId!.trim().isNotEmpty &&
+        essai.elementId == targetElementId) {
+      return true;
+    }
+
+    // 3. Correspondance fonctionnelle par équipement + précision
+    final eEquipId = essai.equipementId?.trim();
+    final tEquipId = equipementId?.trim();
+    final ePrec = essai.precision?.trim().toLowerCase();
+    final tPrec = precision?.trim().toLowerCase();
+
+    if (tEquipId != null && tEquipId.isNotEmpty && eEquipId != null && eEquipId.isNotEmpty && eEquipId == tEquipId) {
+      if (tPrec != null && tPrec.isNotEmpty && ePrec != null && ePrec == tPrec) {
+        // Pour la protection de tête : 1 seul bloc possible par équipement
+        if (tPrec == precisionProtectionTete.toLowerCase()) {
+          return true;
+        }
+
+        // Pour les départs, circuits terminaux ou sorties d'inverseur :
+        final tCircuit = circuitName?.trim().toLowerCase();
+        final eCircuit = essai.designationCircuit?.trim().toLowerCase();
+
+        if (tCircuit != null && tCircuit.isNotEmpty && eCircuit != null && eCircuit.isNotEmpty) {
+          if (tCircuit == eCircuit) {
+            return true;
+          }
+        }
+      }
+    }
+
+    return false;
+  }
+
+  /// Déduplique la liste des essais pour garantir qu'un bloc n'a qu'un seul essai
+  static void deduplicateEssais(List<EssaiDeclenchementDifferentiel> essais) {
+    final indicesToRemove = <int>{};
+
+    for (int i = 0; i < essais.length; i++) {
+      if (indicesToRemove.contains(i)) continue;
+      for (int j = i + 1; j < essais.length; j++) {
+        if (indicesToRemove.contains(j)) continue;
+        final a = essais[i];
+        final b = essais[j];
+        if (isSameBlock(
+          essai: b,
+          targetId: a.id,
+          targetElementId: a.elementId,
+          equipementId: a.equipementId,
+          precision: a.precision,
+          circuitName: a.designationCircuit,
+        )) {
+          // Doublon détecté : on conserve l'essai le plus récemment mis à jour
+          final dateA = a.updatedAt ?? a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+          final dateB = b.updatedAt ?? b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+          if (dateB.isAfter(dateA)) {
+            indicesToRemove.add(i);
+            break;
+          } else {
+            indicesToRemove.add(j);
+          }
+        }
+      }
+    }
+
+    if (indicesToRemove.isNotEmpty) {
+      final sortedIndices = indicesToRemove.toList()..sort((a, b) => b.compareTo(a));
+      for (final idx in sortedIndices) {
+        if (idx < essais.length) {
+          essais.removeAt(idx);
+        }
+      }
+    }
   }
 }

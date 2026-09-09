@@ -1991,36 +1991,15 @@ Widget buildEssaiDeclenchementButton({
   EssaiDeclenchementDifferentiel? existingEssai;
   if (mesures != null) {
     for (final e in mesures.essaisDeclenchement) {
-      // 1. Priorité absolue : correspondance par elementId
-      if (elementId.isNotEmpty && e.elementId == elementId) {
+      if (EssaiDeclenchementHelper.isSameBlock(
+        essai: e,
+        targetElementId: elementId,
+        equipementId: equipementId,
+        precision: precision,
+        circuitName: circuitName,
+      )) {
         existingEssai = e;
         break;
-      }
-      // 2. Fallback rétrocompatible si elementId absent
-      if (e.elementId == null || e.elementId!.isEmpty) {
-        if (precision == EssaiDeclenchementHelper.precisionProtectionTete) {
-          if (equipementId.isNotEmpty &&
-              e.equipementId == equipementId &&
-              e.precision != null &&
-              e.precision!.trim().toLowerCase() == precision.trim().toLowerCase()) {
-            existingEssai = e;
-            break;
-          }
-        } else {
-          final targetCircuit = (circuitName != null && circuitName.trim().isNotEmpty)
-              ? circuitName.trim().toLowerCase()
-              : null;
-          if (equipementId.isNotEmpty &&
-              e.equipementId == equipementId &&
-              e.precision != null &&
-              e.precision!.trim().toLowerCase() == precision.trim().toLowerCase() &&
-              targetCircuit != null &&
-              e.designationCircuit != null &&
-              e.designationCircuit!.trim().toLowerCase() == targetCircuit) {
-            existingEssai = e;
-            break;
-          }
-        }
       }
     }
   }
@@ -6738,11 +6717,13 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
     final circuitDesignation = dep.identification.trim().isNotEmpty ? dep.identification.trim() : 'Départ ${index + 1}';
     final mesures = HiveService.getMesuresEssaisByMissionId(widget.missionId);
     final hasEssai = isEligible && (mesures?.essaisDeclenchement.any((e) =>
-        (dep.id.isNotEmpty && e.elementId == dep.id) ||
-        (e.equipementId == widget.currentEquipmentId &&
-            e.precision == EssaiDeclenchementHelper.precisionDepart &&
-            e.designationCircuit != null &&
-            e.designationCircuit!.trim().toLowerCase() == circuitDesignation.toLowerCase())) ?? false);
+        EssaiDeclenchementHelper.isSameBlock(
+          essai: e,
+          targetElementId: dep.id,
+          equipementId: widget.currentEquipmentId,
+          precision: EssaiDeclenchementHelper.precisionDepart,
+          circuitName: circuitDesignation,
+        )) ?? false);
 
     final typeProtItems = [..._typeProtectionOptions];
     if (dep.typeProtection.isNotEmpty && !typeProtItems.contains(dep.typeProtection)) {
@@ -7217,11 +7198,13 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
     final circuitDesignation = ct.identification.trim().isNotEmpty ? ct.identification.trim() : 'Circuit ${index + 1}';
     final mesures = HiveService.getMesuresEssaisByMissionId(widget.missionId);
     final hasEssai = isEligible && (mesures?.essaisDeclenchement.any((e) =>
-        (ct.id.isNotEmpty && e.elementId == ct.id) ||
-        (e.equipementId == widget.currentEquipmentId &&
-            e.precision == EssaiDeclenchementHelper.precisionCircuit &&
-            e.designationCircuit != null &&
-            e.designationCircuit!.trim().toLowerCase() == circuitDesignation.toLowerCase())) ?? false);
+        EssaiDeclenchementHelper.isSameBlock(
+          essai: e,
+          targetElementId: ct.id,
+          equipementId: widget.currentEquipmentId,
+          precision: EssaiDeclenchementHelper.precisionCircuit,
+          circuitName: circuitDesignation,
+        )) ?? false);
 
     final typeProtItems = [..._typeProtectionOptions];
     if (ct.typeProtection.isNotEmpty && !typeProtItems.contains(ct.typeProtection)) {

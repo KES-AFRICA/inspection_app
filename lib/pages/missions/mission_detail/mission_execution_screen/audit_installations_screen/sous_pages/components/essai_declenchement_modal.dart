@@ -111,36 +111,15 @@ class _EssaiDeclenchementModalState extends ConsumerState<EssaiDeclenchementModa
       final mesures = HiveService.getMesuresEssaisByMissionId(widget.missionId);
       if (mesures != null) {
         for (final e in mesures.essaisDeclenchement) {
-          // 1. Priorité absolue : correspondance par elementId
-          if (widget.elementId.isNotEmpty && e.elementId == widget.elementId) {
+          if (EssaiDeclenchementHelper.isSameBlock(
+            essai: e,
+            targetElementId: widget.elementId,
+            equipementId: widget.equipementId,
+            precision: widget.precision,
+            circuitName: widget.circuitName,
+          )) {
             _resolvedEssai = e;
             break;
-          }
-          // 2. Fallback rétrocompatible si elementId absent
-          if (e.elementId == null || e.elementId!.isEmpty) {
-            if (widget.precision == EssaiDeclenchementHelper.precisionProtectionTete) {
-              if (widget.equipementId.isNotEmpty &&
-                  e.equipementId == widget.equipementId &&
-                  e.precision != null &&
-                  e.precision!.trim().toLowerCase() == widget.precision.trim().toLowerCase()) {
-                _resolvedEssai = e;
-                break;
-              }
-            } else {
-              final targetCircuit = (widget.circuitName != null && widget.circuitName!.trim().isNotEmpty)
-                  ? widget.circuitName!.trim().toLowerCase()
-                  : null;
-              if (widget.equipementId.isNotEmpty &&
-                  e.equipementId == widget.equipementId &&
-                  e.precision != null &&
-                  e.precision!.trim().toLowerCase() == widget.precision.trim().toLowerCase() &&
-                  targetCircuit != null &&
-                  e.designationCircuit != null &&
-                  e.designationCircuit!.trim().toLowerCase() == targetCircuit) {
-                _resolvedEssai = e;
-                break;
-              }
-            }
           }
         }
       }
@@ -192,46 +171,32 @@ class _EssaiDeclenchementModalState extends ConsumerState<EssaiDeclenchementModa
 
       EssaiDeclenchementDifferentiel savedEssai;
 
-      int existingIndex = -1;
-      final targetId = _resolvedEssai?.id ?? widget.existingEssai?.id;
-      final targetElementId = widget.elementId.isNotEmpty ? widget.elementId : null;
-
-      existingIndex = mesures.essaisDeclenchement.indexWhere((e) {
-        if (targetId != null && targetId.isNotEmpty && e.id == targetId) return true;
-        if (targetElementId != null && e.elementId == targetElementId) return true;
-        if (e.elementId == null || e.elementId!.isEmpty) {
-          if (widget.precision == EssaiDeclenchementHelper.precisionProtectionTete) {
-            if (widget.equipementId.isNotEmpty &&
-                e.equipementId == widget.equipementId &&
-                e.precision != null &&
-                e.precision!.trim().toLowerCase() == widget.precision.trim().toLowerCase()) {
-              return true;
-            }
-          } else {
-            final targetCircuit = (widget.circuitName != null && widget.circuitName!.trim().isNotEmpty)
-                ? widget.circuitName!.trim().toLowerCase()
-                : null;
-            if (widget.equipementId.isNotEmpty &&
-                e.equipementId == widget.equipementId &&
-                e.precision != null &&
-                e.precision!.trim().toLowerCase() == widget.precision.trim().toLowerCase() &&
-                targetCircuit != null &&
-                e.designationCircuit != null &&
-                e.designationCircuit!.trim().toLowerCase() == targetCircuit) {
-              return true;
-            }
-          }
-        }
-        return false;
-      });
-
       final effectiveCircuitName = (widget.circuitName != null && widget.circuitName!.trim().isNotEmpty)
           ? widget.circuitName!.trim()
           : widget.precision;
 
-      if (existingIndex != -1) {
-        // Mode modification
-        final prev = mesures.essaisDeclenchement[existingIndex];
+      final targetId = _resolvedEssai?.id ?? widget.existingEssai?.id;
+      final targetElementId = widget.elementId.isNotEmpty ? widget.elementId : null;
+
+      // Recherche de tous les essais existants correspondant à ce même bloc
+      final matchingIndices = <int>[];
+      for (int i = 0; i < mesures.essaisDeclenchement.length; i++) {
+        if (EssaiDeclenchementHelper.isSameBlock(
+          essai: mesures.essaisDeclenchement[i],
+          targetId: targetId,
+          targetElementId: targetElementId,
+          equipementId: widget.equipementId,
+          precision: widget.precision,
+          circuitName: effectiveCircuitName,
+        )) {
+          matchingIndices.add(i);
+        }
+      }
+
+      if (matchingIndices.isNotEmpty) {
+        // Mode modification : met à jour la première instance existante
+        final firstIdx = matchingIndices.first;
+        final prev = mesures.essaisDeclenchement[firstIdx];
         savedEssai = prev.copyWith(
           id: prev.id,
           localisation: widget.repere.isNotEmpty ? widget.repere : (widget.zone.isNotEmpty ? widget.zone : prev.localisation),
@@ -251,9 +216,15 @@ class _EssaiDeclenchementModalState extends ConsumerState<EssaiDeclenchementModa
           zone: widget.zone.isNotEmpty ? widget.zone : prev.zone,
           repere: widget.repere.isNotEmpty ? widget.repere : prev.repere,
         );
-        mesures.essaisDeclenchement[existingIndex] = savedEssai;
+        mesures.essaisDeclenchement[firstIdx] = savedEssai;
+
+        // Règle stricte : 1 bloc = 1 seul essai (suppression immédiate de tout doublon antérieur)
+        if (matchingIndices.length > 1) {
+          final duplicateIds = matchingIndices.skip(1).map((idx) => mesures.essaisDeclenchement[idx].id).toSet();
+          mesures.essaisDeclenchement.removeWhere((item) => duplicateIds.contains(item.id));
+        }
       } else {
-        // Mode création
+        // Mode création unique
         savedEssai = EssaiDeclenchementDifferentiel(
           localisation: widget.repere.isNotEmpty ? widget.repere : widget.zone,
           coffret: widget.designation,
@@ -275,6 +246,12 @@ class _EssaiDeclenchementModalState extends ConsumerState<EssaiDeclenchementModa
         );
         mesures.essaisDeclenchement.add(savedEssai);
       }
+
+      // Déduplication globale de sécurité
+      EssaiDeclenchementHelper.deduplicateEssais(mesures.essaisDeclenchement);
+
+      // Mémoriser l'instance active
+      _resolvedEssai = savedEssai;
 
       final success = await ref.read(mesuresEssaisProvider(widget.missionId).notifier).saveMesures(mesures);
       await HiveService.saveMesuresEssais(mesures);
