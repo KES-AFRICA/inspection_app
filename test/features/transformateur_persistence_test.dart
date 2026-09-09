@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:inspec_app/features/audit_installations/data/mappers/audit_installations_mapper.dart';
-import 'package:inspec_app/features/audit_installations/domain/entities/audit_installations_entities.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
 
 void main() {

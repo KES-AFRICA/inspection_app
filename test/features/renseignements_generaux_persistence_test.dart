@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:inspec_app/models/renseignements_generaux.dart';
-import 'package:inspec_app/features/mission/domain/entities/renseignements_generaux_entity.dart';
 import 'package:inspec_app/features/mission/data/mappers/renseignements_generaux_mapper.dart';
 
 void main() {

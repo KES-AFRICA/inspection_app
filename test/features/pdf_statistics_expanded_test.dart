@@ -14,11 +14,8 @@ import 'package:inspec_app/models/classement_locaux.dart';
 import 'package:inspec_app/models/foudre.dart';
 import 'package:inspec_app/models/mesures_essais.dart';
 import 'package:inspec_app/models/renseignements_generaux.dart';
-import 'package:inspec_app/models/classement_zone.dart';
-import 'package:inspec_app/models/last_report.dart';
 import 'package:inspec_app/models/jsa.dart';
 import 'package:inspec_app/services/statistics/audit_finding_inventory_engine.dart';
-import 'package:inspec_app/services/statistics/audit_finding.dart';
 
 class MockPathProviderPlatform extends PathProviderPlatform
     with MockPlatformInterfaceMixin {

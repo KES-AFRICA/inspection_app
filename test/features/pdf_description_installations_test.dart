@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
-import 'package:inspec_app/models/description_installations.dart';
 import 'package:inspec_app/models/pdf/installation_description_pdf_data.dart';
 import 'package:inspec_app/services/pdf/pdf_report_service.dart';
 

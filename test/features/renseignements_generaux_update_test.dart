@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:inspec_app/models/mission.dart';
-import 'package:inspec_app/features/mission/domain/entities/mission_entity.dart';
 import 'package:inspec_app/features/mission/data/mappers/mission_mapper.dart';
 import 'package:inspec_app/models/create_mission_data.dart';
 

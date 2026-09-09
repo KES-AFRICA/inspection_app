@@ -2,7 +2,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
 import 'package:inspec_app/models/description_installations.dart';
 import 'package:inspec_app/models/pdf/installation_description_pdf_data.dart';
-import 'package:inspec_app/services/installation_description_sync_service.dart';
 
 void main() {
   group('Audit & Resolution PDF Table Mapping (MT & BT)', () {

@@ -2,7 +2,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
 import 'package:inspec_app/services/equipment_number_service.dart';
-import 'package:inspec_app/services/hive_service.dart';
 import 'dart:io';
 
 void main() {

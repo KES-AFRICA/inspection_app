@@ -1,7 +1,6 @@
 // lib/utils/migration_helper.dart
 import 'package:flutter/foundation.dart';
 import 'package:inspec_app/services/hive_service.dart';
-import 'package:inspec_app/services/secure_password_service.dart';
 
 class MigrationHelper {
   static Future<void> migrateExistingUsers() async {

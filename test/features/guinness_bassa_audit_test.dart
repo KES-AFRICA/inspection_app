@@ -9,7 +9,6 @@ import 'package:inspec_app/services/hive_service.dart';
 import 'package:inspec_app/services/sequence_progress_service.dart';
 import 'package:inspec_app/services/pdf/pdf_report_service.dart';
 
-@Timeout(Duration(minutes: 45))
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 

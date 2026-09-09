@@ -6,10 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:inspec_app/features/backup/data/datasources/local_backup_store.dart';
 import 'package:inspec_app/features/backup/data/services/mission_activity_tracker.dart';
-import 'package:inspec_app/features/backup/domain/models/local_backup_item.dart';
 import 'package:inspec_app/features/backup/domain/models/mission_sync_state.dart';
 import 'package:inspec_app/models/mission.dart';
-import 'package:inspec_app/services/backup_service.dart';
 import 'package:inspec_app/services/hive_service.dart';
 
 import 'package:flutter/services.dart';

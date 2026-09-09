@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:inspec_app/models/mesures_essais.dart';
 import 'package:inspec_app/services/hive_service.dart';
-import 'package:inspec_app/features/mesures_essais/domain/entities/mesures_essais_entities.dart';
 import 'package:inspec_app/features/mesures_essais/data/mappers/mesures_essais_mapper.dart';
 
 void main() {

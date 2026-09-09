@@ -2,9 +2,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:inspec_app/models/description_installations.dart';
-import 'package:inspec_app/features/description_installations/domain/entities/description_installations_entity.dart';
 import 'package:inspec_app/features/description_installations/data/mappers/description_installations_mapper.dart';
-import 'package:inspec_app/services/pdf/pdf_report_service.dart';
 
 void main() {
   group('Slide 1 - Persistence & Serialization Tests for Alimentation du site MT', () {

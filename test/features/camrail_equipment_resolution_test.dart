@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
-import 'package:inspec_app/services/hive_service.dart';
 
 void main() {
   group('CAMRAIL Equipment Resolution & Saveguard Tests', () {

@@ -14,8 +14,6 @@ import 'package:inspec_app/features/auth/domain/usecases/get_current_user_use_ca
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:inspec_app/utils/image_compress_helper.dart';
-
 import 'package:inspec_app/features/backup/presentation/widgets/global_backup_progress_overlay.dart';
 import 'package:inspec_app/features/backup/presentation/providers/backup_providers.dart';
 import 'dart:async';

@@ -3,7 +3,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
 import 'package:inspec_app/models/description_installations.dart';
-import 'package:inspec_app/features/description_installations/domain/entities/description_installations_entity.dart';
 import 'package:inspec_app/features/description_installations/data/mappers/description_installations_mapper.dart';
 import 'package:inspec_app/models/pdf/installation_description_pdf_data.dart';
 

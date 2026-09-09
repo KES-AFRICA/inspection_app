@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
 import 'package:inspec_app/services/installation_fields_registry.dart';
-import 'package:inspec_app/services/backup_service.dart';
 
 void main() {
   group('Transformateur MT/BT — Type d\'immersion et protections conditionnelles QA Tests', () {
@@ -128,8 +127,8 @@ void main() {
       // Simuler l'importation JSON
       final importedTransfo = TransformateurMTBT(
         typeTransformateur: jsonMap['typeTransformateur'] as String,
-        typeImmersion: jsonMap['typeImmersion'] as String?,
-        presenceDGPT2: jsonMap['presenceDGPT2'] as String?,
+        typeImmersion: jsonMap['typeImmersion'],
+        presenceDGPT2: jsonMap['presenceDGPT2'],
         relaisBuchholz: jsonMap['relaisBuchholz'] as String,
         marqueAnnee: jsonMap['marqueAnnee'] as String,
         puissanceAssignee: jsonMap['puissanceAssignee'] as String,

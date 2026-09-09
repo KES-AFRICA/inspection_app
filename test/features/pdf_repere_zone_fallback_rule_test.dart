@@ -10,18 +10,6 @@ void main() {
 
   group('Règle de Fallback Zone -> Repère sans réciproque', () {
     test('1. Quand Zone existe mais pas de Repère : Repère prend le nom de la Zone', () {
-      final audit = AuditInstallationsElectriques(
-        missionId: 'm_fallback_1',
-        updatedAt: DateTime.now(),
-        basseTensionZones: [
-          BasseTensionZone(
-            nom: 'Zone EC wagon',
-            coffretsDirects: [
-              CoffretArmoire(nom: 'Armoire Directe 1', type: 'Armoire', qrCode: 'QR1'),
-            ],
-          ),
-        ],
-      );
 
       final pt = PriseTerre(
         localisation: 'Zone EC wagon',
@@ -94,19 +82,6 @@ void main() {
         designationCircuit: 'Disjoncteur MT',
         typeDispositif: 'DDR',
         essai: 'OK',
-      );
-
-      final cont = ContinuiteResistance(
-        localisation: 'Local MT Isolement',
-        designationTableau: 'Cellule Arrivée',
-        origineMesure: 'Masses métalliques',
-      );
-
-      final mesures = MesuresEssais(
-        missionId: 'm_fallback_2',
-        updatedAt: DateTime.now(),
-        essaisDeclenchement: [ddr],
-        continuiteResistances: [cont],
       );
 
       // On s'assure que pour 'Local MT Isolement', le resolver renvoie zoneName = '' et repereName = 'Local MT Isolement'
