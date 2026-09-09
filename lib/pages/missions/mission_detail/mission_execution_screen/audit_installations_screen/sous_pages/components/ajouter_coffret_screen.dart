@@ -2008,12 +2008,6 @@ Widget buildEssaiDeclenchementButton({
   }
 
   final bool hasEssai = existingEssai != null;
-  final bool isSatisfaisant = hasEssai &&
-      (existingEssai.essai == 'OK' ||
-          existingEssai.essai == 'Satisfaisant' ||
-          existingEssai.essai.toLowerCase().contains('sat'));
-
-  final String statusLabel = isSatisfaisant ? 'Satisfaisant' : 'Non satisfaisant';
 
   return Container(
     margin: const EdgeInsets.only(top: 14),
@@ -2074,73 +2068,45 @@ Widget buildEssaiDeclenchementButton({
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  hasEssai
-                      ? (isSatisfaisant ? Icons.check_circle : Icons.warning_amber_rounded)
-                      : Icons.speed,
+                  hasEssai ? Icons.check_circle : Icons.speed,
                   size: 20,
                   color: hasEssai
-                      ? (isSatisfaisant ? Colors.green.shade700 : Colors.orange.shade800)
+                      ? Colors.green.shade700
                       : AppTheme.primaryBlue,
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            hasEssai
-                                ? 'ESSAI RÉALISÉ : $statusLabel'.toUpperCase()
-                                : 'Essai de déclenchement',
+                child: hasEssai
+                    ? Text(
+                        'Essai réalisé',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                          color: Colors.green.shade900,
+                        ),
+                      )
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Essai de déclenchement',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              fontSize: hasEssai ? 12 : 13,
-                              color: hasEssai
-                                  ? (isSatisfaisant ? Colors.green.shade900 : Colors.red.shade900)
-                                  : AppTheme.primaryBlue,
-                              letterSpacing: hasEssai ? 0.3 : 0,
+                              fontSize: 13,
+                              color: AppTheme.primaryBlue,
                             ),
-                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
-                        if (hasEssai) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-                            decoration: BoxDecoration(
-                              color: Colors.green.shade700,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Text(
-                              'ENREGISTRÉ',
-                              style: TextStyle(
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Test différentiel ($ddr mA)',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey.shade600,
                             ),
                           ),
                         ],
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      hasEssai
-                          ? 'DDR : $ddr mA • Tempo : ${existingEssai.tempoText ?? "Réglage d\'origine."}'
-                          : 'Cliquez pour consigner le test différentiel ($ddr mA)',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: hasEssai
-                            ? Colors.green.shade800
-                            : Colors.grey.shade600,
                       ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
               ),
               const SizedBox(width: 8),
               Container(
