@@ -239,6 +239,11 @@ void main() {
       );
 
       expect(bytes.length, greaterThan(0));
+
+      final archive = ZipDecoder().decodeBytes(bytes);
+      final ssFile = archive.files.firstWhere((f) => f.name == 'xl/sharedStrings.xml');
+      final ssXml = utf8.decode(ssFile.content as List<int>);
+      expect(ssXml.contains(dateExpected), isTrue);
     });
 
     test('Génération sur mission vide ou sans données (rétrocompatibilité & null-safety)', () {
@@ -259,6 +264,174 @@ void main() {
 
       expect(bytes, isNotEmpty);
       expect(bytes.length, greaterThan(500));
+    });
+
+    test('Validation du renforcement des séparations de groupes (Zone, Repère, Désignation)', () {
+      // Mission multi-zones et multi-repères
+      final multiZoneAudit = AuditInstallationsElectriques(
+        missionId: 'multi_zone_mission',
+        updatedAt: DateTime(2026, 1, 15),
+        moyenneTensionLocaux: [
+          MoyenneTensionLocal(
+            nom: 'Local MT 1',
+            type: 'LOCAL_MT',
+            cellules: [
+              Cellule(
+                nom: 'Cellule 1',
+                type: 'Cellule MT',
+                fonction: 'Arrivée',
+                marqueModeleAnnee: 'Schneider',
+                tensionAssignee: '20kV',
+                pouvoirCoupure: '16kA',
+                numerotation: '1',
+                parafoudres: 'Non',
+              ),
+            ],
+          ),
+          MoyenneTensionLocal(
+            nom: 'Local MT 2 (Nouveau Repère)',
+            type: 'LOCAL_MT',
+            cellules: [
+              Cellule(
+                nom: 'Cellule 2',
+                type: 'Cellule MT',
+                fonction: 'Départ',
+                marqueModeleAnnee: 'Schneider',
+                tensionAssignee: '20kV',
+                pouvoirCoupure: '16kA',
+                numerotation: '2',
+                parafoudres: 'Non',
+              ),
+            ],
+          ),
+        ],
+        moyenneTensionZones: [],
+        basseTensionZones: [
+          BasseTensionZone(
+            nom: 'Zone Usine',
+            locaux: [
+              BasseTensionLocal(
+                nom: 'Atelier A',
+                type: 'ATELIER',
+                coffrets: [
+                  CoffretArmoire(
+                    qrCode: 'QR-A1',
+                    nom: 'Armoire A1',
+                    type: 'Armoire',
+                    repere: 'ARM-A1',
+                    pointsVerification: [
+                      PointVerification(
+                        pointVerification: 'Obs 1',
+                        conformite: 'Non conforme',
+                        observation: 'Défaut isolement',
+                        referenceNormative: 'NFC 15-100',
+                      ),
+                      PointVerification(
+                        pointVerification: 'Obs 2',
+                        conformite: 'Non conforme',
+                        observation: 'Absence repérage',
+                        referenceNormative: 'NFC 15-100',
+                      ),
+                    ],
+                  ),
+                  CoffretArmoire(
+                    qrCode: 'QR-A2',
+                    nom: 'Armoire A2 (Nouvelle Désignation)',
+                    type: 'Armoire',
+                    repere: 'ARM-A2',
+                    pointsVerification: [
+                      PointVerification(
+                        pointVerification: 'Obs 3',
+                        conformite: 'Non conforme',
+                        observation: 'Câble détérioré',
+                        referenceNormative: 'NFC 15-100',
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              BasseTensionLocal(
+                nom: 'Atelier B (Nouveau Repère)',
+                type: 'ATELIER',
+                coffrets: [
+                  CoffretArmoire(
+                    qrCode: 'QR-B1',
+                    nom: 'Armoire B1',
+                    type: 'Armoire',
+                    repere: 'ARM-B1',
+                    pointsVerification: [
+                      PointVerification(
+                        pointVerification: 'Obs 4',
+                        conformite: 'Non conforme',
+                        observation: 'Porte non verrouillée',
+                        referenceNormative: 'NFC 15-100',
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+          BasseTensionZone(
+            nom: 'Zone Bureaux (Nouvelle Zone)',
+            locaux: [
+              BasseTensionLocal(
+                nom: 'Local Étage',
+                type: 'LOCAL',
+                coffrets: [
+                  CoffretArmoire(
+                    qrCode: 'QR-ET',
+                    nom: 'TD Étage',
+                    type: 'TD',
+                    repere: 'TD-ET',
+                    pointsVerification: [
+                      PointVerification(
+                        pointVerification: 'Obs 5',
+                        conformite: 'Non conforme',
+                        observation: 'Disjoncteur calibre inadapté',
+                        referenceNormative: 'NFC 15-100',
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      );
+
+      final bytes = ExcelReportService.generateWorkbookBytes(
+        mission: sampleMission,
+        audit: multiZoneAudit,
+        description: sampleDesc,
+        generationDate: DateTime(2026, 9, 10),
+      );
+
+      expect(bytes, isNotEmpty);
+
+      // Analyse du fichier styles.xml généré
+      final archive = ZipDecoder().decodeBytes(bytes);
+      final stylesFile = archive.files.firstWhere((f) => f.name == 'xl/styles.xml');
+      final stylesXml = utf8.decode(stylesFile.content as List<int>);
+
+      // Vérification que les bordures medium ont bien été configurées
+      expect(stylesXml.contains('style="medium"'), isTrue,
+          reason: 'Les bordures de séparation renforcées doivent utiliser le style medium');
+
+      // Vérification des couleurs de séparation KES (Navy FF1E3A8A et Ardoise FF475569)
+      expect(stylesXml.contains('FF1E3A8A'), isTrue,
+          reason: 'La couleur marine KES doit être présente sur les bordures de Zone');
+      expect(stylesXml.contains('FF475569'), isTrue,
+          reason: 'La couleur ardoise doit être présente sur les bordures de Repère');
+
+      // Vérification des feuilles et de la présence des fusions intactes
+      final sheet1File = archive.files.firstWhere((f) => f.name == 'xl/worksheets/sheet1.xml');
+      final sheet1Xml = utf8.decode(sheet1File.content as List<int>);
+      expect(sheet1Xml.contains('mergeCells'), isTrue);
+
+      final sheet2File = archive.files.firstWhere((f) => f.name == 'xl/worksheets/sheet2.xml');
+      final sheet2Xml = utf8.decode(sheet2File.content as List<int>);
+      expect(sheet2Xml.contains('mergeCells'), isTrue);
     });
   });
 }

@@ -1,16 +1,16 @@
 # Graph Report - inspection_app  (2026-09-10)
 
 ## Corpus Check
-- 479 files · ~509,052 words
+- 479 files · ~509,820 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 8516 nodes · 11768 edges · 281 communities (250 shown, 19 thin omitted)
+- 8519 nodes · 11771 edges · 286 communities (247 shown, 27 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `81cc683b`
+- Built from commit: `f236e501`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -21,7 +21,7 @@
 - ajouter_coffret_screen.dart
 - audit_installations_electriques.dart
 - backup_service.dart
-- pdf_photos_deduplication_test.dart
+- autonomous_observation_test.dart
 - audit_installations_entities.dart
 - package:flutter_test/flutter_test.dart
 - jsa.dart
@@ -40,11 +40,11 @@
 - detail_coffret_screen.dart
 - detail_local_screen.dart
 - package:inspec_app/services/hive_service.dart
-- lighting_inspection_model_test.dart
-- description_step.dart
+- pdf_photos_deduplication_test.dart
+- VoidCallback?
 - executive_summary_data.dart
 - installation_fields_registry.dart
-- package:inspec_app/constants/app_theme.dart
+- package:flutter/material.dart
 - State
 - mission_entity.dart
 - moyenne_tension_screen.dart
@@ -69,7 +69,7 @@
 - backup_orchestrator.dart
 - classement_locaux.dart
 - basse_tension_screen.dart
-- pdf_report_full_simulation_test.dart
+- package:inspec_app/services/pdf/pdf_report_service.dart
 - mission_domain_inventory_engine.dart
 - MissionRepository
 - qr_scan_coffret_screen.dart
@@ -99,10 +99,10 @@
 - backup_job.dart
 - domain_entity_instance.dart
 - microsoft_auth_service.dart
-- VoidCallback?
+- stats_filter_bar.dart
 - classement_zone_screen.dart
 - audit_finding_inventory_engine.dart
-- package:inspec_app/core/di/injection_container.dart
+- get_jsa_by_mission_use_case.dart
 - audit_installations_mapper.dart
 - observation_screen.dart
 - trash_service.dart
@@ -110,7 +110,7 @@
 - classement_zone.dart
 - mission_detail_provider.dart
 - radio_sequence_screen.dart
-- jsa_local_data_source.dart
+- jsa_mapper.dart
 - normative_search_service.dart
 - radio_selection_screen.dart
 - executive_summary_snapshot.dart
@@ -118,7 +118,7 @@
 - excel_report_service.dart
 - mesuresEssaisProvider
 - sauvegardes_screen.dart
-- package:flutter_riverpod/flutter_riverpod.dart
+- msal_recommendation_banner.dart
 - client_logo_screen.dart
 - item_detail_screen.dart
 - trash_item.dart
@@ -128,30 +128,30 @@
 - unified_observation.dart
 - backup_scheduler_service.dart
 - mesures_essais_screen.dart
-- microsoft_graph_storage_service.dart
-- package:intl/intl.dart
+- String get
+- package:inspec_app/models/description_installations.dart
 - pdf_mesures_essais_builder.dart
 - cpi_sequence_screen.dart
 - corbeille_screen.dart
 - normative_matching_result.dart
 - equipment_source_search_service.dart
-- renseignements_generaux_repository_impl.dart
-- renseignements_generaux_test.dart
+- renseignements_generaux_local_data_source.dart
+- get_renseignements_generaux_use_case.dart
 - mission_executive_summary_service.dart
-- package:flutter/material.dart
-- package:inspec_app/models/description_installations.dart
+- package:inspec_app/models/mission.dart
+- installation_description_pdf_data.dart
 - @visibleForTesting
 - mesures_essais_provider.dart
 - description_installations_screen/description_installations.dart
-- description_installations_providers.dart
+- description_installations_repository.dart
 - renseignements_generaux_entity.dart
 - login_screen.dart
 - installation_detail.dart
 - mission_card.dart
 - avis_mesures_screen.dart
 - foudre_screen.dart
-- mission_repository_impl.dart
 - mission_local_data_source.dart
+- audit_diagnostic_engine_test.dart
 - lighting_inspection_form_screen.dart
 - pdf_report_styles.dart
 - ip_ik_evaluator_service.dart
@@ -161,11 +161,11 @@
 - pdf_description_builder.dart
 - alimentation_site_mt_sequence_screen.dart
 - operation_progress_state.dart
-- sort_dialog.dart
+- List
 - mission_statistics_collector.dart
 - demarrage_auto_screen.dart
 - lighting_mission_detail_screen.dart
-- package:pdf/widgets.dart
+- pdf_footer_builder.dart
 - paratonnerre_screen.dart
 - add_non_conforming_luminaire_sheet.dart
 - pdf_photos_schemas_builder.dart
@@ -178,14 +178,14 @@
 - equipment_number_service.dart
 - pdf_classement_foudre_builder.dart
 - sidebar_menu.dart
-- pdf_cover_builder.dart
+- package:pdf/widgets.dart
 - cloud_backup_manifest.dart
 - status_action_button.dart
 - .application
 - foudre.dart
-- local_deletion_warning_dialog.dart
+- microsoft_graph_storage_service.dart
 - auth_local_data_source.dart
-- cancellation_token.dart
+- bool get
 - pdf_observations_recap_builder.dart
 - local_backup_item.dart
 - String?
@@ -194,7 +194,7 @@
 - search_dialog.dart
 - arret_urgence_screen.dart
 - backup_queue_item.dart
-- foudre_local_data_source.dart
+- mission_statistics_collector_test.dart
 - home_app_bar.dart
 - Color
 - sequence_progress_service.dart
@@ -209,26 +209,26 @@
 - custom_date_range_dialog.dart
 - backup_format_strategy.dart
 - manifest.json
-- List
-- bool get
+- cpi_tests_list_screen.dart
+- description_installations_providers.dart
 - backup_preferences.dart
 - pdf_equipements_synthesis_builder.dart
 - ../../models/audit_installations_electriques.dart
 - verificateur_entity.dart
-- static const String
-- mission_backup_card.dart
-- audit_installations_test.dart
+- mission_activity_tracker.dart
+- global_backup_progress_overlay.dart
+- package:flutter_riverpod/flutter_riverpod.dart
 - pdf_report_context.dart
 - normative_reference_cleaner.dart
-- package:flutter/foundation.dart
+- local_backup_store.dart
 - status_selector_modal.dart
 - pdf_statistics_builder.dart
 - stats_grid.dart
 - email_service.dart
 - JsaStepState
-- package:inspec_app/features/mesures_essais/data/mappers/mesures_essais_mapper.dart
+- package:inspec_app/models/mesures_essais.dart
 - pdf_executive_summary_builder.dart
-- audit_installations_provider.dart
+- mission_backup_card.dart
 - BuildContext
 - RULES — Expert Flutter & Génération de Documents (PDF/Word)
 - MainActivity.kt
@@ -247,21 +247,21 @@
 - canonical_defect_category_registry.dart
 - Spécification Technique — Restauration Visuelle du Rapport PDF (Sommaire, Périmètre, Synthèse MT/BT)
 - Spécification de Conception : Refactorisation de PdfReportService (Façade & Builders Spécialisés)
-- mission_status_badge.dart
+- backup_queue_service.dart
 - Document de Conception Technique : Synchronisation Parfaite du Sommaire (Moteur PDF V3)
 - stats_status_distribution.dart
 - 🚀 Prise en main (Après `git clone`)
 - description_installations_local_data_source.dart
-- source_status_resolver.dart
+- package:flutter/foundation.dart
 - Spécification technique : Migration des modules d'Audit vers Riverpod
 - SPÉCIFICATION DE DESIGN PDF — SYNTHÈSE DES OBSERVATIONS
-- package:inspec_app/services/normative_search_service.dart
+- pdf_report_light_service.dart
 - Contraintes Globales
 - Contraintes Globales
 - @HiveType
-- static const double
-- description_installations_mapper.dart
-- app_bottom_sheet.dart
+- mesures_essais_repository_impl.dart
+- foudre_repository_impl.dart
+- backup_job_store.dart
 - Contraintes Globales
 - pdf_photo_context.dart
 - AGENTS.md
@@ -270,20 +270,25 @@
 - workflows/graphify.md
 - recent_backups_list.dart
 - LaunchImage.imageset/README.md
-- stats_app_bar.dart
-- mappers_test.dart
-- getDescriptionInstallationsUseCaseProvider
-- renseignements_generaux_local_data_source.dart
+- HiveObject
+- package:inspec_app/models/verificateur.dart
+- AjouterCarteScreen
+- _ContinuiteRepereGroup
 - package:path_provider/path_provider.dart
-- backup_multiformat_import_test.dart
-- ClassementEmplacement
+- _ContinuiteZoneGroup
+- _CpiRowItem
 - _CpiZoneGroup
 - ClassementZone
 - progress.md
 - _CpiRepereGroup
-- PdfPriseTerreRepereGroup
+- _DdrEquipmentGroup
 - PdfPriseTerreRowItem
 - _IsolementZoneGroup
+- _DdrRepereGroup
+- _DdrRowItem
+- _DdrZoneGroup
+- _IsolementRowItem
+- PdfPriseTerreZoneGroup
 
 ## God Nodes (most connected - your core abstractions)
 1. `Mission` - 87 edges
@@ -312,7 +317,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (281 total, 19 thin omitted)
+## Communities (286 total, 27 thin omitted)
 
 ### Community 0 - "hive_service.dart"
 Cohesion: 0.00
@@ -339,25 +344,25 @@ Nodes (157): hashCode, operator, read, typeId, write, Cellule? get, accessible, 
 Cohesion: 0.01
 Nodes (138): dart:isolate, Digest?, installation_description_sync_service.dart, add, appVersion, BackupResult, buildBackupFileName, checksum (+130 more)
 
-### Community 6 - "pdf_photos_deduplication_test.dart"
-Cohesion: 0.03
-Nodes (96): AuditInstallationsElectriquesAdapter, FoudreAdapter, class FakePathProviderPlatform extends, toEntity, toModel, VerificateurMapper, FoudreMapper, toEntity (+88 more)
+### Community 6 - "autonomous_observation_test.dart"
+Cohesion: 0.05
+Nodes (53): class FakePathProviderPlatform extends, class MockPathProviderPlatform extends, MockPlatformInterfaceMixin, package:inspec_app/components/safe_file_image.dart, package:inspec_app/services/statistics/audit_finding_inventory_engine.dart, package:path_provider_platform_interface/path_provider_platform_interface.dart, package:plugin_platform_interface/plugin_platform_interface.dart, PathProviderPlatform (+45 more)
 
 ### Community 7 - "audit_installations_entities.dart"
 Cohesion: 0.02
 Nodes (128): ../core/utils/source_status_resolver.dart, accessible, AlimentationEntity, alimentations, alimenteeParTransformateur, annee, anneeFabrication, aReverifier (+120 more)
 
 ### Community 8 - "package:flutter_test/flutter_test.dart"
-Cohesion: 0.03
-Nodes (69): Container, package:flutter_test/flutter_test.dart, package:inspec_app/core/utils/source_status_resolver.dart, package:inspec_app/features/audit_installations/data/mappers/audit_installations_mapper.dart, package:inspec_app/features/audit_installations/domain/entities/audit_installations_entities.dart, package:inspec_app/main.dart, package:inspec_app/models/audit_installations_electriques.dart, package:inspec_app/services/cellule_types_registry.dart (+61 more)
+Cohesion: 0.04
+Nodes (49): package:flutter_test/flutter_test.dart, package:inspec_app/core/utils/source_status_resolver.dart, package:inspec_app/features/audit_installations/data/mappers/audit_installations_mapper.dart, package:inspec_app/features/audit_installations/domain/entities/audit_installations_entities.dart, package:inspec_app/main.dart, package:inspec_app/models/audit_installations_electriques.dart, package:inspec_app/services/cellule_types_registry.dart, package:inspec_app/services/dispositions_constructives_registry.dart (+41 more)
 
 ### Community 9 - "jsa.dart"
 Cohesion: 0.02
-Nodes (92): hashCode, JSADangersAdapter, JSAEPIAdapter, JSAExigencesGeneralesAdapter, JSAInspecteurAdapter, operator, read, typeId (+84 more)
+Nodes (90): hashCode, JSAEPIAdapter, JSAPlanUrgenceAdapter, JSAVerificationFinaleAdapter, operator, read, typeId, write (+82 more)
 
 ### Community 10 - "mesures_essais.dart"
 Cohesion: 0.02
-Nodes (92): hashCode, operator, read, TestArretUrgenceAdapter, typeId, write, appreciation, calculerStatistiques (+84 more)
+Nodes (90): hashCode, operator, read, typeId, write, appreciation, calculerStatistiques, calibre (+82 more)
 
 ### Community 11 - "jsa_entity.dart"
 Cohesion: 0.02
@@ -412,16 +417,16 @@ Cohesion: 0.04
 Nodes (57): _ajouterPhotoAObservation, build, _buildBadge, _buildCelluleDetailCard, _buildClassementTab, _buildCoffretCard, _buildElementItem, _buildInfluenceChip (+49 more)
 
 ### Community 24 - "package:inspec_app/services/hive_service.dart"
-Cohesion: 0.05
-Nodes (54): DescriptionInstallationsAdapter, dart:io, Directory, DescriptionInstallations, migrateExistingUsers, MigrationHelper, package:crypto/crypto.dart, package:flutter/services.dart (+46 more)
+Cohesion: 0.04
+Nodes (61): dart:io, Directory, getOrCreateJSA, _jsaBox, JsaLocalDataSource, JsaLocalDataSourceImpl, _missionBox, saveJSA (+53 more)
 
-### Community 25 - "lighting_inspection_model_test.dart"
-Cohesion: 0.12
-Nodes (21): class MockPathProviderPlatform extends, MockPlatformInterfaceMixin, PathProviderPlatform, MockPathProviderPlatform, MockPathProviderPlatform, getApplicationDocumentsPath, getApplicationSupportPath, getDownloadsPath (+13 more)
+### Community 25 - "pdf_photos_deduplication_test.dart"
+Cohesion: 0.07
+Nodes (31): AuditInstallationsElectriquesAdapter, DescriptionInstallationsAdapter, AuditInstallationsElectriques, DescriptionInstallations, package:inspec_app/models/classement_locaux.dart, package:inspec_app/models/classement_zone.dart, package:inspec_app/services/persistence_queue.dart, main (+23 more)
 
-### Community 26 - "description_step.dart"
-Cohesion: 0.13
-Nodes (14): GlobalKey, build, createState, initState, isFirstSlide, isLastSlide, jumpToSection, mission (+6 more)
+### Community 26 - "VoidCallback?"
+Cohesion: 0.06
+Nodes (29): GlobalKey, build, confirmText, LocalDeletionWarningDialog, message, onConfirm, show, title (+21 more)
 
 ### Community 27 - "executive_summary_data.dart"
 Cohesion: 0.04
@@ -431,13 +436,13 @@ Nodes (54): actionPlanHeader, actionPlanSteps, appreciationGlobale, assessmentPa
 Cohesion: 0.03
 Nodes (59): calculateIk3Max, couplageOptions, fonctionCelluleOptions, generateYearsList, getPccAmontForTypeReseau, immersionConservateur, immersionHermetique, InstallationFieldsRegistry (+51 more)
 
-### Community 29 - "package:inspec_app/constants/app_theme.dart"
+### Community 29 - "package:flutter/material.dart"
 Cohesion: 0.05
-Nodes (43): build, detailedMessage, InvalidFormatDialog, show, MissionHeader, AnalyticsKpiCards, build, _buildKpiCard (+35 more)
+Nodes (48): InvalidFormatDialog, build, _getStatusColor, _getStatusIcon, MissionStatusBadge, _normalizeStatus, status, AnalyticsKpiCards (+40 more)
 
 ### Community 30 - "State"
 Cohesion: 0.06
-Nodes (48): _EtapeInformationsGenerales, BackupScreen, _BackupScreenState, ForgotPasswordScreen, _ForgotPasswordScreenState, MissionCard, _MissionCardState, MissionDetailScreen (+40 more)
+Nodes (52): _EtapeInformationsGenerales, BackupScreen, _BackupScreenState, ForgotPasswordScreen, _ForgotPasswordScreenState, MissionCard, _MissionCardState, LightingMissionDetailScreen (+44 more)
 
 ### Community 31 - "mission_entity.dart"
 Cohesion: 0.04
@@ -445,19 +450,19 @@ Nodes (49): accompagnateurs, activiteClient, activiteSurSite, adresseClient, aud
 
 ### Community 32 - "moyenne_tension_screen.dart"
 Cohesion: 0.04
-Nodes (56): auditInstallationsProvider, _refreshAllData, _supprimerZone, _ajouterZone, _audit, build, _buildBadge, _buildClassementTab (+48 more)
+Nodes (55): auditInstallationsProvider, _refreshAllData, _supprimerZone, _ajouterZone, _audit, build, _buildBadge, _buildClassementTab (+47 more)
 
 ### Community 33 - "ajouter_carte.dart"
 Cohesion: 0.04
-Nodes (48): AjouterCarteScreen, _AjouterCarteScreenState, _annuler, build, _buildActionButtons, _buildAnneeFabricationField, _buildHeader, _buildModernTextField (+40 more)
+Nodes (46): _annuler, build, _buildActionButtons, _buildAnneeFabricationField, _buildHeader, _buildModernTextField, _buildNatureReseauSection, _buildOuiNonDropdown (+38 more)
 
 ### Community 34 - "essais_isolement_screen.dart"
 Cohesion: 0.04
 Nodes (46): _ajouterEssai, _allEquipements, _buildAppreciationButton, _buildEssaiCard, _buildMetricItem, _chargerDonneesExistantes, _chargerEquipements, createState (+38 more)
 
 ### Community 35 - "class"
-Cohesion: 0.13
-Nodes (19): getCurrentUserUseCaseProvider, getJsaByMissionUseCaseProvider, saveJsaUseCaseProvider, getRenseignementsGenerauxUseCaseProvider, saveRenseignementsGenerauxUseCaseProvider, JsaNotifier, load, missionId (+11 more)
+Cohesion: 0.10
+Nodes (25): getCurrentUserUseCaseProvider, getJsaByMissionUseCaseProvider, saveJsaUseCaseProvider, getRenseignementsGenerauxUseCaseProvider, saveRenseignementsGenerauxUseCaseProvider, GetJsaByMissionUseCase, SaveJsaUseCase, JsaNotifier (+17 more)
 
 ### Community 36 - "home_screen.dart"
 Cohesion: 0.04
@@ -469,11 +474,11 @@ Nodes (46): audit_installations_electriques.dart, hashCode, InstallationItemAdap
 
 ### Community 38 - "backup_job_manager.dart"
 Cohesion: 0.05
-Nodes (46): ../datasources/backup_job_store.dart, ../datasources/local_backup_store.dart, ../datasources/microsoft_auth_service.dart, ../datasources/microsoft_graph_storage_service.dart, ../../domain/models/cloud_backup_manifest.dart, ../../domain/repositories/backup_sync_repository.dart, MicrosoftAuthService, MicrosoftGraphStorageService (+38 more)
+Nodes (47): ../datasources/backup_job_store.dart, ../datasources/local_backup_store.dart, ../datasources/microsoft_auth_service.dart, ../datasources/microsoft_graph_storage_service.dart, ../../domain/models/cloud_backup_manifest.dart, ../../domain/repositories/backup_sync_repository.dart, MicrosoftAuthService, MicrosoftGraphStorageService (+39 more)
 
 ### Community 39 - "injection_container.dart"
-Cohesion: 0.08
-Nodes (43): init, sl, getMissionsUseCaseProvider, AddDocumentPersonnaliseUseCase, GetAllReportsForMissionUseCase, GetMissionByIdUseCase, GetMissionsUseCase, RemoveDocumentPersonnaliseUseCase (+35 more)
+Cohesion: 0.07
+Nodes (46): init, sl, getMissionsUseCaseProvider, AddDocumentPersonnaliseUseCase, GetAllReportsForMissionUseCase, GetMissionByIdUseCase, GetMissionsUseCase, RemoveDocumentPersonnaliseUseCase (+38 more)
 
 ### Community 40 - "word_report_service.dart"
 Cohesion: 0.04
@@ -521,19 +526,19 @@ Nodes (40): AuditFindingInventory, CategoryParetoResult, ParetoAnalysisResult, T
 
 ### Community 51 - "backup_orchestrator.dart"
 Cohesion: 0.05
-Nodes (38): app_update_migration_service.dart, backup_scheduler_service.dart, BackupOrchestratorState get, AppUpdateMigrationService, _boxName, checkAndTriggerPostUpdateMigration, currentAppVersion, _getBox (+30 more)
+Nodes (37): app_update_migration_service.dart, backup_scheduler_service.dart, BackupOrchestratorState get, AppUpdateMigrationService, _boxName, checkAndTriggerPostUpdateMigration, currentAppVersion, _getBox (+29 more)
 
 ### Community 52 - "classement_locaux.dart"
 Cohesion: 0.05
-Nodes (39): hashCode, operator, read, typeId, write, ad, adEffective, ae (+31 more)
+Nodes (41): ClassementEmplacementAdapter, hashCode, operator, read, typeId, write, ad, adEffective (+33 more)
 
 ### Community 53 - "basse_tension_screen.dart"
-Cohesion: 0.06
-Nodes (36): _ajouterZone, _audit, BasseTensionScreen, _BasseTensionScreenState, build, _buildClassementTab, _buildEmptyState, _buildInfluenceChip (+28 more)
+Cohesion: 0.05
+Nodes (37): _ajouterZone, _audit, BasseTensionScreen, _BasseTensionScreenState, build, _buildClassementTab, _buildEmptyState, _buildInfluenceChip (+29 more)
 
-### Community 54 - "pdf_report_full_simulation_test.dart"
-Cohesion: 0.14
-Nodes (14): Column, package:inspec_app/services/pdf/builders/pdf_audit_installations_builder.dart, package:inspec_app/services/pdf/builders/pdf_equipements_synthesis_builder.dart, package:inspec_app/services/pdf/builders/pdf_executive_summary_builder.dart, package:inspec_app/services/pdf/builders/pdf_mesures_essais_builder.dart, package:inspec_app/services/pdf/builders/pdf_photos_schemas_builder.dart, package:inspec_app/services/pdf/builders/pdf_sommaire_builder.dart, main (+6 more)
+### Community 54 - "package:inspec_app/services/pdf/pdf_report_service.dart"
+Cohesion: 0.06
+Nodes (27): Column, Container, package:inspec_app/services/pdf/builders/pdf_audit_installations_builder.dart, package:inspec_app/services/pdf/builders/pdf_classement_foudre_builder.dart, package:inspec_app/services/pdf/builders/pdf_equipements_synthesis_builder.dart, package:inspec_app/services/pdf/builders/pdf_executive_summary_builder.dart, package:inspec_app/services/pdf/builders/pdf_mesures_essais_builder.dart, package:inspec_app/services/pdf/builders/pdf_photos_schemas_builder.dart (+19 more)
 
 ### Community 55 - "mission_domain_inventory_engine.dart"
 Cohesion: 0.05
@@ -556,8 +561,8 @@ Cohesion: 0.05
 Nodes (36): _animController, badgeBgColor, badgeColor, badgeText, build, _buildClientLogoCard, _buildElectricCard, _buildHeroHeaderBackground (+28 more)
 
 ### Community 60 - "lighting_inspection.dart"
-Cohesion: 0.06
-Nodes (35): JSAAdapter, hashCode, LightingInspectionAdapter, LuminaireQuestionAnswerAdapter, NonConformingLuminaireAdapter, operator, read, typeId (+27 more)
+Cohesion: 0.07
+Nodes (28): hashCode, NonConformingLuminaireAdapter, operator, read, typeId, write, answers, batimentLocal (+20 more)
 
 ### Community 61 - "backup_providers.dart"
 Cohesion: 0.06
@@ -565,7 +570,7 @@ Nodes (38): AsyncValue, ../../data/datasources/backup_job_store.dart, ../../data
 
 ### Community 62 - "description_installations_sequence.dart"
 Cohesion: 0.06
-Nodes (32): build, _buildSectionWidget, createState, _currentStep, dispose, _getSavedPosition, _getSavedSectionKey, initialSectionIndex (+24 more)
+Nodes (34): build, _buildSectionWidget, createState, _currentStep, DescriptionInstallationsSequenceScreen, DescriptionInstallationsSequenceScreenState, dispose, _getSavedPosition (+26 more)
 
 ### Community 63 - "prises_terre_screen.dart"
 Cohesion: 0.06
@@ -588,8 +593,8 @@ Cohesion: 0.06
 Nodes (33): build, _buildCircleActionButton, _buildGenerateButton, _buildMissionInfoCard, _buildReportCard, _buildStatCard, _buildSummaryRow, _checkAndRequestStoragePermission (+25 more)
 
 ### Community 68 - "continuite_resistance_screen.dart"
-Cohesion: 0.07
-Nodes (29): _ajouterMesure, _annuler, build, _buildDropdown, _buildEssaiSelector, _buildMesureCard, _buildStatCard, _buildTextField (+21 more)
+Cohesion: 0.06
+Nodes (30): _ajouterMesure, _annuler, build, _buildDropdown, _buildEssaiSelector, _buildMesureCard, _buildStatCard, _buildTextField (+22 more)
 
 ### Community 69 - "pdf_report_jsa_service.dart"
 Cohesion: 0.07
@@ -605,15 +610,15 @@ Nodes (32): _activiteClientCtrl, _activiteSurSiteCtrl, _adresseClientCtrl, build
 
 ### Community 72 - "descriptionInstallationsProvider"
 Cohesion: 0.07
-Nodes (31): descriptionInstallationsProvider, _addItem, build, _confirmDeleteAllDescriptions, _deleteItem, _editItem, _ajouterObservation, _analyseRisqueFoudre (+23 more)
+Nodes (33): descriptionInstallationsProvider, _addItem, build, _confirmDeleteAllDescriptions, _deleteItem, _editItem, _ajouterObservation, _analyseRisqueFoudre (+25 more)
 
 ### Community 73 - "create_mission_data.dart"
 Cohesion: 0.06
 Nodes (31): accompagnateurs, activiteClient, activiteSurSite, adresseClient, classementReglementaireCategorie, classementReglementaireType, CreateMissionData, dateIntervention (+23 more)
 
 ### Community 74 - "main.dart"
-Cohesion: 0.07
-Nodes (28): ../entities/verificateur_entity.dart, checkLoginStatusUseCaseProvider, VerificateurRepositoryImpl, getCurrentUser, isUserLoggedIn, saveCurrentUser, VerificateurRepository, call (+20 more)
+Cohesion: 0.09
+Nodes (22): checkLoginStatusUseCaseProvider, call, CheckLoginStatusUseCase, repository, call, GetCurrentUserUseCase, repository, build (+14 more)
 
 ### Community 75 - "mission_detail_screen.dart"
 Cohesion: 0.06
@@ -628,8 +633,8 @@ Cohesion: 0.07
 Nodes (29): hashCode, operator, read, RenseignementsGenerauxAdapter, typeId, write, accompagnateurs, activite (+21 more)
 
 ### Community 78 - "description_installations_repository_impl.dart"
-Cohesion: 0.18
-Nodes (10): ../datasources/description_installations_local_data_source.dart, ../../domain/repositories/description_installations_repository.dart, addInstallationItemToSection, getOrCreateDescriptionInstallations, localDataSource, removeInstallationItemFromSection, saveDescriptionInstallations, updateInstallationItemInSection (+2 more)
+Cohesion: 0.11
+Nodes (17): ../datasources/description_installations_local_data_source.dart, ../../domain/entities/description_installations_entity.dart, ../../domain/entities/installation_item_entity.dart, ../../domain/repositories/description_installations_repository.dart, DescriptionInstallationsMapper, toEntity, toItemEntity, toItemModel (+9 more)
 
 ### Community 79 - "description_installations_entity.dart"
 Cohesion: 0.07
@@ -637,7 +642,7 @@ Nodes (29): installation_item_entity.dart, alimentationBasseTension, alimentatio
 
 ### Community 80 - "MaterialPageRoute"
 Cohesion: 0.06
-Nodes (33): _allerAuClassement, _ajouterCoffret, _ajouterObservation, _allerAuClassement, _editerCoffret, _editerCoffretByIndex, _editerLocal, _editerObservation (+25 more)
+Nodes (34): _allerAuClassement, _ajouterCoffret, _ajouterObservation, _allerAuClassement, _editerCoffret, _editerCoffretByIndex, _editerLocal, _editerObservation (+26 more)
 
 ### Community 81 - "backup_job.dart"
 Cohesion: 0.07
@@ -651,9 +656,9 @@ Nodes (29): TensionDomain, category, classify, compliantCheckpoints, critiqueCou
 Cohesion: 0.07
 Nodes (28): FlutterSecureStorage, _authority, _authorizeUrl, buildAuthUrl, _client, clientId, createCodeChallenge, createCodeVerifier (+20 more)
 
-### Community 84 - "VoidCallback?"
-Cohesion: 0.06
-Nodes (31): build, equipmentType, isAutoLinked, NormativeSearchSuggestionsWidget, onSelect, onUnlink, queryText, selectedCriticite (+23 more)
+### Community 84 - "stats_filter_bar.dart"
+Cohesion: 0.07
+Nodes (27): build, equipmentType, isAutoLinked, NormativeSearchSuggestionsWidget, onSelect, onUnlink, queryText, selectedCriticite (+19 more)
 
 ### Community 85 - "classement_zone_screen.dart"
 Cohesion: 0.07
@@ -663,9 +668,9 @@ Nodes (27): _adValid, _aeValid, _afValid, _agValid, _beValid, build, _buildIndic
 Cohesion: 0.07
 Nodes (26): domain_entity_instance.dart, AuditFindingInventoryEngine, buildInventory, categoryKey, categoryName, _CategoryTracker, compliantPoints, critiqueCount (+18 more)
 
-### Community 87 - "package:inspec_app/core/di/injection_container.dart"
-Cohesion: 0.12
-Nodes (17): ../entities/jsa_entity.dart, JsaRepositoryImpl, getOrCreateJSA, JsaRepository, saveJSA, call, GetJsaByMissionUseCase, repository (+9 more)
+### Community 87 - "get_jsa_by_mission_use_case.dart"
+Cohesion: 0.19
+Nodes (10): ../entities/jsa_entity.dart, JsaRepositoryImpl, getOrCreateJSA, JsaRepository, saveJSA, call, repository, call (+2 more)
 
 ### Community 88 - "audit_installations_mapper.dart"
 Cohesion: 0.05
@@ -676,12 +681,12 @@ Cohesion: 0.08
 Nodes (26): build, _buildPhotosSection, canAddPhotos, _choisirPhotoDepuisGalerie, createState, _criticite, dispose, equipmentType (+18 more)
 
 ### Community 90 - "trash_service.dart"
-Cohesion: 0.05
-Nodes (38): _buildGeneralInfoTable, _buildLightingInspectionTable, _buildLightingPhotosList, conformeBgColor, conformeTextColor, generateLightingMissionReport, nonConformeBgColor, nonConformeTextColor (+30 more)
+Cohesion: 0.07
+Nodes (26): affectedItems, autoPurgeExpiredItems, emptyTrash, _findParentTrashId, getAllTrashItems, getTrashCount, getTrashedJSAIds, getTrashedLightingInspectionIds (+18 more)
 
 ### Community 91 - "safe_file_image.dart"
 Cohesion: 0.08
-Nodes (26): BoxFit, AppImageUtils, build, _buildFallback, _cachedDocDir, cacheHeight, cacheWidth, createState (+18 more)
+Nodes (25): BoxFit, AppImageUtils, build, _buildFallback, _cachedDocDir, cacheHeight, cacheWidth, createState (+17 more)
 
 ### Community 92 - "classement_zone.dart"
 Cohesion: 0.08
@@ -695,9 +700,9 @@ Nodes (17): addDocumentPersonnaliseUseCaseProvider, getMissionByIdUseCaseProvide
 Cohesion: 0.07
 Nodes (27): _autreController, _autreSavedValue, _cpiAnneeFabrication, _cpiMarqueController, _cpiNumeroSerieController, _cpiReportAlarme, _cpiSeuilController, _cpiTypeController (+19 more)
 
-### Community 95 - "jsa_local_data_source.dart"
-Cohesion: 0.08
-Nodes (22): ../datasources/jsa_local_data_source.dart, ../../domain/entities/jsa_entity.dart, ../../domain/repositories/jsa_repository.dart, getOrCreateJSA, _jsaBox, JsaLocalDataSource, JsaLocalDataSourceImpl, _missionBox (+14 more)
+### Community 95 - "jsa_mapper.dart"
+Cohesion: 0.11
+Nodes (16): ../datasources/jsa_local_data_source.dart, ../../domain/entities/jsa_entity.dart, ../../domain/repositories/jsa_repository.dart, JsaDangersMapper, JsaEpiMapper, JsaExigencesGeneralesMapper, JsaInspecteurMapper, JsaMapper (+8 more)
 
 ### Community 96 - "normative_search_service.dart"
 Cohesion: 0.08
@@ -709,35 +714,35 @@ Nodes (24): _autreController, build, _buildMultiSelectRegimeBody, _buildSingleSe
 
 ### Community 98 - "executive_summary_snapshot.dart"
 Cohesion: 0.08
-Nodes (23): categoryStats, clientName, companyName, computeHash, dateRangeText, domainTension, equipmentCount, ExecutiveSummarySnapshot (+15 more)
+Nodes (24): categoryStats, clientName, companyName, computeHash, dateRangeText, domainTension, equipmentCount, ExecutiveSummarySnapshot (+16 more)
 
 ### Community 99 - "essai_declenchement_modal.dart"
 Cohesion: 0.07
 Nodes (27): build, _buildContextRow, _buildResultToggleOption, calibre, circuitName, createState, ddr, designation (+19 more)
 
 ### Community 100 - "excel_report_service.dart"
-Cohesion: 0.09
-Nodes (22): _buildEquipementsSheet, buildExcelReportFileName, _buildObservationsSheet, _colorAccentBlue, _colorBorder, _colorHeaderBg, _colorHeaderFont, _colorMuted (+14 more)
+Cohesion: 0.08
+Nodes (25): _applyHorizontalSeparator, _buildEquipementsSheet, buildExcelReportFileName, _buildObservationsSheet, _colorAccentBlue, _colorBorder, _colorHeaderBg, _colorHeaderFont (+17 more)
 
 ### Community 101 - "mesuresEssaisProvider"
-Cohesion: 0.07
-Nodes (43): ConsumerState, ConsumerStatefulWidget, mesuresEssaisProvider, AjouterCoffretScreen, _AjouterCoffretScreenState, _sauvegarder, _transfererEssais, AvisMesuresScreen (+35 more)
+Cohesion: 0.08
+Nodes (38): ConsumerState, ConsumerStatefulWidget, mesuresEssaisProvider, AjouterCoffretScreen, _AjouterCoffretScreenState, _sauvegarder, _transfererEssais, AjouterContinuiteResistanceScreen (+30 more)
 
 ### Community 102 - "sauvegardes_screen.dart"
 Cohesion: 0.09
-Nodes (26): double get, backupSchedulerServiceProvider, backupSyncNotifierProvider, build, _buildCompactSearchBar, _buildExpandedSearchBar, createState, didChangeAppLifecycleState (+18 more)
+Nodes (23): double get, backupSchedulerServiceProvider, _buildCompactSearchBar, _buildExpandedSearchBar, createState, didChangeAppLifecycleState, dispose, initState (+15 more)
 
-### Community 103 - "package:flutter_riverpod/flutter_riverpod.dart"
-Cohesion: 0.28
-Nodes (8): msalRecommendationServiceProvider, build, createState, _isVisible, MsalRecommendationBanner, _MsalRecommendationBannerState, onConnectPressed, package:flutter_riverpod/flutter_riverpod.dart
+### Community 103 - "msal_recommendation_banner.dart"
+Cohesion: 0.32
+Nodes (7): msalRecommendationServiceProvider, build, createState, _isVisible, MsalRecommendationBanner, _MsalRecommendationBannerState, onConnectPressed
 
 ### Community 104 - "client_logo_screen.dart"
 Cohesion: 0.09
-Nodes (23): ImagePicker, AssetType, build, _buildAssetCard, _buildEmptyCard, _buildHeaderBanner, _buildSectionHeader, _buildSourceOption (+15 more)
+Nodes (23): AssetType, build, _buildAssetCard, _buildEmptyCard, _buildHeaderBanner, _buildSectionHeader, _buildSourceOption, ClientLogoScreen (+15 more)
 
 ### Community 105 - "item_detail_screen.dart"
-Cohesion: 0.08
-Nodes (24): build, champs, _controllers, createState, _deleteItem, dispose, index, _initializeControllers (+16 more)
+Cohesion: 0.09
+Nodes (22): build, champs, _controllers, createState, dispose, index, _initializeControllers, initState (+14 more)
 
 ### Community 106 - "trash_item.dart"
 Cohesion: 0.10
@@ -760,24 +765,24 @@ Cohesion: 0.09
 Nodes (22): AuditSourceCategory, AuditTableType, batiment, CriticalityLevel, criticite, familleRisque, id, intToCriticality (+14 more)
 
 ### Community 111 - "backup_scheduler_service.dart"
-Cohesion: 0.06
-Nodes (33): @pragma, ../datasources/backup_queue_service.dart, ../../domain/models/backup_queue_item.dart, BackupQueueService, _boxName, clearQueue, enqueueOrUpdate, _getBox (+25 more)
+Cohesion: 0.09
+Nodes (21): @pragma, ../datasources/backup_queue_service.dart, authService, callbackDispatcher, checkPreFlightConditions, _daily17h30Timer, dispose, initializeWorkManager (+13 more)
 
 ### Community 112 - "mesures_essais_screen.dart"
 Cohesion: 0.07
 Nodes (29): build, _buildSectionTile, _cpiCount, createState, initState, _isLoading, _isSectionComplete, _loadData (+21 more)
 
-### Community 113 - "microsoft_graph_storage_service.dart"
-Cohesion: 0.05
-Nodes (43): ../ai_provider.dart, Client, dart:async, dart:convert, dart:math, ../../domain/models/backup_cancel_token.dart, cancelUploadSession, _chunkSize (+35 more)
+### Community 113 - "String get"
+Cohesion: 0.08
+Nodes (26): ../ai_provider.dart, dart:async, AiProvider, generateStructuredText, modelName, providerName, apiKey, GeminiRestProvider (+18 more)
 
-### Community 114 - "package:intl/intl.dart"
-Cohesion: 0.40
-Nodes (4): package:archive/archive.dart, package:inspec_app/services/excel/excel_report_service.dart, package:intl/intl.dart, main
+### Community 114 - "package:inspec_app/models/description_installations.dart"
+Cohesion: 0.09
+Nodes (17): package:archive/archive.dart, package:inspec_app/features/description_installations/data/mappers/description_installations_mapper.dart, package:inspec_app/features/description_installations/domain/entities/description_installations_entity.dart, package:inspec_app/features/description_installations/domain/entities/installation_item_entity.dart, package:inspec_app/models/description_installations.dart, package:inspec_app/models/pdf/installation_description_pdf_data.dart, package:inspec_app/services/excel/excel_report_service.dart, package:intl/intl.dart (+9 more)
 
 ### Community 115 - "pdf_mesures_essais_builder.dart"
 Cohesion: 0.03
-Nodes (79): PointEquipmentInfo, accentColor, addMesuresEssaisPages, armoireGroups, armoireName, _bodyBold, _bodyText, borderColor (+71 more)
+Nodes (63): PointEquipmentInfo, accentColor, addMesuresEssaisPages, armoireGroups, armoireName, _bodyBold, _bodyText, borderColor (+55 more)
 
 ### Community 116 - "cpi_sequence_screen.dart"
 Cohesion: 0.12
@@ -795,25 +800,25 @@ Nodes (21): alreadyLinkedCount, ambiguousCount, analyses, autoLinkedCount, bestM
 Cohesion: 0.09
 Nodes (22): CoffretArmoireAdapter, DepartEquipementAdapter, CoffretArmoire, DepartEquipement, calculateSimilarityScore, depart, equipmentId, EquipmentSearchResult (+14 more)
 
-### Community 120 - "renseignements_generaux_repository_impl.dart"
-Cohesion: 0.17
-Nodes (10): ../datasources/renseignements_generaux_local_data_source.dart, ../../domain/entities/renseignements_generaux_entity.dart, ../../domain/repositories/renseignements_generaux_repository.dart, RenseignementsGenerauxMapper, toEntity, toModel, getOrCreateRenseignementsGeneraux, localDataSource (+2 more)
+### Community 120 - "renseignements_generaux_local_data_source.dart"
+Cohesion: 0.14
+Nodes (13): ../datasources/renseignements_generaux_local_data_source.dart, ../../domain/entities/renseignements_generaux_entity.dart, ../../domain/repositories/renseignements_generaux_repository.dart, getOrCreateRenseignementsGeneraux, _missionBox, _renseignementsGenerauxBox, RenseignementsGenerauxLocalDataSource, RenseignementsGenerauxLocalDataSourceImpl (+5 more)
 
-### Community 121 - "renseignements_generaux_test.dart"
-Cohesion: 0.12
-Nodes (16): ../entities/renseignements_generaux_entity.dart, RenseignementsGenerauxRepositoryImpl, getOrCreateRenseignementsGeneraux, RenseignementsGenerauxRepository, saveRenseignementsGeneraux, call, GetRenseignementsGenerauxUseCase, repository (+8 more)
+### Community 121 - "get_renseignements_generaux_use_case.dart"
+Cohesion: 0.16
+Nodes (12): ../entities/renseignements_generaux_entity.dart, RenseignementsGenerauxRepositoryImpl, getOrCreateRenseignementsGeneraux, RenseignementsGenerauxRepository, saveRenseignementsGeneraux, call, GetRenseignementsGenerauxUseCase, repository (+4 more)
 
 ### Community 122 - "mission_executive_summary_service.dart"
 Cohesion: 0.08
 Nodes (23): executive_summary_cache_entry.dart, executive_summary_snapshot.dart, _boxName, buildDeterministicFallback, _buildPrompt, clearAllCache, clearCacheForMission, geminiApiKey (+15 more)
 
-### Community 123 - "package:flutter/material.dart"
+### Community 123 - "package:inspec_app/models/mission.dart"
 Cohesion: 0.05
-Nodes (42): Mission, build, _buildSectionTile, mission, MissionExecutionScreen, _navigateToAudit, _navigateToDescription, build (+34 more)
+Nodes (46): Mission, build, _buildSectionTile, mission, MissionExecutionScreen, _navigateToAudit, _navigateToDescription, build (+38 more)
 
-### Community 124 - "package:inspec_app/models/description_installations.dart"
-Cohesion: 0.05
-Nodes (34): btRows, _collectAllCellules, _collectAllTransformateurs, _createRowFromCellule, _createRowFromCelluleAndItem, _createRowFromItemOnly, _createRowFromTransformateur, _createRowFromTransformateurAndItem (+26 more)
+### Community 124 - "installation_description_pdf_data.dart"
+Cohesion: 0.09
+Nodes (20): btRows, _collectAllCellules, _collectAllTransformateurs, _createRowFromCellule, _createRowFromCelluleAndItem, _createRowFromItemOnly, _createRowFromTransformateur, _createRowFromTransformateurAndItem (+12 more)
 
 ### Community 125 - "@visibleForTesting"
 Cohesion: 0.11
@@ -821,15 +826,15 @@ Nodes (19): @visibleForTesting, testParseCoffrets, testSerializeCoffret, buildPh
 
 ### Community 126 - "mesures_essais_provider.dart"
 Cohesion: 0.08
-Nodes (27): ../entities/mesures_essais_entities.dart, getMesuresEssaisUseCaseProvider, saveMesuresEssaisUseCaseProvider, MesuresEssaisRepositoryImpl, getOrCreateMesuresEssais, MesuresEssaisRepository, saveMesuresEssais, call (+19 more)
+Nodes (26): ../entities/mesures_essais_entities.dart, getMesuresEssaisUseCaseProvider, saveMesuresEssaisUseCaseProvider, MesuresEssaisRepositoryImpl, getOrCreateMesuresEssais, MesuresEssaisRepository, saveMesuresEssais, call (+18 more)
 
 ### Community 127 - "description_installations_screen/description_installations.dart"
 Cohesion: 0.08
 Nodes (25): createdAt, data, InstallationItemEntity, photoPaths, build, _buildListTile, _buildRadioTile, _buildSimpleTile (+17 more)
 
-### Community 128 - "description_installations_providers.dart"
-Cohesion: 0.07
-Nodes (37): ../entities/description_installations_entity.dart, ../entities/installation_item_entity.dart, saveDescriptionInstallationsUseCaseProvider, DescriptionInstallationsRepositoryImpl, addInstallationItemToSection, DescriptionInstallationsRepository, getOrCreateDescriptionInstallations, removeInstallationItemFromSection (+29 more)
+### Community 128 - "description_installations_repository.dart"
+Cohesion: 0.09
+Nodes (23): ../entities/description_installations_entity.dart, ../entities/installation_item_entity.dart, DescriptionInstallationsRepositoryImpl, addInstallationItemToSection, DescriptionInstallationsRepository, getOrCreateDescriptionInstallations, removeInstallationItemFromSection, saveDescriptionInstallations (+15 more)
 
 ### Community 129 - "renseignements_generaux_entity.dart"
 Cohesion: 0.10
@@ -849,19 +854,19 @@ Nodes (19): build, _buildFallbackLogo, _buildLogoWidget, createState, _formatDat
 
 ### Community 133 - "avis_mesures_screen.dart"
 Cohesion: 0.11
-Nodes (17): _annuler, build, _buildListChip, createState, dispose, _getPourcentageColor, _hasData, initState (+9 more)
+Nodes (19): _annuler, AvisMesuresScreen, _AvisMesuresScreenState, build, _buildListChip, createState, dispose, _getPourcentageColor (+11 more)
 
 ### Community 134 - "foudre_screen.dart"
 Cohesion: 0.09
 Nodes (22): foudreObservationsProvider, _sauvegarder, _ajouterObservation, build, _buildDisplayToggleCard, _buildHeaderStats, _buildObservationCard, _buildPriorityFilter (+14 more)
 
-### Community 135 - "mission_repository_impl.dart"
-Cohesion: 0.11
-Nodes (17): ../datasources/mission_local_data_source.dart, ../../domain/entities/mission_entity.dart, ../../domain/repositories/mission_repository.dart, MissionMapper, toEntity, toModel, addDocumentPersonnalise, getAllReportsForMission (+9 more)
+### Community 135 - "mission_local_data_source.dart"
+Cohesion: 0.06
+Nodes (29): ../datasources/mission_local_data_source.dart, ../../domain/entities/mission_entity.dart, ../../domain/repositories/mission_repository.dart, addDocumentPersonnalise, getAllReportsForMission, getMissionById, getMissionsByMatricule, _missionBox (+21 more)
 
-### Community 136 - "mission_local_data_source.dart"
-Cohesion: 0.11
-Nodes (17): addDocumentPersonnalise, getAllReportsForMission, getMissionById, getMissionsByMatricule, _missionBox, MissionLocalDataSource, MissionLocalDataSourceImpl, removeDocumentPersonnalise (+9 more)
+### Community 136 - "audit_diagnostic_engine_test.dart"
+Cohesion: 0.07
+Nodes (23): RenseignementsGenerauxMapper, toEntity, toModel, package:inspec_app/features/mission/data/mappers/renseignements_generaux_mapper.dart, package:inspec_app/models/jsa.dart, package:inspec_app/models/renseignements_generaux.dart, package:inspec_app/services/equipment_number_service.dart, package:inspec_app/services/pdf/builders/pdf_cover_builder.dart (+15 more)
 
 ### Community 137 - "lighting_inspection_form_screen.dart"
 Cohesion: 0.12
@@ -899,9 +904,9 @@ Nodes (17): AlimentationSiteMtSequenceScreen, _AlimentationSiteMtSequenceScreenS
 Cohesion: 0.11
 Nodes (17): copyWith, currentMissionIndex, currentMissionName, currentMissionProgress, currentStep, errorDetail, isCancelRequested, message (+9 more)
 
-### Community 146 - "sort_dialog.dart"
-Cohesion: 0.15
-Nodes (13): _applyCustomDateRange, build, _buildSortSection, createState, _filterByPeriod, _filterByStatus, _formatDate, missions (+5 more)
+### Community 146 - "List"
+Cohesion: 0.07
+Nodes (29): double?, _applyFilter, build, FilterDialog, _filterOptions, missions, _normalizeStatus, selectedFilter (+21 more)
 
 ### Community 147 - "mission_statistics_collector.dart"
 Cohesion: 0.12
@@ -912,12 +917,12 @@ Cohesion: 0.15
 Nodes (13): build, createState, DemarrageAutoScreen, _DemarrageAutoScreenState, initState, _isLoading, _isSaving, _loadData (+5 more)
 
 ### Community 149 - "lighting_mission_detail_screen.dart"
-Cohesion: 0.11
-Nodes (18): build, _buildEmptyState, _buildHeaderClientCard, _buildLocalInspectionCard, _buildStatusBadge, _confirmDelete, createState, initState (+10 more)
+Cohesion: 0.12
+Nodes (16): build, _buildEmptyState, _buildHeaderClientCard, _buildLocalInspectionCard, _buildStatusBadge, _confirmDelete, createState, initState (+8 more)
 
-### Community 150 - "package:pdf/widgets.dart"
-Cohesion: 0.09
-Nodes (20): _buildContactItem, buildFirstPageFooter, buildOtherPageFooter, _buildVectorIcon, darkSlateGrey, headerGrey, kesBlue, kFullPageWidth (+12 more)
+### Community 150 - "pdf_footer_builder.dart"
+Cohesion: 0.10
+Nodes (19): analyze, dominanceGapThreshold, highConfidenceThreshold, mediumConfidenceThreshold, NormativeMatchingEngine, veryHighConfidenceThreshold, _buildContactItem, buildFirstPageFooter (+11 more)
 
 ### Community 151 - "paratonnerre_screen.dart"
 Cohesion: 0.12
@@ -925,15 +930,15 @@ Nodes (16): _analyseRisqueFoudre, build, _buildRadioButton, _buildRadioGroup, cr
 
 ### Community 152 - "add_non_conforming_luminaire_sheet.dart"
 Cohesion: 0.10
-Nodes (20): AddNonConformingLuminaireSheet, _AddNonConformingLuminaireSheetState, _answers, _areAllCurrentSlideElementsAnswered, build, _buildQuestionCardItem, _commentControllers, createState (+12 more)
+Nodes (20): ImagePicker, AddNonConformingLuminaireSheet, _AddNonConformingLuminaireSheetState, _answers, _areAllCurrentSlideElementsAnswered, build, _buildQuestionCardItem, _commentControllers (+12 more)
 
 ### Community 153 - "pdf_photos_schemas_builder.dart"
 Cohesion: 0.04
 Nodes (50): Font get, accentColor, addPhotosSectionChunked, addSchemaSection, badgeBgColor, badgeLabel, badgeTextColor, borderColor (+42 more)
 
 ### Community 154 - "executive_summary_cache_entry.dart"
-Cohesion: 0.12
-Nodes (15): executive_summary_data.dart, decodeJson, encodeJson, ExecutiveSummaryCacheEntry, fromJson, generatedAt, missionId, model (+7 more)
+Cohesion: 0.11
+Nodes (17): dart:convert, executive_summary_data.dart, decodeJson, encodeJson, ExecutiveSummaryCacheEntry, fromJson, generatedAt, missionId (+9 more)
 
 ### Community 155 - "get_audit_installations_use_case.dart"
 Cohesion: 0.19
@@ -948,8 +953,8 @@ Cohesion: 0.14
 Nodes (14): AuditInstallationsScreen, _AuditInstallationsScreenState, build, _buildSectionTile, createState, mission, _navigateToBasseTension, _navigateToFoudre (+6 more)
 
 ### Community 158 - "mission_team_section.dart"
-Cohesion: 0.12
-Nodes (16): _accompagnateurs, _addAccompagnateur, build, _buildAccompagnateursList, _buildVerificateursList, createState, _deleteAccompagnateur, didUpdateWidget (+8 more)
+Cohesion: 0.13
+Nodes (14): _accompagnateurs, _addAccompagnateur, build, _buildAccompagnateursList, _buildVerificateursList, createState, _deleteAccompagnateur, didUpdateWidget (+6 more)
 
 ### Community 159 - "static const List"
 Cohesion: 0.12
@@ -967,9 +972,9 @@ Nodes (51): ad, ae, af, ag, be, _buildClassementEmplacementsMulti, _buildCodific
 Cohesion: 0.12
 Nodes (16): _buildNavigationTile, _buildSectionHeader, _buildStatusBadge, currentPageIndex, filteredMissions, _logout, onClose, onRefreshMissions (+8 more)
 
-### Community 163 - "pdf_cover_builder.dart"
+### Community 163 - "package:pdf/widgets.dart"
 Cohesion: 0.05
-Nodes (39): Font, buildCoverPage, buildIntervenantsEtResponsabilitesPage, cachedClientLogoImg, cachedClientQrImg, coverInfoRow, docStatus, fontBold (+31 more)
+Nodes (48): Font, buildCoverPage, buildIntervenantsEtResponsabilitesPage, cachedClientLogoImg, cachedClientQrImg, coverInfoRow, docStatus, fontBold (+40 more)
 
 ### Community 164 - "cloud_backup_manifest.dart"
 Cohesion: 0.13
@@ -987,29 +992,29 @@ Nodes (10): Any, Flutter, FlutterAppDelegate, AppDelegate, Bool, RunnerTests, UI
 Cohesion: 0.14
 Nodes (13): hashCode, operator, read, typeId, write, create, createdAt, fromJson (+5 more)
 
-### Community 168 - "local_deletion_warning_dialog.dart"
-Cohesion: 0.25
-Nodes (7): build, confirmText, LocalDeletionWarningDialog, message, onConfirm, show, title
+### Community 168 - "microsoft_graph_storage_service.dart"
+Cohesion: 0.09
+Nodes (21): Client, dart:math, ../../domain/models/backup_cancel_token.dart, cancelUploadSession, _chunkSize, _client, createUploadSession, downloadBackupFile (+13 more)
 
 ### Community 169 - "auth_local_data_source.dart"
-Cohesion: 0.12
-Nodes (15): ../datasources/auth_local_data_source.dart, ../../domain/entities/verificateur_entity.dart, ../../domain/repositories/verificateur_repository.dart, AuthLocalDataSource, AuthLocalDataSourceImpl, _currentUserKey, getCurrentUser, isUserLoggedIn (+7 more)
+Cohesion: 0.07
+Nodes (26): ../datasources/auth_local_data_source.dart, ../../domain/entities/verificateur_entity.dart, ../../domain/repositories/verificateur_repository.dart, ../entities/verificateur_entity.dart, AuthLocalDataSource, AuthLocalDataSourceImpl, _currentUserKey, getCurrentUser (+18 more)
 
-### Community 170 - "cancellation_token.dart"
-Cohesion: 0.15
-Nodes (12): Exception, BackupCancelledException, addListener, cancel, CancellationToken, generationId, _isCancelled, message (+4 more)
+### Community 170 - "bool get"
+Cohesion: 0.09
+Nodes (21): bool get, Exception, BackupCancelledException, BackupCancelToken, cancel, _isCancelled, message, onCancel (+13 more)
 
 ### Community 171 - "pdf_observations_recap_builder.dart"
 Cohesion: 0.04
-Nodes (44): _addCoffretObservations, _buildListeRecapitulativeMulti, _buildObsRecapTableBT, _buildObsRecapTableBTFromGroups, _buildObsRecapTableMT, _buildObsRecapTableUnifie, buildObsRecapTableUnifieForTesting, coffret (+36 more)
+Nodes (46): _addCoffretObservations, _buildListeRecapitulativeMulti, _buildObsRecapTableBT, _buildObsRecapTableBTFromGroups, _buildObsRecapTableMT, _buildObsRecapTableUnifie, buildObsRecapTableUnifieForTesting, coffret (+38 more)
 
 ### Community 172 - "local_backup_item.dart"
 Cohesion: 0.14
 Nodes (13): appVersion, copyWith, createdAt, fileName, filePath, fileSizeBytes, fromJson, isSyncedToCloud (+5 more)
 
 ### Community 173 - "String?"
-Cohesion: 0.20
-Nodes (9): displayName, email, fromJson, id, jobTitle, MicrosoftUserProfile, officeLocation, toJson (+1 more)
+Cohesion: 0.14
+Nodes (12): displayName, email, fromJson, id, jobTitle, MicrosoftUserProfile, officeLocation, toJson (+4 more)
 
 ### Community 174 - "essai_declenchement_helper.dart"
 Cohesion: 0.17
@@ -1020,8 +1025,8 @@ Cohesion: 0.15
 Nodes (13): hashCode, LastReportAdapter, operator, read, typeId, write, int get, fileName (+5 more)
 
 ### Community 176 - "search_dialog.dart"
-Cohesion: 0.11
-Nodes (18): _applyFilter, build, FilterDialog, _filterOptions, missions, _normalizeStatus, selectedFilter, _applySearch (+10 more)
+Cohesion: 0.20
+Nodes (10): _applySearch, build, createState, initState, missions, _searchController, SearchDialog, _SearchDialogState (+2 more)
 
 ### Community 177 - "arret_urgence_screen.dart"
 Cohesion: 0.18
@@ -1031,9 +1036,9 @@ Nodes (10): build, createState, initState, _isLoading, _isSaving, _loadData, mis
 Cohesion: 0.15
 Nodes (12): addedAt, attemptCount, BackupQueueItem, BackupQueueStatus, copyWith, fromJson, lastError, matricule (+4 more)
 
-### Community 179 - "foudre_local_data_source.dart"
-Cohesion: 0.05
-Nodes (40): Box, ../datasources/foudre_local_data_source.dart, ../datasources/mesures_essais_local_data_source.dart, ../../domain/entities/foudre_entity.dart, ../../domain/entities/mesures_essais_entities.dart, ../../domain/repositories/foudre_repository.dart, ../../domain/repositories/mesures_essais_repository.dart, _box (+32 more)
+### Community 179 - "mission_statistics_collector_test.dart"
+Cohesion: 0.07
+Nodes (29): FoudreAdapter, _box, createFoudreObservation, deleteFoudreObservation, _foudreBox, FoudreLocalDataSource, FoudreLocalDataSourceImpl, getFoudreObservationsByMissionId (+21 more)
 
 ### Community 180 - "home_app_bar.dart"
 Cohesion: 0.14
@@ -1048,12 +1053,12 @@ Cohesion: 0.14
 Nodes (13): areAllStepsCompleted, _getBox, getCompletionPercentage, getGlobalCompletionPercentage, getProgress, getStepData, isStepCompleted, markStepCompleted (+5 more)
 
 ### Community 183 - "description_installations_provider.dart"
-Cohesion: 0.15
-Nodes (16): addInstallationItemUseCaseProvider, removeInstallationItemUseCaseProvider, updateDescriptionSelectionUseCaseProvider, updateInstallationItemUseCaseProvider, addFoudreObservation, addInstallationItem, DescriptionInstallationsNotifier, load (+8 more)
+Cohesion: 0.12
+Nodes (21): addInstallationItemUseCaseProvider, getDescriptionInstallationsUseCaseProvider, removeInstallationItemUseCaseProvider, updateDescriptionSelectionUseCaseProvider, updateInstallationItemUseCaseProvider, addFoudreObservation, addInstallationItem, clearAllDescriptions (+13 more)
 
 ### Community 184 - "installation_description_sync_service.dart"
-Cohesion: 0.11
-Nodes (18): _areItemListsEqual, _auditBox, buildLocalisationMap, _celluleAliases, clearAllDescriptions, clearSectionDescriptions, _collectAllCellulesMT, _collectAllTransformateursMT (+10 more)
+Cohesion: 0.08
+Nodes (21): _areItemListsEqual, _auditBox, buildLocalisationMap, _celluleAliases, clearAllDescriptions, clearSectionDescriptions, _collectAllCellulesMT, _collectAllTransformateursMT (+13 more)
 
 ### Community 185 - "pdf_audit_installations_builder.dart"
 Cohesion: 0.05
@@ -1091,13 +1096,13 @@ Nodes (10): BackupFileFormat, BackupFormatDetector, BackupFormatInfo, detectForm
 Cohesion: 0.18
 Nodes (10): background_color, description, display, icons, name, orientation, prefer_related_applications, short_name (+2 more)
 
-### Community 194 - "List"
-Cohesion: 0.10
-Nodes (18): cpi_test_form_screen.dart, build, _buildEmptyState, _buildStatusBadge, _confirmDelete, _cpiTests, createState, _getStatusColor (+10 more)
+### Community 194 - "cpi_tests_list_screen.dart"
+Cohesion: 0.12
+Nodes (16): cpi_test_form_screen.dart, build, _buildEmptyState, _buildStatusBadge, _confirmDelete, _cpiTests, CpiTestsListScreen, _CpiTestsListScreenState (+8 more)
 
-### Community 195 - "bool get"
-Cohesion: 0.20
-Nodes (9): bool get, BackupCancelToken, cancel, _isCancelled, message, onCancel, _reason, throwIfCancelled (+1 more)
+### Community 195 - "description_installations_providers.dart"
+Cohesion: 0.22
+Nodes (14): saveDescriptionInstallationsUseCaseProvider, AddInstallationItemUseCase, GetDescriptionInstallationsUseCase, RemoveInstallationItemUseCase, SaveDescriptionInstallationsUseCase, UpdateDescriptionSelectionUseCase, UpdateInstallationItemUseCase, package:inspec_app/features/description_installations/domain/usecases/add_installation_item_use_case.dart (+6 more)
 
 ### Community 196 - "backup_preferences.dart"
 Cohesion: 0.17
@@ -1115,17 +1120,17 @@ Nodes (15): ../hive_service.dart, _extractAllFreeObservations, MissionNormativeB
 Cohesion: 0.20
 Nodes (9): createdAt, email, fullName, id, matricule, nom, password, prenom (+1 more)
 
-### Community 200 - "static const String"
-Cohesion: 0.05
-Nodes (35): ../../domain/models/backup_job.dart, ../../domain/models/backup_preferences.dart, BackupJobStore, _boxName, deleteJob, getActiveJobForMission, _getBox, getIncompleteJobs (+27 more)
+### Community 200 - "mission_activity_tracker.dart"
+Cohesion: 0.10
+Nodes (18): ../../domain/models/backup_preferences.dart, _boxName, clearActivityForMission, _getBox, getMissionsModifiedToday, _getTodayKey, isMissionModifiedToday, markMissionModifiedToday (+10 more)
 
-### Community 201 - "mission_backup_card.dart"
-Cohesion: 0.11
-Nodes (21): ConsumerWidget, ../../data/services/backup_orchestrator.dart, ../../domain/models/mission_sync_state.dart, backupOrchestratorStateProvider, backupQueueServiceProvider, build, child, GlobalBackupProgressOverlay (+13 more)
+### Community 201 - "global_backup_progress_overlay.dart"
+Cohesion: 0.20
+Nodes (11): ConsumerWidget, ../../data/services/backup_orchestrator.dart, backupOrchestratorStateProvider, build, child, GlobalBackupProgressOverlay, AuthWrapper, build (+3 more)
 
-### Community 202 - "audit_installations_test.dart"
-Cohesion: 0.16
-Nodes (13): AuditInstallationsRepository get, Completer, AuditInstallationsElectriquesEntity, GetAuditInstallationsUseCase, SaveAuditInstallationsUseCase, package:inspec_app/features/audit_installations/domain/repositories/audit_installations_repository.dart, package:inspec_app/features/audit_installations/presentation/providers/audit_installations_provider.dart, call (+5 more)
+### Community 202 - "package:flutter_riverpod/flutter_riverpod.dart"
+Cohesion: 0.10
+Nodes (26): AuditInstallationsRepository get, Completer, Future, getAuditInstallationsUseCaseProvider, saveAuditInstallationsUseCaseProvider, AuditInstallationsElectriquesEntity, GetAuditInstallationsUseCase, SaveAuditInstallationsUseCase (+18 more)
 
 ### Community 203 - "pdf_report_context.dart"
 Cohesion: 0.06
@@ -1135,9 +1140,9 @@ Nodes (32): audit, cancellationToken, classements, classementsZones, currentUser
 Cohesion: 0.33
 Nodes (5): clean, _explanatoryPatterns, NormativeReferenceCleaner, _parenthesisToRemove, static final List
 
-### Community 205 - "package:flutter/foundation.dart"
-Cohesion: 0.10
-Nodes (18): ../../domain/models/local_backup_item.dart, _boxName, _getBox, getLatestLocalBackup, getLocalBackupsForMission, getMissionBackupDir, LocalBackupStore, markSyncedToCloud (+10 more)
+### Community 205 - "local_backup_store.dart"
+Cohesion: 0.20
+Nodes (9): ../../domain/models/local_backup_item.dart, _boxName, _getBox, getLatestLocalBackup, getLocalBackupsForMission, getMissionBackupDir, LocalBackupStore, markSyncedToCloud (+1 more)
 
 ### Community 206 - "status_selector_modal.dart"
 Cohesion: 0.18
@@ -1159,17 +1164,17 @@ Nodes (6): EmailService, getRemainingSeconds, resendOtp, sendOtpEmail, verifyOtp
 Cohesion: 0.33
 Nodes (6): AutomaticKeepAliveClientMixin, jsaProvider, build, JsaStep, JsaStepState, _saveJSA
 
-### Community 211 - "package:inspec_app/features/mesures_essais/data/mappers/mesures_essais_mapper.dart"
-Cohesion: 0.40
-Nodes (3): package:inspec_app/features/mesures_essais/data/mappers/mesures_essais_mapper.dart, main, main
+### Community 211 - "package:inspec_app/models/mesures_essais.dart"
+Cohesion: 0.07
+Nodes (22): Box, MesuresEssaisAdapter, _box, getOrCreateMesuresEssais, _mBox, _mesuresEssaisBox, MesuresEssaisLocalDataSource, MesuresEssaisLocalDataSourceImpl (+14 more)
 
 ### Community 212 - "pdf_executive_summary_builder.dart"
 Cohesion: 0.10
 Nodes (20): _buildCriticalitySummaryTable, _buildFormattedText, _buildGroupedCellWidget, _buildIndicateurRow, buildResumeExecutif, _buildRiskFactorsSummaryTable, _buildTableCell, _buildTableHeaderCell (+12 more)
 
-### Community 213 - "audit_installations_provider.dart"
-Cohesion: 0.20
-Nodes (11): Future, getAuditInstallationsUseCaseProvider, saveAuditInstallationsUseCaseProvider, AuditInstallationsNotifier, load, _loadFuture, missionId, _performLoad (+3 more)
+### Community 213 - "mission_backup_card.dart"
+Cohesion: 0.18
+Nodes (13): ../../domain/models/mission_sync_state.dart, backupQueueServiceProvider, backupSyncNotifierProvider, build, _refresh, build, _buildStatusBadge, _confirmPause (+5 more)
 
 ### Community 214 - "BuildContext"
 Cohesion: 0.50
@@ -1219,9 +1224,9 @@ Nodes (10): 1. Vue d'ensemble, 2. Exigences et Principes Non-Négociables, 3.1 S
 Cohesion: 0.18
 Nodes (10): 1. Contexte & Objectif, 2. Architecture Cible : Façade & Builders Spécialisés, 3.1. Algorithme des 2 Passes, 3.2. Préservation des Clés et Offsets de PageTracker, 3. Garantie de Préservation de la Pagination (Moteur 2-Passes), 4. Garantie de Préservation des Calculs & Données, 5. Découpage Modulaire des Fichiers, 6. Stratégie de Vérification et Tests de Non-Régression (+2 more)
 
-### Community 238 - "mission_status_badge.dart"
-Cohesion: 0.29
-Nodes (6): build, _getStatusColor, _getStatusIcon, MissionStatusBadge, _normalizeStatus, status
+### Community 238 - "backup_queue_service.dart"
+Cohesion: 0.15
+Nodes (12): ../../domain/models/backup_queue_item.dart, BackupQueueService, _boxName, clearQueue, enqueueOrUpdate, _getBox, getNextEligibleItem, getQueue (+4 more)
 
 ### Community 239 - "Document de Conception Technique : Synchronisation Parfaite du Sommaire (Moteur PDF V3)"
 Cohesion: 0.20
@@ -1239,9 +1244,9 @@ Nodes (9): 1. Cloner le projet et installer les dépendances, 2. Configurer le f
 Cohesion: 0.20
 Nodes (10): addInstallationItemToSection, _descriptionBox, DescriptionInstallationsLocalDataSource, DescriptionInstallationsLocalDataSourceImpl, getOrCreateDescriptionInstallations, _missionBox, removeInstallationItemFromSection, saveDescriptionInstallations (+2 more)
 
-### Community 243 - "source_status_resolver.dart"
-Cohesion: 0.20
-Nodes (9): isKnown, _noneOptions, _normalize, resolve, SourceStatusResolver, statusConnue, statusInconnue, _validProtectionTypes (+1 more)
+### Community 243 - "package:flutter/foundation.dart"
+Cohesion: 0.10
+Nodes (18): isKnown, _noneOptions, _normalize, resolve, SourceStatusResolver, statusConnue, statusInconnue, _validProtectionTypes (+10 more)
 
 ### Community 244 - "Spécification technique : Migration des modules d'Audit vers Riverpod"
 Cohesion: 0.25
@@ -1251,9 +1256,9 @@ Nodes (7): 1. Objectifs, 2. Architecture des Providers, 3. Stratégie de Refacto
 Cohesion: 0.25
 Nodes (7): 1. CONTEXTE ET OBJECTIF, 2.1 Structure Hiérarchique par Blocs d'Équipement, 2. SPÉCIFICATION DU NOUVEAU RENDU VISUEL, 3. RÈGLES DE DÉLIMITATION ET DE PAGINATION, 4. IMPACT SUR LE CODE ET REFACTORING, 5. VALIDATION ET CRITÈRES DE SUCCÈS, SPÉCIFICATION DE DESIGN PDF — SYNTHÈSE DES OBSERVATIONS
 
-### Community 246 - "package:inspec_app/services/normative_search_service.dart"
-Cohesion: 0.24
-Nodes (7): package:inspec_app/services/normative_matching/mission_normative_batch_service.dart, package:inspec_app/services/normative_matching/normative_matching_engine.dart, package:inspec_app/services/normative_matching/normative_matching_result.dart, package:inspec_app/services/normative_search_service.dart, main, main, main
+### Community 246 - "pdf_report_light_service.dart"
+Cohesion: 0.15
+Nodes (12): _buildGeneralInfoTable, _buildLightingInspectionTable, _buildLightingPhotosList, conformeBgColor, conformeTextColor, generateLightingMissionReport, nonConformeBgColor, nonConformeTextColor (+4 more)
 
 ### Community 247 - "Contraintes Globales"
 Cohesion: 0.29
@@ -1265,19 +1270,19 @@ Nodes (6): Contraintes Globales, Plan d'implémentation - Synchronisation Parfai
 
 ### Community 249 - "@HiveType"
 Cohesion: 0.06
-Nodes (47): @HiveType, AlimentationAdapter, BasseTensionLocalAdapter, BasseTensionZoneAdapter, CelluleAdapter, CircuitTerminalEquipementAdapter, ElementControleAdapter, MoyenneTensionLocalAdapter (+39 more)
+Nodes (49): @HiveType, AlimentationAdapter, BasseTensionLocalAdapter, BasseTensionZoneAdapter, CelluleAdapter, CircuitTerminalEquipementAdapter, ElementControleAdapter, MoyenneTensionLocalAdapter (+41 more)
 
-### Community 250 - "static const double"
-Cohesion: 0.22
-Nodes (8): analyze, dominanceGapThreshold, highConfidenceThreshold, mediumConfidenceThreshold, NormativeMatchingEngine, veryHighConfidenceThreshold, ../normative_search_service.dart, static const double
+### Community 250 - "mesures_essais_repository_impl.dart"
+Cohesion: 0.17
+Nodes (10): ../datasources/mesures_essais_local_data_source.dart, ../../domain/entities/mesures_essais_entities.dart, ../../domain/repositories/mesures_essais_repository.dart, MesuresEssaisMapper, toEntity, toModel, getOrCreateMesuresEssais, localDataSource (+2 more)
 
-### Community 251 - "description_installations_mapper.dart"
-Cohesion: 0.25
-Nodes (7): ../../domain/entities/description_installations_entity.dart, ../../domain/entities/installation_item_entity.dart, DescriptionInstallationsMapper, toEntity, toItemEntity, toItemModel, toModel
+### Community 251 - "foudre_repository_impl.dart"
+Cohesion: 0.20
+Nodes (9): ../datasources/foudre_local_data_source.dart, ../../domain/entities/foudre_entity.dart, ../../domain/repositories/foudre_repository.dart, createFoudreObservation, deleteFoudreObservation, getFoudreObservationsByMissionId, localDataSource, updateFoudreObservation (+1 more)
 
-### Community 252 - "app_bottom_sheet.dart"
-Cohesion: 0.25
-Nodes (7): double?, AppBottomSheet, bottomButton, build, children, maxHeight, title
+### Community 252 - "backup_job_store.dart"
+Cohesion: 0.20
+Nodes (9): ../../domain/models/backup_job.dart, BackupJobStore, _boxName, deleteJob, getActiveJobForMission, _getBox, getIncompleteJobs, getJob (+1 more)
 
 ### Community 253 - "Contraintes Globales"
 Cohesion: 0.40
@@ -1291,46 +1296,34 @@ Nodes (4): maxHeight, maxWidth, PdfPhotoContext, quality
 Cohesion: 0.25
 Nodes (7): backups, build, _buildBackupCard, isLoading, onRefresh, RecentBackupsList, package:share_plus/share_plus.dart
 
-### Community 261 - "stats_app_bar.dart"
-Cohesion: 0.25
-Nodes (7): build, _buildPeriodChip, isCustomPeriod, onResetPeriod, periodLabel, selectedPeriod, StatsAppBar
-
-### Community 262 - "mappers_test.dart"
-Cohesion: 0.25
-Nodes (6): package:inspec_app/features/auth/data/mappers/verificateur_mapper.dart, package:inspec_app/features/auth/domain/entities/verificateur_entity.dart, package:inspec_app/features/mission/data/mappers/mission_mapper.dart, package:inspec_app/models/create_mission_data.dart, main, main
-
-### Community 263 - "getDescriptionInstallationsUseCaseProvider"
+### Community 261 - "HiveObject"
 Cohesion: 0.29
-Nodes (7): getDescriptionInstallationsUseCaseProvider, clearAllDescriptions, clearSectionDescriptions, DescriptionInstallationsSequenceScreen, DescriptionInstallationsSequenceScreenState, _loadProgress, _onSectionComplete
+Nodes (7): JSAAdapter, LightingInspectionAdapter, LuminaireQuestionAnswerAdapter, HiveObject, JSA, LightingInspection, LuminaireQuestionAnswer
 
-### Community 264 - "renseignements_generaux_local_data_source.dart"
-Cohesion: 0.33
-Nodes (6): getOrCreateRenseignementsGeneraux, _missionBox, _renseignementsGenerauxBox, RenseignementsGenerauxLocalDataSource, RenseignementsGenerauxLocalDataSourceImpl, saveRenseignementsGeneraux
+### Community 262 - "package:inspec_app/models/verificateur.dart"
+Cohesion: 0.15
+Nodes (10): toEntity, toModel, VerificateurMapper, package:inspec_app/features/auth/data/mappers/verificateur_mapper.dart, package:inspec_app/features/auth/domain/entities/verificateur_entity.dart, package:inspec_app/features/mission/data/mappers/mission_mapper.dart, package:inspec_app/models/create_mission_data.dart, package:inspec_app/models/verificateur.dart (+2 more)
 
 ### Community 265 - "package:path_provider/path_provider.dart"
 Cohesion: 0.33
 Nodes (5): compressImage, ImageCompressHelper, optimizeExistingPhotosProgressively, package:flutter_image_compress/flutter_image_compress.dart, package:path_provider/path_provider.dart
 
-### Community 266 - "backup_multiformat_import_test.dart"
-Cohesion: 0.33
-Nodes (4): package:archive/archive_io.dart, package:inspec_app/services/backup/backup_format_strategy.dart, main, main
-
 ## Knowledge Gaps
-- **6675 isolated node(s):** `XCTest`, `queryText`, `equipmentType`, `selectedReferenceNormative`, `selectedFamilleRisque` (+6670 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 6969 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **19 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **6678 isolated node(s):** `XCTest`, `queryText`, `equipmentType`, `selectedReferenceNormative`, `selectedFamilleRisque` (+6673 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 6972 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **27 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Mission` connect `package:flutter/material.dart` to `hive_service.dart`, `ajouter_local_screen.dart`, `ajouter_coffret_screen.dart`, `mission_card.dart`, `avis_mesures_screen.dart`, `foudre_screen.dart`, `installation_detail.dart`, `mission_local_data_source.dart`, `renseignements_generaux_local_data_source.dart`, `backup_service.dart`, `pdf_photos_deduplication_test.dart`, `essais_declenchement_screen.dart`, `ajouter_foudre_screen.dart`, `jsa_step.dart`, `alimentation_site_mt_sequence_screen.dart`, `description_installations_form.dart`, `general_info_step.dart`, `sequence_screen.dart`, `demarrage_auto_screen.dart`, `mission.dart`, `lighting_mission_detail_screen.dart`, `detail_coffret_screen.dart`, `detail_local_screen.dart`, `detail_zone_screen.dart`, `paratonnerre_screen.dart`, `description_step.dart`, `package:inspec_app/services/hive_service.dart`, `audit_installations.dart`, `mission_team_section.dart`, `moyenne_tension_screen.dart`, `essais_isolement_screen.dart`, `status_action_button.dart`, `summary_step.dart`, `mission_analytics_detail_screen.dart`, `ajouter_zone_screen.dart`, `classement_emplacement_screen.dart`, `arret_urgence_screen.dart`, `foudre_local_data_source.dart`, `basse_tension_screen.dart`, `Color`, `qr_scan_coffret_screen.dart`, `jsa_standalone_screen.dart`, `mission_hub_screen.dart`, `lighting_inspection.dart`, `conditions_mesure_screen.dart`, `prises_terre_screen.dart`, `description_installations_sequence.dart`, `schema_step.dart`, `List`, `lighting_summary_screen.dart`, `continuite_resistance_screen.dart`, `create_mission_screen.dart`, `descriptionInstallationsProvider`, `mission_backup_card.dart`, `mission_detail_screen.dart`, `pdf_report_context.dart`, `status_selector_modal.dart`, `classement_zone_screen.dart`, `radio_sequence_screen.dart`, `jsa_local_data_source.dart`, `radio_selection_screen.dart`, `client_logo_screen.dart`, `item_detail_screen.dart`, `cpi_test_form_screen.dart`, `mesures_essais_screen.dart`, `cpi_sequence_screen.dart`, `@HiveType`, `description_installations_screen/description_installations.dart`?**
+- **Why does `Mission` connect `package:inspec_app/models/mission.dart` to `hive_service.dart`, `ajouter_local_screen.dart`, `ajouter_coffret_screen.dart`, `mission_card.dart`, `HiveObject`, `avis_mesures_screen.dart`, `mission_local_data_source.dart`, `foudre_screen.dart`, `installation_detail.dart`, `backup_service.dart`, `audit_diagnostic_engine_test.dart`, `autonomous_observation_test.dart`, `essais_declenchement_screen.dart`, `ajouter_foudre_screen.dart`, `jsa_step.dart`, `alimentation_site_mt_sequence_screen.dart`, `description_installations_form.dart`, `general_info_step.dart`, `sequence_screen.dart`, `demarrage_auto_screen.dart`, `mission.dart`, `lighting_mission_detail_screen.dart`, `detail_coffret_screen.dart`, `package:inspec_app/services/hive_service.dart`, `detail_local_screen.dart`, `detail_zone_screen.dart`, `paratonnerre_screen.dart`, `VoidCallback?`, `audit_installations.dart`, `mission_team_section.dart`, `pdf_photos_deduplication_test.dart`, `moyenne_tension_screen.dart`, `essais_isolement_screen.dart`, `status_action_button.dart`, `summary_step.dart`, `mission_analytics_detail_screen.dart`, `ajouter_zone_screen.dart`, `classement_emplacement_screen.dart`, `arret_urgence_screen.dart`, `mission_statistics_collector_test.dart`, `basse_tension_screen.dart`, `Color`, `qr_scan_coffret_screen.dart`, `jsa_standalone_screen.dart`, `mission_hub_screen.dart`, `conditions_mesure_screen.dart`, `prises_terre_screen.dart`, `description_installations_sequence.dart`, `schema_step.dart`, `cpi_tests_list_screen.dart`, `lighting_summary_screen.dart`, `continuite_resistance_screen.dart`, `create_mission_screen.dart`, `descriptionInstallationsProvider`, `mission_detail_screen.dart`, `pdf_report_context.dart`, `status_selector_modal.dart`, `package:inspec_app/models/mesures_essais.dart`, `mission_backup_card.dart`, `classement_zone_screen.dart`, `radio_sequence_screen.dart`, `radio_selection_screen.dart`, `client_logo_screen.dart`, `item_detail_screen.dart`, `cpi_test_form_screen.dart`, `mesures_essais_screen.dart`, `cpi_sequence_screen.dart`, `renseignements_generaux_local_data_source.dart`, `@HiveType`, `description_installations_screen/description_installations.dart`?**
   _High betweenness centrality (0.051) - this node is a cross-community bridge._
 - **Why does `FoudreRepository` connect `foudre_providers.dart` to `injection_container.dart`?**
   _High betweenness centrality (0.011) - this node is a cross-community bridge._
-- **Why does `RenseignementsGenerauxRepository` connect `renseignements_generaux_test.dart` to `injection_container.dart`?**
+- **Why does `RenseignementsGenerauxRepository` connect `get_renseignements_generaux_use_case.dart` to `injection_container.dart`?**
   _High betweenness centrality (0.011) - this node is a cross-community bridge._
 - **What connects `XCTest`, `queryText`, `equipmentType` to the rest of the system?**
-  _6675 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _6678 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `hive_service.dart` be split into smaller, more focused modules?**
   _Cohesion score 0.004140786749482402 - nodes in this community are weakly interconnected._
 - **Should `pdf_report_service.dart` be split into smaller, more focused modules?**

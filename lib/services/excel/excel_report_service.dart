@@ -16,7 +16,7 @@ import 'package:inspec_app/services/pdf/builders/pdf_observations_recap_builder.
 /// aligné sur les données et la logique métier du rapport PDF.
 class ExcelReportService {
   // Palette de couleurs institutionnelle KES
-  static const String _colorNavy = '#1E3A8A'; // En-tête principal & titres
+  static const String _colorNavy = '#1E3A8A'; // En-tête principal & titres & séparations Zone
   static const String _colorAccentBlue = '#2563EB'; // Sous-titres & sections
   static const String _colorHeaderBg = '#1E3A8A'; // Fond d'en-tête de tableau
   static const String _colorHeaderFont = '#FFFFFF'; // Texte d'en-tête blanc
@@ -24,6 +24,8 @@ class ExcelReportService {
   static const String _colorZebra = '#F8FAFC'; // Ligne alternée
   static const String _colorWhite = '#FFFFFF'; // Ligne blanche
   static const String _colorMuted = '#64748B'; // Texte secondaire
+  static const String _colorSepRepere = '#475569'; // Séparation Repère (ardoise foncée / slate 600)
+  static const String _colorSepEquip = '#94A3B8'; // Séparation Désignation (ardoise moyenne / slate 400)
 
   /// Génère le nom de fichier officiel pour le rapport Excel de Vérification Électrique.
   /// Format : `Rapport_Verif_elec_<client>_<site>_<année>_<timestamp>.xlsx`
@@ -258,11 +260,14 @@ class ExcelReportService {
     int currentEqNum = 1;
 
     for (final zoneGroup in zoneGroups) {
+      final bool isNewZone = (zoneGroup != zoneGroups.first);
       final int zoneStartRow = currentRow;
       final int totalZoneItems =
           zoneGroup.repereGroups.fold<int>(0, (sum, g) => sum + g.items.length);
 
       for (final repereGroup in zoneGroup.repereGroups) {
+        final bool isNewRepere =
+            (repereGroup != zoneGroup.repereGroups.first);
         final int repereStartRow = currentRow;
         final int repereCount = repereGroup.items.length;
         final String displayRepere = repereGroup.localName.isNotEmpty
@@ -332,6 +337,27 @@ class ExcelReportService {
 
           currentRow++;
           currentEqNum++;
+        }
+
+        // Renforcement ciblé des bordures de séparation (hiérarchie visuelle)
+        if (isNewZone && repereStartRow == zoneStartRow) {
+          _applyHorizontalSeparator(
+            sheet,
+            repereStartRow,
+            1,
+            9,
+            color: _colorNavy,
+            lineStyle: xlsio.LineStyle.medium,
+          );
+        } else if (isNewRepere) {
+          _applyHorizontalSeparator(
+            sheet,
+            repereStartRow,
+            2,
+            9,
+            color: _colorSepRepere,
+            lineStyle: xlsio.LineStyle.medium,
+          );
         }
 
         // Fusion verticale dynamique de Repère
@@ -480,9 +506,11 @@ class ExcelReportService {
         PdfObservationsRecapBuilder.groupByZoneLocalEquip(obsList);
 
     for (final zoneGroup in zoneGroups) {
+      final bool isNewZone = (zoneGroup != zoneGroups.first);
       final int zoneStartRow = currentRow;
 
       for (final localGroup in zoneGroup.localGroups) {
+        final bool isNewRepere = (localGroup != zoneGroup.localGroups.first);
         final int localStartRow = currentRow;
 
         final String displayRepere = localGroup.localName.isNotEmpty
@@ -490,6 +518,7 @@ class ExcelReportService {
             : (zoneGroup.zoneName.isNotEmpty ? zoneGroup.zoneName : '-');
 
         for (final equipGroup in localGroup.equipGroups) {
+          final bool isNewEquip = (equipGroup != localGroup.equipGroups.first);
           final int equipStartRow = currentRow;
           final String equipName = equipGroup.coffret.isNotEmpty
               ? equipGroup.coffret
@@ -545,6 +574,36 @@ class ExcelReportService {
 
             sheet.getRangeByIndex(currentRow, 1).rowHeight = 26;
             currentRow++;
+          }
+
+          // Renforcement ciblé des bordures de séparation (hiérarchie visuelle)
+          if (isNewZone && equipStartRow == zoneStartRow) {
+            _applyHorizontalSeparator(
+              sheet,
+              equipStartRow,
+              1,
+              10,
+              color: _colorNavy,
+              lineStyle: xlsio.LineStyle.medium,
+            );
+          } else if (isNewRepere && equipStartRow == localStartRow) {
+            _applyHorizontalSeparator(
+              sheet,
+              equipStartRow,
+              2,
+              10,
+              color: _colorSepRepere,
+              lineStyle: xlsio.LineStyle.medium,
+            );
+          } else if (isNewEquip) {
+            _applyHorizontalSeparator(
+              sheet,
+              equipStartRow,
+              3,
+              10,
+              color: _colorSepEquip,
+              lineStyle: xlsio.LineStyle.medium,
+            );
           }
 
           // Fusion verticale dynamique de Désignation
@@ -624,8 +683,15 @@ class ExcelReportService {
     cell.cellStyle.hAlign = hAlign;
     cell.cellStyle.vAlign = xlsio.VAlignType.center;
     cell.cellStyle.wrapText = wrapText;
-    cell.cellStyle.borders.all.lineStyle = xlsio.LineStyle.thin;
-    cell.cellStyle.borders.all.color = _colorBorder;
+    final borders = cell.cellStyle.borders;
+    borders.left.lineStyle = xlsio.LineStyle.thin;
+    borders.left.color = _colorBorder;
+    borders.right.lineStyle = xlsio.LineStyle.thin;
+    borders.right.color = _colorBorder;
+    borders.top.lineStyle = xlsio.LineStyle.thin;
+    borders.top.color = _colorBorder;
+    borders.bottom.lineStyle = xlsio.LineStyle.thin;
+    borders.bottom.color = _colorBorder;
   }
 
   static void _styleEmptyRow(xlsio.Range range) {
@@ -636,7 +702,38 @@ class ExcelReportService {
     range.cellStyle.fontColor = _colorMuted;
     range.cellStyle.hAlign = xlsio.HAlignType.center;
     range.cellStyle.vAlign = xlsio.VAlignType.center;
-    range.cellStyle.borders.all.lineStyle = xlsio.LineStyle.thin;
-    range.cellStyle.borders.all.color = _colorBorder;
+    final borders = range.cellStyle.borders;
+    borders.left.lineStyle = xlsio.LineStyle.thin;
+    borders.left.color = _colorBorder;
+    borders.right.lineStyle = xlsio.LineStyle.thin;
+    borders.right.color = _colorBorder;
+    borders.top.lineStyle = xlsio.LineStyle.thin;
+    borders.top.color = _colorBorder;
+    borders.bottom.lineStyle = xlsio.LineStyle.thin;
+    borders.bottom.color = _colorBorder;
+  }
+
+  /// Applique une bordure de séparation horizontale continue sur une plage de colonnes.
+  /// Configure la bordure haute (top) de la ligne cible et la bordure basse (bottom) de la ligne précédente
+  /// pour garantir un rendu net et homogène sur Excel et LibreOffice.
+  static void _applyHorizontalSeparator(
+    xlsio.Worksheet sheet,
+    int row,
+    int startCol,
+    int endCol, {
+    required String color,
+    required xlsio.LineStyle lineStyle,
+  }) {
+    for (int col = startCol; col <= endCol; col++) {
+      final cell = sheet.getRangeByIndex(row, col);
+      cell.cellStyle.borders.top.lineStyle = lineStyle;
+      cell.cellStyle.borders.top.color = color;
+
+      if (row > 1) {
+        final cellAbove = sheet.getRangeByIndex(row - 1, col);
+        cellAbove.cellStyle.borders.bottom.lineStyle = lineStyle;
+        cellAbove.cellStyle.borders.bottom.color = color;
+      }
+    }
   }
 }
