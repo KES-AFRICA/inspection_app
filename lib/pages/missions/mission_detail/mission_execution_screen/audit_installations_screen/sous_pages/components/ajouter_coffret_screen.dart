@@ -1048,12 +1048,14 @@ class _EtapeInformationsGenerales extends StatefulWidget {
   final Function(int) onDeleteParafoudreObservation;
   final Future<String?> Function(File, String) onSavePhoto;
 
+  final ParsedIpIk? repereParsedIpIk;
   final TextEditingController? indiceIpIkController;
   final int departuresCount;
   final int terminalCircuitsCount;
 
   const _EtapeInformationsGenerales({
     this.equipmentType,
+    this.repereParsedIpIk,
     required this.alimenteeParTransformateur,
     required this.onAlimenteeParTransformateurChanged,
     this.transformateurId,
@@ -1216,6 +1218,142 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIndiceIpIkRepereTile(BuildContext context) {
+    final repere = widget.repereParsedIpIk ?? const ParsedIpIk();
+    final hasIndice = repere.hasIpOrIk;
+    final ipText = hasIndice ? (repere.ipDigits ?? '') : '';
+    final ikText = hasIndice ? (repere.ikDigits ?? '') : '';
+
+    return Container(
+      margin: EdgeInsets.only(bottom: context.spacingS),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(context.spacingM),
+        border: Border.all(color: Colors.grey.shade300),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: context.spacingS,
+            offset: const Offset(0, 2),
+          )
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Indice IP/IK du repère',
+            style: TextStyle(
+              fontSize: context.fontSizeM,
+              fontWeight: FontWeight.w500,
+              color: AppTheme.darkBlue,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              // Champ IP préfixé
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryBlue.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          'IP',
+                          style: TextStyle(
+                            fontSize: context.fontSizeM,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.primaryBlue,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          ipText,
+                          style: TextStyle(
+                            fontSize: context.fontSizeM,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey.shade800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Champ IK préfixé
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.deepOrange.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'IK',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.deepOrange,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          ikText,
+                          style: TextStyle(
+                            fontSize: context.fontSizeM,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey.shade800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (!hasIndice) ...[
+            const SizedBox(height: 6),
+            Text(
+              "Absence de l'indice dans le repère",
+              style: TextStyle(
+                fontSize: context.fontSizeS,
+                fontWeight: FontWeight.w500,
+                color: Colors.red.shade600,
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -1758,6 +1896,7 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
           _buildReadOnlyCountTile(context, label: 'Récapitulatif nombre de départ', count: widget.departuresCount),
           _buildReadOnlyCountTile(context, label: 'Récapitulatif nombre de circuit terminaux', count: widget.terminalCircuitsCount),
         ],
+        _buildIndiceIpIkRepereTile(context),
         _buildIndiceIpIkTile(context),
 
         
@@ -4378,6 +4517,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         verificationThermographie: _verificationThermographie,
         presenceDefautThermo: _presenceDefautThermo,
         indiceIpIk: _indiceIpIkController.text.trim().isEmpty ? null : _indiceIpIkController.text.trim(),
+        indiceIpIkRepere: _resolveRepereIpIk().hasIpOrIk ? _resolveRepereIpIk().toString() : null,
         departures: List.from(_departures),
         terminalCircuits: List.from(_terminalCircuits),
         sourceEquipementId: _sourceEquipementId,
@@ -4471,6 +4611,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
       verificationThermographie: _verificationThermographie,
       presenceDefautThermo: _presenceDefautThermo,
       indiceIpIk: _indiceIpIkController.text.trim().isEmpty ? null : _indiceIpIkController.text.trim(),
+      indiceIpIkRepere: _resolveRepereIpIk().hasIpOrIk ? _resolveRepereIpIk().toString() : null,
       departures: _departures,
       terminalCircuits: _terminalCircuits,
       sourceEquipementId: _sourceEquipementId,
@@ -4544,6 +4685,14 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
       else if (!widget.isMoyenneTension && widget.parentIndex < audit.basseTensionZones.length) return audit.basseTensionZones[widget.parentIndex].nom;
     }
     return _repereController.text.trim();
+  }
+
+  ParsedIpIk _resolveRepereIpIk() {
+    return IpIkEvaluatorService.resolveRepereIpIk(
+      missionId: widget.mission.id,
+      parentName: _getParentLocationName(),
+      repere: _repereController.text.trim(),
+    );
   }
 
   ({String zone, String repere}) _resolveCurrentLocation() {
@@ -5000,6 +5149,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
       nom: _nomController.text.trim(),
       type: _selectedType!,
       indiceIpIk: _indiceIpIkController.text.trim().isEmpty ? null : _indiceIpIkController.text.trim(),
+      indiceIpIkRepere: _resolveRepereIpIk().hasIpOrIk ? _resolveRepereIpIk().toString() : null,
       repere: _repereController.text.trim().isEmpty ? null : _repereController.text.trim(),
       pointsVerification: _pointsVerification,
     );
@@ -5035,6 +5185,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         verificationThermographie: _verificationThermographie,
         presenceDefautThermo: _presenceDefautThermo,
         indiceIpIk: _indiceIpIkController.text.trim().isEmpty ? null : _indiceIpIkController.text.trim(),
+        indiceIpIkRepere: _resolveRepereIpIk().hasIpOrIk ? _resolveRepereIpIk().toString() : null,
         departures: _departures,
         terminalCircuits: _terminalCircuits,
         sourceEquipementId: _sourceEquipementId,
@@ -5709,6 +5860,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
                   if (_selectedType != null && _accessible)
                     _EtapeInformationsGenerales(
                       equipmentType: _selectedType,
+                      repereParsedIpIk: _resolveRepereIpIk(),
                       indiceIpIkController: _indiceIpIkController,
                       departuresCount: _departures.length,
                       terminalCircuitsCount: _terminalCircuits.length,

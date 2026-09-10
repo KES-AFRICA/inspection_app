@@ -393,6 +393,7 @@ class CoffretArmoireEntity {
   final List<ObservationLibreEntity> observationsParafoudre;
   final bool accessible;
   final String? indiceIpIk;
+  final String? indiceIpIkRepere;
   final String? sourceEquipementId;
   final String? sourceNomComplet;
   final String? sourceDepartId;
@@ -459,6 +460,7 @@ class CoffretArmoireEntity {
     this.photosInternes = const [],
     this.observationsParafoudre = const [],
     this.indiceIpIk,
+    this.indiceIpIkRepere,
     this.sourceEquipementId,
     this.sourceNomComplet,
     this.sourceDepartId,

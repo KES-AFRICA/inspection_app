@@ -2953,6 +2953,31 @@ class PdfAuditInstallationsBuilder {
       );
     }
 
+    pw.TableRow tableRowCustomColor(String label, String value, PdfColor bgColor) {
+      return pw.TableRow(
+        children: [
+          pw.Container(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+            alignment: pw.Alignment.centerLeft,
+            child: pw.Text(
+              label,
+              style: pw.TextStyle(font: fontBold, fontSize: PdfReportStyles.fsSmall),
+            ),
+          ),
+          pw.Container(
+            color: bgColor,
+            padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+            alignment: pw.Alignment.center,
+            child: pw.Text(
+              value,
+              style: pw.TextStyle(font: fontRegular, fontSize: PdfReportStyles.fsSmall),
+              textAlign: pw.TextAlign.center,
+            ),
+          ),
+        ],
+      );
+    }
+
     // ══════════════════════════════════════════════════════════════════════
     // TABLEAU 1 : Titre + Caractéristiques + Photo
     // ══════════════════════════════════════════════════════════════════════
@@ -3013,6 +3038,37 @@ class PdfAuditInstallationsBuilder {
       ],
     );
 
+    // Résolution et conformité des indices IP/IK (Repère et Équipement)
+    ParsedIpIk repereParsed = const ParsedIpIk();
+    if (missionId != null && missionId.isNotEmpty) {
+      repereParsed = IpIkEvaluatorService.resolveRepereIpIk(
+        missionId: missionId,
+        coffret: coffret,
+        parentName: parentName,
+      );
+    } else if (coffret.indiceIpIkRepere != null && coffret.indiceIpIkRepere!.trim().isNotEmpty) {
+      repereParsed = ParsedIpIk.parse(coffret.indiceIpIkRepere);
+    }
+
+    final bool hasRepereIndice = repereParsed.hasIpOrIk;
+    final String repereDisplay = hasRepereIndice ? repereParsed.toString() : 'Absent';
+    final PdfColor repereBgColor = hasRepereIndice
+        ? PdfReportStyles.conformeColor
+        : PdfReportStyles.nonConformeColor;
+
+    final bool hasEquipIndice =
+        coffret.indiceIpIk != null && coffret.indiceIpIk!.trim().isNotEmpty;
+    final String equipDisplay = hasEquipIndice ? coffret.indiceIpIk!.trim() : 'Absent';
+    final bool isEquipConforme = hasEquipIndice &&
+        hasRepereIndice &&
+        IpIkEvaluatorService.comparerIndicesIpIk(
+          coffret.indiceIpIk,
+          repereParsed.toString(),
+        );
+    final PdfColor equipBgColor = isEquipConforme
+        ? PdfReportStyles.conformeColor
+        : PdfReportStyles.nonConformeColor;
+
     final charTable = pw.Table(
       defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
       border: pw.TableBorder(
@@ -3062,11 +3118,15 @@ class PdfAuditInstallationsBuilder {
             'Présence de défaut thermo',
             coffret.effectivePresenceDefautThermo,
           ),
-        tableRowChar(
-          'Indice IP / IK',
-          (coffret.indiceIpIk != null && coffret.indiceIpIk!.trim().isNotEmpty)
-              ? coffret.indiceIpIk!.trim()
-              : 'Non renseigné',
+        tableRowCustomColor(
+          'Indice IP/IK du repère',
+          repereDisplay,
+          repereBgColor,
+        ),
+        tableRowCustomColor(
+          'Indice IP/IK',
+          equipDisplay,
+          equipBgColor,
         ),
         if (coffret.type != 'INVERSEUR') ...[
           tableRowChar(

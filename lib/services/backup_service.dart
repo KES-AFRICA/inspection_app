@@ -901,6 +901,8 @@ class BackupService {
         'sourceEquipementId': c.sourceEquipementId,
         'sourceNomComplet': c.sourceNomComplet,
         'sourceDepartId': c.sourceDepartId,
+        'indiceIpIk': c.indiceIpIk,
+        'indiceIpIkRepere': c.indiceIpIkRepere,
       };
 
   static Map<String, dynamic> _serializeDepart(DepartEquipement d) => {
@@ -2693,6 +2695,8 @@ class BackupService {
         sourceEquipementId: d['sourceEquipementId'] as String?,
         sourceNomComplet: d['sourceNomComplet'] as String?,
         sourceDepartId: d['sourceDepartId'] as String?,
+        indiceIpIk: d['indiceIpIk'] as String?,
+        indiceIpIkRepere: d['indiceIpIkRepere'] as String?,
       );
     }).toList();
   }

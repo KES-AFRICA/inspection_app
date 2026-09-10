@@ -162,5 +162,77 @@ void main() {
       expect(point.conformite, equals('non'));
       expect(point.observation, equals("Absence d'indice ip/ik du repère"));
     });
+
+    test('Test 9 — normaliserIndiceIpIk standardise correctement tous les formats', () {
+      expect(IpIkEvaluatorService.normaliserIndiceIpIk('IP55 / IK08'), equals('IP55 / IK08'));
+      expect(IpIkEvaluatorService.normaliserIndiceIpIk('ip 55   ik 08'), equals('IP55 / IK08'));
+      expect(IpIkEvaluatorService.normaliserIndiceIpIk('IP65'), equals('IP65'));
+      expect(IpIkEvaluatorService.normaliserIndiceIpIk('IK10'), equals('IK10'));
+      expect(IpIkEvaluatorService.normaliserIndiceIpIk(''), equals(''));
+      expect(IpIkEvaluatorService.normaliserIndiceIpIk(null), equals(''));
+    });
+
+    test('Test 10 — comparerIndicesIpIk effectue une comparaison stricte et déterministe', () {
+      // Égalité parfaite IP + IK
+      expect(IpIkEvaluatorService.comparerIndicesIpIk('IP55 / IK08', 'IP55 / IK08'), isTrue);
+      expect(IpIkEvaluatorService.comparerIndicesIpIk('ip55/ik08', 'IP 55 / IK 08'), isTrue);
+
+      // Différence IP ou IK
+      expect(IpIkEvaluatorService.comparerIndicesIpIk('IP54 / IK08', 'IP55 / IK08'), isFalse);
+      expect(IpIkEvaluatorService.comparerIndicesIpIk('IP55 / IK07', 'IP55 / IK08'), isFalse);
+
+      // Repère avec IP seul
+      expect(IpIkEvaluatorService.comparerIndicesIpIk('IP55 / IK08', 'IP55'), isTrue);
+      expect(IpIkEvaluatorService.comparerIndicesIpIk('IP54 / IK08', 'IP55'), isFalse);
+      expect(IpIkEvaluatorService.comparerIndicesIpIk('IP55', 'IP55'), isTrue);
+
+      // Repère avec IK seul
+      expect(IpIkEvaluatorService.comparerIndicesIpIk('IP55 / IK08', 'IK08'), isTrue);
+      expect(IpIkEvaluatorService.comparerIndicesIpIk('IP55 / IK07', 'IK08'), isFalse);
+      expect(IpIkEvaluatorService.comparerIndicesIpIk('IK08', 'IK08'), isTrue);
+
+      // Repère ou équipement absent
+      expect(IpIkEvaluatorService.comparerIndicesIpIk('IP55 / IK08', ''), isFalse);
+      expect(IpIkEvaluatorService.comparerIndicesIpIk('IP55 / IK08', null), isFalse);
+      expect(IpIkEvaluatorService.comparerIndicesIpIk('', 'IP55 / IK08'), isFalse);
+      expect(IpIkEvaluatorService.comparerIndicesIpIk(null, 'IP55 / IK08'), isFalse);
+    });
+
+    test('Test 11 — resolveRepereIpIk résout depuis repère, local parent ou arborescence', () {
+      final coffretAvecRepere = CoffretArmoire(
+        qrCode: 'QR_1',
+        nom: 'TGBT 1',
+        type: 'TGBT',
+        repere: 'LOCAL_INEXISTANT',
+      );
+
+      // Si le repère n'existe pas dans Hive, renvoie un ParsedIpIk vide
+      final resolvedVide = IpIkEvaluatorService.resolveRepereIpIk(
+        missionId: 'mission_dummy',
+        coffret: coffretAvecRepere,
+      );
+      expect(resolvedVide.hasIpOrIk, isFalse);
+    });
+
+    test('Test 12 — CoffretArmoire copyWith et compatibilité indiceIpIkRepere', () {
+      final c1 = CoffretArmoire(
+        qrCode: 'QR_COPY',
+        nom: 'Inverseur Normal/Secours',
+        type: 'INVERSEUR',
+        indiceIpIk: 'IP55 / IK08',
+      );
+
+      expect(c1.indiceIpIkRepere, isNull);
+
+      final c2 = c1.copyWith(
+        indiceIpIkRepere: 'IP65 / IK08',
+      );
+
+      expect(c2.qrCode, equals('QR_COPY'));
+      expect(c2.nom, equals('Inverseur Normal/Secours'));
+      expect(c2.type, equals('INVERSEUR'));
+      expect(c2.indiceIpIk, equals('IP55 / IK08')); // Valeur inspecteur inchangée
+      expect(c2.indiceIpIkRepere, equals('IP65 / IK08')); // Valeur repère
+    });
   });
 }

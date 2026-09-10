@@ -1131,6 +1131,9 @@ class CoffretArmoire {
   @HiveField(39)
   String? transformateurNomComplet;
 
+  @HiveField(40)
+  String? indiceIpIkRepere;
+
   List<DepartEquipement> get effectiveDepartures => departures ?? [];
   List<CircuitTerminalEquipement> get effectiveTerminalCircuits => terminalCircuits ?? [];
 
@@ -1196,6 +1199,7 @@ class CoffretArmoire {
     this.createdAt,
     this.updatedAt,
     this.indiceIpIk,
+    this.indiceIpIkRepere,
     List<DepartEquipement>? departures,
     List<CircuitTerminalEquipement>? terminalCircuits,
     this.sourceEquipementId,
@@ -1228,6 +1232,94 @@ class CoffretArmoire {
         photosInternes = photosInternes ?? [],
         observationsParafoudre = observationsParafoudre ?? [],
         observationsParafoudreEnrichies = observationsParafoudreEnrichies ?? [];
+
+  CoffretArmoire copyWith({
+    String? id,
+    String? qrCode,
+    String? nom,
+    String? type,
+    String? description,
+    String? repere,
+    bool? zoneAtex,
+    String? domaineTension,
+    bool? identificationArmoire,
+    bool? signalisationDanger,
+    bool? presenceSchema,
+    bool? presenceParafoudre,
+    bool? verificationThermographie,
+    String? presenceDefautThermo,
+    bool? alimenteeParTransformateur,
+    String? transformateurId,
+    String? transformateurNomComplet,
+    bool? presenceCPI,
+    bool? departPrisAvecProtection,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    String? indiceIpIk,
+    String? indiceIpIkRepere,
+    List<DepartEquipement>? departures,
+    List<CircuitTerminalEquipement>? terminalCircuits,
+    String? sourceEquipementId,
+    String? sourceNomComplet,
+    String? sourceDepartId,
+    bool? accessible,
+    List<Alimentation>? alimentations,
+    Alimentation? protectionTete,
+    List<PointVerification>? pointsVerification,
+    List<ObservationLibre>? observationsLibres,
+    List<String>? photos,
+    String? statut,
+    int? currentStep,
+    String? numeroEquipement,
+    List<String>? photosExternes,
+    List<String>? photosInternes,
+    List<ObservationLibre>? observationsParafoudre,
+    List<ElementControle>? observationsParafoudreEnrichies,
+  }) {
+    return CoffretArmoire(
+      id: id ?? this.id,
+      qrCode: qrCode ?? this.qrCode,
+      nom: nom ?? this.nom,
+      type: type ?? this.type,
+      description: description ?? this.description,
+      repere: repere ?? this.repere,
+      zoneAtex: zoneAtex ?? this.zoneAtex,
+      domaineTension: domaineTension ?? this.domaineTension,
+      identificationArmoire: identificationArmoire ?? this.identificationArmoire,
+      signalisationDanger: signalisationDanger ?? this.signalisationDanger,
+      presenceSchema: presenceSchema ?? this.presenceSchema,
+      presenceParafoudre: presenceParafoudre ?? this.presenceParafoudre,
+      verificationThermographie: verificationThermographie ?? this.verificationThermographie,
+      presenceDefautThermo: presenceDefautThermo ?? this.presenceDefautThermo,
+      alimenteeParTransformateur: alimenteeParTransformateur ?? this.alimenteeParTransformateur,
+      transformateurId: transformateurId ?? this.transformateurId,
+      transformateurNomComplet: transformateurNomComplet ?? this.transformateurNomComplet,
+      presenceCPI: presenceCPI ?? this.presenceCPI,
+      departPrisAvecProtection: departPrisAvecProtection ?? this.departPrisAvecProtection,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      indiceIpIk: indiceIpIk ?? this.indiceIpIk,
+      indiceIpIkRepere: indiceIpIkRepere ?? this.indiceIpIkRepere,
+      departures: departures ?? this.departures,
+      terminalCircuits: terminalCircuits ?? this.terminalCircuits,
+      sourceEquipementId: sourceEquipementId ?? this.sourceEquipementId,
+      sourceNomComplet: sourceNomComplet ?? this.sourceNomComplet,
+      sourceDepartId: sourceDepartId ?? this.sourceDepartId,
+      accessible: accessible ?? this.accessible,
+      alimentations: alimentations ?? this.alimentations,
+      protectionTete: protectionTete ?? this.protectionTete,
+      pointsVerification: pointsVerification ?? this.pointsVerification,
+      observationsLibres: observationsLibres ?? this.observationsLibres,
+      photos: photos ?? this.photos,
+      statut: statut ?? this.statut,
+      currentStep: currentStep ?? this.currentStep,
+      numeroEquipement: numeroEquipement ?? this.numeroEquipement,
+      photosExternes: photosExternes ?? this.photosExternes,
+      photosInternes: photosInternes ?? this.photosInternes,
+      observationsParafoudre: observationsParafoudre ?? this.observationsParafoudre,
+      observationsParafoudreEnrichies: observationsParafoudreEnrichies ?? this.observationsParafoudreEnrichies,
+    );
+  }
 
   /// Pour un Inverseur, retourne les alimentations d'entrée (Alimentation 1 & Alimentation 2)
   List<Alimentation> get alimentationsInverseurEntree {

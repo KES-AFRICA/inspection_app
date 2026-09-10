@@ -184,6 +184,26 @@ void main() {
       expect(coffretHistorique.pointsVerification.first.conformite, equals('non'));
       expect(coffretHistorique.pointsVerification.first.observation, equals("Absence de l'indice ip/ik"));
     });
+
+    test('Cas 8 — PDF : affichage des deux lignes Indice IP/IK du repère et Indice IP/IK', () {
+      final coffret = CoffretArmoire(
+        qrCode: 'QR_PDF_TEST',
+        nom: 'TGBT PRINCIPAL',
+        type: 'TGBT',
+        repere: 'Local TGBT',
+        indiceIpIk: 'IP55 / IK08',
+        indiceIpIkRepere: 'IP55 / IK08',
+      );
+
+      final widgets = PdfAuditInstallationsBuilder.buildCoffret(
+        coffret,
+        {},
+        'Local TGBT',
+        missionId: 'mission_pdf_test',
+      );
+
+      expect(widgets, isNotEmpty);
+    });
   });
 
   group('TABLEAU DES INTERVENANTS — CELLULE "NOM" ET COUVERTURE DU BACKGROUND', () {

@@ -234,20 +234,87 @@ class IpIkEvaluatorService {
     }
 
     // CAS B & D — Recherche du repère et de son classement
-    // Résolution multi-candidats par ordre de priorité :
-    // 1. coffret.repere (le repère direct de l'équipement)
-    // 2. parentName (le local ou la zone parente explicite)
-    // 3. Emplacement retrouvé par introspection de l'arborescence (uniquement si parentName n'est pas fourni)
+    final repereParsed = resolveRepereIpIk(
+      missionId: missionId,
+      coffret: coffret,
+      parentName: parentName,
+      audit: audit,
+    );
+
+    if (!repereParsed.hasIpOrIk) {
+      return const IpIkEvaluationResult(
+        conformite: 'non',
+        observation: "Absence d'indice ip/ik du repère",
+      );
+    }
+
+    final repereFormatted = repereParsed.toString();
+
+    // Comparaison intelligente stricte et déterministe
+    final bool isMatching = comparerIndicesIpIk(coffret.indiceIpIk, repereFormatted);
+
+    // CAS C1 — Présent + compatible
+    if (isMatching) {
+      return IpIkEvaluationResult(
+        conformite: 'oui',
+        observation: null,
+        repereIpIkFormatted: repereFormatted,
+      );
+    }
+
+    // CAS C2 — Présent + différent
+    return IpIkEvaluationResult(
+      conformite: 'non',
+      observation: "Indice ip/ik différent de l'indice du repère",
+      repereIpIkFormatted: repereFormatted,
+    );
+  }
+
+  /// Normalise un indice IP/IK brut en chaîne standardisée (ex: "IP55 / IK08", "IP55", "IK08" ou "")
+  static String normaliserIndiceIpIk(String? raw) {
+    final parsed = ParsedIpIk.parse(raw);
+    return parsed.toString();
+  }
+
+  /// Compare un indice d'équipement avec l'indice attendu de son repère de façon stricte et déterministe
+  static bool comparerIndicesIpIk(String? equipRaw, String? repereRaw) {
+    final equipParsed = ParsedIpIk.parse(equipRaw);
+    final repereParsed = ParsedIpIk.parse(repereRaw);
+
+    if (!repereParsed.hasIpOrIk) return false;
+    if (!equipParsed.hasIpOrIk) return false;
+
+    if (repereParsed.ip != null && repereParsed.ik != null) {
+      return equipParsed.ip == repereParsed.ip && equipParsed.ik == repereParsed.ik;
+    } else if (repereParsed.ip != null) {
+      return equipParsed.ip == repereParsed.ip;
+    } else if (repereParsed.ik != null) {
+      return equipParsed.ik == repereParsed.ik;
+    }
+    return false;
+  }
+
+  /// Résout l'indice IP/IK attendu du repère réel de l'équipement (Local ou Zone)
+  static ParsedIpIk resolveRepereIpIk({
+    required String missionId,
+    CoffretArmoire? coffret,
+    String? parentName,
+    String? repere,
+    AuditInstallationsElectriques? audit,
+  }) {
     final candidates = <String>[];
-    if (coffret.repere != null && coffret.repere!.trim().isNotEmpty) {
+    if (repere != null && repere.trim().isNotEmpty) {
+      candidates.add(repere.trim());
+    } else if (coffret?.repere != null && coffret!.repere!.trim().isNotEmpty) {
       candidates.add(coffret.repere!.trim());
     }
+
     if (parentName != null && parentName.trim().isNotEmpty) {
       final p = parentName.trim();
       if (!candidates.contains(p)) {
         candidates.add(p);
       }
-    } else {
+    } else if (coffret != null) {
       final discoveredLocation = _findLocationForCoffret(
         coffret,
         missionId,
@@ -262,10 +329,7 @@ class IpIkEvaluatorService {
     }
 
     if (candidates.isEmpty) {
-      return const IpIkEvaluationResult(
-        conformite: 'non',
-        observation: "Absence d'indice ip/ik du repère",
-      );
+      return const ParsedIpIk(ip: null, ik: null);
     }
 
     ClassementEmplacement? emplacement;
@@ -297,57 +361,14 @@ class IpIkEvaluatorService {
     }
 
     if (emplacement == null) {
-      return const IpIkEvaluationResult(
-        conformite: 'non',
-        observation: "Absence d'indice ip/ik du repère",
-      );
+      return const ParsedIpIk(ip: null, ik: null);
     }
 
     final String? repereIpRaw = emplacement.ipEffective;
     final String? repereIkRaw = emplacement.ikEffective;
 
-    final repereParsed = ParsedIpIk.parse(
+    return ParsedIpIk.parse(
       '${repereIpRaw ?? ''} ${repereIkRaw ?? ''}',
-    );
-
-    if (!repereParsed.hasIpOrIk) {
-      return const IpIkEvaluationResult(
-        conformite: 'non',
-        observation: "Absence d'indice ip/ik du repère",
-      );
-    }
-
-    final repereFormatted = repereParsed.toString();
-
-    // Comparaison intelligente :
-    // - Si le repère requiert IP et IK : l'équipement doit correspondre aux deux
-    // - Si le repère requiert uniquement IP : l'IP de l'équipement doit correspondre
-    // - Si le repère requiert uniquement IK : l'IK de l'équipement doit correspondre
-    final bool isMatching;
-    if (repereParsed.ip != null && repereParsed.ik != null) {
-      isMatching = (equipParsed.ip == repereParsed.ip && equipParsed.ik == repereParsed.ik);
-    } else if (repereParsed.ip != null) {
-      isMatching = (equipParsed.ip == repereParsed.ip);
-    } else if (repereParsed.ik != null) {
-      isMatching = (equipParsed.ik == repereParsed.ik);
-    } else {
-      isMatching = false;
-    }
-
-    // CAS C1 — Présent + compatible
-    if (isMatching) {
-      return IpIkEvaluationResult(
-        conformite: 'oui',
-        observation: null,
-        repereIpIkFormatted: repereFormatted,
-      );
-    }
-
-    // CAS C2 — Présent + différent
-    return IpIkEvaluationResult(
-      conformite: 'non',
-      observation: "Indice ip/ik différent de l'indice du repère",
-      repereIpIkFormatted: repereFormatted,
     );
   }
 
