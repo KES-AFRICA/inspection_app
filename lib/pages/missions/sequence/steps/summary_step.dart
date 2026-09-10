@@ -14,6 +14,7 @@ import 'package:inspec_app/features/mission/presentation/providers/mission_detai
 import 'package:inspec_app/services/sequence_progress_service.dart';
 import 'package:inspec_app/services/pdf/pdf_report_service.dart';
 import 'package:inspec_app/services/word_report_service.dart';
+import 'package:inspec_app/services/excel/excel_report_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:printing/printing.dart';
@@ -44,10 +45,13 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
   bool _isGenerating = false;
   File? _pdfFile;
   File? _wordFile;
+  File? _excelFile;
   String? _pdfFileName;
   String? _wordFileName;
+  String? _excelFileName;
   bool _showPdfPreview = false;
   bool _showWordPreview = false;
+  bool _showExcelPreview = false;
 
   @override
   void initState() {
@@ -87,11 +91,17 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
             _pdfFileName = report.fileName;
             _showPdfPreview = true;
           });
-        } else if (report.reportType == 'docx') {
+        } else if (report.reportType == 'docx' || report.reportType == 'word') {
           setState(() {
             _wordFile = file;
             _wordFileName = report.fileName;
             _showWordPreview = true;
+          });
+        } else if (report.reportType == 'xlsx' || report.reportType == 'excel') {
+          setState(() {
+            _excelFile = file;
+            _excelFileName = report.fileName;
+            _showExcelPreview = true;
           });
         }
       }
@@ -118,6 +128,14 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
       if (reportType == 'word') {
         file = await WordReportService.generateMissionReport(widget.mission.id);
         fileName = 'Rapport_${widget.mission.nomClient}_${DateTime.now().millisecondsSinceEpoch}.docx';
+      } else if (reportType == 'excel') {
+        file = await ExcelReportService.generateMissionReport(widget.mission.id);
+        fileName = file != null
+            ? path.basename(file.path)
+            : ExcelReportService.buildExcelReportFileName(
+                widget.mission.nomClient,
+                nomSite: widget.mission.nomSite,
+              );
       } else {
         file = await PdfReportService.generateMissionReport(
           widget.mission.id,
@@ -166,6 +184,10 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
               _pdfFile = savedFile;
               _pdfFileName = fileName;
               _showPdfPreview = true;
+            } else if (reportType == 'excel') {
+              _excelFile = savedFile;
+              _excelFileName = fileName;
+              _showExcelPreview = true;
             } else {
               _wordFile = savedFile;
               _wordFileName = fileName;
@@ -258,6 +280,24 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
                 _generateReport('word');
               },
             ),
+            const Divider(height: 0),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(Icons.table_chart, color: Colors.green.shade700),
+              ),
+              title: const Text('Excel', style: TextStyle(fontWeight: FontWeight.w600)),
+              subtitle: const Text('Générer un rapport au format Excel (.xlsx)'),
+              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+              onTap: () {
+                Navigator.pop(context);
+                _generateReport('excel');
+              },
+            ),
             const SizedBox(height: 12),
           ],
         ),
@@ -266,6 +306,10 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
   }
 
   Future<void> _previewReport(File file, String reportType) async {
+    if (reportType == 'excel') {
+      _showExcelPreviewUnavailableDialog();
+      return;
+    }
     if (reportType != 'pdf') {
       _showWordPreviewUnavailableDialog();
       return;
@@ -338,6 +382,81 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
                     child: Text(
                       'Vous pouvez télécharger le fichier Word pour l\'ouvrir avec une application externe (Microsoft Word, Google Docs, etc.).',
                       style: TextStyle(fontSize: 13, color: Colors.blue.shade800, height: 1.3),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            style: TextButton.styleFrom(
+              foregroundColor: AppTheme.primaryBlue,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text('COMPRIS', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showExcelPreviewUnavailableDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        elevation: 0,
+        backgroundColor: Colors.white,
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(Icons.table_chart, color: Colors.green.shade700, size: 28),
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'Information',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 8),
+            Text(
+              'La prévisualisation des fichiers Excel n\'est pas disponible directement dans l\'application.',
+              style: TextStyle(fontSize: 15, color: Colors.grey.shade700, height: 1.4),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.green.shade100),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.lightbulb_outline, color: Colors.green.shade700, size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Vous pouvez télécharger ou partager le fichier Excel pour l\'ouvrir avec une application compatible (Microsoft Excel, LibreOffice, Google Sheets, etc.).',
+                      style: TextStyle(fontSize: 13, color: Colors.green.shade900, height: 1.3),
                     ),
                   ),
                 ],
@@ -446,7 +565,7 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
       if (await canLaunchUrl(mailtoUri)) {
         await launchUrl(mailtoUri);
       } else {
-        final fileToSend = _pdfFile ?? _wordFile;
+        final fileToSend = _pdfFile ?? _wordFile ?? _excelFile;
         if (fileToSend != null) {
           await Share.shareXFiles(
             [XFile(fileToSend.path)],
@@ -494,9 +613,10 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
     return 7;
   }
 
-  bool get hasAnyReport => _showPdfPreview || _showWordPreview;
+  bool get hasAnyReport => _showPdfPreview || _showWordPreview || _showExcelPreview;
   bool get hasPdf => _showPdfPreview && _pdfFile != null;
   bool get hasWord => _showWordPreview && _wordFile != null;
+  bool get hasExcel => _showExcelPreview && _excelFile != null;
 
   // ============================================================
   // VERSION OPTIMISÉE DE LA CARTE RAPPORT (COMPACTE)
@@ -511,6 +631,7 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
   }) {
     final cleanFileName = fileName?.split('/').last ?? 'Rapport généré';
     final isPdf = reportType == 'pdf';
+    final isExcel = reportType == 'excel' || reportType == 'xlsx';
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
@@ -545,7 +666,9 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
                         gradient: LinearGradient(
                           colors: isPdf
                               ? [Colors.red.shade600, Colors.red.shade400]
-                              : [Colors.blue.shade600, Colors.blue.shade400],
+                              : (isExcel
+                                  ? [Colors.green.shade700, Colors.green.shade500]
+                                  : [Colors.blue.shade600, Colors.blue.shade400]),
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
@@ -560,7 +683,7 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
                       ),
                       child: Center(
                         child: Text(
-                          isPdf ? 'PDF' : 'DOCX',
+                          isPdf ? 'PDF' : (isExcel ? 'XLSX' : 'DOCX'),
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w900,
@@ -684,6 +807,16 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
         reportType: 'word',
         icon: Icons.description,
         color: Colors.blue,
+      ));
+    }
+
+    if (hasExcel) {
+      reports.add(_buildReportCard(
+        file: _excelFile!,
+        fileName: _excelFileName,
+        reportType: 'excel',
+        icon: Icons.table_chart,
+        color: Colors.green,
       ));
     }
     
