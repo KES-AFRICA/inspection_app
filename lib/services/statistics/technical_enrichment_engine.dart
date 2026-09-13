@@ -407,6 +407,31 @@ class TechnicalEnrichmentResult {
       : 0.0;
   String get globalAdequationTeteRatio =>
       '$globalAdequationTeteConformes / $globalAdequationTeteEvalues';
+
+  int get totalTgbt => coupureTeteStats[DomainObjectType.tgbt]?.totalEquipments ?? 0;
+  int get totalArmoires => coupureTeteStats[DomainObjectType.armoire]?.totalEquipments ?? 0;
+  int get totalCoffrets => coupureTeteStats[DomainObjectType.coffret]?.totalEquipments ?? 0;
+  int get totalInverseurs => coupureTeteStats[DomainObjectType.inverseur]?.totalEquipments ?? 0;
+
+  String get globalIpIkAdequationRateStr {
+    final totalConformes = ipIkZoneItems.fold(0, (s, e) => s + e.conformes);
+    final totalEvaluables = ipIkZoneItems.fold(0, (s, e) => s + e.evaluables);
+    if (totalEvaluables > 0) {
+      final pct = (totalConformes / totalEvaluables) * 100.0;
+      return '${pct.toStringAsFixed(1).replaceAll('.', ',')} %';
+    }
+    return '0,0 % (Déficit de données terrain : 100 % non renseignés)';
+  }
+
+  Map<String, int> get globalMarquesDeTete {
+    final res = <String, int>{};
+    for (final row in marquesMatrix) {
+      for (final e in row.organeDeTete.entries) {
+        res[e.key] = (res[e.key] ?? 0) + e.value;
+      }
+    }
+    return res;
+  }
 }
 
 /// Moteur principal d'analyse technique et d'enrichissement statistique.
@@ -663,19 +688,20 @@ class TechnicalEnrichmentEngine {
 
     // 8. Lignes de conformité croisée par catégorie pour Moyenne Tension
     final totalNcMt = findingInventory.findings.where((f) => f.tensionDomain == TensionDomain.mt).length;
+    final totalMissionNc = findingInventory.classifiedCount > 0 ? findingInventory.classifiedCount : findingInventory.totalFindings;
     final mtCatRows = <CategoryCrossAuditRow>[];
 
     CategoryCrossAuditRow buildCategoryRow(
       String name,
       List<DomainEntityInstance> instances,
-      int totalDomainNc,
+      int totalNcDenominator,
     ) {
       final eqCount = instances.length;
       final findings = instances.expand((i) => i.findings).toList();
       final ncCount = findings.length;
       final critCount = findings.where((f) => f.criticality.toLowerCase().contains('critique')).length;
       final majCount = findings.where((f) => f.criticality.toLowerCase().contains('majeur')).length;
-      final pctOfTotal = totalDomainNc > 0 ? (ncCount / totalDomainNc) * 100.0 : 0.0;
+      final pctOfTotal = totalNcDenominator > 0 ? (ncCount / totalNcDenominator) * 100.0 : 0.0;
       final tauxCrit = ncCount > 0 ? (critCount / ncCount) * 100.0 : 0.0;
       final densite = eqCount > 0 ? (ncCount / eqCount) : 0.0;
 
@@ -695,21 +721,21 @@ class TechnicalEnrichmentEngine {
       buildCategoryRow(
         'Locaux techniques',
         domainInventory.getInstancesByCategory(DomainObjectType.localMT),
-        totalNcMt,
+        totalMissionNc,
       ),
     );
     mtCatRows.add(
       buildCategoryRow(
         'Cellules',
         domainInventory.getInstancesByCategory(DomainObjectType.celluleMT),
-        totalNcMt,
+        totalMissionNc,
       ),
     );
     mtCatRows.add(
       buildCategoryRow(
         'Transformateurs',
         domainInventory.getInstancesByCategory(DomainObjectType.transformateurMTBT),
-        totalNcMt,
+        totalMissionNc,
       ),
     );
 
@@ -722,7 +748,7 @@ class TechnicalEnrichmentEngine {
       ncCount: totalNcMt,
       critiquesCount: mtTotalCrit,
       majeuresCount: mtTotalMaj,
-      pctOfTotalNc: 100.0,
+      pctOfTotalNc: totalMissionNc > 0 ? (totalNcMt / totalMissionNc) * 100.0 : 0.0,
       tauxCritique: totalNcMt > 0 ? (mtTotalCrit / totalNcMt) * 100.0 : 0.0,
       densite: mtTotalEq > 0 ? (totalNcMt / mtTotalEq) : 0.0,
     );
@@ -735,49 +761,49 @@ class TechnicalEnrichmentEngine {
       buildCategoryRow(
         'Locaux techniques GE',
         domainInventory.getInstancesByCategory(DomainObjectType.localGE),
-        totalNcBt,
+        totalMissionNc,
       ),
     );
     btCatRows.add(
       buildCategoryRow(
         'Locaux techniques BT',
         domainInventory.getInstancesByCategory(DomainObjectType.localBT),
-        totalNcBt,
+        totalMissionNc,
       ),
     );
     btCatRows.add(
       buildCategoryRow(
         'Inverseur',
         domainInventory.getInstancesByCategory(DomainObjectType.inverseur),
-        totalNcBt,
+        totalMissionNc,
       ),
     );
     btCatRows.add(
       buildCategoryRow(
         'TGBT',
         domainInventory.getInstancesByCategory(DomainObjectType.tgbt),
-        totalNcBt,
+        totalMissionNc,
       ),
     );
     btCatRows.add(
       buildCategoryRow(
         'Armoires',
         domainInventory.getInstancesByCategory(DomainObjectType.armoire),
-        totalNcBt,
+        totalMissionNc,
       ),
     );
     btCatRows.add(
       buildCategoryRow(
         'Coffrets',
         domainInventory.getInstancesByCategory(DomainObjectType.coffret),
-        totalNcBt,
+        totalMissionNc,
       ),
     );
     btCatRows.add(
       buildCategoryRow(
         'Prises de terre mesurées',
         domainInventory.getInstancesByCategory(DomainObjectType.priseTerre),
-        totalNcBt,
+        totalMissionNc,
       ),
     );
 
@@ -790,7 +816,7 @@ class TechnicalEnrichmentEngine {
       ncCount: totalNcBt,
       critiquesCount: btTotalCrit,
       majeuresCount: btTotalMaj,
-      pctOfTotalNc: 100.0,
+      pctOfTotalNc: totalMissionNc > 0 ? (totalNcBt / totalMissionNc) * 100.0 : 0.0,
       tauxCritique: totalNcBt > 0 ? (btTotalCrit / totalNcBt) * 100.0 : 0.0,
       densite: btTotalEq > 0 ? (totalNcBt / btTotalEq) : 0.0,
     );

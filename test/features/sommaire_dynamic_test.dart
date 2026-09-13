@@ -25,23 +25,23 @@ void main() {
       expect(titles, contains("FOUDRE ET SURTENSION"));
       expect(titles, contains("PHOTOS"));
 
-      // Sous-sections du Résumé Exécutif (11 sections Word)
+      // Sous-sections du Résumé Exécutif (12 sections officielles KES)
       expect(titles, contains("1. Contexte et périmètre de la mission"));
       expect(titles, contains("2. Synthèse des résultats"));
       expect(titles, contains("2.1. Indicateurs clés de la mission"));
       expect(titles, contains("2.2. Criticité"));
-      expect(titles, contains("2.3. Facteurs de risque prépondérants"));
-      expect(titles, contains("3. Répartition des non-conformités"));
-      expect(titles, contains("3.1. Analyse Moyenne Tension (HTA)"));
-      expect(titles, contains("3.2. Analyse Basse Tension (BT)"));
-      expect(titles, contains("4. Diversification des marques des appareillages de protection"));
-      expect(titles, contains("5. Courbes et protections"));
-      expect(titles, contains("6. Adéquation ICC / PDC"));
-      expect(titles, contains("7. Proportion type de câble par section"));
-      expect(titles, contains("8. Adéquation classement des zones et indices des équipements"));
-      expect(titles, contains("9. Renforcement des compétences"));
-      expect(titles, contains("10. Recommandations prioritaires hiérarchisées"));
-      expect(titles, contains("11. Appréciation globale"));
+      expect(titles, contains("3. Facteurs de risque prépondérants"));
+      expect(titles, contains("4. Répartition des non-conformités"));
+      expect(titles, contains("4.1. Analyse Moyenne Tension (HTA)"));
+      expect(titles, contains("4.2. Analyse Basse Tension (BT)"));
+      expect(titles, contains("5. Diversification des marques des appareillages de protection"));
+      expect(titles, contains("6. Courbes et protections"));
+      expect(titles, contains("7. Adéquation ICC / PDC"));
+      expect(titles, contains("8. Proportion type de câble par section"));
+      expect(titles, contains("9. Adéquation classement des zones, et indices des équipements"));
+      expect(titles, contains("10. Renforcement des compétences"));
+      expect(titles, contains("11. Recommandations prioritaires hiérarchisées"));
+      expect(titles, contains("12. Appréciation globale"));
 
       // Sous-sections d'Analyse Statistique (7 sections Word)
       expect(titles, contains("1. Répartition des non conformités par domaine de tension"));

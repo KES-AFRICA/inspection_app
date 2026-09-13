@@ -224,85 +224,85 @@ class PdfSommaireBuilder {
     );
     entries.add(
       SommaireEntry(
-        titre: "2.3. Facteurs de risque prépondérants",
-        key: 'resume_executif_1_2_3',
-        level: 2,
-      ),
-    );
-    entries.add(
-      SommaireEntry(
-        titre: "3. Répartition des non-conformités",
+        titre: "3. Facteurs de risque prépondérants",
         key: 'resume_executif_1_3',
         level: 1,
       ),
     );
     entries.add(
       SommaireEntry(
-        titre: "3.1. Analyse Moyenne Tension (HTA)",
-        key: 'resume_executif_1_3_1',
-        level: 2,
-      ),
-    );
-    entries.add(
-      SommaireEntry(
-        titre: "3.2. Analyse Basse Tension (BT)",
-        key: 'resume_executif_1_3_2',
-        level: 2,
-      ),
-    );
-    entries.add(
-      SommaireEntry(
-        titre: "4. Diversification des marques des appareillages de protection",
+        titre: "4. Répartition des non-conformités",
         key: 'resume_executif_1_4',
         level: 1,
       ),
     );
     entries.add(
       SommaireEntry(
-        titre: "5. Courbes et protections",
+        titre: "4.1. Analyse Moyenne Tension (HTA)",
+        key: 'resume_executif_1_4_1',
+        level: 2,
+      ),
+    );
+    entries.add(
+      SommaireEntry(
+        titre: "4.2. Analyse Basse Tension (BT)",
+        key: 'resume_executif_1_4_2',
+        level: 2,
+      ),
+    );
+    entries.add(
+      SommaireEntry(
+        titre: "5. Diversification des marques des appareillages de protection",
         key: 'resume_executif_1_5',
         level: 1,
       ),
     );
     entries.add(
       SommaireEntry(
-        titre: "6. Adéquation ICC / PDC",
+        titre: "6. Courbes et protections",
         key: 'resume_executif_1_6',
         level: 1,
       ),
     );
     entries.add(
       SommaireEntry(
-        titre: "7. Proportion type de câble par section",
+        titre: "7. Adéquation ICC / PDC",
         key: 'resume_executif_1_7',
         level: 1,
       ),
     );
     entries.add(
       SommaireEntry(
-        titre: "8. Adéquation classement des zones et indices des équipements",
+        titre: "8. Proportion type de câble par section",
         key: 'resume_executif_1_8',
         level: 1,
       ),
     );
     entries.add(
       SommaireEntry(
-        titre: "9. Renforcement des compétences",
+        titre: "9. Adéquation classement des zones, et indices des équipements",
         key: 'resume_executif_1_9',
         level: 1,
       ),
     );
     entries.add(
       SommaireEntry(
-        titre: "10. Recommandations prioritaires hiérarchisées",
+        titre: "10. Renforcement des compétences",
         key: 'resume_executif_1_10',
         level: 1,
       ),
     );
     entries.add(
       SommaireEntry(
-        titre: "11. Appréciation globale",
+        titre: "11. Recommandations prioritaires hiérarchisées",
         key: 'resume_executif_1_11',
+        level: 1,
+      ),
+    );
+    entries.add(
+      SommaireEntry(
+        titre: "12. Appréciation globale",
+        key: 'resume_executif_1_12',
         level: 1,
       ),
     );

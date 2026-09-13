@@ -1764,9 +1764,9 @@
     "semantic_hash": ""
   },
   "lib/services/pdf/builders/pdf_executive_summary_builder.dart": {
-    "mtime": 1789288210.5209608,
-    "seen": 1789288567.1996434,
-    "ast_hash": "08f690ee1026c1df89a55a6794405e1b",
+    "mtime": 1789290763.1125505,
+    "seen": 1789292211.8586938,
+    "ast_hash": "d104f1fc4b269c368b4ca980ba2f8acf",
     "semantic_hash": ""
   },
   "lib/services/pdf/builders/pdf_mesures_essais_builder.dart": {
@@ -1800,15 +1800,15 @@
     "semantic_hash": ""
   },
   "lib/services/pdf/builders/pdf_sommaire_builder.dart": {
-    "mtime": 1788679122.2796657,
-    "seen": 1788698856.7554154,
-    "ast_hash": "76afcc3a3c58a1f57f2bbe2b878fafdd",
+    "mtime": 1789291034.3863802,
+    "seen": 1789292211.8587036,
+    "ast_hash": "b0aeafecef6b5fbeaa3d3ee5021e2ef4",
     "semantic_hash": ""
   },
   "lib/services/pdf/builders/pdf_statistics_builder.dart": {
-    "mtime": 1789287628.207825,
-    "seen": 1789288567.1996534,
-    "ast_hash": "1d4c40f1ade023ec0130357e671b9cf2",
+    "mtime": 1789292121.1682127,
+    "seen": 1789292211.8587048,
+    "ast_hash": "8913f726c30a8d3484a6a5cea60916cb",
     "semantic_hash": ""
   },
   "lib/services/pdf/pdf_chunk_merger.dart": {
@@ -2502,9 +2502,9 @@
     "semantic_hash": ""
   },
   "test/features/sommaire_dynamic_test.dart": {
-    "mtime": 1788534824.0605216,
-    "seen": 1788698856.7555616,
-    "ast_hash": "b71b90771188f7949bd8b6d079ab8de9",
+    "mtime": 1789291234.6823292,
+    "seen": 1789292211.8588989,
+    "ast_hash": "147116d6131453f576837f0fc1cff170",
     "semantic_hash": ""
   },
   "test/features/source_status_resolver_test.dart": {
@@ -3204,15 +3204,15 @@
     "semantic_hash": ""
   },
   "lib/services/statistics/technical_enrichment_engine.dart": {
-    "mtime": 1789287547.029128,
-    "seen": 1789288567.1996908,
-    "ast_hash": "8a32f61c2f5b6456b8eacd545533d996",
+    "mtime": 1789290729.702446,
+    "seen": 1789292211.8587432,
+    "ast_hash": "5045ed16a0943859cb3858f7cc19ddfd",
     "semantic_hash": ""
   },
   "test/features/statistics_enrichment_test.dart": {
-    "mtime": 1789286849.56089,
-    "seen": 1789288567.199857,
-    "ast_hash": "1280f5c94c4d9a7e15887cd5aaef5f23",
+    "mtime": 1789291312.5239716,
+    "seen": 1789292211.858905,
+    "ast_hash": "c9510635d45038a40df119d6acd4accd",
     "semantic_hash": ""
   }
 }

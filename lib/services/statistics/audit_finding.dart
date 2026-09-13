@@ -179,6 +179,9 @@ class TensionDomainStats {
     required this.mtPct,
     required this.btPct,
   });
+
+  String get mtPercentageStr => '${mtPct.toStringAsFixed(1).replaceAll('.', ',')} %';
+  String get btPercentageStr => '${btPct.toStringAsFixed(1).replaceAll('.', ',')} %';
 }
 
 /// Modèle d'item d'analyse par famille de risque
