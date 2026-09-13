@@ -9,9 +9,21 @@ import 'package:inspec_app/services/statistics/domain_entity_instance.dart';
 /// Composants de graphiques vectoriels haute fidélité pour la section « Analyse Statistique ».
 /// Rendu 100 % vectoriel, déterministe et conforme au document de référence KES.
 class PdfStatisticsCharts {
-  static pw.Font get fontRegular => pw.Font.helvetica();
-  static pw.Font get fontBold => pw.Font.helveticaBold();
+  static pw.Font get fontRegular => PdfReportStyles.fontRegular;
+  static set fontRegular(pw.Font font) => PdfReportStyles.fontRegular = font;
+
+  static pw.Font get fontBold => PdfReportStyles.fontBold;
+  static set fontBold(pw.Font font) => PdfReportStyles.fontBold = font;
+  // Couleurs harmonisées selon la charte KES
+  static final PdfColor colorNavy = PdfColor.fromHex('#1B365D');
+  static final PdfColor colorBlueMT = PdfColor.fromHex('#4A7BB0');
+  static final PdfColor colorCritique = PdfColor.fromHex('#A91D22');
+  static final PdfColor colorMajeure = PdfColor.fromHex('#D35400');
+  static final PdfColor colorPresent = PdfColor.fromHex('#2E7D32');
+  static final PdfColor colorAbsent = PdfColor.fromHex('#A91D22');
+  static final PdfColor colorSansParafoudre = PdfColor.fromHex('#7E909A');
   static final PdfColor textGrey = PdfColor.fromHex('#64748B');
+  static final PdfColor axisBlack = PdfColors.black;
 
   // ──────────────────────────────────────────────────────────────────────────
   // 1. DIAGRAMME HORIZONTAL : RÉPARTITION PAR DOMAINE DE TENSION
@@ -19,13 +31,13 @@ class PdfStatisticsCharts {
   static pw.Widget buildTensionDomainChart(int btCount, int mtCount) {
     final total = btCount + mtCount;
     final maxVal = math.max(math.max(btCount, mtCount), 1);
-    // Arrondi supérieur à un pas propre (50)
     final axisMax = ((maxVal / 50).ceil() * 50).clamp(50, 500);
 
-    const chartWidth = 420.0;
-    const barHeight = 24.0;
-    const labelWidth = 120.0;
-    const plotWidth = chartWidth - labelWidth - 40.0;
+    const barHeight = 22.0;
+    const barSlotHeight = 36.0;
+    const labelWidth = 115.0;
+    const plotWidth = 270.0;
+    const chartInnerWidth = labelWidth + 1 + plotWidth + 45.0;
 
     final btWidth = (btCount / axisMax) * plotWidth;
     final mtWidth = (mtCount / axisMax) * plotWidth;
@@ -46,107 +58,134 @@ class PdfStatisticsCharts {
             style: pw.TextStyle(font: fontBold, fontSize: 10, color: PdfReportStyles.headerColor),
           ),
           pw.SizedBox(height: 10),
-          // Barre Basse Tension
-          pw.Row(
-            crossAxisAlignment: pw.CrossAxisAlignment.center,
-            children: [
-              pw.SizedBox(
-                width: labelWidth,
-                child: pw.Text(
-                  'Basse tension\n(BT)',
-                  textAlign: pw.TextAlign.right,
-                  style: pw.TextStyle(font: fontBold, fontSize: 8.5, color: PdfReportStyles.darkGrey),
-                ),
-              ),
-              pw.SizedBox(width: 8),
-              pw.Container(
-                height: 38,
-                decoration: const pw.BoxDecoration(
-                  border: pw.Border(left: pw.BorderSide(color: PdfColors.black, width: 1)),
-                ),
-                padding: const pw.EdgeInsets.symmetric(vertical: 6),
-                child: pw.Row(
-                  children: [
-                    pw.Container(
-                      width: btWidth.clamp(2.0, plotWidth),
-                      height: barHeight,
-                      color: PdfColor.fromHex('#0B192C'),
-                    ),
-                    pw.SizedBox(width: 6),
-                    pw.Text(
-                      '$btCount',
-                      style: pw.TextStyle(font: fontBold, fontSize: 9, color: PdfReportStyles.headerColor),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          pw.SizedBox(height: 6),
-          // Barre Moyenne Tension
-          pw.Row(
-            crossAxisAlignment: pw.CrossAxisAlignment.center,
-            children: [
-              pw.SizedBox(
-                width: labelWidth,
-                child: pw.Text(
-                  'Moyenne tension\n(MT/HTA)',
-                  textAlign: pw.TextAlign.right,
-                  style: pw.TextStyle(font: fontBold, fontSize: 8.5, color: PdfReportStyles.darkGrey),
-                ),
-              ),
-              pw.SizedBox(width: 8),
-              pw.Container(
-                height: 38,
-                decoration: const pw.BoxDecoration(
-                  border: pw.Border(left: pw.BorderSide(color: PdfColors.black, width: 1)),
-                ),
-                padding: const pw.EdgeInsets.symmetric(vertical: 6),
-                child: pw.Row(
-                  children: [
-                    pw.Container(
-                      width: mtWidth.clamp(2.0, plotWidth),
-                      height: barHeight,
-                      color: PdfColor.fromHex('#4A7BB0'),
-                    ),
-                    pw.SizedBox(width: 6),
-                    pw.Text(
-                      '$mtCount',
-                      style: pw.TextStyle(font: fontBold, fontSize: 9, color: PdfReportStyles.headerColor),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          // Axe des X
-          pw.Padding(
-            padding: const pw.EdgeInsets.only(left: labelWidth + 8),
+          pw.Container(
+            width: chartInnerWidth,
             child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                pw.Container(
-                  width: plotWidth + 30,
-                  height: 1,
-                  color: PdfColors.black,
-                ),
-                pw.SizedBox(height: 2),
-                pw.Container(
-                  width: plotWidth + 30,
-                  child: pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                    children: List.generate(
-                      (axisMax ~/ 50) + 1,
-                      (i) => pw.Text(
-                        '${i * 50}',
-                        style: pw.TextStyle(font: fontRegular, fontSize: 7, color: textGrey),
+                pw.Row(
+                  crossAxisAlignment: pw.CrossAxisAlignment.end,
+                  children: [
+                    // Colonne des libellés à gauche
+                    pw.SizedBox(
+                      width: labelWidth,
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.end,
+                        children: [
+                          pw.Container(
+                            height: barSlotHeight,
+                            alignment: pw.Alignment.centerRight,
+                            padding: const pw.EdgeInsets.only(right: 8),
+                            child: pw.Text(
+                              'Basse tension\n(BT)',
+                              textAlign: pw.TextAlign.right,
+                              style: pw.TextStyle(font: fontBold, fontSize: 8.5, color: PdfReportStyles.darkGrey),
+                            ),
+                          ),
+                          pw.SizedBox(height: 6),
+                          pw.Container(
+                            height: barSlotHeight,
+                            alignment: pw.Alignment.centerRight,
+                            padding: const pw.EdgeInsets.only(right: 8),
+                            child: pw.Text(
+                              'Moyenne tension\n(MT/HTA)',
+                              textAlign: pw.TextAlign.right,
+                              style: pw.TextStyle(font: fontBold, fontSize: 8.5, color: PdfReportStyles.darkGrey),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ),
+                    // Axe Y continu
+                    pw.Container(
+                      width: 1,
+                      height: barSlotHeight * 2 + 6,
+                      color: axisBlack,
+                    ),
+                    // Barres de données
+                    pw.SizedBox(
+                      width: plotWidth + 44,
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Container(
+                            height: barSlotHeight,
+                            alignment: pw.Alignment.centerLeft,
+                            child: pw.Row(
+                              children: [
+                                pw.Container(
+                                  width: btWidth.clamp(2.0, plotWidth),
+                                  height: barHeight,
+                                  color: colorNavy,
+                                ),
+                                pw.SizedBox(width: 6),
+                                pw.Text(
+                                  '$btCount',
+                                  style: pw.TextStyle(font: fontBold, fontSize: 9, color: PdfReportStyles.headerColor),
+                                ),
+                              ],
+                            ),
+                          ),
+                          pw.SizedBox(height: 6),
+                          pw.Container(
+                            height: barSlotHeight,
+                            alignment: pw.Alignment.centerLeft,
+                            child: pw.Row(
+                              children: [
+                                pw.Container(
+                                  width: mtWidth.clamp(2.0, plotWidth),
+                                  height: barHeight,
+                                  color: colorBlueMT,
+                                ),
+                                pw.SizedBox(width: 6),
+                                pw.Text(
+                                  '$mtCount',
+                                  style: pw.TextStyle(font: fontBold, fontSize: 9, color: PdfReportStyles.headerColor),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                pw.SizedBox(height: 2),
-                pw.Text(
-                  'Nombre de non-conformités (Total : $total)',
-                  style: pw.TextStyle(font: fontRegular, fontSize: 7.5, color: PdfReportStyles.darkGrey),
+                // Axe X parfaitement calé sur l'axe Y
+                pw.Padding(
+                  padding: const pw.EdgeInsets.only(left: labelWidth),
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Container(
+                        width: plotWidth + 1,
+                        height: 1,
+                        color: axisBlack,
+                      ),
+                      pw.SizedBox(height: 2),
+                      pw.SizedBox(
+                        width: plotWidth,
+                        child: pw.Row(
+                          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                          children: List.generate(
+                            (axisMax ~/ 50) + 1,
+                            (i) => pw.Text(
+                              '${i * 50}',
+                              style: pw.TextStyle(font: fontRegular, fontSize: 7, color: textGrey),
+                            ),
+                          ),
+                        ),
+                      ),
+                      pw.SizedBox(height: 2),
+                      pw.Container(
+                        width: plotWidth,
+                        alignment: pw.Alignment.center,
+                        child: pw.Text(
+                          'Nombre de non-conformités (Total : $total)',
+                          style: pw.TextStyle(font: fontRegular, fontSize: 7.5, color: PdfReportStyles.darkGrey),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -157,23 +196,14 @@ class PdfStatisticsCharts {
   }
 
   // ──────────────────────────────────────────────────────────────────────────
-  // 2. DIAGRAMME EN BARRES EMPIILÉES : NON-CONFORMITÉS PAR CATÉGORIE
+  // 2.1 DIAGRAMME EN BARRES EMPIILÉES : NON-CONFORMITÉS MOYENNE TENSION (MT)
   // ──────────────────────────────────────────────────────────────────────────
-  static pw.Widget buildEquipmentCategoryStackedBarChart(
-    List<CategoryCrossAuditRow> mtRows,
-    List<CategoryCrossAuditRow> btRows,
-  ) {
-    // Agréger et trier par total NC décroissant
-    final allRows = <CategoryCrossAuditRow>[...mtRows, ...btRows];
-    allRows.sort((a, b) => b.ncCount.compareTo(a.ncCount));
+  static pw.Widget buildMtCategoryStackedBarChart(List<CategoryCrossAuditRow> mtRows) {
+    if (mtRows.isEmpty) return pw.SizedBox();
 
-    // Prendre les catégories avec NC > 0 ou au moins les 9 premières
-    final displayRows = allRows.take(9).toList();
-    if (displayRows.isEmpty) return pw.SizedBox();
-
-    final maxVal = displayRows.first.ncCount;
-    final axisMax = ((maxVal / 25).ceil() * 25).clamp(25, 250);
-    const plotHeight = 110.0;
+    final maxVal = mtRows.fold<int>(0, (m, r) => math.max(m, r.ncCount));
+    final axisMax = ((maxVal / 10).ceil() * 10).clamp(10, 150);
+    const plotHeight = 100.0;
 
     return pw.Container(
       margin: const pw.EdgeInsets.symmetric(vertical: 6),
@@ -190,16 +220,144 @@ class PdfStatisticsCharts {
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
               pw.Text(
-                'Non-conformités par catégorie d\'installation / d\'équipement',
+                'Non-conformités par catégorie - Moyenne Tension (MT)',
                 style: pw.TextStyle(font: fontBold, fontSize: 9.5, color: PdfReportStyles.headerColor),
               ),
               pw.Row(
                 children: [
-                  pw.Container(width: 8, height: 8, color: PdfColor.fromHex('#B71C1C')),
+                  pw.Container(width: 8, height: 8, color: colorCritique),
                   pw.SizedBox(width: 3),
                   pw.Text('Critique', style: pw.TextStyle(font: fontRegular, fontSize: 7.5)),
                   pw.SizedBox(width: 8),
-                  pw.Container(width: 8, height: 8, color: PdfColor.fromHex('#D97706')),
+                  pw.Container(width: 8, height: 8, color: colorMajeure),
+                  pw.SizedBox(width: 3),
+                  pw.Text('Majeure', style: pw.TextStyle(font: fontRegular, fontSize: 7.5)),
+                ],
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 8),
+          pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.end,
+            children: [
+              // Axe Y
+              pw.Container(
+                height: plotHeight,
+                child: pw.Column(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: pw.CrossAxisAlignment.end,
+                  children: [
+                    pw.Text('$axisMax', style: pw.TextStyle(font: fontRegular, fontSize: 7, color: textGrey)),
+                    pw.Text('${(axisMax * 0.5).round()}', style: pw.TextStyle(font: fontRegular, fontSize: 7, color: textGrey)),
+                    pw.Text('0', style: pw.TextStyle(font: fontRegular, fontSize: 7, color: textGrey)),
+                  ],
+                ),
+              ),
+              pw.SizedBox(width: 4),
+              pw.Container(width: 1, height: plotHeight, color: axisBlack),
+              pw.SizedBox(width: 6),
+              // Barres des catégories MT
+              pw.Expanded(
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
+                  crossAxisAlignment: pw.CrossAxisAlignment.end,
+                  children: mtRows.map((cat) {
+                    final critH = axisMax > 0 ? (cat.critiquesCount / axisMax) * plotHeight : 0.0;
+                    final majCount = math.max(0, cat.ncCount - cat.critiquesCount);
+                    final majH = axisMax > 0 ? (majCount / axisMax) * plotHeight : 0.0;
+
+                    return pw.Column(
+                      mainAxisAlignment: pw.MainAxisAlignment.end,
+                      children: [
+                        pw.Text(
+                          '${cat.ncCount}',
+                          style: pw.TextStyle(font: fontBold, fontSize: 7.5, color: PdfReportStyles.darkGrey),
+                        ),
+                        pw.SizedBox(height: 2),
+                        pw.Container(
+                          width: 38,
+                          child: pw.Column(
+                            children: [
+                              if (majH > 0)
+                                pw.Container(
+                                  width: 38,
+                                  height: majH,
+                                  color: colorMajeure,
+                                ),
+                              if (critH > 0)
+                                pw.Container(
+                                  width: 38,
+                                  height: critH,
+                                  color: colorCritique,
+                                ),
+                              if (majH == 0 && critH == 0)
+                                pw.Container(width: 38, height: 1, color: PdfColors.grey),
+                            ],
+                          ),
+                        ),
+                        pw.Container(width: 50, height: 1, color: axisBlack),
+                        pw.SizedBox(height: 3),
+                        pw.SizedBox(
+                          width: 65,
+                          child: pw.Text(
+                            _formatShortCategoryName(cat.categoryName),
+                            textAlign: pw.TextAlign.center,
+                            maxLines: 2,
+                            style: pw.TextStyle(font: fontRegular, fontSize: 6.5, color: PdfReportStyles.darkGrey),
+                          ),
+                        ),
+                      ],
+                    );
+                  }).toList(),
+                ),
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 4),
+          pw.Text(
+            'Nombre de non-conformités par catégorie Moyenne Tension',
+            style: pw.TextStyle(font: fontRegular, fontSize: 7, color: textGrey),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 2.2 DIAGRAMME EN BARRES EMPIILÉES : NON-CONFORMITÉS BASSE TENSION (BT)
+  // ──────────────────────────────────────────────────────────────────────────
+  static pw.Widget buildBtCategoryStackedBarChart(List<CategoryCrossAuditRow> btRows) {
+    if (btRows.isEmpty) return pw.SizedBox();
+
+    final maxVal = btRows.fold<int>(0, (m, r) => math.max(m, r.ncCount));
+    final axisMax = ((maxVal / 25).ceil() * 25).clamp(25, 250);
+    const plotHeight = 100.0;
+
+    return pw.Container(
+      margin: const pw.EdgeInsets.symmetric(vertical: 6),
+      padding: const pw.EdgeInsets.all(8),
+      decoration: pw.BoxDecoration(
+        color: PdfColors.white,
+        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+        border: pw.Border.all(color: PdfReportStyles.borderColor, width: 0.5),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.center,
+        children: [
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text(
+                'Non-conformités par catégorie - Basse Tension (BT)',
+                style: pw.TextStyle(font: fontBold, fontSize: 9.5, color: PdfReportStyles.headerColor),
+              ),
+              pw.Row(
+                children: [
+                  pw.Container(width: 8, height: 8, color: colorCritique),
+                  pw.SizedBox(width: 3),
+                  pw.Text('Critique', style: pw.TextStyle(font: fontRegular, fontSize: 7.5)),
+                  pw.SizedBox(width: 8),
+                  pw.Container(width: 8, height: 8, color: colorMajeure),
                   pw.SizedBox(width: 3),
                   pw.Text('Majeure', style: pw.TextStyle(font: fontRegular, fontSize: 7.5)),
                 ],
@@ -226,15 +384,14 @@ class PdfStatisticsCharts {
                 ),
               ),
               pw.SizedBox(width: 4),
-              // Ligne verticale Y
-              pw.Container(width: 1, height: plotHeight, color: PdfColors.black),
+              pw.Container(width: 1, height: plotHeight, color: axisBlack),
               pw.SizedBox(width: 6),
-              // Barres des catégories
+              // Barres des 7 catégories BT
               pw.Expanded(
                 child: pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
                   crossAxisAlignment: pw.CrossAxisAlignment.end,
-                  children: displayRows.map((cat) {
+                  children: btRows.map((cat) {
                     final critH = axisMax > 0 ? (cat.critiquesCount / axisMax) * plotHeight : 0.0;
                     final majCount = math.max(0, cat.ncCount - cat.critiquesCount);
                     final majH = axisMax > 0 ? (majCount / axisMax) * plotHeight : 0.0;
@@ -247,7 +404,6 @@ class PdfStatisticsCharts {
                           style: pw.TextStyle(font: fontBold, fontSize: 7.5, color: PdfReportStyles.darkGrey),
                         ),
                         pw.SizedBox(height: 2),
-                        // Pile : Majeure en haut, Critique en bas
                         pw.Container(
                           width: 22,
                           child: pw.Column(
@@ -256,23 +412,23 @@ class PdfStatisticsCharts {
                                 pw.Container(
                                   width: 22,
                                   height: majH,
-                                  color: PdfColor.fromHex('#D97706'),
+                                  color: colorMajeure,
                                 ),
                               if (critH > 0)
                                 pw.Container(
                                   width: 22,
                                   height: critH,
-                                  color: PdfColor.fromHex('#B71C1C'),
+                                  color: colorCritique,
                                 ),
                               if (majH == 0 && critH == 0)
                                 pw.Container(width: 22, height: 1, color: PdfColors.grey),
                             ],
                           ),
                         ),
-                        pw.Container(width: 32, height: 1, color: PdfColors.black),
+                        pw.Container(width: 32, height: 1, color: axisBlack),
                         pw.SizedBox(height: 3),
                         pw.SizedBox(
-                          width: 42,
+                          width: 44,
                           child: pw.Text(
                             _formatShortCategoryName(cat.categoryName),
                             textAlign: pw.TextAlign.center,
@@ -289,12 +445,20 @@ class PdfStatisticsCharts {
           ),
           pw.SizedBox(height: 4),
           pw.Text(
-            'Nombre de non-conformités par catégorie',
+            'Nombre de non-conformités par catégorie Basse Tension',
             style: pw.TextStyle(font: fontRegular, fontSize: 7, color: textGrey),
           ),
         ],
       ),
     );
+  }
+
+  // Conservé pour rétrocompatibilité
+  static pw.Widget buildEquipmentCategoryStackedBarChart(
+    List<CategoryCrossAuditRow> mtRows,
+    List<CategoryCrossAuditRow> btRows,
+  ) {
+    return buildBtCategoryStackedBarChart(btRows);
   }
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -339,11 +503,11 @@ class PdfStatisticsCharts {
               ),
               pw.Row(
                 children: [
-                  pw.Container(width: 8, height: 8, color: PdfColor.fromHex('#2E7D32')),
+                  pw.Container(width: 8, height: 8, color: colorPresent),
                   pw.SizedBox(width: 3),
                   pw.Text('Source identifiée', style: pw.TextStyle(font: fontRegular, fontSize: 7.5)),
                   pw.SizedBox(width: 8),
-                  pw.Container(width: 8, height: 8, color: PdfColor.fromHex('#B71C1C')),
+                  pw.Container(width: 8, height: 8, color: colorAbsent),
                   pw.SizedBox(width: 3),
                   pw.Text('Source non identifiée', style: pw.TextStyle(font: fontRegular, fontSize: 7.5)),
                 ],
@@ -368,7 +532,7 @@ class PdfStatisticsCharts {
                 ),
               ),
               pw.SizedBox(width: 4),
-              pw.Container(width: 1, height: plotHeight, color: PdfColors.black),
+              pw.Container(width: 1, height: plotHeight, color: axisBlack),
               pw.SizedBox(width: 12),
               // Barres
               pw.Expanded(
@@ -390,7 +554,7 @@ class PdfStatisticsCharts {
                                 pw.Container(
                                   width: 46,
                                   height: nonIdentH,
-                                  color: PdfColor.fromHex('#B71C1C'),
+                                  color: colorAbsent,
                                   alignment: pw.Alignment.center,
                                   child: cat.$4 > 0 && nonIdentH > 10
                                       ? pw.Text('${cat.$4}', style: pw.TextStyle(font: fontBold, fontSize: 7.5, color: PdfColors.white))
@@ -400,7 +564,7 @@ class PdfStatisticsCharts {
                                 pw.Container(
                                   width: 46,
                                   height: identH,
-                                  color: PdfColor.fromHex('#2E7D32'),
+                                  color: colorPresent,
                                   alignment: pw.Alignment.center,
                                   child: cat.$3 > 0 && identH > 10
                                       ? pw.Text('${cat.$3}', style: pw.TextStyle(font: fontBold, fontSize: 7.5, color: PdfColors.white))
@@ -409,7 +573,7 @@ class PdfStatisticsCharts {
                             ],
                           ),
                         ),
-                        pw.Container(width: 60, height: 1, color: PdfColors.black),
+                        pw.Container(width: 60, height: 1, color: axisBlack),
                         pw.SizedBox(height: 4),
                         pw.Text(
                           '${cat.$1}\n(n=${cat.$2})',
@@ -443,8 +607,8 @@ class PdfStatisticsCharts {
     final absentPct = total > 0 ? (absent / total * 100.0) : 0.0;
 
     return pw.Container(
-      margin: const pw.EdgeInsets.symmetric(vertical: 6),
-      padding: const pw.EdgeInsets.all(8),
+      margin: const pw.EdgeInsets.symmetric(vertical: 4),
+      padding: const pw.EdgeInsets.all(6),
       decoration: pw.BoxDecoration(
         color: PdfColors.white,
         borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
@@ -456,7 +620,7 @@ class PdfStatisticsCharts {
             'Disjoncteur de tête (Armoires + Coffrets, n=$total)',
             style: pw.TextStyle(font: fontBold, fontSize: 9.5, color: PdfReportStyles.headerColor),
           ),
-          pw.SizedBox(height: 10),
+          pw.SizedBox(height: 8),
           pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.center,
             crossAxisAlignment: pw.CrossAxisAlignment.center,
@@ -465,18 +629,18 @@ class PdfStatisticsCharts {
               pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.end,
                 children: [
-                  pw.Text('Présent', style: pw.TextStyle(font: fontBold, fontSize: 8.5, color: PdfColor.fromHex('#2E7D32'))),
+                  pw.Text('Présent', style: pw.TextStyle(font: fontBold, fontSize: 8.5, color: colorPresent)),
                   pw.Text('${presentPct.toStringAsFixed(0)} % ($present)', style: pw.TextStyle(font: fontBold, fontSize: 9, color: PdfReportStyles.darkGrey)),
                 ],
               ),
               pw.SizedBox(width: 14),
-              // Cercle graphique vectoriel
+              // Cercle graphique vectoriel compact
               pw.CustomPaint(
-                size: const PdfPoint(80, 80),
+                size: const PdfPoint(70, 70),
                 painter: (PdfGraphics canvas, PdfPoint size) {
                   final cx = size.x / 2;
                   final cy = size.y / 2;
-                  final r = 36.0;
+                  final r = 32.0;
 
                   // Si total == 0, cercle neutre
                   if (total == 0) {
@@ -490,7 +654,7 @@ class PdfStatisticsCharts {
                   final anglePresent = (present / total) * 2 * math.pi;
 
                   // Portion Présent (Vert)
-                  canvas.setFillColor(PdfColor.fromHex('#2E7D32'));
+                  canvas.setFillColor(colorPresent);
                   canvas.moveTo(cx, cy);
                   for (double a = 0; a <= anglePresent; a += 0.05) {
                     canvas.lineTo(cx + r * math.cos(a), cy + r * math.sin(a));
@@ -500,7 +664,7 @@ class PdfStatisticsCharts {
                   canvas.fillPath();
 
                   // Portion Absent (Rouge)
-                  canvas.setFillColor(PdfColor.fromHex('#B71C1C'));
+                  canvas.setFillColor(colorAbsent);
                   canvas.moveTo(cx, cy);
                   for (double a = anglePresent; a <= 2 * math.pi; a += 0.05) {
                     canvas.lineTo(cx + r * math.cos(a), cy + r * math.sin(a));
@@ -511,7 +675,7 @@ class PdfStatisticsCharts {
 
                   // Trou central Donut (Blanc)
                   canvas.setFillColor(PdfColors.white);
-                  canvas.drawEllipse(cx, cy, 14, 14);
+                  canvas.drawEllipse(cx, cy, 12, 12);
                   canvas.fillPath();
                 },
               ),
@@ -520,7 +684,7 @@ class PdfStatisticsCharts {
               pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
-                  pw.Text('Absent', style: pw.TextStyle(font: fontBold, fontSize: 8.5, color: PdfColor.fromHex('#B71C1C'))),
+                  pw.Text('Absent', style: pw.TextStyle(font: fontBold, fontSize: 8.5, color: colorAbsent)),
                   pw.Text('${absentPct.toStringAsFixed(0)} % ($absent)', style: pw.TextStyle(font: fontBold, fontSize: 9, color: PdfReportStyles.darkGrey)),
                 ],
               ),
@@ -573,11 +737,11 @@ class PdfStatisticsCharts {
               ),
               pw.Row(
                 children: [
-                  pw.Container(width: 8, height: 8, color: PdfColor.fromHex('#2E7D32')),
+                  pw.Container(width: 8, height: 8, color: colorPresent),
                   pw.SizedBox(width: 3),
                   pw.Text('Avec parafoudre', style: pw.TextStyle(font: fontRegular, fontSize: 7.5)),
                   pw.SizedBox(width: 8),
-                  pw.Container(width: 8, height: 8, color: PdfColor.fromHex('#94A3B8')),
+                  pw.Container(width: 8, height: 8, color: colorSansParafoudre),
                   pw.SizedBox(width: 3),
                   pw.Text('Sans parafoudre', style: pw.TextStyle(font: fontRegular, fontSize: 7.5)),
                 ],
@@ -602,7 +766,7 @@ class PdfStatisticsCharts {
                 ),
               ),
               pw.SizedBox(width: 4),
-              pw.Container(width: 1, height: plotHeight, color: PdfColors.black),
+              pw.Container(width: 1, height: plotHeight, color: axisBlack),
               pw.SizedBox(width: 12),
               // Barres
               pw.Expanded(
@@ -624,7 +788,7 @@ class PdfStatisticsCharts {
                                 pw.Container(
                                   width: 46,
                                   height: sansH,
-                                  color: PdfColor.fromHex('#94A3B8'),
+                                  color: colorSansParafoudre,
                                   alignment: pw.Alignment.center,
                                   child: cat.$4 > 0 && sansH > 10
                                       ? pw.Text('${cat.$4}', style: pw.TextStyle(font: fontBold, fontSize: 7.5, color: PdfColors.white))
@@ -634,7 +798,7 @@ class PdfStatisticsCharts {
                                 pw.Container(
                                   width: 46,
                                   height: avecH,
-                                  color: PdfColor.fromHex('#2E7D32'),
+                                  color: colorPresent,
                                   alignment: pw.Alignment.center,
                                   child: cat.$3 > 0 && avecH > 10
                                       ? pw.Text('${cat.$3}', style: pw.TextStyle(font: fontBold, fontSize: 7.5, color: PdfColors.white))
@@ -643,7 +807,7 @@ class PdfStatisticsCharts {
                             ],
                           ),
                         ),
-                        pw.Container(width: 60, height: 1, color: PdfColors.black),
+                        pw.Container(width: 60, height: 1, color: axisBlack),
                         pw.SizedBox(height: 4),
                         pw.Text(
                           '${cat.$1}\n(n=${cat.$2})',
@@ -724,7 +888,7 @@ class PdfStatisticsCharts {
                 ),
               ),
               pw.SizedBox(width: 4),
-              pw.Container(width: 1, height: plotHeight, color: PdfColors.black),
+              pw.Container(width: 1, height: plotHeight, color: axisBlack),
               // Zone de tracé : Barres + Courbe de Pareto avec CustomPaint
               pw.Expanded(
                 child: pw.Stack(
@@ -749,7 +913,7 @@ class PdfStatisticsCharts {
                               pw.Container(
                                 width: barWidth,
                                 height: h.clamp(1.0, plotHeight),
-                                color: PdfColor.fromHex('#1E3E62'),
+                                color: colorNavy,
                               ),
                             ],
                           );
@@ -762,7 +926,7 @@ class PdfStatisticsCharts {
                       painter: (PdfGraphics canvas, PdfPoint size) {
                         // 1. Ligne en pointillés à 80%
                         final y80 = 0.8 * plotHeight;
-                        canvas.setStrokeColor(PdfColor.fromHex('#D32F2F'));
+                        canvas.setStrokeColor(colorCritique);
                         canvas.setLineWidth(0.8);
                         canvas.setLineDashPattern([3, 2]);
                         canvas.drawLine(0, y80, size.x, y80);
@@ -770,7 +934,7 @@ class PdfStatisticsCharts {
                         canvas.setLineDashPattern(); // Reset pointillés
 
                         // 2. Courbe de Pareto cumulative
-                        canvas.setStrokeColor(PdfColor.fromHex('#B71C1C'));
+                        canvas.setStrokeColor(colorCritique);
                         canvas.setLineWidth(1.8);
 
                         final count = top10.length;
@@ -795,7 +959,7 @@ class PdfStatisticsCharts {
                         canvas.strokePath();
 
                         // Points circulaires
-                        canvas.setFillColor(PdfColor.fromHex('#B71C1C'));
+                        canvas.setFillColor(colorCritique);
                         for (final p in points) {
                           canvas.drawEllipse(p.x, p.y, 2.5, 2.5);
                           canvas.fillPath();
@@ -808,14 +972,14 @@ class PdfStatisticsCharts {
                       right: 12,
                       child: pw.Text(
                         '80 %',
-                        style: pw.TextStyle(font: fontBold, fontSize: 7.5, color: PdfColor.fromHex('#D32F2F')),
+                        style: pw.TextStyle(font: fontBold, fontSize: 7.5, color: colorCritique),
                       ),
                     ),
                   ],
                 ),
               ),
               // Axe Y droit (% cumulé)
-              pw.Container(width: 1, height: plotHeight, color: PdfColors.black),
+              pw.Container(width: 1, height: plotHeight, color: axisBlack),
               pw.SizedBox(width: 4),
               pw.Container(
                 height: plotHeight,
@@ -824,7 +988,7 @@ class PdfStatisticsCharts {
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
                     pw.Text('100', style: pw.TextStyle(font: fontRegular, fontSize: 7, color: textGrey)),
-                    pw.Text('80', style: pw.TextStyle(font: fontBold, fontSize: 7, color: PdfColor.fromHex('#D32F2F'))),
+                    pw.Text('80', style: pw.TextStyle(font: fontBold, fontSize: 7, color: colorCritique)),
                     pw.Text('60', style: pw.TextStyle(font: fontRegular, fontSize: 7, color: textGrey)),
                     pw.Text('40', style: pw.TextStyle(font: fontRegular, fontSize: 7, color: textGrey)),
                     pw.Text('20', style: pw.TextStyle(font: fontRegular, fontSize: 7, color: textGrey)),
@@ -838,7 +1002,7 @@ class PdfStatisticsCharts {
           pw.Container(
             margin: const pw.EdgeInsets.only(left: 20, right: 20),
             height: 1,
-            color: PdfColors.black,
+            color: axisBlack,
           ),
           pw.SizedBox(height: 4),
           // Libellés catégories sous les barres
@@ -877,16 +1041,17 @@ class PdfStatisticsCharts {
   // UTILITAIRES DE FORMATAGE
   // ──────────────────────────────────────────────────────────────────────────
   static String _formatShortCategoryName(String full) {
-    if (full.contains('Armoire')) return 'Armoires';
-    if (full.contains('Coffret')) return 'Coffrets';
-    if (full.contains('Locaux MT') || full.contains('Locaux techniques MT')) return 'Locaux MT';
-    if (full.contains('Locaux GE')) return 'Locaux GE';
-    if (full.contains('Locaux BT') || full.contains('Locaux technique BT')) return 'Locaux BT';
-    if (full.contains('Cellule')) return 'Cellules MT';
-    if (full.contains('Inverseur')) return 'Inverseurs';
-    if (full.contains('Transfo')) return 'Transfo MT/BT';
-    if (full.contains('TGBT')) return 'TGBT';
-    if (full.contains('Prises de terre') || full.contains('Essai')) return 'Prises terre';
+    final upper = full.toUpperCase();
+    if (upper.contains('CELLULE')) return 'Cellules MT';
+    if (upper.contains('TRANSFO')) return 'Transfo MT/BT';
+    if (upper.contains('INVERSEUR')) return 'Inverseurs';
+    if (upper.contains('TGBT')) return 'TGBT';
+    if (upper.contains('ARMOIRE')) return 'Armoires';
+    if (upper.contains('COFFRET')) return 'Coffrets';
+    if (upper.contains('TERRE') || upper.contains('ESSAI')) return 'Prises terre';
+    if (upper.contains('GE') || upper.contains('GROUPE')) return 'Locaux GE';
+    if (upper.contains('BT') || upper.contains('BASSE')) return 'Locaux BT';
+    if (upper.contains('MT') || upper.contains('MOYENNE') || upper.contains('TECHNIQUE')) return 'Locaux MT';
     return full.length > 12 ? '${full.substring(0, 10)}.' : full;
   }
 

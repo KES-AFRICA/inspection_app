@@ -12,8 +12,20 @@ import 'package:inspec_app/services/pdf/builders/pdf_statistics_charts.dart';
 /// Builder responsable de l'Analyse Statistique (indicateurs clés, diagramme Pareto, histogrammes, tableaux de synthèse).
 /// Restitution 100 % conforme au document de référence KES avec calculs dynamiques déterministes.
 class PdfStatisticsBuilder {
-  static pw.Font fontRegular = pw.Font.helvetica();
-  static pw.Font fontBold = pw.Font.helveticaBold();
+  static pw.Font? _fontRegular;
+  static pw.Font? _fontBold;
+
+  static pw.Font get fontRegular => _fontRegular ?? PdfReportStyles.fontRegular;
+  static set fontRegular(pw.Font font) {
+    _fontRegular = font;
+    PdfReportStyles.fontRegular = font;
+  }
+
+  static pw.Font get fontBold => _fontBold ?? PdfReportStyles.fontBold;
+  static set fontBold(pw.Font font) {
+    _fontBold = font;
+    PdfReportStyles.fontBold = font;
+  }
 
   static const double fsH1 = PdfReportStyles.fsH1;
   static const double fsH2 = PdfReportStyles.fsH2;
@@ -97,16 +109,18 @@ class PdfStatisticsBuilder {
         'Moyenne Tension (MT)',
       ),
     );
-    widgets.add(pw.SizedBox(height: 10));
+    widgets.add(pw.SizedBox(height: 6));
 
-    // Diagramme 2 : Non-conformités par catégorie d'installation / d'équipement
+    // Diagramme MT : les catégories MT du tableau
     widgets.add(
-      PdfStatisticsCharts.buildEquipmentCategoryStackedBarChart(
+      PdfStatisticsCharts.buildMtCategoryStackedBarChart(
         technical.mtCategoriesCrossRows,
-        technical.btCategoriesCrossRows,
       ),
     );
     widgets.add(pw.SizedBox(height: 10));
+
+    // Saut de page systématique pour regrouper 2.2 Basse tension et son tableau
+    widgets.add(pw.NewPage());
 
     // 2.2 Basse tension
     widgets.add(
@@ -126,6 +140,14 @@ class PdfStatisticsBuilder {
         technical.btCategoriesCrossRows,
         technical.btTotalCrossRow,
         'Basse Tension (BT)',
+      ),
+    );
+    widgets.add(pw.SizedBox(height: 6));
+
+    // Diagramme BT : les 7 catégories du tableau BT
+    widgets.add(
+      PdfStatisticsCharts.buildBtCategoryStackedBarChart(
+        technical.btCategoriesCrossRows,
       ),
     );
     widgets.add(pw.SizedBox(height: 12));
@@ -166,7 +188,7 @@ class PdfStatisticsBuilder {
     widgets.add(_buildBtSourceTable(technical));
     widgets.add(pw.SizedBox(height: 6));
     widgets.add(PdfStatisticsCharts.buildBtSourceStackedBarChart(technical));
-    widgets.add(pw.SizedBox(height: 10));
+    widgets.add(pw.NewPage());
 
     // 3.2 Présence organe de coupure en tête d'installation
     widgets.add(
@@ -694,47 +716,67 @@ class PdfStatisticsBuilder {
     final top10Sum = top10.fold<int>(0, (sum, e) => sum + e.count);
     final top10Pct = totalOccurrences > 0 ? (top10Sum / totalOccurrences * 100) : 0.0;
 
-    return pw.Table(
-      border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.5),
-      columnWidths: const {
-        0: pw.FlexColumnWidth(0.8),
-        1: pw.FlexColumnWidth(4.8),
-        2: pw.FlexColumnWidth(1.4),
-        3: pw.FlexColumnWidth(1.4),
-        4: pw.FlexColumnWidth(1.6),
-      },
+    return pw.Column(
       children: [
-        pw.TableRow(
-          decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
+        pw.Table(
+          border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.5),
+          columnWidths: const {
+            0: pw.FlexColumnWidth(0.8),
+            1: pw.FlexColumnWidth(4.8),
+            2: pw.FlexColumnWidth(1.4),
+            3: pw.FlexColumnWidth(1.4),
+            4: pw.FlexColumnWidth(1.6),
+          },
           children: [
-            _buildTableHeaderCell('N°'),
-            _buildTableHeaderCell('Catégorie de non-conformité'),
-            _buildTableHeaderCell('Constats'),
-            _buildTableHeaderCell('Part (%)'),
-            _buildTableHeaderCell('Part cumulée (%)'),
+            pw.TableRow(
+              decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
+              children: [
+                _buildTableHeaderCell('N°'),
+                _buildTableHeaderCell('Catégorie de non-conformité'),
+                _buildTableHeaderCell('Constats'),
+                _buildTableHeaderCell('Part (%)'),
+                _buildTableHeaderCell('Part cumulée (%)'),
+              ],
+            ),
+            for (int i = 0; i < top10.length; i++)
+              pw.TableRow(
+                decoration: pw.BoxDecoration(
+                  color: i % 2 == 1 ? PdfReportStyles.tableRowAlt : PdfColors.white,
+                ),
+                children: [
+                  _buildTableCell('${i + 1}', isBold: true),
+                  _buildTableCell(top10[i].title, isBold: false, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
+                  _buildTableCell('${top10[i].count}', isBold: true),
+                  _buildTableCell('${top10[i].percentage.toStringAsFixed(1).replaceAll('.', ',')} %'),
+                  _buildTableCell('${top10[i].cumulativePercentage.toStringAsFixed(1).replaceAll('.', ',')} %', isBold: true),
+                ],
+              ),
           ],
         ),
-        for (int i = 0; i < top10.length; i++)
-          pw.TableRow(
-            decoration: pw.BoxDecoration(
-              color: i % 2 == 1 ? PdfReportStyles.tableRowAlt : PdfColors.white,
-            ),
-            children: [
-              _buildTableCell('${i + 1}', isBold: true),
-              _buildTableCell(top10[i].title, isBold: false, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
-              _buildTableCell('${top10[i].count}', isBold: true),
-              _buildTableCell('${top10[i].percentage.toStringAsFixed(1).replaceAll('.', ',')} %'),
-              _buildTableCell('${top10[i].cumulativePercentage.toStringAsFixed(1).replaceAll('.', ',')} %', isBold: true),
-            ],
+        // Ligne de total avec fusion native des colonnes 0 et 1 (0.8 + 4.8 = 5.6)
+        pw.Table(
+          border: pw.TableBorder(
+            left: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
+            right: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
+            bottom: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
+            verticalInside: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
           ),
-        pw.TableRow(
-          decoration: pw.BoxDecoration(color: PdfReportStyles.lightBlue),
+          columnWidths: const {
+            0: pw.FlexColumnWidth(5.6),
+            1: pw.FlexColumnWidth(1.4),
+            2: pw.FlexColumnWidth(1.4),
+            3: pw.FlexColumnWidth(1.6),
+          },
           children: [
-            _buildTableCell('-', isBold: true),
-            _buildTableCell('TOTAL TOP 10', isBold: true, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
-            _buildTableCell('$top10Sum', isBold: true),
-            _buildTableCell('${top10Pct.toStringAsFixed(1).replaceAll('.', ',')} %', isBold: true),
-            _buildTableCell('${top10Pct.toStringAsFixed(1).replaceAll('.', ',')} %', isBold: true),
+            pw.TableRow(
+              decoration: pw.BoxDecoration(color: PdfReportStyles.lightBlue),
+              children: [
+                _buildTableCell('TOTAL TOP 10', isBold: true, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
+                _buildTableCell('$top10Sum', isBold: true),
+                _buildTableCell('${top10Pct.toStringAsFixed(1).replaceAll('.', ',')} %', isBold: true),
+                _buildTableCell('${top10Pct.toStringAsFixed(1).replaceAll('.', ',')} %', isBold: true),
+              ],
+            ),
           ],
         ),
       ],
@@ -742,24 +784,44 @@ class PdfStatisticsBuilder {
   }
 
   static pw.Widget _buildCalloutBox(String text) {
+    String title = 'Note technique : ';
+    String body = text;
+    if (text.startsWith('Incohérence relevée (récurrente) : ')) {
+      title = 'Incohérence relevée (récurrente) : ';
+      body = text.substring('Incohérence relevée (récurrente) : '.length);
+    }
+
     return pw.Container(
       margin: const pw.EdgeInsets.symmetric(vertical: 6),
       padding: const pw.EdgeInsets.all(8),
       decoration: pw.BoxDecoration(
-        color: PdfColor.fromHex('#FFF8E1'), // Jaune très pâle / warm cream
-        border: pw.Border(
-          left: pw.BorderSide(color: PdfColor.fromHex('#E65100'), width: 3.5),
-        ),
+        color: PdfColor.fromHex('#F8FAFC'),
+        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+        border: pw.Border.all(color: PdfColor.fromHex('#CBD5E1'), width: 0.5),
       ),
-      child: pw.Text(
-        text,
-        style: pw.TextStyle(
-          font: fontRegular,
-          fontSize: fsBody,
-          color: PdfReportStyles.darkGrey,
-          lineSpacing: 1.8,
-        ),
+      child: pw.RichText(
         textAlign: pw.TextAlign.justify,
+        text: pw.TextSpan(
+          children: [
+            pw.TextSpan(
+              text: title,
+              style: pw.TextStyle(
+                font: fontBold,
+                fontSize: fsBody,
+                color: PdfReportStyles.headerColor,
+              ),
+            ),
+            pw.TextSpan(
+              text: body,
+              style: pw.TextStyle(
+                font: fontRegular,
+                fontSize: fsBody,
+                color: PdfReportStyles.darkGrey,
+                lineSpacing: 1.8,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -777,55 +839,52 @@ class PdfStatisticsBuilder {
     final btPctStr = stats.btPct.toStringAsFixed(1).replaceAll('.', ',');
     final total = stats.totalCount;
 
-    // Calculs dynamiques de criticité
-    final mtTotalCrossRow = technical.mtTotalCrossRow;
-    final mtTauxCritStr = mtTotalCrossRow.ncCount > 0
-        ? mtTotalCrossRow.tauxCritiqueStr
-        : '15,0 %';
+    final isBtMajority = stats.btCount >= stats.mtCount;
+    final majDomainName = isBtMajority ? 'La Basse Tension' : 'La Moyenne Tension';
+    final majCount = isBtMajority ? stats.btCount : stats.mtCount;
+    final majPctStr = isBtMajority ? btPctStr : mtPctStr;
+    final minDomainName = isBtMajority ? 'la Moyenne Tension' : 'la Basse Tension';
+    final minCount = isBtMajority ? stats.mtCount : stats.btCount;
+    final minPctStr = isBtMajority ? mtPctStr : btPctStr;
 
-    final geRow = technical.btCategoriesCrossRows.firstWhere(
-      (r) => r.categoryName.toUpperCase().contains('GE') || r.categoryName.toUpperCase().contains('GROUPE'),
-      orElse: () => const CategoryCrossAuditRow(
-        categoryName: 'Locaux techniques GE',
-        equipementsCount: 0,
-        ncCount: 0,
-        critiquesCount: 0,
-        majeuresCount: 0,
-        pctOfTotalNc: 0,
-        tauxCritique: 28.9,
-        densite: 0,
-      ),
-    );
-    final geTauxCritStr = geRow.ncCount > 0 ? geRow.tauxCritiqueStr : '28,9 %';
+    // Catégories prépondérantes du domaine majoritaire
+    final majRows = isBtMajority ? technical.btCategoriesCrossRows : technical.mtCategoriesCrossRows;
+    final sortedMajRows = List<CategoryCrossAuditRow>.from(majRows)
+      ..sort((a, b) => b.ncCount.compareTo(a.ncCount));
+    final topCatNames = sortedMajRows.take(2).map((r) => r.categoryName).join(', ');
 
-    final btLocauxRow = technical.btCategoriesCrossRows.firstWhere(
-      (r) => r.categoryName.toUpperCase().contains('LOCAUX TECHNIQUE BT') || r.categoryName.toUpperCase().contains('LOCAL BT'),
-      orElse: () => const CategoryCrossAuditRow(
-        categoryName: 'Locaux technique BT',
-        equipementsCount: 0,
-        ncCount: 0,
-        critiquesCount: 0,
-        majeuresCount: 0,
-        pctOfTotalNc: 0,
-        tauxCritique: 2.7,
-        densite: 0,
-      ),
-    );
-    final btTauxCritStr = btLocauxRow.ncCount > 0 ? btLocauxRow.tauxCritiqueStr : '2,7 %';
+    // Catégories à sévérité remarquable (taux critique le plus fort et le plus modéré)
+    final allRows = [...technical.mtCategoriesCrossRows, ...technical.btCategoriesCrossRows];
+    final sortedByCrit = List<CategoryCrossAuditRow>.from(allRows.where((r) => r.ncCount >= 5))
+      ..sort((a, b) => b.tauxCritique.compareTo(a.tauxCritique));
+    final highCrit1 = sortedByCrit.isNotEmpty ? sortedByCrit.first : null;
+    final highCrit2 = sortedByCrit.length > 1 ? sortedByCrit[1] : null;
+    final lowCrit = sortedByCrit.isNotEmpty ? sortedByCrit.last : null;
+
+    String severityComparison = '';
+    if (highCrit1 != null && lowCrit != null && highCrit1.categoryName != lowCrit.categoryName) {
+      severityComparison = ' La sévérité par équipement reste néanmoins contrastée : ${highCrit1.categoryName}'
+          '${highCrit2 != null ? " et ${highCrit2.categoryName}" : ""} présentent les taux de criticité les plus élevés '
+          '(${highCrit1.tauxCritiqueStr}${highCrit2 != null ? " et ${highCrit2.tauxCritiqueStr}" : ""}), '
+          'tandis que ${lowCrit.categoryName} affiche un taux de criticité plus modéré (${lowCrit.tauxCritiqueStr}).';
+    }
+
+    final dynamicText = '$majDomainName concentre $majPctStr % des non-conformités ($majCount sur $total), '
+        'contre $minPctStr % pour $minDomainName ($minCount sur $total), ce qui reflète pour l\'essentiel '
+        'le poids du parc d\'équipements (${topCatNames.isNotEmpty ? topCatNames : "équipements principaux"}).'
+        '$severityComparison';
 
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
         PdfReportStyles.subTitle(
-          '${index != null ? "$index. " : ""}Répartition des non conformités par domaine de tension',
+          '${index != null ? "$index. " : ""}Répartition des non-conformités par domaine de tension',
         ),
         pw.SizedBox(height: 6),
         // Diagramme 1 : Répartition par domaine de tension
         PdfStatisticsCharts.buildTensionDomainChart(stats.btCount, stats.mtCount),
         pw.SizedBox(height: 6),
-        PdfReportStyles.bodyText(
-          'La Basse Tension concentre $btPctStr % des non-conformités (${stats.btCount} sur $total), contre $mtPctStr % pour la Moyenne Tension (${stats.mtCount} sur $total), ce qui reflète pour l\'essentiel le poids du parc BT (Armoires, Coffrets) dans l\'installation. La sévérité par équipement reste néanmoins plus marquée côté MT et Groupe Électrogène (taux de criticité $mtTauxCritStr et $geTauxCritStr respectivement, contre $btTauxCritStr pour les Locaux BT).',
-        ),
+        PdfReportStyles.bodyText(dynamicText),
       ],
     );
   }

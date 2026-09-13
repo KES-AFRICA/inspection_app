@@ -742,19 +742,19 @@ class TechnicalEnrichmentEngine {
     final mtTotalEq = mtCatRows.fold(0, (s, r) => s + r.equipementsCount);
     final mtTotalCrit = mtCatRows.fold(0, (s, r) => s + r.critiquesCount);
     final mtTotalMaj = mtCatRows.fold(0, (s, r) => s + r.majeuresCount);
+    final mtTotalNc = mtCatRows.fold(0, (s, r) => s + r.ncCount);
     final mtTotalCrossRow = CategoryCrossAuditRow(
       categoryName: 'TOTAL MOYENNE TENSION',
       equipementsCount: mtTotalEq,
-      ncCount: totalNcMt,
+      ncCount: mtTotalNc,
       critiquesCount: mtTotalCrit,
       majeuresCount: mtTotalMaj,
-      pctOfTotalNc: totalMissionNc > 0 ? (totalNcMt / totalMissionNc) * 100.0 : 0.0,
-      tauxCritique: totalNcMt > 0 ? (mtTotalCrit / totalNcMt) * 100.0 : 0.0,
-      densite: mtTotalEq > 0 ? (totalNcMt / mtTotalEq) : 0.0,
+      pctOfTotalNc: totalMissionNc > 0 ? (mtTotalNc / totalMissionNc) * 100.0 : 0.0,
+      tauxCritique: mtTotalNc > 0 ? (mtTotalCrit / mtTotalNc) * 100.0 : 0.0,
+      densite: mtTotalEq > 0 ? (mtTotalNc / mtTotalEq) : 0.0,
     );
 
     // 9. Lignes de conformité croisée par catégorie pour Basse Tension
-    final totalNcBt = findingInventory.findings.where((f) => f.tensionDomain == TensionDomain.bt).length;
     final btCatRows = <CategoryCrossAuditRow>[];
 
     btCatRows.add(
@@ -810,15 +810,16 @@ class TechnicalEnrichmentEngine {
     final btTotalEq = btCatRows.fold(0, (s, r) => s + r.equipementsCount);
     final btTotalCrit = btCatRows.fold(0, (s, r) => s + r.critiquesCount);
     final btTotalMaj = btCatRows.fold(0, (s, r) => s + r.majeuresCount);
+    final btTotalNc = btCatRows.fold(0, (s, r) => s + r.ncCount);
     final btTotalCrossRow = CategoryCrossAuditRow(
       categoryName: 'TOTAL BASSE TENSION',
       equipementsCount: btTotalEq,
-      ncCount: totalNcBt,
+      ncCount: btTotalNc,
       critiquesCount: btTotalCrit,
       majeuresCount: btTotalMaj,
-      pctOfTotalNc: totalMissionNc > 0 ? (totalNcBt / totalMissionNc) * 100.0 : 0.0,
-      tauxCritique: totalNcBt > 0 ? (btTotalCrit / totalNcBt) * 100.0 : 0.0,
-      densite: btTotalEq > 0 ? (totalNcBt / btTotalEq) : 0.0,
+      pctOfTotalNc: totalMissionNc > 0 ? (btTotalNc / totalMissionNc) * 100.0 : 0.0,
+      tauxCritique: btTotalNc > 0 ? (btTotalCrit / btTotalNc) * 100.0 : 0.0,
+      densite: btTotalEq > 0 ? (btTotalNc / btTotalEq) : 0.0,
     );
 
     return TechnicalEnrichmentResult(

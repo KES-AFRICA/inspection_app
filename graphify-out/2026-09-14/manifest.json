@@ -1806,9 +1806,9 @@
     "semantic_hash": ""
   },
   "lib/services/pdf/builders/pdf_statistics_builder.dart": {
-    "mtime": 1789340338.9512188,
-    "seen": 1789340422.3030808,
-    "ast_hash": "61ad49ef3ca547d59dc5f646804d5c43",
+    "mtime": 1789339805.5125902,
+    "seen": 1789340103.6906822,
+    "ast_hash": "187fc95d965e61fe85ce21f4c4a0b513",
     "semantic_hash": ""
   },
   "lib/services/pdf/pdf_chunk_merger.dart": {
@@ -1854,8 +1854,8 @@
     "semantic_hash": ""
   },
   "lib/services/pdf/pdf_report_service.dart": {
-    "mtime": 1789340203.0562668,
-    "seen": 1789340422.3031018,
+    "mtime": 1788968145.9651675,
+    "seen": 1789001553.0022423,
     "ast_hash": "b87562d9092b5bffd03e3fca57506442",
     "semantic_hash": ""
   },
@@ -3222,15 +3222,15 @@
     "semantic_hash": ""
   },
   "pdf_exec_summary_fixed.pdf": {
-    "mtime": 1789340379.5294845,
-    "seen": 1789340422.3034713,
-    "ast_hash": "30426e98dadd405d85daa0d60eff1f14",
+    "mtime": 1789340060.6145566,
+    "seen": 1789340103.6909587,
+    "ast_hash": "97fabe56d1dadb2a4666ff3b391f643e",
     "semantic_hash": ""
   },
   "lib/services/pdf/builders/pdf_statistics_charts.dart": {
-    "mtime": 1789340366.3012035,
-    "seen": 1789340422.3030849,
-    "ast_hash": "c7c99a5971302b65fa37fb93ee76c35e",
+    "mtime": 1789339966.8663812,
+    "seen": 1789340103.6906846,
+    "ast_hash": "6899296c02b65bfb008325e048f19341",
     "semantic_hash": ""
   },
   "test/pdf_statistics_test.dart": {
@@ -3240,9 +3240,9 @@
     "semantic_hash": ""
   },
   "scratch/test_statistics_full_output.pdf": {
-    "mtime": 1789340379.4368615,
-    "seen": 1789340422.3034735,
-    "ast_hash": "e7dec63083f942616f6c388bbb63af3b",
+    "mtime": 1789340010.9075603,
+    "seen": 1789340103.6909602,
+    "ast_hash": "3d60d739c753479b29564785e4ef855e",
     "semantic_hash": ""
   },
   "scratch/test_statistics_output.pdf": {

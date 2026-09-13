@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:inspec_app/models/mission.dart';
+import 'package:inspec_app/services/pdf/pdf_report_styles.dart';
 import 'package:inspec_app/services/pdf/builders/pdf_statistics_builder.dart';
 import 'package:inspec_app/services/pdf/builders/pdf_statistics_charts.dart';
 import 'package:inspec_app/services/statistics/audit_finding.dart';
@@ -10,7 +11,18 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 void main() {
-  test('Verify PdfStatisticsBuilder and all 6 Charts generate PDF cleanly', () async {
+  setUpAll(() {
+    final regularFile = File('assets/fonts/Roboto-Regular.ttf');
+    final boldFile = File('assets/fonts/Roboto-Bold.ttf');
+    if (regularFile.existsSync() && boldFile.existsSync()) {
+      final regularData = regularFile.readAsBytesSync();
+      final boldData = boldFile.readAsBytesSync();
+      PdfReportStyles.fontRegular = pw.Font.ttf(regularData.buffer.asByteData());
+      PdfReportStyles.fontBold = pw.Font.ttf(boldData.buffer.asByteData());
+    }
+  });
+
+  test('Verify PdfStatisticsBuilder and all Charts generate PDF cleanly', () async {
     final mission = Mission(
       id: 'M-STAT-TEST-001',
       nomClient: 'CIMENCAM - FIGUIL',
@@ -36,7 +48,7 @@ void main() {
       ),
     );
 
-    // 2. Page dédiée validant les 6 graphiques avec les données exactes du document de référence
+    // 2. Page dédiée validant les graphiques avec les données exactes du document de référence
     final mtRows = [
       const CategoryCrossAuditRow(categoryName: 'Locaux MT', equipementsCount: 16, ncCount: 127, critiquesCount: 19, majeuresCount: 108, pctOfTotalNc: 25.6, tauxCritique: 15.0, densite: 7.9),
       const CategoryCrossAuditRow(categoryName: 'Cellules MT', equipementsCount: 29, ncCount: 23, critiquesCount: 0, majeuresCount: 23, pctOfTotalNc: 4.6, tauxCritique: 0.0, densite: 0.8),
@@ -116,11 +128,13 @@ void main() {
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(1.5 * 28.35),
         build: (ctx) => [
-          pw.Header(level: 1, text: 'VALIDATION DES 6 GRAPHIQUES DE REFERENCE'),
+          pw.Header(level: 1, text: 'VALIDATION DES GRAPHIQUES DE REFERENCE'),
           pw.SizedBox(height: 10),
           PdfStatisticsCharts.buildTensionDomainChart(321, 175),
           pw.SizedBox(height: 10),
-          PdfStatisticsCharts.buildEquipmentCategoryStackedBarChart(mtRows, btRows),
+          PdfStatisticsCharts.buildMtCategoryStackedBarChart(mtRows),
+          pw.SizedBox(height: 10),
+          PdfStatisticsCharts.buildBtCategoryStackedBarChart(btRows),
           pw.SizedBox(height: 10),
           PdfStatisticsCharts.buildBtSourceStackedBarChart(technicalMock),
           pw.SizedBox(height: 10),

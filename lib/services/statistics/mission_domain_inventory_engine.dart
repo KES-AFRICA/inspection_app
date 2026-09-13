@@ -23,11 +23,8 @@ class MissionDomainInventory {
     required this.allFindings,
   });
 
-  /// Non-conformités pertinentes pour l'ensemble du Résumé Exécutif.
-  List<AuditFinding> get pertinentFindings {
-    final list = allFindings.where((f) => f.hasValidNormativeReference).toList();
-    return list.isNotEmpty ? list : allFindings;
-  }
+  /// Non-conformités exhaustives pour l'ensemble du Résumé Exécutif et des Analyses Statistiques.
+  List<AuditFinding> get pertinentFindings => allFindings;
 
   /// Retourne toutes les instances d'une catégorie donnée.
   List<DomainEntityInstance> getInstancesByCategory(DomainObjectType cat) {
@@ -51,7 +48,7 @@ class MissionDomainInventory {
       totalPoints += inst.totalCheckpoints;
       compliant += inst.compliantCheckpoints;
       if (inst.findings.isNotEmpty) {
-        final instPertinentFindings = inst.findings.where((f) => f.hasValidNormativeReference).toList();
+        final instPertinentFindings = inst.findings;
         nonCompliant += instPertinentFindings.length;
         critique += instPertinentFindings.where((f) => f.criticality == 'Critique').length;
         majeure += instPertinentFindings.where((f) => f.criticality == 'Majeure').length;
@@ -189,9 +186,24 @@ class MissionDomainInventory {
     final sortedEntries = counts.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
 
-    double runningCumul = 0.0;
+    // Calcul dynamique de k80 sur la totalité des catégories de défauts
     int paretoK = 0;
     double paretoCumulPct = 0.0;
+    double runningAll = 0.0;
+    for (int i = 0; i < sortedEntries.length; i++) {
+      final p = total > 0 ? (sortedEntries[i].value / total) * 100.0 : 0.0;
+      runningAll += p;
+      if (paretoK == 0 && (runningAll >= 80.0 || i == sortedEntries.length - 1)) {
+        paretoK = i + 1;
+        paretoCumulPct = runningAll;
+      }
+    }
+    if (paretoK == 0 && sortedEntries.isNotEmpty) {
+      paretoK = sortedEntries.length;
+      paretoCumulPct = runningAll;
+    }
+
+    double runningCumul = 0.0;
     final topList = <TopDefectItem>[];
 
     for (int i = 0; i < sortedEntries.length && i < limit; i++) {
@@ -199,22 +211,12 @@ class MissionDomainInventory {
       final pct = total > 0 ? (entry.value / total) * 100.0 : 0.0;
       runningCumul += pct;
 
-      if (paretoK == 0 && (runningCumul >= 80.0 || i == sortedEntries.length - 1)) {
-        paretoK = i + 1;
-        paretoCumulPct = runningCumul;
-      }
-
       topList.add(TopDefectItem(
         title: entry.key,
         count: entry.value,
         percentage: pct,
         cumulativePercentage: runningCumul,
       ));
-    }
-
-    if (paretoK == 0 && sortedEntries.isNotEmpty) {
-      paretoK = sortedEntries.length;
-      paretoCumulPct = runningCumul;
     }
 
     final totalDistinctCategories = counts.length;
@@ -521,7 +523,7 @@ class MissionDomainInventoryEngine {
             originNom: 'Zone MT "${zone.nom}"',
             parentZone: zone.nom,
             parentLocal: null,
-            defaultTensionDomain: TensionDomain.mt,
+            defaultTensionDomain: TensionDomain.bt,
             instances: instances,
             addFinding: addFinding,
             visitedCoffrets: visitedCoffrets,
@@ -813,7 +815,7 @@ class MissionDomainInventoryEngine {
         originNom: originNom,
         parentZone: parentZone,
         parentLocal: local.nom,
-        defaultTensionDomain: TensionDomain.mt,
+        defaultTensionDomain: TensionDomain.bt,
         instances: instances,
         addFinding: addFinding,
         visitedCoffrets: visitedCoffrets,

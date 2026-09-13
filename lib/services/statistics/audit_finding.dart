@@ -326,11 +326,8 @@ class AuditFindingInventory {
     List<CategoryCrossItem>? crossCategoryItems,
   }) : crossCategoryItems = crossCategoryItems ?? [];
 
-  /// Non-conformités pertinentes disposant d'une référence normative valide.
-  List<AuditFinding> get pertinentFindings {
-    final list = findings.where((f) => f.hasValidNormativeReference).toList();
-    return list.isNotEmpty ? list : findings;
-  }
+  /// Non-conformités exhaustives pour l'ensemble du Résumé Exécutif et des Analyses Statistiques.
+  List<AuditFinding> get pertinentFindings => findings;
 
   int get totalFindings => pertinentFindings.length;
   int get totalEquipments => crossCategoryItems.fold<int>(0, (sum, e) => sum + e.equipmentCount);
