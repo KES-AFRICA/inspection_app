@@ -218,8 +218,12 @@ class MissionDomainInventory {
     }
 
     final totalDistinctCategories = counts.length;
+    final top10Sum = topList.take(10).fold(0, (s, e) => s + e.count);
+    final top10Pct = total > 0 ? (top10Sum / total * 100) : 0.0;
+    final top10Length = topList.take(10).length;
+
     final summary = total > 0
-        ? 'L\'analyse porte sur l\'intégralité des $total non-conformités relevées sur le site, regroupées sous $totalDistinctCategories catégories de défauts normalisées. Les $paretoK premières catégories concentrent à elles seules ${paretoCumulPct.toStringAsFixed(1).replaceAll('.', ',')} % du total des défaillances (seuil de 80 %).'
+        ? 'L\'analyse porte sur l\'intégralité des $total non-conformités relevées sur le site, regroupées sous $totalDistinctCategories catégories de défauts normalisées. Les $top10Length catégories principales concentrent $top10Sum occurrences, soit ${top10Pct.toStringAsFixed(1).replaceAll('.', ',')} % du total des défaillances. Par ailleurs, les $paretoK premières catégories permettent d\'atteindre ou dépasser le seuil critique de 80 % (${paretoCumulPct.toStringAsFixed(1).replaceAll('.', ',')} % du volume global des anomalies).'
         : 'Aucune non-conformité recensée pour l\'analyse de Pareto.';
 
     return ParetoAnalysisResult(

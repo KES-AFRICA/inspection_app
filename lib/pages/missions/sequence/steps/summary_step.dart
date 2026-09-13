@@ -291,7 +291,7 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
                 child: Icon(Icons.table_chart, color: Colors.green.shade700),
               ),
               title: const Text('Excel', style: TextStyle(fontWeight: FontWeight.w600)),
-              subtitle: const Text('Générer un rapport au format Excel (.xlsx)'),
+              subtitle: const Text('Générer un rapport au format Excel'),
               trailing: const Icon(Icons.arrow_forward_ios, size: 16),
               onTap: () {
                 Navigator.pop(context);

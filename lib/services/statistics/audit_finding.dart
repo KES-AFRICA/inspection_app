@@ -119,6 +119,13 @@ class ParetoAnalysisResult {
     required this.paretoCumulativePercentage,
     required this.summaryText,
   });
+
+  /// Nombre d'occurrences cumulées concentrées par les 10 premières catégories de défauts.
+  int get top10Count => items.take(10).fold(0, (sum, e) => sum + e.count);
+
+  /// Pourcentage cumulé représenté par les 10 premières catégories de défauts.
+  double get top10Percentage =>
+      totalOccurrences > 0 ? (top10Count / totalOccurrences) * 100.0 : 0.0;
 }
 
 /// Item de Pareto par catégorie d'équipement / d'installation

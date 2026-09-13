@@ -485,13 +485,23 @@ INSTRUCTIONS ET CONTRAT RÉDACTIONNEL STRICT :
     try {
       final summary = MissionStatisticsCollector.collectSummary(missionId);
       final cStats = summary.criticalityStats;
-      total = cStats.total;
-      critique = cStats.critique;
-      majeure = cStats.majeure;
-      mineure = cStats.mineure;
-      pctCritiqueStr = '${cStats.pctCritique.toStringAsFixed(1).replaceAll('.', ',')} %';
-      pctMajeureStr = '${cStats.pctMajeure.toStringAsFixed(1).replaceAll('.', ',')} %';
-      pctMineureStr = '${cStats.pctMineure.toStringAsFixed(1).replaceAll('.', ',')} %';
+      if (cStats.total > 0 || !snapshot.officialStats.containsKey('totalNC')) {
+        total = cStats.total;
+        critique = cStats.critique;
+        majeure = cStats.majeure;
+        mineure = cStats.mineure;
+        pctCritiqueStr = '${cStats.pctCritique.toStringAsFixed(1).replaceAll('.', ',')} %';
+        pctMajeureStr = '${cStats.pctMajeure.toStringAsFixed(1).replaceAll('.', ',')} %';
+        pctMineureStr = '${cStats.pctMineure.toStringAsFixed(1).replaceAll('.', ',')} %';
+      } else {
+        total = snapshot.officialStats['totalNC'] as int? ?? 0;
+        critique = snapshot.officialStats['critique'] as int? ?? 0;
+        majeure = snapshot.officialStats['majeure'] as int? ?? 0;
+        mineure = snapshot.officialStats['mineure'] as int? ?? 0;
+        pctCritiqueStr = '${snapshot.officialStats['pctCritique'] ?? '0,0'} %';
+        pctMajeureStr = '${snapshot.officialStats['pctMajeure'] ?? '0,0'} %';
+        pctMineureStr = '${snapshot.officialStats['pctMineure'] ?? '0,0'} %';
+      }
     } catch (_) {
       total = snapshot.officialStats['totalNC'] as int? ?? 0;
       critique = snapshot.officialStats['critique'] as int? ?? 0;

@@ -1,9 +1,10 @@
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:inspec_app/models/mission.dart';
-import 'package:inspec_app/services/statistics/mission_statistics.dart';
 import 'package:inspec_app/services/statistics/mission_statistics_collector.dart';
 import 'package:inspec_app/services/statistics/audit_finding.dart';
+import 'package:inspec_app/services/statistics/domain_entity_instance.dart';
+import 'package:inspec_app/services/statistics/technical_enrichment_engine.dart';
 import 'package:inspec_app/services/pdf/pdf_page_tracker.dart';
 import 'package:inspec_app/services/pdf/pdf_report_styles.dart';
 
@@ -29,6 +30,8 @@ class PdfStatisticsBuilder {
     // Collecte unifiée via le résumé statistique Néo-Natif
     final summary = MissionStatisticsCollector.collectSummary(mission.id);
     final cStats = summary.criticalityStats;
+    final domainStats = summary.tensionDomainStats;
+    final technical = summary.technical;
 
     // Entête de section
     widgets.add(
@@ -41,84 +44,80 @@ class PdfStatisticsBuilder {
     );
     widgets.add(pw.SizedBox(height: 10));
 
-    // 1. Indicateurs clés de la mission
-    final totalEq = summary.totalEquipments;
-    final activeCats = summary.crossCategoryItems.length;
-    final densestStr = summary.densestCategoryFormatted;
-    final topTwo = summary.topTwoCategoriesResult;
-    final domainStats = summary.tensionDomainStats;
-
+    // ── 1. Répartition des non-conformités par domaine de tension ──
     widgets.add(
       PageTracker(
-        key: 'stat_indicateurs',
+        key: 'stat_tension',
+        registry: trackedPages,
+        offset: offset,
+        child: _buildTensionDomainSection(domainStats, 1),
+      ),
+    );
+    widgets.add(pw.SizedBox(height: 12));
+
+    // ── 2. Non-conformités croisées par catégorie d'installation ──
+    widgets.add(
+      PageTracker(
+        key: 'stat_croisee',
         registry: trackedPages,
         offset: offset,
         child: pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
-            PdfReportStyles.subTitle('1. Indicateurs clés de la mission'),
-            pw.SizedBox(height: 5),
+            PdfReportStyles.subTitle('2. Non-conformités croisées par catégorie d\'installation'),
+            pw.SizedBox(height: 4),
             PdfReportStyles.bodyText(
-              'Tableau synthétique des indicateurs majeurs de la mission (gravité, concentration et volume) :',
+              'Analyse granulaire croisant le parc d\'équipements recensés avec les non-conformités détectées, le volume d\'anomalies critiques et la densité par équipement selon le domaine de tension :',
             ),
-            pw.SizedBox(height: 8),
-            pw.Table(
-              border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.5),
-              columnWidths: const {
-                0: pw.FlexColumnWidth(3.8),
-                1: pw.FlexColumnWidth(6.2),
-              },
-              children: [
-                pw.TableRow(
-                  decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
-                  children: [
-                    pw.Padding(
-                      padding: const pw.EdgeInsets.all(5),
-                      child: pw.Text(
-                        'INDICATEUR',
-                        style: pw.TextStyle(
-                          font: fontBold,
-                          fontSize: 8,
-                          color: PdfColors.white,
-                        ),
-                      ),
-                    ),
-                    pw.Padding(
-                      padding: const pw.EdgeInsets.all(5),
-                      child: pw.Text(
-                        'VALEUR ET DESCRIPTION',
-                        style: pw.TextStyle(
-                          font: fontBold,
-                          fontSize: 8,
-                          color: PdfColors.white,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                _buildIndicateurRow(
-                  'Périmètre couvert',
-                  '$totalEq installations et équipements répartis en $activeCats catégories (MT et BT)',
-                ),
-                _buildIndicateurRow(
-                  'Total des non-conformités',
-                  '${cStats.total} (recensement par installation/équipement)',
-                ),
-                _buildIndicateurRow(
-                  'Densité moyenne globale',
-                  '${summary.globalDensityStr} NC/équipement',
-                ),
-                _buildIndicateurRow(
-                  'Part des NC critiques',
-                  '${cStats.pctCritique.toStringAsFixed(1).replaceAll('.', ',')} % — niveau de risque élevé',
-                ),
-                _buildIndicateurRow(topTwo.label, topTwo.formattedValue),
-                _buildIndicateurRow('Catégorie la plus dense', densestStr),
-                _buildIndicateurRow(
-                  'Répartition MT / BT',
-                  'MT : ${domainStats.mtCount} NC (${domainStats.mtPct.toStringAsFixed(1).replaceAll('.', ',')} %) — BT : ${domainStats.btCount} NC (${domainStats.btPct.toStringAsFixed(1).replaceAll('.', ',')} %)',
-                ),
-              ],
+          ],
+        ),
+      ),
+    );
+    widgets.add(pw.SizedBox(height: 6));
+
+    // 2.1 Moyenne tension
+    widgets.add(
+      PageTracker(
+        key: 'stat_croisee_mt',
+        registry: trackedPages,
+        offset: offset,
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Text(
+              '2.1. Moyenne tension',
+              style: pw.TextStyle(font: fontBold, fontSize: fsH3, color: PdfReportStyles.headerColor),
+            ),
+            pw.SizedBox(height: 4),
+            _buildCrossAuditTable(
+              technical.mtCategoriesCrossRows,
+              technical.mtTotalCrossRow,
+              'MT',
+            ),
+          ],
+        ),
+      ),
+    );
+    widgets.add(pw.SizedBox(height: 8));
+
+    // 2.2 Basse tension
+    widgets.add(
+      PageTracker(
+        key: 'stat_croisee_bt',
+        registry: trackedPages,
+        offset: offset,
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Text(
+              '2.2. Basse tension',
+              style: pw.TextStyle(font: fontBold, fontSize: fsH3, color: PdfReportStyles.headerColor),
+            ),
+            pw.SizedBox(height: 4),
+            _buildCrossAuditTable(
+              technical.btCategoriesCrossRows,
+              technical.btTotalCrossRow,
+              'BT',
             ),
           ],
         ),
@@ -126,38 +125,90 @@ class PdfStatisticsBuilder {
     );
     widgets.add(pw.SizedBox(height: 12));
 
-    // 2. Analyse croisée par catégories / équipement (incluant criticité et historique)
-    if (summary.crossCategoryItems.isNotEmpty) {
-      widgets.add(
-        PageTracker(
-          key: 'stat_croisee',
-          registry: trackedPages,
-          offset: offset,
-          child: _buildCrossCategorySection(
-            summary.crossCategoryItems,
-            summary.crossAnalysisText,
-            cStats,
-            2,
-          ),
+    // ── 3. Sécurité et traçabilité des tableaux Basse Tension ──
+    widgets.add(
+      PageTracker(
+        key: 'stat_securite_bt',
+        registry: trackedPages,
+        offset: offset,
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            PdfReportStyles.subTitle('3. Sécurité et traçabilité des tableaux Basse Tension'),
+            pw.SizedBox(height: 4),
+            PdfReportStyles.bodyText(
+              'Synthèse technique portant sur les 3 prérequis normatifs critiques de la distribution Basse Tension (NF C 15-100) : identification des sources d\'alimentation, présence d\'un organe de coupure générale dédié en tête, et protection contre les surtensions transitoires (parafoudres) :',
+            ),
+          ],
         ),
-      );
-      widgets.add(pw.SizedBox(height: 12));
-    }
+      ),
+    );
+    widgets.add(pw.SizedBox(height: 6));
 
-    // 3. Répartition des non-conformités par domaine de tension
-    if (domainStats.totalCount > 0) {
-      widgets.add(
-        PageTracker(
-          key: 'stat_tension',
-          registry: trackedPages,
-          offset: offset,
-          child: _buildTensionDomainSection(domainStats, 3),
+    // 3.1 Sources d'alimentation
+    widgets.add(
+      PageTracker(
+        key: 'stat_sources_alim',
+        registry: trackedPages,
+        offset: offset,
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Text(
+              '3.1. Identification des sources d’alimentation',
+              style: pw.TextStyle(font: fontBold, fontSize: fsH3, color: PdfReportStyles.headerColor),
+            ),
+            pw.SizedBox(height: 4),
+            _buildBtSourceTable(technical),
+          ],
         ),
-      );
-      widgets.add(pw.SizedBox(height: 12));
-    }
+      ),
+    );
+    widgets.add(pw.SizedBox(height: 8));
 
-    // 4. Statistique par type de défaut — analyse de Pareto (normalisée & explicite)
+    // 3.2 Présence organe de coupure en tête
+    widgets.add(
+      PageTracker(
+        key: 'stat_coupure_tete',
+        registry: trackedPages,
+        offset: offset,
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Text(
+              '3.2. Présence organe de coupure en tête d’installation',
+              style: pw.TextStyle(font: fontBold, fontSize: fsH3, color: PdfReportStyles.headerColor),
+            ),
+            pw.SizedBox(height: 4),
+            _buildBtCoupureTable(technical),
+          ],
+        ),
+      ),
+    );
+    widgets.add(pw.SizedBox(height: 8));
+
+    // 3.3 Présence parafoudre
+    widgets.add(
+      PageTracker(
+        key: 'stat_parafoudres',
+        registry: trackedPages,
+        offset: offset,
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Text(
+              '3.3. Présence parafoudre',
+              style: pw.TextStyle(font: fontBold, fontSize: fsH3, color: PdfReportStyles.headerColor),
+            ),
+            pw.SizedBox(height: 4),
+            _buildBtParafoudreTable(technical),
+          ],
+        ),
+      ),
+    );
+    widgets.add(pw.SizedBox(height: 12));
+
+    // ── 4. Statistique par type de défaut : analyse de Pareto (corrigée) ──
     final totalOccur = summary.paretoResult.totalOccurrences > 0
         ? summary.paretoResult.totalOccurrences
         : summary.criticalityStats.total;
@@ -195,7 +246,7 @@ class PdfStatisticsBuilder {
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
               PdfReportStyles.subTitle(
-                '4. Statistique par type de défaut — analyse de Pareto',
+                '4. Statistique par type de défaut : analyse de Pareto (corrigée)',
               ),
               pw.SizedBox(height: 5),
               PdfReportStyles.bodyText(paretoIntroSummary),
@@ -210,7 +261,7 @@ class PdfStatisticsBuilder {
     );
     widgets.add(pw.SizedBox(height: 12));
 
-    // 5. Non-conformités de l'année passée et taux de mise en conformité
+    // ── 5. Analyse comparative avec la visite précédente ──
     widgets.add(
       PageTracker(
         key: 'stat_annee_passee',
@@ -221,7 +272,7 @@ class PdfStatisticsBuilder {
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
               PdfReportStyles.subTitle(
-                '5. Non-conformités de l\'année passée et taux de mise en conformité',
+                '5. Analyse comparative avec la visite précédente',
               ),
               pw.SizedBox(height: 5),
               PdfReportStyles.bodyText(
@@ -234,9 +285,12 @@ class PdfStatisticsBuilder {
     );
     widgets.add(pw.SizedBox(height: 12));
 
-    // 6. Synthèse de l'analyse statistique
+    // ── 6. Synthèse de l'analyse statistique ──
     final paretoK = summary.paretoResult.paretoCategoryCount;
     final paretoCumul = summary.paretoResult.paretoCumulativePercentage;
+    final totalEq = summary.totalEquipments;
+    final activeCats = summary.crossCategoryItems.length;
+    final topTwo = summary.topTwoCategoriesResult;
 
     widgets.add(
       PageTracker(
@@ -312,17 +366,374 @@ class PdfStatisticsBuilder {
         ),
       ),
     );
+    widgets.add(pw.SizedBox(height: 12));
+
+    // ── 7. Recommandation pour le renforcement des capacités des agents d’entretien ──
+    widgets.add(
+      PageTracker(
+        key: 'stat_formation',
+        registry: trackedPages,
+        offset: offset,
+        child: pw.Inseparable(
+          child: _buildTrainingRecommendationsSection(7),
+        ),
+      ),
+    );
 
     return widgets;
   }
 
-
-  static String _formatConcentrationTitle(String rawTitle) {
-    final trimmed = rawTitle.trim();
-    if (trimmed.isEmpty) return '3. Concentration du risque';
-    if (RegExp(r'^3\.\s*').hasMatch(trimmed)) return trimmed;
-    return '3. $trimmed';
+  static String _formatCategoryName(DomainObjectType cat) {
+    switch (cat) {
+      case DomainObjectType.inverseur:
+        return 'Inverseurs Normal / Secours';
+      case DomainObjectType.tgbt:
+        return 'TGBT (Tableaux Généraux)';
+      case DomainObjectType.armoire:
+        return 'Armoires divisionnaires';
+      case DomainObjectType.coffret:
+        return 'Coffrets terminaux';
+      default:
+        return cat.name;
+    }
   }
+
+  static pw.Widget _buildTableHeaderCell(String text) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+      child: pw.Text(
+        text,
+        style: pw.TextStyle(
+          font: fontBold,
+          fontSize: fsSmall,
+          color: PdfColors.white,
+        ),
+        textAlign: pw.TextAlign.center,
+      ),
+    );
+  }
+
+  static pw.Widget _buildTableCell(
+    String text, {
+    bool isBold = false,
+    pw.TextAlign align = pw.TextAlign.center,
+    pw.Alignment alignment = pw.Alignment.center,
+    PdfColor? color,
+  }) {
+    return pw.Container(
+      alignment: alignment,
+      padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+      child: pw.Text(
+        text,
+        style: pw.TextStyle(
+          font: isBold ? fontBold : fontRegular,
+          fontSize: fsSmall,
+          color: color ?? PdfReportStyles.darkGrey,
+        ),
+        textAlign: align,
+      ),
+    );
+  }
+
+  static pw.Widget _buildCrossAuditTable(
+    List<CategoryCrossAuditRow> rows,
+    CategoryCrossAuditRow totalRow,
+    String domainName,
+  ) {
+    return pw.Table(
+      border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.5),
+      columnWidths: const {
+        0: pw.FlexColumnWidth(3.4),
+        1: pw.FlexColumnWidth(1.2),
+        2: pw.FlexColumnWidth(1.2),
+        3: pw.FlexColumnWidth(1.2),
+        4: pw.FlexColumnWidth(1.4),
+        5: pw.FlexColumnWidth(1.4),
+        6: pw.FlexColumnWidth(1.6),
+      },
+      children: [
+        pw.TableRow(
+          decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
+          children: [
+            _buildTableHeaderCell('CATÉGORIE D\'INSTALLATION'),
+            _buildTableHeaderCell('ÉQUIP.'),
+            _buildTableHeaderCell('NC'),
+            _buildTableHeaderCell('CRIT.'),
+            _buildTableHeaderCell('% TOTAL'),
+            _buildTableHeaderCell('TX CRIT.'),
+            _buildTableHeaderCell('DENSITÉ (NC/ÉQ)'),
+          ],
+        ),
+        if (rows.isEmpty)
+          pw.TableRow(
+            children: [
+              _buildTableCell('Aucune installation $domainName recensée', isBold: true, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
+              _buildTableCell('0'),
+              _buildTableCell('0'),
+              _buildTableCell('0'),
+              _buildTableCell('0,0 %'),
+              _buildTableCell('0,0 %'),
+              _buildTableCell('—'),
+            ],
+          )
+        else
+          for (int i = 0; i < rows.length; i++)
+            pw.TableRow(
+              decoration: pw.BoxDecoration(
+                color: i % 2 == 1 ? PdfReportStyles.tableRowAlt : PdfColors.white,
+              ),
+              children: [
+                _buildTableCell(rows[i].categoryName, isBold: true, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
+                _buildTableCell('${rows[i].equipementsCount}'),
+                _buildTableCell('${rows[i].ncCount}'),
+                _buildTableCell(
+                  '${rows[i].critiquesCount}',
+                  color: rows[i].critiquesCount > 0 ? PdfColor.fromHex('#B71C1C') : null,
+                  isBold: rows[i].critiquesCount > 0,
+                ),
+                _buildTableCell(rows[i].pctOfTotalNcStr),
+                _buildTableCell(rows[i].tauxCritiqueStr),
+                _buildTableCell(rows[i].densiteStr, isBold: true),
+              ],
+            ),
+        pw.TableRow(
+          decoration: pw.BoxDecoration(color: PdfReportStyles.lightBlue),
+          children: [
+            _buildTableCell('TOTAL $domainName', isBold: true, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
+            _buildTableCell('${totalRow.equipementsCount}', isBold: true),
+            _buildTableCell('${totalRow.ncCount}', isBold: true),
+            _buildTableCell(
+              '${totalRow.critiquesCount}',
+              isBold: true,
+              color: totalRow.critiquesCount > 0 ? PdfColor.fromHex('#B71C1C') : null,
+            ),
+            _buildTableCell(totalRow.pctOfTotalNcStr, isBold: true),
+            _buildTableCell(totalRow.tauxCritiqueStr, isBold: true),
+            _buildTableCell(totalRow.densiteStr, isBold: true),
+          ],
+        ),
+      ],
+    );
+  }
+
+  static pw.Widget _buildBtSourceTable(TechnicalEnrichmentResult technical) {
+    const categories = [
+      DomainObjectType.inverseur,
+      DomainObjectType.tgbt,
+      DomainObjectType.armoire,
+      DomainObjectType.coffret,
+    ];
+
+    int totEquip = 0;
+    int totIdent = 0;
+    int totNonIdent = 0;
+
+    for (final cat in categories) {
+      final s = technical.sourceStats[cat];
+      totEquip += s?.totalEquipments ?? 0;
+      totIdent += s?.identifiees ?? 0;
+      totNonIdent += s?.nonIdentifiees ?? 0;
+    }
+    final totPct = totEquip > 0 ? (totIdent / totEquip * 100.0) : 0.0;
+
+    return pw.Table(
+      border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.5),
+      columnWidths: const {
+        0: pw.FlexColumnWidth(3.8),
+        1: pw.FlexColumnWidth(1.4),
+        2: pw.FlexColumnWidth(1.6),
+        3: pw.FlexColumnWidth(1.6),
+        4: pw.FlexColumnWidth(1.6),
+      },
+      children: [
+        pw.TableRow(
+          decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
+          children: [
+            _buildTableHeaderCell('CATÉGORIE TABLEAU'),
+            _buildTableHeaderCell('TOTAL'),
+            _buildTableHeaderCell('IDENTIFIÉE'),
+            _buildTableHeaderCell('NON IDENTIFIÉE'),
+            _buildTableHeaderCell('TAUX (%)'),
+          ],
+        ),
+        ...categories.map((cat) {
+          final s = technical.sourceStats[cat];
+          final tot = s?.totalEquipments ?? 0;
+          final ident = s?.identifiees ?? 0;
+          final nonIdent = s?.nonIdentifiees ?? 0;
+          final pct = s?.percentage ?? 0.0;
+          final isAlert = nonIdent > 0;
+          return pw.TableRow(
+            verticalAlignment: pw.TableCellVerticalAlignment.middle,
+            children: [
+              _buildTableCell(_formatCategoryName(cat), isBold: true, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
+              _buildTableCell('$tot'),
+              _buildTableCell('$ident'),
+              _buildTableCell('$nonIdent', isBold: isAlert, color: isAlert ? PdfColor.fromHex('#B71C1C') : null),
+              _buildTableCell('${pct.toStringAsFixed(1).replaceAll('.', ',')} %', isBold: true, color: pct < 100.0 && tot > 0 ? PdfColor.fromHex('#B71C1C') : PdfReportStyles.accentColor),
+            ],
+          );
+        }),
+        pw.TableRow(
+          decoration: pw.BoxDecoration(color: PdfReportStyles.lightBlue),
+          children: [
+            _buildTableCell('TOTAL DISTRIBUTION BT', isBold: true, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
+            _buildTableCell('$totEquip', isBold: true),
+            _buildTableCell('$totIdent', isBold: true),
+            _buildTableCell('$totNonIdent', isBold: true, color: totNonIdent > 0 ? PdfColor.fromHex('#B71C1C') : null),
+            _buildTableCell('${totPct.toStringAsFixed(1).replaceAll('.', ',')} %', isBold: true, color: totPct < 100.0 && totEquip > 0 ? PdfColor.fromHex('#B71C1C') : PdfReportStyles.accentColor),
+          ],
+        ),
+      ],
+    );
+  }
+
+  static pw.Widget _buildBtCoupureTable(TechnicalEnrichmentResult technical) {
+    const categories = [
+      DomainObjectType.inverseur,
+      DomainObjectType.tgbt,
+      DomainObjectType.armoire,
+      DomainObjectType.coffret,
+    ];
+
+    int totEquip = 0;
+    int totPres = 0;
+    int totAbs = 0;
+
+    for (final cat in categories) {
+      final s = technical.coupureTeteStats[cat];
+      totEquip += s?.totalEquipments ?? 0;
+      totPres += s?.presents ?? 0;
+      totAbs += s?.absents ?? 0;
+    }
+    final totPct = totEquip > 0 ? (totPres / totEquip * 100.0) : 0.0;
+
+    return pw.Table(
+      border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.5),
+      columnWidths: const {
+        0: pw.FlexColumnWidth(3.8),
+        1: pw.FlexColumnWidth(1.4),
+        2: pw.FlexColumnWidth(1.6),
+        3: pw.FlexColumnWidth(1.6),
+        4: pw.FlexColumnWidth(1.6),
+      },
+      children: [
+        pw.TableRow(
+          decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
+          children: [
+            _buildTableHeaderCell('CATÉGORIE TABLEAU'),
+            _buildTableHeaderCell('TOTAL'),
+            _buildTableHeaderCell('PRÉSENT'),
+            _buildTableHeaderCell('ABSENT'),
+            _buildTableHeaderCell('TAUX (%)'),
+          ],
+        ),
+        ...categories.map((cat) {
+          final s = technical.coupureTeteStats[cat];
+          final tot = s?.totalEquipments ?? 0;
+          final pres = s?.presents ?? 0;
+          final abs = s?.absents ?? 0;
+          final pct = s?.percentage ?? 0.0;
+          final isAlert = abs > 0;
+          return pw.TableRow(
+            verticalAlignment: pw.TableCellVerticalAlignment.middle,
+            children: [
+              _buildTableCell(_formatCategoryName(cat), isBold: true, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
+              _buildTableCell('$tot'),
+              _buildTableCell('$pres'),
+              _buildTableCell('$abs', isBold: isAlert, color: isAlert ? PdfColor.fromHex('#B71C1C') : null),
+              _buildTableCell('${pct.toStringAsFixed(1).replaceAll('.', ',')} %', isBold: true, color: pct < 100.0 && tot > 0 ? PdfColor.fromHex('#B71C1C') : PdfReportStyles.accentColor),
+            ],
+          );
+        }),
+        pw.TableRow(
+          decoration: pw.BoxDecoration(color: PdfReportStyles.lightBlue),
+          children: [
+            _buildTableCell('TOTAL DISTRIBUTION BT', isBold: true, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
+            _buildTableCell('$totEquip', isBold: true),
+            _buildTableCell('$totPres', isBold: true),
+            _buildTableCell('$totAbs', isBold: true, color: totAbs > 0 ? PdfColor.fromHex('#B71C1C') : null),
+            _buildTableCell('${totPct.toStringAsFixed(1).replaceAll('.', ',')} %', isBold: true, color: totPct < 100.0 && totEquip > 0 ? PdfColor.fromHex('#B71C1C') : PdfReportStyles.accentColor),
+          ],
+        ),
+      ],
+    );
+  }
+
+  static pw.Widget _buildBtParafoudreTable(TechnicalEnrichmentResult technical) {
+    const categories = [
+      DomainObjectType.inverseur,
+      DomainObjectType.tgbt,
+      DomainObjectType.armoire,
+      DomainObjectType.coffret,
+    ];
+
+    int totEquip = 0;
+    int totPres = 0;
+    int totAbs = 0;
+
+    for (final cat in categories) {
+      final s = technical.parafoudreStats[cat];
+      totEquip += s?.totalEquipments ?? 0;
+      totPres += s?.avecParafoudre ?? 0;
+      totAbs += s?.sansParafoudre ?? 0;
+    }
+    final totPct = totEquip > 0 ? (totPres / totEquip * 100.0) : 0.0;
+
+    return pw.Table(
+      border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.5),
+      columnWidths: const {
+        0: pw.FlexColumnWidth(3.8),
+        1: pw.FlexColumnWidth(1.4),
+        2: pw.FlexColumnWidth(1.6),
+        3: pw.FlexColumnWidth(1.6),
+        4: pw.FlexColumnWidth(1.6),
+      },
+      children: [
+        pw.TableRow(
+          decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
+          children: [
+            _buildTableHeaderCell('CATÉGORIE TABLEAU'),
+            _buildTableHeaderCell('TOTAL'),
+            _buildTableHeaderCell('AVEC PARAFOUDRE'),
+            _buildTableHeaderCell('SANS PARAFOUDRE'),
+            _buildTableHeaderCell('TAUX (%)'),
+          ],
+        ),
+        ...categories.map((cat) {
+          final s = technical.parafoudreStats[cat];
+          final tot = s?.totalEquipments ?? 0;
+          final pres = s?.avecParafoudre ?? 0;
+          final abs = s?.sansParafoudre ?? 0;
+          final pct = s?.percentage ?? 0.0;
+          final isAlert = abs > 0;
+          return pw.TableRow(
+            verticalAlignment: pw.TableCellVerticalAlignment.middle,
+            children: [
+              _buildTableCell(_formatCategoryName(cat), isBold: true, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
+              _buildTableCell('$tot'),
+              _buildTableCell('$pres'),
+              _buildTableCell('$abs', isBold: isAlert, color: isAlert ? PdfColor.fromHex('#B71C1C') : null),
+              _buildTableCell('${pct.toStringAsFixed(1).replaceAll('.', ',')} %', isBold: true, color: pct < 100.0 && tot > 0 ? PdfColor.fromHex('#B71C1C') : PdfReportStyles.accentColor),
+            ],
+          );
+        }),
+        pw.TableRow(
+          decoration: pw.BoxDecoration(color: PdfReportStyles.lightBlue),
+          children: [
+            _buildTableCell('TOTAL DISTRIBUTION BT', isBold: true, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
+            _buildTableCell('$totEquip', isBold: true),
+            _buildTableCell('$totPres', isBold: true),
+            _buildTableCell('$totAbs', isBold: true, color: totAbs > 0 ? PdfColor.fromHex('#B71C1C') : null),
+            _buildTableCell('${totPct.toStringAsFixed(1).replaceAll('.', ',')} %', isBold: true, color: totPct < 100.0 && totEquip > 0 ? PdfColor.fromHex('#B71C1C') : PdfReportStyles.accentColor),
+          ],
+        ),
+      ],
+    );
+  }
+
+
+
 
   static pw.Widget _buildMultiLineValueWidget(String value) {
     final trimmed = value.trim();
@@ -419,366 +830,9 @@ class PdfStatisticsBuilder {
     );
   }
 
-  static pw.Widget _buildTextBulletPoint(String title, String description) {
-    return pw.Padding(
-      padding: const pw.EdgeInsets.only(bottom: 4, left: 2),
-      child: pw.RichText(
-        text: pw.TextSpan(
-          children: [
-            pw.TextSpan(
-              text: '$title : ',
-              style: pw.TextStyle(
-                font: fontBold,
-                fontSize: 8.5,
-                color: PdfReportStyles.headerColor,
-              ),
-            ),
-            pw.TextSpan(
-              text: description,
-              style: pw.TextStyle(
-                font: fontRegular,
-                fontSize: 8.5,
-                color: PdfColors.black,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
-  static pw.Widget _buildBulletItem(String text, {String? boldPrefix}) {
-    String prefix = boldPrefix ?? '';
-    String body = text;
 
-    if (boldPrefix == null && text.contains(' : ')) {
-      final parts = text.split(' : ');
-      prefix = '${parts[0]} : ';
-      body = parts.sublist(1).join(' : ');
-    }
 
-    return pw.Padding(
-      padding: const pw.EdgeInsets.only(bottom: 4, left: 4),
-      child: pw.Row(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          pw.Container(
-            margin: const pw.EdgeInsets.only(top: 4, right: 6),
-            width: 4,
-            height: 4,
-            decoration: pw.BoxDecoration(
-              color: PdfReportStyles.accentColor,
-              shape: pw.BoxShape.circle,
-            ),
-          ),
-          pw.Expanded(
-            child: prefix.isNotEmpty
-                ? pw.RichText(
-                    text: pw.TextSpan(
-                      children: [
-                        pw.TextSpan(
-                          text: prefix,
-                          style: pw.TextStyle(
-                            font: fontBold,
-                            fontSize: 8.5,
-                            color: PdfReportStyles.darkGrey,
-                          ),
-                        ),
-                        pw.TextSpan(
-                          text: body,
-                          style: pw.TextStyle(
-                            font: fontRegular,
-                            fontSize: 8.5,
-                            color: PdfReportStyles.darkGrey,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : pw.Text(
-                    text,
-                    style: pw.TextStyle(
-                      font: fontRegular,
-                      fontSize: 8.5,
-                      color: PdfReportStyles.darkGrey,
-                    ),
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  static pw.Widget _buildCategoryParetoChartWidget(
-    CategoryParetoResult pareto,
-  ) {
-    if (pareto.items.isEmpty) {
-      return PdfReportStyles.bodyText(
-        'Aucune non-conformité recensée pour l\'analyse de Pareto par catégorie.',
-      );
-    }
-
-    final maxVal = pareto.items
-        .map((e) => e.nonConformitiesCount)
-        .fold(1, (a, b) => a > b ? a : b);
-
-    return pw.Container(
-      padding: const pw.EdgeInsets.all(8),
-      decoration: pw.BoxDecoration(
-        border: pw.Border.all(color: PdfColors.grey300, width: 0.5),
-        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
-        color: PdfColors.white,
-      ),
-      child: pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          pw.Center(
-            child: pw.Text(
-              'Analyse de Pareto par catégorie d\'équipement (Occurrences & % Cumulé 80%)',
-              style: pw.TextStyle(
-                font: fontBold,
-                fontSize: 9,
-                color: PdfReportStyles.accentColor,
-              ),
-            ),
-          ),
-          pw.SizedBox(height: 6),
-          // ── Diagramme Visuel Pareto (Barres Horizontales) ──
-          pw.Column(
-            children: pareto.items.map((item) {
-              final isPareto =
-                  item.cumulativePercentage <=
-                      pareto.paretoCumulativePercentage ||
-                  pareto.items.indexOf(item) < pareto.paretoCategoryCount;
-              final barColor = isPareto
-                  ? PdfColor.fromHex('#B71C1C')
-                  : PdfReportStyles.accentColor;
-              final barWidthPct = maxVal > 0
-                  ? (item.nonConformitiesCount / maxVal)
-                  : 0.0;
-
-              return pw.Padding(
-                padding: const pw.EdgeInsets.symmetric(vertical: 1.5),
-                child: pw.Row(
-                  children: [
-                    pw.SizedBox(
-                      width: 140,
-                      child: pw.Text(
-                        item.categoryName,
-                        style: pw.TextStyle(
-                          font: isPareto ? fontBold : fontRegular,
-                          fontSize: 6.5,
-                          color: PdfColors.grey900,
-                        ),
-                        maxLines: 1,
-                        overflow: pw.TextOverflow.clip,
-                        textAlign: pw.TextAlign.right,
-                      ),
-                    ),
-                    pw.SizedBox(width: 6),
-                    pw.Expanded(
-                      child: pw.Container(
-                        height: 7,
-                        decoration: const pw.BoxDecoration(
-                          color: PdfColors.grey100,
-                          borderRadius: pw.BorderRadius.all(
-                            pw.Radius.circular(2),
-                          ),
-                        ),
-                        alignment: pw.Alignment.centerLeft,
-                        child: pw.Container(
-                          width: (barWidthPct * 260).clamp(2.0, 260.0),
-                          height: 7,
-                          decoration: pw.BoxDecoration(
-                            color: barColor,
-                            borderRadius: const pw.BorderRadius.all(
-                              pw.Radius.circular(2),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    pw.SizedBox(width: 6),
-                    pw.SizedBox(
-                      width: 65,
-                      child: pw.Text(
-                        '${item.nonConformitiesCount} NC (${item.percentage.toStringAsFixed(1).replaceAll('.', ',')} %)',
-                        style: pw.TextStyle(
-                          font: fontBold,
-                          fontSize: 6.5,
-                          color: barColor,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
-          ),
-          pw.SizedBox(height: 8),
-          pw.Table(
-            border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.5),
-            columnWidths: const {
-              0: pw.FlexColumnWidth(3.2),
-              1: pw.FlexColumnWidth(1.2),
-              2: pw.FlexColumnWidth(1.4),
-              3: pw.FlexColumnWidth(1.2),
-              4: pw.FlexColumnWidth(1.4),
-            },
-            children: [
-              pw.TableRow(
-                decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
-                children: [
-                  pw.Padding(
-                    padding: const pw.EdgeInsets.all(4),
-                    child: pw.Text(
-                      'CATÉGORIE',
-                      style: pw.TextStyle(
-                        font: fontBold,
-                        fontSize: 7.5,
-                        color: PdfColors.white,
-                      ),
-                    ),
-                  ),
-                  pw.Padding(
-                    padding: const pw.EdgeInsets.all(4),
-                    child: pw.Text(
-                      'ÉQUIP.',
-                      style: pw.TextStyle(
-                        font: fontBold,
-                        fontSize: 7,
-                        color: PdfColors.white,
-                      ),
-                      textAlign: pw.TextAlign.center,
-                    ),
-                  ),
-                  pw.Padding(
-                    padding: const pw.EdgeInsets.all(4),
-                    child: pw.Text(
-                      'NON-CONF.',
-                      style: pw.TextStyle(
-                        font: fontBold,
-                        fontSize: 7,
-                        color: PdfColors.white,
-                      ),
-                      textAlign: pw.TextAlign.center,
-                    ),
-                  ),
-                  pw.Padding(
-                    padding: const pw.EdgeInsets.all(4),
-                    child: pw.Text(
-                      'PART (%)',
-                      style: pw.TextStyle(
-                        font: fontBold,
-                        fontSize: 7,
-                        color: PdfColors.white,
-                      ),
-                      textAlign: pw.TextAlign.center,
-                    ),
-                  ),
-                  pw.Padding(
-                    padding: const pw.EdgeInsets.all(4),
-                    child: pw.Text(
-                      '% CUMULÉ',
-                      style: pw.TextStyle(
-                        font: fontBold,
-                        fontSize: 7,
-                        color: PdfColors.white,
-                      ),
-                      textAlign: pw.TextAlign.center,
-                    ),
-                  ),
-                ],
-              ),
-              ...pareto.items.map((item) {
-                final isPareto =
-                    item.cumulativePercentage <=
-                        pareto.paretoCumulativePercentage ||
-                    pareto.items.indexOf(item) < pareto.paretoCategoryCount;
-                final textStyle = isPareto
-                    ? pw.TextStyle(
-                        font: fontBold,
-                        fontSize: 7,
-                        color: PdfColor.fromHex('#B71C1C'),
-                      )
-                    : pw.TextStyle(
-                        font: fontRegular,
-                        fontSize: 7,
-                        color: PdfColors.grey800,
-                      );
-
-                return pw.TableRow(
-                  decoration: isPareto
-                      ? pw.BoxDecoration(color: PdfColor.fromHex('#FEF2F2'))
-                      : null,
-                  children: [
-                    pw.Padding(
-                      padding: const pw.EdgeInsets.all(4),
-                      child: pw.Text(item.categoryName, style: textStyle),
-                    ),
-                    pw.Padding(
-                      padding: const pw.EdgeInsets.all(4),
-                      child: pw.Text(
-                        '${item.equipmentCount}',
-                        style: textStyle,
-                        textAlign: pw.TextAlign.center,
-                      ),
-                    ),
-                    pw.Padding(
-                      padding: const pw.EdgeInsets.all(4),
-                      child: pw.Text(
-                        '${item.nonConformitiesCount}',
-                        style: textStyle,
-                        textAlign: pw.TextAlign.center,
-                      ),
-                    ),
-                    pw.Padding(
-                      padding: const pw.EdgeInsets.all(4),
-                      child: pw.Text(
-                        '${item.percentage.toStringAsFixed(1).replaceAll('.', ',')} %',
-                        style: textStyle,
-                        textAlign: pw.TextAlign.center,
-                      ),
-                    ),
-                    pw.Padding(
-                      padding: const pw.EdgeInsets.all(4),
-                      child: pw.Text(
-                        '${item.cumulativePercentage.toStringAsFixed(1).replaceAll('.', ',')} %',
-                        style: textStyle,
-                        textAlign: pw.TextAlign.center,
-                      ),
-                    ),
-                  ],
-                );
-              }).toList(),
-            ],
-          ),
-          pw.SizedBox(height: 6),
-          pw.Row(
-            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-            children: [
-              pw.Text(
-                'Total non-conformités analysées : ${pareto.totalNonConformities}',
-                style: pw.TextStyle(
-                  font: fontRegular,
-                  fontSize: 7.5,
-                  color: PdfColors.grey700,
-                ),
-              ),
-              pw.Text(
-                'Seuil Pareto (80 %) atteint sur les ${pareto.paretoCategoryCount} première(s) catégorie(s)',
-                style: pw.TextStyle(
-                  font: fontBold,
-                  fontSize: 7.5,
-                  color: PdfColor.fromHex('#B71C1C'),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 
   static pw.Widget _buildParetoChartWidget(ParetoAnalysisResult pareto) {
     if (pareto.items.isEmpty) return pw.SizedBox();
@@ -1121,148 +1175,7 @@ class PdfStatisticsBuilder {
   //  GRAPHIQUES ET ANALYSES STATISTIQUES AVANCÉES
   // ──────────────────────────────────────────────────────────────
 
-  static pw.Widget _buildTopDefectsHorizontalChart(
-    List<TopDefectItem> topItems,
-  ) {
-    if (topItems.isEmpty) return pw.SizedBox();
 
-    final maxVal = topItems.map((e) => e.count).reduce((a, b) => a > b ? a : b);
-    final xMax = ((maxVal * 1.2) / 10).ceil() * 10 > 0
-        ? ((maxVal * 1.2) / 10).ceil() * 10
-        : 10;
-    final xMid = (xMax / 2).round();
-
-    return pw.Container(
-      padding: const pw.EdgeInsets.all(10),
-      decoration: pw.BoxDecoration(
-        border: pw.Border.all(color: PdfColors.grey300, width: 0.5),
-        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
-        color: PdfColors.white,
-      ),
-      child: pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          pw.Center(
-            child: pw.Text(
-              'Statistique par type de d\u00e9faut (10 principales cat\u00e9gories)',
-              style: pw.TextStyle(
-                font: fontBold,
-                fontSize: 10,
-                fontWeight: pw.FontWeight.bold,
-                color: PdfReportStyles.headerColor,
-              ),
-            ),
-          ),
-          pw.SizedBox(height: 10),
-          pw.Column(
-            children: topItems.map((item) {
-              final barWidthPct = xMax > 0 ? (item.count / xMax) : 0.0;
-              return pw.Padding(
-                padding: const pw.EdgeInsets.symmetric(vertical: 2.5),
-                child: pw.Row(
-                  children: [
-                    pw.SizedBox(
-                      width: 170,
-                      child: pw.Text(
-                        item.title,
-                        style: pw.TextStyle(
-                          font: fontRegular,
-                          fontSize: 7.5,
-                          color: PdfColors.grey900,
-                        ),
-                        maxLines: 1,
-                        overflow: pw.TextOverflow.clip,
-                        textAlign: pw.TextAlign.right,
-                      ),
-                    ),
-                    pw.SizedBox(width: 8),
-                    pw.Expanded(
-                      child: pw.Container(
-                        height: 10,
-                        decoration: const pw.BoxDecoration(
-                          color: PdfColors.grey100,
-                          borderRadius: pw.BorderRadius.all(
-                            pw.Radius.circular(2),
-                          ),
-                        ),
-                        alignment: pw.Alignment.centerLeft,
-                        child: pw.Container(
-                          width: (barWidthPct * 260).clamp(2.0, 260.0),
-                          height: 10,
-                          decoration: pw.BoxDecoration(
-                            color: PdfReportStyles.headerColor,
-                            borderRadius: const pw.BorderRadius.all(
-                              pw.Radius.circular(2),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    pw.SizedBox(width: 6),
-                    pw.SizedBox(
-                      width: 25,
-                      child: pw.Text(
-                        '${item.count}',
-                        style: pw.TextStyle(
-                          font: fontBold,
-                          fontSize: 8,
-                          color: PdfReportStyles.headerColor,
-                          fontWeight: pw.FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
-          ),
-          pw.SizedBox(height: 6),
-          pw.Padding(
-            padding: const pw.EdgeInsets.only(left: 178, right: 30),
-            child: pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-              children: [
-                pw.Text(
-                  '0',
-                  style: pw.TextStyle(
-                    font: fontRegular,
-                    fontSize: 7,
-                    color: PdfColors.grey600,
-                  ),
-                ),
-                pw.Text(
-                  '$xMid',
-                  style: pw.TextStyle(
-                    font: fontRegular,
-                    fontSize: 7,
-                    color: PdfColors.grey600,
-                  ),
-                ),
-                pw.Text(
-                  '$xMax',
-                  style: pw.TextStyle(
-                    font: fontRegular,
-                    fontSize: 7,
-                    color: PdfColors.grey600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          pw.Center(
-            child: pw.Text(
-              'Nombre d\'occurrences',
-              style: pw.TextStyle(
-                font: fontRegular,
-                fontSize: 7.5,
-                color: PdfColors.grey700,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   static pw.Widget _buildTensionDomainSection(
     TensionDomainStats stats, [
@@ -1390,989 +1303,43 @@ class PdfStatisticsBuilder {
     );
   }
 
-  static pw.Widget _buildCrossCategorySection(
-    List<CategoryCrossItem> items,
-    String crossText,
-    CriticalityStats cStats, [
-    int? index,
-  ]) {
-    final totalNC = items.fold<int>(
-      0,
-      (sum, e) => sum + e.nonConformitiesCount,
-    );
-    final totalCritique = items.fold<int>(0, (sum, e) => sum + e.critiqueCount);
-    final totalMajeure = items.fold<int>(0, (sum, e) => sum + e.majeureCount);
-    final totalMineure = items.fold<int>(0, (sum, e) => sum + e.mineureCount);
-    final totalEquipements = items.fold<int>(
-      0,
-      (sum, e) => sum + e.equipmentCount,
-    );
-    final maxVal = items
-        .map((e) => e.nonConformitiesCount)
-        .fold(1, (a, b) => a > b ? a : b);
-
-    final colorCritique = PdfColor.fromHex('#DC2626');
-    final colorMajeure = PdfColor.fromHex('#EA580C');
-    final colorMineure = PdfColor.fromHex('#D97706');
-
-    final bgCritiqueHeader = PdfColor.fromHex('#DC2626');
-    final bgMajeureHeader = PdfColor.fromHex('#EA580C');
-    final bgMineureHeader = PdfColor.fromHex('#D97706');
-
-    final bgCritiqueCell = PdfColor.fromHex('#FEF2F2');
-    final bgMajeureCell = PdfColor.fromHex('#FFF7ED');
-    final bgMineureCell = PdfColor.fromHex('#FEF3C7');
-
-    final textCritique = PdfColor.fromHex('#B71C1C');
-    final textMajeure = PdfColor.fromHex('#C2410C');
-    final textMineure = PdfColor.fromHex('#B45309');
-
-    final comments = crossText
-        .split(RegExp(r'\.(?=\s|[A-Z]|$)'))
-        .map((s) => s.trim())
-        .where((s) => s.isNotEmpty)
-        .map((s) => s.endsWith('.') ? s : '$s.')
-        .toList();
-
-    // 2.2 Calculations pour la criticité
-    final critique = cStats.critique;
-    final majeure = cStats.majeure;
-    final mineure = cStats.mineure;
-    final total = cStats.total;
-    final pctCritique = cStats.pctCritique;
-    final pctMajeure = cStats.pctMajeure;
-    final pctMineure = cStats.pctMineure;
-
-    final pctCritStr = pctCritique.toStringAsFixed(1).replaceAll('.', ',');
-    final pctMajStr = pctMajeure.toStringAsFixed(1).replaceAll('.', ',');
-    final pctMinStr = pctMineure.toStringAsFixed(1).replaceAll('.', ',');
-
-    final totalCritMaj = critique + majeure;
-    final pctCritMaj = total > 0 ? ((totalCritMaj / total) * 100.0) : 0.0;
-    final pctCritMajStr = pctCritMaj.toStringAsFixed(1).replaceAll('.', ',');
-
-    String textRatioSeverite;
-    if (mineure > 0) {
-      final ratioVal = (critique / mineure)
-          .toStringAsFixed(1)
-          .replaceAll('.', ',');
-      textRatioSeverite =
-          'L\'analyse recense $critique non-conformité(s) de niveau Critique ($pctCritStr %) pour $mineure non-conformité(s) de niveau Mineur ($pctMinStr %), soit un ratio de $ratioVal NC critique(s) pour 1 NC mineure. Ce rapport traduit la sévérité relative des anomalies constatées sur l\'installation.';
-    } else if (critique > 0) {
-      textRatioSeverite =
-          'L\'analyse recense $critique non-conformité(s) de niveau Critique ($pctCritStr %) et 0 non-conformité mineure (0,0 %). L\'absence de défauts mineurs atteste que l\'intégralité des défaillances relevées présente un niveau de sévérité élevé.';
-    } else {
-      textRatioSeverite =
-          'L\'analyse recense 0 non-conformité de niveau Critique (0,0 %) et $mineure non-conformité(s) de niveau Mineur ($pctMinStr %). Aucun défaut à sévérité critique n\'a été constaté.';
-    }
-
-    final textNiveauRisqueDominant =
-        'Les non-conformités à fort impact (niveaux Critique et Majeur) cumulent $totalCritMaj constat(s) sur un total de $total, soit $pctCritMajStr % de l\'ensemble des défaillances de la mission ($critique critique(s), soit $pctCritStr % + $majeure majeure(s), soit $pctMajStr %). Ce regroupement confirme la prédominance nette des risques majeurs pour la sécurité des personnes et la continuité d\'exploitation.';
-
-    String textSignalGraviteGlobal;
-    if (pctCritMaj >= 70.0) {
-      textSignalGraviteGlobal =
-          'La forte concentration des écarts sur les niveaux de gravité Critique et Majeur ($pctCritMajStr %) constitue un signal de risque très élevé. Il est vivement recommandé d\'engager en priorité les interventions de levée de réserves sur les $critique équipement(s)/point(s) critique(s) et les $majeure élément(s) majeur(s) afin de prévenir tout incident électrique ou dommage matériel.';
-    } else if (pctCritMaj >= 40.0) {
-      textSignalGraviteGlobal =
-          'La répartition des défauts montre un niveau de risque modéré à élevé ($pctCritMajStr % d\'écarts critiques et majeurs). Les travaux de remise en conformité doivent prioriser les $critique constat(s) critique(s), tout en intégrant les $majeure anomalie(s) majeure(s) dans le plan de maintenance à moyen terme.';
-    } else {
-      textSignalGraviteGlobal =
-          'La majorité des non-conformités identifiées relève de niveaux de gravité mineurs ou modérés. Le plan d\'action peut s\'inscrire dans le cadre des opérations de maintenance préventive et d\'entretien courant de l\'établissement.';
-    }
-
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        // Groupe Titre 2 + Entête 2.1 + Diagramme en pw.Inseparable anti-titre orphelin
-        pw.Inseparable(
-          child: pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              PdfReportStyles.subTitle(
-                '${index != null ? "$index. " : ""}Analyse croisée par catégories / équipement',
-              ),
-              pw.SizedBox(height: 6),
-              PdfReportStyles.subTitle(
-                '2.1 Non-conformités par catégorie d\'installation / d\'équipement',
-              ),
-              pw.SizedBox(height: 4),
-              PdfReportStyles.bodyText(
-                'En croisant chaque catégorie ci-dessus avec les non-conformités relevées, la répartition et la densité moyenne par équipement se présentent comme suit :',
-              ),
-              pw.SizedBox(height: 6),
-              pw.Container(
-                height: 135,
-                padding: const pw.EdgeInsets.all(8),
-                decoration: pw.BoxDecoration(
-                  border: pw.Border.all(color: PdfReportStyles.borderColor, width: 0.5),
-                  borderRadius: const pw.BorderRadius.all(
-                    pw.Radius.circular(4),
-                  ),
-                  color: PdfColors.white,
-                ),
-                child: pw.Column(
-                  children: [
-                    pw.Row(
-                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                      children: [
-                        pw.Text(
-                          'Non-conformités par catégorie d\'installation / d\'équipement',
-                          style: pw.TextStyle(
-                            font: fontBold,
-                            fontSize: 9,
-                            color: PdfReportStyles.accentColor,
-                          ),
-                        ),
-                        pw.Row(
-                          children: [
-                            pw.Container(
-                              width: 8,
-                              height: 8,
-                              color: colorCritique,
-                            ),
-                            pw.SizedBox(width: 3),
-                            pw.Text(
-                              'Critique',
-                              style: pw.TextStyle(
-                                font: fontRegular,
-                                fontSize: 6.5,
-                              ),
-                            ),
-                            pw.SizedBox(width: 6),
-                            pw.Container(
-                              width: 8,
-                              height: 8,
-                              color: colorMajeure,
-                            ),
-                            pw.SizedBox(width: 3),
-                            pw.Text(
-                              'Majeure',
-                              style: pw.TextStyle(
-                                font: fontRegular,
-                                fontSize: 6.5,
-                              ),
-                            ),
-                            pw.SizedBox(width: 6),
-                            pw.Container(
-                              width: 8,
-                              height: 8,
-                              color: colorMineure,
-                            ),
-                            pw.SizedBox(width: 3),
-                            pw.Text(
-                              'Mineure',
-                              style: pw.TextStyle(
-                                font: fontRegular,
-                                fontSize: 6.5,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    pw.SizedBox(height: 8),
-                    pw.Container(
-                      height: 100,
-                      child: pw.Row(
-                        mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
-                        crossAxisAlignment: pw.CrossAxisAlignment.end,
-                        children: items.map((item) {
-                          final hCrit = maxVal > 0
-                              ? (item.critiqueCount / maxVal) * 65
-                              : 0.0;
-                          final hMaj = maxVal > 0
-                              ? (item.majeureCount / maxVal) * 65
-                              : 0.0;
-                          final hMin = maxVal > 0
-                              ? (item.mineureCount / maxVal) * 65
-                              : 0.0;
-
-                          return pw.Column(
-                            mainAxisAlignment: pw.MainAxisAlignment.end,
-                            children: [
-                              pw.Text(
-                                '${item.nonConformitiesCount}',
-                                style: pw.TextStyle(
-                                  font: fontBold,
-                                  fontSize: 7,
-                                  color: PdfReportStyles.accentColor,
-                                ),
-                              ),
-                              pw.SizedBox(height: 2),
-                              pw.Container(
-                                width: 22,
-                                child: pw.Column(
-                                  children: [
-                                    if (hCrit > 0)
-                                      pw.Container(
-                                        height: hCrit < 2 ? 2 : hCrit,
-                                        color: colorCritique,
-                                      ),
-                                    if (hMaj > 0)
-                                      pw.Container(
-                                        height: hMaj < 2 ? 2 : hMaj,
-                                        color: colorMajeure,
-                                      ),
-                                    if (hMin > 0)
-                                      pw.Container(
-                                        height: hMin < 2 ? 2 : hMin,
-                                        color: colorMineure,
-                                      ),
-                                    if (item.nonConformitiesCount == 0)
-                                      pw.Container(
-                                        height: 2,
-                                        color: PdfColors.grey300,
-                                      ),
-                                  ],
-                                ),
-                              ),
-                              pw.SizedBox(height: 4),
-                              pw.SizedBox(
-                                width: 44,
-                                height: 22,
-                                child: pw.Align(
-                                  alignment: pw.Alignment.topCenter,
-                                  child: pw.Text(
-                                    _shortCatName(item.categoryName),
-                                    style: pw.TextStyle(
-                                      font: fontRegular,
-                                      fontSize: 6,
-                                      color: PdfColors.grey800,
-                                    ),
-                                    textAlign: pw.TextAlign.center,
-                                    maxLines: 2,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        pw.SizedBox(height: 8),
-        pw.Table(
-          border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.5),
-          columnWidths: const {
-            0: pw.FlexColumnWidth(2.6),
-            1: pw.FlexColumnWidth(0.8),
-            2: pw.FlexColumnWidth(0.8),
-            3: pw.FlexColumnWidth(0.8),
-            4: pw.FlexColumnWidth(0.8),
-            5: pw.FlexColumnWidth(0.8),
-            6: pw.FlexColumnWidth(1.2),
-            7: pw.FlexColumnWidth(1.3),
-            8: pw.FlexColumnWidth(1.2),
-          },
-          children: [
-            pw.TableRow(
-              children: [
-                pw.Container(
-                  color: PdfReportStyles.accentColor,
-                  padding: const pw.EdgeInsets.symmetric(
-                    horizontal: 3,
-                    vertical: 4,
-                  ),
-                  child: pw.Text(
-                    'Catégorie',
-                    style: pw.TextStyle(
-                      font: fontBold,
-                      fontSize: 7,
-                      color: PdfColors.white,
-                    ),
-                  ),
-                ),
-                pw.Container(
-                  color: PdfReportStyles.accentColor,
-                  padding: const pw.EdgeInsets.symmetric(
-                    horizontal: 2,
-                    vertical: 4,
-                  ),
-                  child: pw.Text(
-                    'Équip.',
-                    style: pw.TextStyle(
-                      font: fontBold,
-                      fontSize: 6.8,
-                      color: PdfColors.white,
-                    ),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                ),
-                pw.Container(
-                  color: PdfReportStyles.accentColor,
-                  padding: const pw.EdgeInsets.symmetric(
-                    horizontal: 2,
-                    vertical: 4,
-                  ),
-                  child: pw.Text(
-                    'NC',
-                    style: pw.TextStyle(
-                      font: fontBold,
-                      fontSize: 6.8,
-                      color: PdfColors.white,
-                    ),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                ),
-                pw.Container(
-                  color: bgCritiqueHeader,
-                  padding: const pw.EdgeInsets.symmetric(
-                    horizontal: 2,
-                    vertical: 4,
-                  ),
-                  child: pw.Text(
-                    'Crit.',
-                    style: pw.TextStyle(
-                      font: fontBold,
-                      fontSize: 6.8,
-                      color: PdfColors.white,
-                    ),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                ),
-                pw.Container(
-                  color: bgMajeureHeader,
-                  padding: const pw.EdgeInsets.symmetric(
-                    horizontal: 2,
-                    vertical: 4,
-                  ),
-                  child: pw.Text(
-                    'Maj.',
-                    style: pw.TextStyle(
-                      font: fontBold,
-                      fontSize: 6.8,
-                      color: PdfColors.white,
-                    ),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                ),
-                pw.Container(
-                  color: bgMineureHeader,
-                  padding: const pw.EdgeInsets.symmetric(
-                    horizontal: 2,
-                    vertical: 4,
-                  ),
-                  child: pw.Text(
-                    'Min.',
-                    style: pw.TextStyle(
-                      font: fontBold,
-                      fontSize: 6.8,
-                      color: PdfColors.white,
-                    ),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                ),
-                pw.Container(
-                  color: PdfReportStyles.accentColor,
-                  padding: const pw.EdgeInsets.symmetric(
-                    horizontal: 2,
-                    vertical: 4,
-                  ),
-                  child: pw.Text(
-                    '% du total NC',
-                    style: pw.TextStyle(
-                      font: fontBold,
-                      fontSize: 6.8,
-                      color: PdfColors.white,
-                    ),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                ),
-                pw.Container(
-                  color: PdfReportStyles.accentColor,
-                  padding: const pw.EdgeInsets.symmetric(
-                    horizontal: 2,
-                    vertical: 4,
-                  ),
-                  child: pw.Text(
-                    'Taux crit. / NC',
-                    style: pw.TextStyle(
-                      font: fontBold,
-                      fontSize: 6.8,
-                      color: PdfColors.white,
-                    ),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                ),
-                pw.Container(
-                  color: PdfReportStyles.accentColor,
-                  padding: const pw.EdgeInsets.symmetric(
-                    horizontal: 2,
-                    vertical: 4,
-                  ),
-                  child: pw.Text(
-                    'Densité NC/équip.',
-                    style: pw.TextStyle(
-                      font: fontBold,
-                      fontSize: 6.8,
-                      color: PdfColors.white,
-                    ),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                ),
-              ],
-            ),
-            for (int i = 0; i < items.length; i++) ...[
-              () {
-                final item = items[i];
-                final pctTotalNC = totalNC > 0
-                    ? (item.nonConformitiesCount / totalNC * 100)
-                    : 0.0;
-                final tauxCrit = item.nonConformitiesCount > 0
-                    ? (item.critiqueCount / item.nonConformitiesCount * 100)
-                    : 0.0;
-                final densite = item.equipmentCount > 0
-                    ? (item.nonConformitiesCount / item.equipmentCount)
-                    : 0.0;
-
-                final rowBg = i % 2 == 1 ? PdfReportStyles.tableRowAlt : PdfColors.white;
-
-                return pw.TableRow(
-                  children: [
-                    pw.Container(
-                      color: rowBg,
-                      padding: const pw.EdgeInsets.symmetric(
-                        horizontal: 3,
-                        vertical: 3,
-                      ),
-                      child: pw.Text(
-                        item.categoryName,
-                        style: pw.TextStyle(
-                          font: fontBold,
-                          fontSize: 6.5,
-                          color: PdfColors.black,
-                        ),
-                      ),
-                    ),
-                    pw.Container(
-                      color: rowBg,
-                      padding: const pw.EdgeInsets.symmetric(
-                        horizontal: 2,
-                        vertical: 3,
-                      ),
-                      child: pw.Text(
-                        '${item.equipmentCount}',
-                        style: pw.TextStyle(font: fontRegular, fontSize: 6.5),
-                        textAlign: pw.TextAlign.center,
-                      ),
-                    ),
-                    pw.Container(
-                      color: rowBg,
-                      padding: const pw.EdgeInsets.symmetric(
-                        horizontal: 2,
-                        vertical: 3,
-                      ),
-                      child: pw.Text(
-                        '${item.nonConformitiesCount}',
-                        style: pw.TextStyle(font: fontBold, fontSize: 6.5),
-                        textAlign: pw.TextAlign.center,
-                      ),
-                    ),
-
-                    pw.Container(
-                      color: item.critiqueCount > 0 ? bgCritiqueCell : rowBg,
-                      padding: const pw.EdgeInsets.symmetric(
-                        horizontal: 2,
-                        vertical: 3,
-                      ),
-                      child: pw.Text(
-                        '${item.critiqueCount}',
-                        style: pw.TextStyle(
-                          font: item.critiqueCount > 0
-                              ? fontBold
-                              : fontRegular,
-                          fontSize: 6.5,
-                          color: item.critiqueCount > 0
-                              ? textCritique
-                              : PdfColors.grey700,
-                        ),
-                        textAlign: pw.TextAlign.center,
-                      ),
-                    ),
-
-                    pw.Container(
-                      color: item.majeureCount > 0 ? bgMajeureCell : rowBg,
-                      padding: const pw.EdgeInsets.symmetric(
-                        horizontal: 2,
-                        vertical: 3,
-                      ),
-                      child: pw.Text(
-                        '${item.majeureCount}',
-                        style: pw.TextStyle(
-                          font: item.majeureCount > 0
-                              ? fontBold
-                              : fontRegular,
-                          fontSize: 6.5,
-                          color: item.majeureCount > 0
-                              ? textMajeure
-                              : PdfColors.grey700,
-                        ),
-                        textAlign: pw.TextAlign.center,
-                      ),
-                    ),
-
-                    pw.Container(
-                      color: item.mineureCount > 0 ? bgMineureCell : rowBg,
-                      padding: const pw.EdgeInsets.symmetric(
-                        horizontal: 2,
-                        vertical: 3,
-                      ),
-                      child: pw.Text(
-                        '${item.mineureCount}',
-                        style: pw.TextStyle(
-                          font: item.mineureCount > 0
-                              ? fontBold
-                              : fontRegular,
-                          fontSize: 6.5,
-                          color: item.mineureCount > 0
-                              ? textMineure
-                              : PdfColors.grey700,
-                        ),
-                        textAlign: pw.TextAlign.center,
-                      ),
-                    ),
-
-                    pw.Container(
-                      color: rowBg,
-                      padding: const pw.EdgeInsets.symmetric(
-                        horizontal: 2,
-                        vertical: 3,
-                      ),
-                      child: pw.Text(
-                        '${pctTotalNC.toStringAsFixed(1).replaceAll('.', ',')} %',
-                        style: pw.TextStyle(font: fontRegular, fontSize: 6.5),
-                        textAlign: pw.TextAlign.center,
-                      ),
-                    ),
-                    pw.Container(
-                      color: rowBg,
-                      padding: const pw.EdgeInsets.symmetric(
-                        horizontal: 2,
-                        vertical: 3,
-                      ),
-                      child: pw.Text(
-                        item.nonConformitiesCount > 0
-                            ? '${tauxCrit.toStringAsFixed(1).replaceAll('.', ',')} %'
-                            : '—',
-                        style: pw.TextStyle(font: fontRegular, fontSize: 6.5),
-                        textAlign: pw.TextAlign.center,
-                      ),
-                    ),
-                    pw.Container(
-                      color: rowBg,
-                      padding: const pw.EdgeInsets.symmetric(
-                        horizontal: 2,
-                        vertical: 3,
-                      ),
-                      child: pw.Text(
-                        item.equipmentCount > 0
-                            ? densite.toStringAsFixed(1).replaceAll('.', ',')
-                            : '0,0',
-                        style: pw.TextStyle(font: fontRegular, fontSize: 6.5),
-                        textAlign: pw.TextAlign.center,
-                      ),
-                    ),
-                  ],
-                );
-              }(),
-            ],
-            pw.TableRow(
-              children: [
-                pw.Container(
-                  color: PdfReportStyles.lightBlue,
-                  padding: const pw.EdgeInsets.symmetric(
-                    horizontal: 3,
-                    vertical: 4,
-                  ),
-                  child: pw.Text(
-                    'TOTAL',
-                    style: pw.TextStyle(
-                      font: fontBold,
-                      fontSize: 7,
-                      color: PdfReportStyles.accentColor,
-                    ),
-                  ),
-                ),
-                pw.Container(
-                  color: PdfReportStyles.lightBlue,
-                  padding: const pw.EdgeInsets.symmetric(
-                    horizontal: 2,
-                    vertical: 4,
-                  ),
-                  child: pw.Text(
-                    '$totalEquipements',
-                    style: pw.TextStyle(
-                      font: fontBold,
-                      fontSize: 6.8,
-                      color: PdfReportStyles.accentColor,
-                    ),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                ),
-                pw.Container(
-                  color: PdfReportStyles.lightBlue,
-                  padding: const pw.EdgeInsets.symmetric(
-                    horizontal: 2,
-                    vertical: 4,
-                  ),
-                  child: pw.Text(
-                    '$totalNC',
-                    style: pw.TextStyle(
-                      font: fontBold,
-                      fontSize: 6.8,
-                      color: PdfReportStyles.accentColor,
-                    ),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                ),
-                pw.Container(
-                  color: PdfColor.fromHex('#FEE2E2'),
-                  padding: const pw.EdgeInsets.symmetric(
-                    horizontal: 2,
-                    vertical: 4,
-                  ),
-                  child: pw.Text(
-                    '$totalCritique',
-                    style: pw.TextStyle(
-                      font: fontBold,
-                      fontSize: 6.8,
-                      color: textCritique,
-                    ),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                ),
-                pw.Container(
-                  color: PdfColor.fromHex('#FFEDD5'),
-                  padding: const pw.EdgeInsets.symmetric(
-                    horizontal: 2,
-                    vertical: 4,
-                  ),
-                  child: pw.Text(
-                    '$totalMajeure',
-                    style: pw.TextStyle(
-                      font: fontBold,
-                      fontSize: 6.8,
-                      color: textMajeure,
-                    ),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                ),
-                pw.Container(
-                  color: PdfColor.fromHex('#FEF3C7'),
-                  padding: const pw.EdgeInsets.symmetric(
-                    horizontal: 2,
-                    vertical: 4,
-                  ),
-                  child: pw.Text(
-                    '$totalMineure',
-                    style: pw.TextStyle(
-                      font: fontBold,
-                      fontSize: 6.8,
-                      color: textMineure,
-                    ),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                ),
-                pw.Container(
-                  color: PdfReportStyles.lightBlue,
-                  padding: const pw.EdgeInsets.symmetric(
-                    horizontal: 2,
-                    vertical: 4,
-                  ),
-                  child: pw.Text(
-                    '100 %',
-                    style: pw.TextStyle(
-                      font: fontBold,
-                      fontSize: 6.8,
-                      color: PdfReportStyles.accentColor,
-                    ),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                ),
-                pw.Container(
-                  color: PdfReportStyles.lightBlue,
-                  padding: const pw.EdgeInsets.symmetric(
-                    horizontal: 2,
-                    vertical: 4,
-                  ),
-                  child: pw.Text(
-                    totalNC > 0
-                        ? '${(totalCritique / totalNC * 100).toStringAsFixed(1).replaceAll('.', ',')} %'
-                        : '—',
-                    style: pw.TextStyle(
-                      font: fontBold,
-                      fontSize: 6.8,
-                      color: PdfReportStyles.accentColor,
-                    ),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                ),
-                pw.Container(
-                  color: PdfReportStyles.lightBlue,
-                  padding: const pw.EdgeInsets.symmetric(
-                    horizontal: 2,
-                    vertical: 4,
-                  ),
-                  child: pw.Text(
-                    totalEquipements > 0
-                        ? (totalNC / totalEquipements)
-                              .toStringAsFixed(1)
-                              .replaceAll('.', ',')
-                        : '0,0',
-                    style: pw.TextStyle(
-                      font: fontBold,
-                      fontSize: 6.8,
-                      color: PdfReportStyles.accentColor,
-                    ),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-        pw.SizedBox(height: 6),
-        pw.Container(
-          margin: const pw.EdgeInsets.only(top: 2),
-          child: pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Text(
-                'Glossaire des abréviations et termes du tableau :',
-                style: pw.TextStyle(
-                  font: fontBold,
-                  fontSize: 8.5,
-                  color: PdfReportStyles.accentColor,
-                ),
-              ),
-              pw.SizedBox(height: 3),
-              pw.Table(
-                border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.5),
-                columnWidths: const {
-                  0: pw.FlexColumnWidth(1.2),
-                  1: pw.FlexColumnWidth(3.8),
-                  2: pw.FlexColumnWidth(1.2),
-                  3: pw.FlexColumnWidth(3.8),
-                },
-                children: [
-                  pw.TableRow(
-                    decoration: pw.BoxDecoration(color: PdfReportStyles.tableRowAlt),
-                    children: [
-                      _buildGlossaireCell('Équip.', true),
-                      _buildGlossaireCell(
-                        'Nombre d\'équipements répertoriés',
-                        false,
-                      ),
-                      _buildGlossaireCell('Maj.', true),
-                      _buildGlossaireCell(
-                        'Non-conformités majeures (orange)',
-                        false,
-                      ),
-                    ],
-                  ),
-                  pw.TableRow(
-                    children: [
-                      _buildGlossaireCell('NC', true),
-                      _buildGlossaireCell(
-                        'Nombre total de non-conformités',
-                        false,
-                      ),
-                      _buildGlossaireCell('Min.', true),
-                      _buildGlossaireCell(
-                        'Non-conformités mineures (jaune)',
-                        false,
-                      ),
-                    ],
-                  ),
-                  pw.TableRow(
-                    decoration: pw.BoxDecoration(color: PdfReportStyles.tableRowAlt),
-                    children: [
-                      _buildGlossaireCell('Crit.', true),
-                      _buildGlossaireCell(
-                        'Non-conformités critiques (rouge)',
-                        false,
-                      ),
-                      _buildGlossaireCell('Taux crit.', true),
-                      _buildGlossaireCell(
-                        'Ratio NC Critiques / NC Totales (%)',
-                        false,
-                      ),
-                    ],
-                  ),
-                  pw.TableRow(
-                    children: [
-                      _buildGlossaireCell('Densité', true),
-                      _buildGlossaireCell(
-                        'Ratio NC par équipement (NC / Équip.)',
-                        false,
-                      ),
-                      _buildGlossaireCell('', true),
-                      _buildGlossaireCell('', false),
-                    ],
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        pw.SizedBox(height: 8),
-        pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.Text(
-              'Constatations et commentaires d\'analyse :',
-              style: pw.TextStyle(
-                font: fontBold,
-                fontSize: 8.5,
-                color: PdfReportStyles.accentColor,
-              ),
-            ),
-            pw.SizedBox(height: 4),
-            ...comments.map((comment) {
-              return pw.Padding(
-                padding: const pw.EdgeInsets.only(bottom: 3),
-                child: pw.Row(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    pw.Container(
-                      width: 3,
-                      height: 3,
-                      margin: const pw.EdgeInsets.only(top: 3, right: 5),
-                      decoration: pw.BoxDecoration(
-                        color: PdfReportStyles.accentColor,
-                        shape: pw.BoxShape.circle,
-                      ),
-                    ),
-                    pw.Expanded(
-                      child: pw.Text(
-                        comment,
-                        style: pw.TextStyle(
-                          font: fontRegular,
-                          fontSize: 7.5,
-                          color: PdfColors.grey900,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
-          ],
-        ),
-        pw.SizedBox(height: 10),
-
-        // 2.2 Analyse de la criticité des non-conformités
-        pw.Inseparable(
-          child: pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              PdfReportStyles.subTitle('2.2 Analyse de la criticité des non-conformités'),
-              pw.SizedBox(height: 4),
-              PdfReportStyles.bodyText(
-                'Distribution des non-conformités selon les 3 niveaux de gravité réglementaires KES :',
-              ),
-              pw.SizedBox(height: 6),
-              _buildBarChart(critique, majeure, mineure),
-              pw.SizedBox(height: 8),
-              _buildTextBulletPoint('Ratio de sévérité', textRatioSeverite),
-              pw.SizedBox(height: 4),
-              _buildTextBulletPoint(
-                'Niveau de risque dominant',
-                textNiveauRisqueDominant,
-              ),
-              pw.SizedBox(height: 4),
-              _buildTextBulletPoint(
-                'Signal de gravité global',
-                textSignalGraviteGlobal,
-              ),
-            ],
-          ),
-        ),
-        pw.SizedBox(height: 10),
-
-        // 2.3 Analyse comparative avec la visite précédente
-        pw.Inseparable(
-          child: pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              PdfReportStyles.subTitle('2.3 Analyse comparative avec la visite précédente'),
-              pw.SizedBox(height: 4),
-              _buildBulletItem(
-                'Nouveaux équipements (coffret / armoire / TGBT) : Donnée non disponible. Le nombre d\'équipements nouvellement installés depuis la dernière visite nécessite une comparaison directe avec l\'inventaire du rapport précédent.',
-              ),
-              pw.SizedBox(height: 4),
-              _buildBulletItem(
-                'Équipements supprimés (coffret / armoire / TGBT) : Donnée non disponible. Le nombre d\'équipements retirés de l\'installation depuis la dernière visite nécessite également une comparaison avec le rapport précédent.',
-              ),
-              pw.SizedBox(height: 4),
-              _buildBulletItem(
-                'Rapport précédent nécessaire : Merci de transmettre le rapport de vérification périodique de l\'année précédente pour ce site (ou son export de check-list). Dès réception, l\'historique d\'évolution sera calculé automatiquement.',
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  static String _shortCatName(String cat) {
-    if (cat.contains('Moyenne Tension')) return 'Local MT';
-    if (cat.contains('Cellules')) return 'Cellule MT';
-    if (cat.contains('Transformateurs')) return 'Transfo MT/BT';
-    if (cat.contains('Groupe')) return 'Local GE';
-    if (cat.contains('Basse Tension')) return 'Local BT';
-    if (cat.contains('TGBT')) return 'TGBT';
-    if (cat.contains('Armoires')) return 'Armoire';
-    if (cat.contains('Coffrets')) return 'Coffret';
-    if (cat.contains('Inverseurs')) return 'Inverseur';
-    return cat;
-  }
-
-  static pw.Widget _buildGlossaireCell(String text, bool isKey) {
-    return pw.Container(
-      padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-      child: pw.Text(
-        text,
-        style: pw.TextStyle(
-          font: isKey ? fontBold : fontRegular,
-          fontSize: 6.8,
-          color: isKey ? PdfReportStyles.accentColor : PdfColors.grey900,
-        ),
-      ),
-    );
-  }
 
   static String _shortVerificationPointName(String title) {
     final s = title.trim();
     final lower = s.toLowerCase();
     if (lower.contains('contacts indirects') ||
-        lower.contains('contact indirect'))
+        lower.contains('contact indirect')) {
       return 'contact\nindirect';
-    if (lower.contains('câblage') || lower.contains('cablage'))
+    }
+    if (lower.contains('câblage') || lower.contains('cablage')) {
       return 'Câblage';
-    if (lower.contains('identification')) return 'Identification\ncircuits';
-    if (lower.contains('dispositif') || lower.contains('protection'))
+    }
+    if (lower.contains('identification')) {
+      return 'Identification\ncircuits';
+    }
+    if (lower.contains('dispositif') || lower.contains('protection')) {
       return 'Dispositifs de\nprotection';
-    if (lower.contains('répartiteur') || lower.contains('repartiteur'))
+    }
+    if (lower.contains('répartiteur') || lower.contains('repartiteur')) {
       return 'Répartiteur de\ncircuit';
-    if (lower.contains('continuité') || lower.contains('pe'))
+    }
+    if (lower.contains('continuité') || lower.contains('pe')) {
       return 'Continuité PE';
-    if (lower.contains('répartition') || lower.contains('repartition'))
+    }
+    if (lower.contains('répartition') || lower.contains('repartition')) {
       return 'Répartition des\ncircuits';
-    if (lower.contains('emplacement') || lower.contains('dégagement'))
+    }
+    if (lower.contains('emplacement') || lower.contains('dégagement')) {
       return 'Emplacement /\ndégagement';
-    if (lower.contains('code couleur') || lower.contains('couleur'))
+    }
+    if (lower.contains('code couleur') || lower.contains('couleur')) {
       return 'Code couleur\ncâbles';
+    }
     if (lower.contains('état') ||
         lower.contains('armoire') ||
-        lower.contains('coffret'))
+        lower.contains('coffret')) {
       return 'État coffret /\narmoire / TGBT';
+    }
 
     if (s.length > 20) {
       final parts = s.split(' ');
@@ -2384,256 +1351,124 @@ class PdfStatisticsBuilder {
     return s;
   }
 
-  // ──────────────────────────────────────────────────────────────
-  //  RENSEIGNEMENTS GENERAUX
-  // ──────────────────────────────────────────────────────────────
 
-
-
-  static pw.Widget _buildBarChart(int critique, int majeure, int mineure) {
-    final total = critique + majeure + mineure;
-    final pctCritique = total > 0 ? (critique / total) * 100.0 : 0.0;
-    final pctMajeure = total > 0 ? (majeure / total) * 100.0 : 0.0;
-    final pctMineure = total > 0 ? (mineure / total) * 100.0 : 0.0;
-
-    final pctCritStr = pctCritique.toStringAsFixed(1).replaceAll('.', ',');
-    final pctMajStr = pctMajeure.toStringAsFixed(1).replaceAll('.', ',');
-    final pctMinStr = pctMineure.toStringAsFixed(1).replaceAll('.', ',');
-
-    final maxVal = [
-      critique,
-      majeure,
-      mineure,
-      1,
-    ].reduce((a, b) => a > b ? a : b);
-    final yMax = ((maxVal * 1.25) / 10).ceil() * 10 > 0
-        ? ((maxVal * 1.25) / 10).ceil() * 10
-        : 10;
-    final yMid = (yMax / 2).round();
-
-    const double chartHeight = 100.0;
-    const double barWidth = 54.0;
-
-    double calcBarHeight(int val) {
-      if (yMax == 0) return 0;
-      final h = (val / yMax) * chartHeight;
-      return h < 2 && val > 0 ? 2 : h;
-    }
-
-    final hCritique = calcBarHeight(critique);
-    final hMajeure = calcBarHeight(majeure);
-    final hMineure = calcBarHeight(mineure);
-
-    final colorCritique = PdfColor.fromHex('#DC2626');
-    final colorMajeure = PdfColor.fromHex('#EA580C');
-    final colorMineure = PdfColor.fromHex('#16A34A');
-
-    return pw.Container(
-      padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-      child: pw.Column(
-        children: [
-          pw.Text(
-            'Répartition des non-conformités par criticité',
-            style: pw.TextStyle(
-              font: fontBold,
-              fontSize: 10,
-              fontWeight: pw.FontWeight.bold,
-              color: PdfReportStyles.accentColor,
-            ),
-            textAlign: pw.TextAlign.center,
-          ),
-          pw.SizedBox(height: 10),
-
-          pw.Row(
-            mainAxisAlignment: pw.MainAxisAlignment.center,
-            crossAxisAlignment: pw.CrossAxisAlignment.end,
-            children: [
-              // Axe Y - valeurs
-              pw.Container(
-                height: chartHeight + 20,
-                margin: const pw.EdgeInsets.only(right: 6),
-                child: pw.Column(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: pw.CrossAxisAlignment.end,
-                  children: [
-                    pw.Text(
-                      '$yMax',
-                      style: pw.TextStyle(
-                        font: fontRegular,
-                        fontSize: 8,
-                        color: PdfColors.grey700,
-                      ),
-                    ),
-                    pw.Text(
-                      '$yMid',
-                      style: pw.TextStyle(
-                        font: fontRegular,
-                        fontSize: 8,
-                        color: PdfColors.grey700,
-                      ),
-                    ),
-                    pw.Text(
-                      '0',
-                      style: pw.TextStyle(
-                        font: fontRegular,
-                        fontSize: 8,
-                        color: PdfColors.grey700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Ligne d'axe Y
-              pw.Container(
-                height: chartHeight + 2,
-                width: 0.8,
-                color: PdfColors.grey400,
-              ),
-              pw.SizedBox(width: 20),
-
-              // Barres (Critique, Majeure, Mineure)
-              pw.Container(
-                height: chartHeight + 28,
-                child: pw.Row(
-                  crossAxisAlignment: pw.CrossAxisAlignment.end,
-                  children: [
-                    // Critique
-                    pw.Column(
-                      mainAxisAlignment: pw.MainAxisAlignment.end,
-                      children: [
-                        pw.Text(
-                          '$critique ($pctCritStr %)',
-                          style: pw.TextStyle(
-                            font: fontBold,
-                            fontSize: 8,
-                            fontWeight: pw.FontWeight.bold,
-                            color: PdfColors.black,
-                          ),
-                          textAlign: pw.TextAlign.center,
-                        ),
-                        pw.SizedBox(height: 2),
-                        pw.Container(
-                          width: barWidth,
-                          height: hCritique,
-                          decoration: pw.BoxDecoration(
-                            color: colorCritique,
-                            borderRadius: const pw.BorderRadius.vertical(
-                              top: pw.Radius.circular(2),
-                            ),
-                          ),
-                        ),
-                        pw.Container(
-                          height: 0.8,
-                          width: barWidth + 14,
-                          color: PdfColors.grey600,
-                        ),
-                        pw.SizedBox(height: 4),
-                        pw.Text(
-                          'Critique',
-                          style: pw.TextStyle(
-                            font: fontBold,
-                            fontSize: 8.5,
-                            color: PdfReportStyles.accentColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                    pw.SizedBox(width: 24),
-
-                    // Majeure
-                    pw.Column(
-                      mainAxisAlignment: pw.MainAxisAlignment.end,
-                      children: [
-                        pw.Text(
-                          '$majeure ($pctMajStr %)',
-                          style: pw.TextStyle(
-                            font: fontBold,
-                            fontSize: 8,
-                            fontWeight: pw.FontWeight.bold,
-                            color: PdfColors.black,
-                          ),
-                          textAlign: pw.TextAlign.center,
-                        ),
-                        pw.SizedBox(height: 2),
-                        pw.Container(
-                          width: barWidth,
-                          height: hMajeure,
-                          decoration: pw.BoxDecoration(
-                            color: colorMajeure,
-                            borderRadius: const pw.BorderRadius.vertical(
-                              top: pw.Radius.circular(2),
-                            ),
-                          ),
-                        ),
-                        pw.Container(
-                          height: 0.8,
-                          width: barWidth + 14,
-                          color: PdfColors.grey600,
-                        ),
-                        pw.SizedBox(height: 4),
-                        pw.Text(
-                          'Majeure',
-                          style: pw.TextStyle(
-                            font: fontBold,
-                            fontSize: 8.5,
-                            color: PdfReportStyles.accentColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                    pw.SizedBox(width: 24),
-
-                    // Mineure
-                    pw.Column(
-                      mainAxisAlignment: pw.MainAxisAlignment.end,
-                      children: [
-                        pw.Text(
-                          '$mineure ($pctMinStr %)',
-                          style: pw.TextStyle(
-                            font: fontBold,
-                            fontSize: 8,
-                            fontWeight: pw.FontWeight.bold,
-                            color: PdfColors.black,
-                          ),
-                          textAlign: pw.TextAlign.center,
-                        ),
-                        pw.SizedBox(height: 2),
-                        pw.Container(
-                          width: barWidth,
-                          height: hMineure,
-                          decoration: pw.BoxDecoration(
-                            color: colorMineure,
-                            borderRadius: const pw.BorderRadius.vertical(
-                              top: pw.Radius.circular(2),
-                            ),
-                          ),
-                        ),
-                        pw.Container(
-                          height: 0.8,
-                          width: barWidth + 14,
-                          color: PdfColors.grey600,
-                        ),
-                        pw.SizedBox(height: 4),
-                        pw.Text(
-                          'Mineure',
-                          style: pw.TextStyle(
-                            font: fontBold,
-                            fontSize: 8.5,
-                            color: PdfReportStyles.accentColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
+  static pw.Widget _buildTrainingRecommendationsSection(int sectionNum) {
+    final recoList = [
+      (
+        '1. Adéquation Pouvoir de Coupure (Pdc) / Icc max site',
+        'Dimensionnement & sélection d\'appareillage selon les Icc amont calculés en tête de tableau.',
+        'Prévention des destructions violentes de disjoncteurs et des arcs électriques majeurs.',
       ),
+      (
+        '2. Continuité des Masses et Conducteurs de Protection (PE)',
+        'Méthodologie de mesure 4 fils au milliohmmètre (< 2 Ω) et contrôle des liaisons équipotentielles.',
+        'Élimination des risques de choc électrique par contact indirect pour le personnel.',
+      ),
+      (
+        '3. Sélectivité & Choix des Courbes de Déclenchement (B, C, D)',
+        'Maîtrise des courants d\'appel (moteurs, transformateurs, charges informatiques) et étagement.',
+        'Continuité d\'alimentation, limitation du déclenchement au seul circuit en défaut.',
+      ),
+      (
+        '4. Coordination & Filiation des Protections Amont / Aval',
+        'Règles normatives d\'association de disjoncteurs pour renforcer le pouvoir de coupure aval.',
+        'Garantie de tenue en court-circuit à coût optimisé sans compromettre la sécurité.',
+      ),
+      (
+        '5. Régimes de Neutre & Schémas de Liaison à la Terre (SLT)',
+        'Exploitation et surveillance des schémas TT, TN et IT ; déclenchement au 1er ou 2nd défaut.',
+        'Conformité réglementaire (décret travailleurs) et maintien de l\'exploitation.',
+      ),
+      (
+        '6. Protection contre les Surtensions Transitoires (Parafoudres)',
+        'Règles d\'installation (Type 1 / Type 2), règle des 50 cm et coordination avec la prise de terre.',
+        'Préservation des cartes électroniques, automates industriels et charges sensibles.',
+      ),
+      (
+        '7. Contrôle Thermographique Infrarouge & Serrages',
+        'Utilisation des caméras thermiques, détection des points chauds et resserrage au couple.',
+        'Prévention des départs d\'incendie d\'origine électrique et dégradation prématurée des isolants.',
+      ),
+    ];
+
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        PdfReportStyles.subTitle(
+          '$sectionNum. Recommandation pour le renforcement des capacités des agents d’entretien',
+        ),
+        pw.SizedBox(height: 5),
+        PdfReportStyles.bodyText(
+          'L\'analyse approfondie des non-conformités et des caractéristiques techniques du site met en évidence la nécessité de renforcer les compétences des techniciens de maintenance selon 7 axes techniques prioritaires :',
+        ),
+        pw.SizedBox(height: 8),
+        pw.Table(
+          border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.5),
+          columnWidths: const {
+            0: pw.FlexColumnWidth(3.2),
+            1: pw.FlexColumnWidth(3.8),
+            2: pw.FlexColumnWidth(3.0),
+          },
+          children: [
+            pw.TableRow(
+              decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
+              children: [
+                pw.Padding(
+                  padding: const pw.EdgeInsets.all(5),
+                  child: pw.Text(
+                    'AXE TECHNIQUE PRIORITAIRE',
+                    style: pw.TextStyle(font: fontBold, fontSize: 7.5, color: PdfColors.white),
+                  ),
+                ),
+                pw.Padding(
+                  padding: const pw.EdgeInsets.all(5),
+                  child: pw.Text(
+                    'OBJECTIF PÉDAGOGIQUE & NORMES',
+                    style: pw.TextStyle(font: fontBold, fontSize: 7.5, color: PdfColors.white),
+                    textAlign: pw.TextAlign.center,
+                  ),
+                ),
+                pw.Padding(
+                  padding: const pw.EdgeInsets.all(5),
+                  child: pw.Text(
+                    'RISQUE COUVERT & GAIN OPÉRATIONNEL',
+                    style: pw.TextStyle(font: fontBold, fontSize: 7.5, color: PdfColors.white),
+                    textAlign: pw.TextAlign.center,
+                  ),
+                ),
+              ],
+            ),
+            ...recoList.map((item) {
+              return pw.TableRow(
+                verticalAlignment: pw.TableCellVerticalAlignment.middle,
+                children: [
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.all(4),
+                    child: pw.Text(
+                      item.$1,
+                      style: pw.TextStyle(font: fontBold, fontSize: 7, color: PdfReportStyles.headerColor),
+                    ),
+                  ),
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.all(4),
+                    child: pw.Text(
+                      item.$2,
+                      style: pw.TextStyle(font: fontRegular, fontSize: 7, color: PdfColors.grey900),
+                    ),
+                  ),
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.all(4),
+                    child: pw.Text(
+                      item.$3,
+                      style: pw.TextStyle(font: fontRegular, fontSize: 7, color: PdfColors.grey900),
+                    ),
+                  ),
+                ],
+              );
+            }),
+          ],
+        ),
+      ],
     );
   }
-
-
 }

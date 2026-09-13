@@ -210,36 +210,99 @@ class PdfSommaireBuilder {
     );
     entries.add(
       SommaireEntry(
-        titre: "3. Concentration du risque",
+        titre: "2.1. Indicateurs clés de la mission",
+        key: 'resume_executif_1_2_1',
+        level: 2,
+      ),
+    );
+    entries.add(
+      SommaireEntry(
+        titre: "2.2. Criticité",
+        key: 'resume_executif_1_2_2',
+        level: 2,
+      ),
+    );
+    entries.add(
+      SommaireEntry(
+        titre: "2.3. Facteurs de risque prépondérants",
+        key: 'resume_executif_1_2_3',
+        level: 2,
+      ),
+    );
+    entries.add(
+      SommaireEntry(
+        titre: "3. Répartition des non-conformités",
         key: 'resume_executif_1_3',
         level: 1,
       ),
     );
     entries.add(
       SommaireEntry(
-        titre: "4. Facteurs de risque prépondérants",
+        titre: "3.1. Analyse Moyenne Tension (HTA)",
+        key: 'resume_executif_1_3_1',
+        level: 2,
+      ),
+    );
+    entries.add(
+      SommaireEntry(
+        titre: "3.2. Analyse Basse Tension (BT)",
+        key: 'resume_executif_1_3_2',
+        level: 2,
+      ),
+    );
+    entries.add(
+      SommaireEntry(
+        titre: "4. Diversification des marques des appareillages de protection",
         key: 'resume_executif_1_4',
         level: 1,
       ),
     );
     entries.add(
       SommaireEntry(
-        titre: "5. Observations et constats majeurs",
+        titre: "5. Courbes et protections",
         key: 'resume_executif_1_5',
         level: 1,
       ),
     );
     entries.add(
       SommaireEntry(
-        titre: "6. Recommandations prioritaires hiérarchisées",
+        titre: "6. Adéquation ICC / PDC",
         key: 'resume_executif_1_6',
         level: 1,
       ),
     );
     entries.add(
       SommaireEntry(
-        titre: "7. Appréciation globale",
+        titre: "7. Proportion type de câble par section",
         key: 'resume_executif_1_7',
+        level: 1,
+      ),
+    );
+    entries.add(
+      SommaireEntry(
+        titre: "8. Adéquation classement des zones et indices des équipements",
+        key: 'resume_executif_1_8',
+        level: 1,
+      ),
+    );
+    entries.add(
+      SommaireEntry(
+        titre: "9. Renforcement des compétences",
+        key: 'resume_executif_1_9',
+        level: 1,
+      ),
+    );
+    entries.add(
+      SommaireEntry(
+        titre: "10. Recommandations prioritaires hiérarchisées",
+        key: 'resume_executif_1_10',
+        level: 1,
+      ),
+    );
+    entries.add(
+      SommaireEntry(
+        titre: "11. Appréciation globale",
+        key: 'resume_executif_1_11',
         level: 1,
       ),
     );
@@ -256,36 +319,70 @@ class PdfSommaireBuilder {
     );
     entries.add(
       SommaireEntry(
-        titre: "1. Indicateurs clés de la mission",
-        key: 'stat_indicateurs',
-        level: 1,
-      ),
-    );
-    entries.add(
-      SommaireEntry(
-        titre: "2. Analyse croisée par catégories / équipement",
-        key: 'stat_croisee',
-        level: 1,
-      ),
-    );
-    entries.add(
-      SommaireEntry(
-        titre: "3. Répartition des non-conformités par domaine de tension",
+        titre: "1. Répartition des non conformités par domaine de tension",
         key: 'stat_tension',
         level: 1,
       ),
     );
     entries.add(
       SommaireEntry(
-        titre: "4. Statistique par type de défaut — analyse de Pareto",
+        titre: "2. Non-conformités croisées par catégorie d'installation",
+        key: 'stat_croisee',
+        level: 1,
+      ),
+    );
+    entries.add(
+      SommaireEntry(
+        titre: "2.1. Moyenne tension",
+        key: 'stat_croisee_mt',
+        level: 2,
+      ),
+    );
+    entries.add(
+      SommaireEntry(
+        titre: "2.2. Basse tension",
+        key: 'stat_croisee_bt',
+        level: 2,
+      ),
+    );
+    entries.add(
+      SommaireEntry(
+        titre: "3. Sécurité et traçabilité des tableaux Basse Tension",
+        key: 'stat_securite_bt',
+        level: 1,
+      ),
+    );
+    entries.add(
+      SommaireEntry(
+        titre: "3.1. Identification des sources d’alimentation",
+        key: 'stat_sources_alim',
+        level: 2,
+      ),
+    );
+    entries.add(
+      SommaireEntry(
+        titre: "3.2. Présence organe de coupure en tête d’installation",
+        key: 'stat_coupure_tete',
+        level: 2,
+      ),
+    );
+    entries.add(
+      SommaireEntry(
+        titre: "3.3. Présence parafoudre",
+        key: 'stat_parafoudres',
+        level: 2,
+      ),
+    );
+    entries.add(
+      SommaireEntry(
+        titre: "4. Statistique par type de défaut : analyse de Pareto (corrigée)",
         key: 'stat_pareto',
         level: 1,
       ),
     );
     entries.add(
       SommaireEntry(
-        titre:
-            "5. Non-conformités de l'année passée et taux de mise en conformité",
+        titre: "5. Analyse comparative avec la visite précédente",
         key: 'stat_annee_passee',
         level: 1,
       ),
@@ -294,6 +391,13 @@ class PdfSommaireBuilder {
       SommaireEntry(
         titre: "6. Synthèse de l'analyse statistique",
         key: 'stat_synthese',
+        level: 1,
+      ),
+    );
+    entries.add(
+      SommaireEntry(
+        titre: "7. Recommandation pour le renforcement des capacités des agents d’entretien",
+        key: 'stat_formation',
         level: 1,
       ),
     );

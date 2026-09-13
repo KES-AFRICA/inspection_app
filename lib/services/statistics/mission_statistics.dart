@@ -3,6 +3,7 @@
 import 'audit_finding.dart';
 import 'unified_observation.dart';
 import 'mission_domain_inventory_engine.dart';
+import 'technical_enrichment_engine.dart';
 
 class CriticalityStats {
   final int critique;
@@ -135,11 +136,13 @@ class MissionStatisticsSummary {
   final List<CategoryCrossItem> crossCategoryItems;
   final String crossAnalysisText;
   final List<EquipmentInventoryItem> equipmentInventory;
+  final TechnicalEnrichmentResult? technicalEnrichment;
 
   MissionStatisticsSummary({
     required this.missionId,
     required this.inventory,
     this.domainInventory,
+    this.technicalEnrichment,
     required this.criticalityStats,
     required this.topDefects,
     required this.paretoResult,
@@ -168,6 +171,41 @@ class MissionStatisticsSummary {
 
   /// Formatage texte unique certifié de la densité moyenne globale (ex: "3,90").
   String get globalDensityStr => globalDensity.toStringAsFixed(2).replaceAll('.', ',');
+
+  /// Nombre d'équipements et installations inspectés en Moyenne Tension
+  int get htaEquipmentsCount {
+    if (domainInventory != null) {
+      return domainInventory!.instances.where((i) => i.tensionDomain == TensionDomain.mt).length;
+    }
+    return crossCategoryItems
+        .where((c) => c.categoryKey.contains('mt') || c.categoryKey.contains('transfo'))
+        .fold(0, (s, e) => s + e.equipmentCount);
+  }
+
+  /// Densité moyenne en Moyenne Tension (NC HTA / Equip HTA)
+  double get densityHta => htaEquipmentsCount > 0 ? tensionDomainStats.mtCount / htaEquipmentsCount : 0.0;
+  String get densityHtaStr => densityHta.toStringAsFixed(2).replaceAll('.', ',');
+
+  /// Nombre d'équipements et installations inspectés en Basse Tension
+  int get btEquipmentsCount {
+    if (domainInventory != null) {
+      return domainInventory!.instances.where((i) => i.tensionDomain == TensionDomain.bt).length;
+    }
+    return crossCategoryItems
+        .where((c) => !c.categoryKey.contains('mt') && !c.categoryKey.contains('transfo'))
+        .fold(0, (s, e) => s + e.equipmentCount);
+  }
+
+  /// Densité moyenne en Basse Tension (NC BT / Equip BT)
+  double get densityBt => btEquipmentsCount > 0 ? tensionDomainStats.btCount / btEquipmentsCount : 0.0;
+  String get densityBtStr => densityBt.toStringAsFixed(2).replaceAll('.', ',');
+
+  /// Accès au résultat d'enrichissement technique avancé
+  TechnicalEnrichmentResult get technical {
+    if (technicalEnrichment != null) return technicalEnrichment!;
+    final dom = domainInventory ?? MissionDomainInventoryEngine.buildInventory(missionId);
+    return TechnicalEnrichmentEngine.compute(missionId, dom, inventory);
+  }
 
   String get densestCategoryFormatted {
     if (domainInventory != null) {
@@ -273,10 +311,17 @@ class MissionStatisticsSummary {
     final topTwo = domainInventory.getTopTwoNonConformityCategories();
     final catPareto = domainInventory.getCategoryParetoAnalysis();
 
+    final technical = TechnicalEnrichmentEngine.compute(
+      inventory.missionId,
+      domainInventory,
+      inventory,
+    );
+
     return MissionStatisticsSummary(
       missionId: inventory.missionId,
       inventory: inventory,
       domainInventory: domainInventory,
+      technicalEnrichment: technical,
       criticalityStats: cStats,
       topDefects: pareto.items,
       paretoResult: pareto,
