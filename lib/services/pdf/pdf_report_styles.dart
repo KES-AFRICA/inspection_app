@@ -958,3 +958,128 @@ class ParsedObservationRow {
     required this.constatMajeur,
   });
 }
+
+/// Tableau PDF supportant de vraies lignes fusionnées sur toute la largeur (colSpan total).
+/// Lorsqu'une ligne possède exactement un seul enfant (TableRow avec children.length == 1),
+/// cet enfant est automatiquement dimensionné sur la largeur totale du tableau,
+/// parfaitement centré géométriquement, et les bordures verticales intérieures ne coupent pas la ligne.
+class PdfMergedTable extends pw.Table {
+  final pw.TableBorder? customBorder;
+
+  PdfMergedTable({
+    super.children = const <pw.TableRow>[],
+    super.defaultColumnWidth = const pw.FlexColumnWidth(),
+    super.columnWidths,
+    this.customBorder,
+    super.defaultVerticalAlignment = pw.TableCellVerticalAlignment.top,
+  }) : super(border: null);
+
+  @override
+  void layout(
+    pw.Context context,
+    pw.BoxConstraints constraints, {
+    bool parentUsesSize = false,
+  }) {
+    super.layout(context, constraints, parentUsesSize: parentUsesSize);
+
+    final totalWidth = box!.width;
+    for (final row in children) {
+      if (row.children.length == 1) {
+        final child = row.children.first;
+        final childConstraints = pw.BoxConstraints.tightFor(width: totalWidth);
+        child.layout(context, childConstraints);
+        child.box = PdfRect(
+          box!.left,
+          child.box?.bottom ?? box!.bottom,
+          totalWidth,
+          child.box?.height ?? 0,
+        );
+      }
+    }
+  }
+
+  @override
+  void paint(pw.Context context) {
+    super.paint(context);
+
+    if (customBorder == null || box == null) return;
+    final b = customBorder!;
+
+    context.canvas.saveContext();
+
+    // 1. Bordures extérieures
+    if (b.top.style.paint) {
+      context.canvas
+        ..moveTo(box!.left, box!.top)
+        ..lineTo(box!.right, box!.top)
+        ..setStrokeColor(b.top.color)
+        ..setLineWidth(b.top.width)
+        ..strokePath();
+    }
+    if (b.bottom.style.paint) {
+      context.canvas
+        ..moveTo(box!.left, box!.bottom)
+        ..lineTo(box!.right, box!.bottom)
+        ..setStrokeColor(b.bottom.color)
+        ..setLineWidth(b.bottom.width)
+        ..strokePath();
+    }
+    if (b.left.style.paint) {
+      context.canvas
+        ..moveTo(box!.left, box!.bottom)
+        ..lineTo(box!.left, box!.top)
+        ..setStrokeColor(b.left.color)
+        ..setLineWidth(b.left.width)
+        ..strokePath();
+    }
+    if (b.right.style.paint) {
+      context.canvas
+        ..moveTo(box!.right, box!.bottom)
+        ..lineTo(box!.right, box!.top)
+        ..setStrokeColor(b.right.color)
+        ..setLineWidth(b.right.width)
+        ..strokePath();
+    }
+
+    // 2. Bordures horizontales intérieures
+    if (b.horizontalInside.style.paint) {
+      context.canvas.setStrokeColor(b.horizontalInside.color);
+      context.canvas.setLineWidth(b.horizontalInside.width);
+      for (int i = 0; i < children.length - 1; i++) {
+        final row = children[i];
+        if (row.children.isNotEmpty && row.children.first.box != null) {
+          final y = row.children.first.box!.bottom;
+          context.canvas
+            ..moveTo(box!.left, y)
+            ..lineTo(box!.right, y)
+            ..strokePath();
+        }
+      }
+    }
+
+    // 3. Bordures verticales intérieures (UNIQUEMENT pour les lignes avec plusieurs colonnes)
+    if (b.verticalInside.style.paint) {
+      context.canvas.setStrokeColor(b.verticalInside.color);
+      context.canvas.setLineWidth(b.verticalInside.width);
+      for (final row in children) {
+        if (row.children.length > 1) {
+          for (int c = 0; c < row.children.length - 1; c++) {
+            final child = row.children[c];
+            if (child.box != null) {
+              final x = child.box!.right;
+              final yBottom = child.box!.bottom;
+              final yTop = child.box!.top;
+              context.canvas
+                ..moveTo(x, yBottom)
+                ..lineTo(x, yTop)
+                ..strokePath();
+            }
+          }
+        }
+      }
+    }
+
+    context.canvas.restoreContext();
+  }
+}
+

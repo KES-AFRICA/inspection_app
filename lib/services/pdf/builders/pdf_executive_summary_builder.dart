@@ -180,6 +180,7 @@ class PdfExecutiveSummaryBuilder {
     widgets.add(pw.SizedBox(height: 10));
 
     // ── 3. Facteurs de risque prépondérants ──
+    widgets.add(pw.NewPage(freeSpace: 460));
     widgets.add(
       PageTracker(
         key: 'resume_executif_1_3',
@@ -206,6 +207,7 @@ class PdfExecutiveSummaryBuilder {
     widgets.add(pw.SizedBox(height: 10));
 
     // ── 4. Répartition des non-conformités ──
+    widgets.add(pw.NewPage(freeSpace: 120));
     widgets.add(
       PageTracker(
         key: 'resume_executif_1_4',
@@ -238,6 +240,7 @@ class PdfExecutiveSummaryBuilder {
     widgets.add(pw.SizedBox(height: 2));
     widgets.add(_buildLocauxStatsTable(technical.locauxMtFindings, isHta: true));
     widgets.add(pw.SizedBox(height: 6));
+    widgets.add(pw.NewPage(freeSpace: 120));
     widgets.add(
       pw.Text(
         'B. Exploitation et maintenance',
@@ -253,6 +256,7 @@ class PdfExecutiveSummaryBuilder {
       ),
     );
     widgets.add(pw.SizedBox(height: 6));
+    widgets.add(pw.NewPage(freeSpace: 120));
     widgets.add(
       pw.Text(
         'C. Non conformités majeures',
@@ -264,6 +268,7 @@ class PdfExecutiveSummaryBuilder {
     widgets.add(pw.SizedBox(height: 8));
 
     // 4.2 Analyse Basse Tension (BT)
+    widgets.add(pw.NewPage(freeSpace: 120));
     widgets.add(
       PageTracker(
         key: 'resume_executif_1_4_2',
@@ -285,6 +290,7 @@ class PdfExecutiveSummaryBuilder {
     widgets.add(pw.SizedBox(height: 2));
     widgets.add(_buildLocauxStatsTable(technical.locauxBtFindings, isHta: false));
     widgets.add(pw.SizedBox(height: 6));
+    widgets.add(pw.NewPage(freeSpace: 130));
     widgets.add(
       pw.Text(
         'B. Exploitation et maintenance',
@@ -300,6 +306,7 @@ class PdfExecutiveSummaryBuilder {
       ),
     );
     widgets.add(pw.SizedBox(height: 6));
+    widgets.add(pw.NewPage(freeSpace: 120));
     widgets.add(
       pw.Text(
         'D. Non conformités majeures',
@@ -311,6 +318,7 @@ class PdfExecutiveSummaryBuilder {
     widgets.add(pw.SizedBox(height: 10));
 
     // ── 5. Diversification des marques des appareillages de protection ──
+    widgets.add(pw.NewPage(freeSpace: 130));
     widgets.add(
       PageTracker(
         key: 'resume_executif_1_5',
@@ -332,6 +340,7 @@ class PdfExecutiveSummaryBuilder {
     widgets.add(pw.SizedBox(height: 10));
 
     // ── 6. Courbes et protections ──
+    widgets.add(pw.NewPage(freeSpace: 100));
     widgets.add(
       PageTracker(
         key: 'resume_executif_1_6',
@@ -345,6 +354,7 @@ class PdfExecutiveSummaryBuilder {
     widgets.add(pw.SizedBox(height: 10));
 
     // ── 7. Adéquation ICC / PDC ──
+    widgets.add(pw.NewPage(freeSpace: 100));
     widgets.add(
       PageTracker(
         key: 'resume_executif_1_7',
@@ -358,6 +368,7 @@ class PdfExecutiveSummaryBuilder {
     widgets.add(pw.SizedBox(height: 10));
 
     // ── 8. Proportion type de câble par section ──
+    widgets.add(pw.NewPage(freeSpace: 110));
     widgets.add(
       PageTracker(
         key: 'resume_executif_1_8',
@@ -817,10 +828,11 @@ class PdfExecutiveSummaryBuilder {
 
     pw.TableRow buildRow(String label, String value) {
       return pw.TableRow(
+        verticalAlignment: pw.TableCellVerticalAlignment.middle,
         children: [
           pw.Container(
             padding: const pw.EdgeInsets.all(5),
-            alignment: pw.Alignment.topLeft,
+            alignment: pw.Alignment.centerLeft,
             child: pw.Text(
               label,
               style: pw.TextStyle(font: fontBold, fontSize: 7.5, color: PdfReportStyles.headerColor),
@@ -828,7 +840,7 @@ class PdfExecutiveSummaryBuilder {
           ),
           pw.Container(
             padding: const pw.EdgeInsets.all(5),
-            alignment: pw.Alignment.topLeft,
+            alignment: pw.Alignment.centerLeft,
             child: pw.Text(
               value,
               style: pw.TextStyle(font: fontRegular, fontSize: 7.5, color: PdfReportStyles.darkGrey, lineSpacing: 1.8),
@@ -856,20 +868,25 @@ class PdfExecutiveSummaryBuilder {
       },
       children: [
         pw.TableRow(
+          verticalAlignment: pw.TableCellVerticalAlignment.middle,
           decoration: pw.BoxDecoration(color: PdfReportStyles.headerColor),
           children: [
-            pw.Padding(
+            pw.Container(
+              alignment: pw.Alignment.center,
               padding: const pw.EdgeInsets.all(5),
               child: pw.Text(
                 'Indicateur',
                 style: pw.TextStyle(font: fontBold, fontSize: 8, color: PdfColors.white),
+                textAlign: pw.TextAlign.center,
               ),
             ),
-            pw.Padding(
+            pw.Container(
+              alignment: pw.Alignment.center,
               padding: const pw.EdgeInsets.all(5),
               child: pw.Text(
                 'Valeur',
                 style: pw.TextStyle(font: fontBold, fontSize: 8, color: PdfColors.white),
+                textAlign: pw.TextAlign.center,
               ),
             ),
           ],
@@ -1031,10 +1048,11 @@ class PdfExecutiveSummaryBuilder {
 
     pw.TableRow buildBanner(String text) {
       return pw.TableRow(
+        verticalAlignment: pw.TableCellVerticalAlignment.middle,
         decoration: pw.BoxDecoration(color: PdfReportStyles.headerColor),
         children: [
           pw.Container(
-            padding: const pw.EdgeInsets.symmetric(vertical: 3.5),
+            padding: const pw.EdgeInsets.symmetric(vertical: 4),
             alignment: pw.Alignment.center,
             child: pw.Text(
               text,
@@ -1042,15 +1060,12 @@ class PdfExecutiveSummaryBuilder {
               textAlign: pw.TextAlign.center,
             ),
           ),
-          pw.Container(),
-          pw.Container(),
-          pw.Container(),
         ],
       );
     }
 
-    return pw.Table(
-      border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.5),
+    return PdfMergedTable(
+      customBorder: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.5),
       columnWidths: const {
         0: pw.FlexColumnWidth(2.6),
         1: pw.FlexColumnWidth(1.6),
@@ -1083,15 +1098,7 @@ class PdfExecutiveSummaryBuilder {
         buildCritRow('Critique', totCrit, totCritPct, '$totCritDens NC critique / équipement'),
         buildCritRow('Majeure', totMaj, totMajPct, '$totMajDens NC majeure / équipement'),
         buildCritRow('Mineure', totMin, totMinPct, '$totMinDens NC mineure / équipement'),
-        pw.TableRow(
-          decoration: pw.BoxDecoration(color: PdfReportStyles.lightBlue),
-          children: [
-            _buildTableCell('TOTAL GLOBAL HTA + BT', isBold: true, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
-            _buildTableCell('', isBold: true),
-            _buildTableCell('', isBold: true),
-            _buildTableCell('${stats.globalDensityStr} NC / équipement (moyenne globale)', isBold: true),
-          ],
-        ),
+        buildCritRow('TOTAL GLOBAL HTA + BT', totGlobal, '100', '${stats.globalDensityStr} NC / équipement (moyenne globale)', isTotal: true),
       ],
     );
   }
@@ -1107,10 +1114,11 @@ class PdfExecutiveSummaryBuilder {
 
     pw.TableRow buildBanner(String title, PdfColor bgColor, PdfColor textColor) {
       return pw.TableRow(
+        verticalAlignment: pw.TableCellVerticalAlignment.middle,
         decoration: pw.BoxDecoration(color: bgColor),
         children: [
           pw.Container(
-            padding: const pw.EdgeInsets.symmetric(vertical: 3),
+            padding: const pw.EdgeInsets.symmetric(vertical: 3.5),
             alignment: pw.Alignment.center,
             child: pw.Text(
               title,
@@ -1118,15 +1126,13 @@ class PdfExecutiveSummaryBuilder {
               textAlign: pw.TextAlign.center,
             ),
           ),
-          pw.Container(),
-          pw.Container(),
         ],
       );
     }
 
     List<pw.TableRow> buildSubSection(String subTitle, Map<String, int> counts, int total) {
       final rows = <pw.TableRow>[];
-      rows.add(buildBanner(subTitle, PdfColor.fromHex('#FCE4D6'), PdfColor.fromHex('#843C0C')));
+      rows.add(buildBanner(subTitle, PdfReportStyles.lightBlue, PdfReportStyles.headerColor));
 
       for (final fam in canonicalOrder) {
         final c = counts[fam] ?? 0;
@@ -1154,8 +1160,8 @@ class PdfExecutiveSummaryBuilder {
       return rows;
     }
 
-    return pw.Table(
-      border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.5),
+    return PdfMergedTable(
+      customBorder: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.5),
       columnWidths: const {
         0: pw.FlexColumnWidth(5.5),
         1: pw.FlexColumnWidth(2.2),
@@ -1361,7 +1367,7 @@ class PdfExecutiveSummaryBuilder {
 
   static pw.Widget _buildMarquesTable(TechnicalEnrichmentResult technical) {
     String formatBrands(Map<String, int> m) {
-      if (m.isEmpty) return 'Quantité par marque sur l’ensemble';
+      if (m.isEmpty) return '';
       final sorted = m.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
       return sorted.map((e) => '${e.key} : ${e.value}').join('\n');
     }
@@ -1419,7 +1425,7 @@ class PdfExecutiveSummaryBuilder {
 
   static pw.Widget _buildCourbesTable(TechnicalEnrichmentResult technical) {
     String formatCourbes(Map<String, int> m) {
-      if (m.isEmpty) return 'Quantité de courbe';
+      if (m.isEmpty) return '';
       final sorted = m.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
       return sorted.map((e) => 'Courbe ${e.key} : ${e.value}').join('\n');
     }
@@ -1478,7 +1484,7 @@ class PdfExecutiveSummaryBuilder {
   static pw.Widget _buildAdequationTable(TechnicalEnrichmentResult technical) {
     String formatAdequation(AdequationIccPdcStats? s) {
       if (s == null || s.totalElements == 0) {
-        return 'CONFORMITE PDC REQUIS / ICC PRESENT';
+        return '';
       }
       if (s.evaluables == 0) {
         return 'Non renseigné';
@@ -1540,9 +1546,7 @@ class PdfExecutiveSummaryBuilder {
   static pw.Widget _buildCablesTable(TechnicalEnrichmentResult technical) {
     String formatBreakdown(Map<String, CablesSectionBreakdown> b, bool isAluPreferred) {
       if (b.isEmpty) {
-        return isAluPreferred
-            ? 'Alu xxxx / sur le nombre, et les sections'
-            : 'Cuivre xxxx / sur le nombre, et les sections';
+        return '';
       }
       final parts = <String>[];
       for (final e in b.entries) {
@@ -1553,7 +1557,7 @@ class PdfExecutiveSummaryBuilder {
           parts.add('${sb.metal} : ${sb.count}${secStr.isNotEmpty ? " [$secStr]" : ""}');
         }
       }
-      return parts.isNotEmpty ? parts.join('\n') : (isAluPreferred ? 'Alu 0 / 0' : 'Cuivre 0 / 0');
+      return parts.isNotEmpty ? parts.join('\n') : '';
     }
 
     const categories = [
