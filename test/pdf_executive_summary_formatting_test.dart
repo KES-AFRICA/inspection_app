@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/services/ai/executive_summary_snapshot.dart';
@@ -68,5 +69,7 @@ void main() {
     final bytes = await doc.save();
     expect(bytes.isNotEmpty, isTrue);
     expect(bytes.length, greaterThan(5000));
+    final file = File('pdf_exec_summary_fixed.pdf');
+    await file.writeAsBytes(bytes);
   });
 }

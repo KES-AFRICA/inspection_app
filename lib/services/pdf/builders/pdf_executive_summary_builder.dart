@@ -1034,6 +1034,13 @@ class PdfExecutiveSummaryBuilder {
     final totMajDens = (totMaj / globEq).toStringAsFixed(2).replaceAll('.', ',');
     final totMinDens = (totMin / globEq).toStringAsFixed(2).replaceAll('.', ',');
 
+    const domainColWidths = {
+      0: pw.FlexColumnWidth(2.6),
+      1: pw.FlexColumnWidth(1.6),
+      2: pw.FlexColumnWidth(2.0),
+      3: pw.FlexColumnWidth(3.8),
+    };
+
     pw.TableRow buildCritRow(String level, int count, String pct, String dens, {bool isTotal = false}) {
       return pw.TableRow(
         decoration: isTotal ? pw.BoxDecoration(color: PdfReportStyles.lightBlue) : null,
@@ -1046,32 +1053,42 @@ class PdfExecutiveSummaryBuilder {
       );
     }
 
-    pw.TableRow buildBanner(String text) {
-      return pw.TableRow(
-        verticalAlignment: pw.TableCellVerticalAlignment.middle,
-        decoration: pw.BoxDecoration(color: PdfReportStyles.headerColor),
+    pw.Widget buildBannerTable(String text) {
+      return pw.Table(
+        border: pw.TableBorder(
+          left: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
+          right: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
+          bottom: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
+        ),
+        columnWidths: const {0: pw.FlexColumnWidth(1.0)},
         children: [
-          pw.Container(
-            padding: const pw.EdgeInsets.symmetric(vertical: 4),
-            alignment: pw.Alignment.center,
-            child: pw.Text(
-              text,
-              style: pw.TextStyle(font: fontBold, fontSize: 8, color: PdfColors.white),
-              textAlign: pw.TextAlign.center,
-            ),
+          pw.TableRow(
+            verticalAlignment: pw.TableCellVerticalAlignment.middle,
+            decoration: pw.BoxDecoration(color: PdfReportStyles.headerColor),
+            children: [
+              pw.Container(
+                padding: const pw.EdgeInsets.symmetric(vertical: 4),
+                alignment: pw.Alignment.center,
+                child: pw.Text(
+                  text,
+                  style: pw.TextStyle(font: fontBold, fontSize: 8, color: PdfColors.white),
+                  textAlign: pw.TextAlign.center,
+                ),
+              ),
+            ],
           ),
         ],
       );
     }
 
-    return PdfMergedTable(
-      customBorder: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.5),
-      columnWidths: const {
-        0: pw.FlexColumnWidth(2.6),
-        1: pw.FlexColumnWidth(1.6),
-        2: pw.FlexColumnWidth(2.0),
-        3: pw.FlexColumnWidth(3.8),
-      },
+    final domainHeaderTable = pw.Table(
+      border: pw.TableBorder(
+        top: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
+        left: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
+        right: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
+        bottom: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
+      ),
+      columnWidths: domainColWidths,
       children: [
         pw.TableRow(
           decoration: pw.BoxDecoration(color: PdfReportStyles.headerColor),
@@ -1082,23 +1099,47 @@ class PdfExecutiveSummaryBuilder {
             _buildTableHeaderCell('Densité'),
           ],
         ),
-        buildBanner('HTA'),
-        buildCritRow('Critique', mtCrit, mtCritPct, '$mtCritDens NC critique / équipement'),
-        buildCritRow('Majeure', mtMaj, mtMajPct, '$mtMajDens NC majeure / équipement'),
-        buildCritRow('Mineure', mtMin, mtMinPct, '$mtMinDens NC mineure / équipement'),
-        buildCritRow('TOTAL HTA', mtTot, '100', '${stats.densityHtaStr} NC / équipement (moyenne HTA)', isTotal: true),
+      ],
+    );
 
-        buildBanner('BT'),
-        buildCritRow('Critique', btCrit, btCritPct, '$btCritDens NC critique / équipement'),
-        buildCritRow('Majeure', btMaj, btMajPct, '$btMajDens NC majeure / équipement'),
-        buildCritRow('Mineure', btMin, btMinPct, '$btMinDens NC mineure / équipement'),
-        buildCritRow('TOTAL BT', btTot, '100', '${stats.densityBtStr} NC / équipement (moyenne BT)', isTotal: true),
+    pw.Widget buildDomainDataTable(List<pw.TableRow> rows) {
+      return pw.Table(
+        border: pw.TableBorder(
+          left: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
+          right: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
+          bottom: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
+          horizontalInside: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
+          verticalInside: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
+        ),
+        columnWidths: domainColWidths,
+        children: rows,
+      );
+    }
 
-        buildBanner('HTA + BT'),
-        buildCritRow('Critique', totCrit, totCritPct, '$totCritDens NC critique / équipement'),
-        buildCritRow('Majeure', totMaj, totMajPct, '$totMajDens NC majeure / équipement'),
-        buildCritRow('Mineure', totMin, totMinPct, '$totMinDens NC mineure / équipement'),
-        buildCritRow('TOTAL GLOBAL HTA + BT', totGlobal, '100', '${stats.globalDensityStr} NC / équipement (moyenne globale)', isTotal: true),
+    return pw.Column(
+      children: [
+        domainHeaderTable,
+        buildBannerTable('HTA'),
+        buildDomainDataTable([
+          buildCritRow('Critique', mtCrit, mtCritPct, '$mtCritDens NC critique / équipement'),
+          buildCritRow('Majeure', mtMaj, mtMajPct, '$mtMajDens NC majeure / équipement'),
+          buildCritRow('Mineure', mtMin, mtMinPct, '$mtMinDens NC mineure / équipement'),
+          buildCritRow('TOTAL HTA', mtTot, '100', '${stats.densityHtaStr} NC / équipement (moyenne HTA)', isTotal: true),
+        ]),
+        buildBannerTable('BT'),
+        buildDomainDataTable([
+          buildCritRow('Critique', btCrit, btCritPct, '$btCritDens NC critique / équipement'),
+          buildCritRow('Majeure', btMaj, btMajPct, '$btMajDens NC majeure / équipement'),
+          buildCritRow('Mineure', btMin, btMinPct, '$btMinDens NC mineure / équipement'),
+          buildCritRow('TOTAL BT', btTot, '100', '${stats.densityBtStr} NC / équipement (moyenne BT)', isTotal: true),
+        ]),
+        buildBannerTable('HTA + BT'),
+        buildDomainDataTable([
+          buildCritRow('Critique', totCrit, totCritPct, '$totCritDens NC critique / équipement'),
+          buildCritRow('Majeure', totMaj, totMajPct, '$totMajDens NC majeure / équipement'),
+          buildCritRow('Mineure', totMin, totMinPct, '$totMinDens NC mineure / équipement'),
+          buildCritRow('TOTAL GLOBAL HTA + BT', totGlobal, '100', '${stats.globalDensityStr} NC / équipement (moyenne globale)', isTotal: true),
+        ]),
       ],
     );
   }
@@ -1112,28 +1153,62 @@ class PdfExecutiveSummaryBuilder {
       'Surintensité / court-circuit',
     ];
 
-    pw.TableRow buildBanner(String title, PdfColor bgColor, PdfColor textColor) {
-      return pw.TableRow(
-        verticalAlignment: pw.TableCellVerticalAlignment.middle,
-        decoration: pw.BoxDecoration(color: bgColor),
+    const riskColWidths = {
+      0: pw.FlexColumnWidth(5.5),
+      1: pw.FlexColumnWidth(2.2),
+      2: pw.FlexColumnWidth(2.3),
+    };
+
+    pw.Widget buildRiskBannerTable(String title, PdfColor bgColor, PdfColor textColor) {
+      return pw.Table(
+        border: pw.TableBorder(
+          left: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
+          right: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
+          bottom: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
+        ),
+        columnWidths: const {0: pw.FlexColumnWidth(1.0)},
         children: [
-          pw.Container(
-            padding: const pw.EdgeInsets.symmetric(vertical: 3.5),
-            alignment: pw.Alignment.center,
-            child: pw.Text(
-              title,
-              style: pw.TextStyle(font: fontBold, fontSize: 7.5, color: textColor),
-              textAlign: pw.TextAlign.center,
-            ),
+          pw.TableRow(
+            verticalAlignment: pw.TableCellVerticalAlignment.middle,
+            decoration: pw.BoxDecoration(color: bgColor),
+            children: [
+              pw.Container(
+                padding: const pw.EdgeInsets.symmetric(vertical: 3.5),
+                alignment: pw.Alignment.center,
+                child: pw.Text(
+                  title,
+                  style: pw.TextStyle(font: fontBold, fontSize: 7.5, color: textColor),
+                  textAlign: pw.TextAlign.center,
+                ),
+              ),
+            ],
           ),
         ],
       );
     }
 
-    List<pw.TableRow> buildSubSection(String subTitle, Map<String, int> counts, int total) {
-      final rows = <pw.TableRow>[];
-      rows.add(buildBanner(subTitle, PdfReportStyles.lightBlue, PdfReportStyles.headerColor));
+    final riskHeaderTable = pw.Table(
+      border: pw.TableBorder(
+        top: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
+        left: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
+        right: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
+        bottom: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
+      ),
+      columnWidths: riskColWidths,
+      children: [
+        pw.TableRow(
+          decoration: pw.BoxDecoration(color: PdfReportStyles.headerColor),
+          children: [
+            _buildTableHeaderCell('Famille de risque'),
+            _buildTableHeaderCell('Constats'),
+            _buildTableHeaderCell('Part'),
+          ],
+        ),
+      ],
+    );
 
+    pw.Widget buildRiskDataTable(Map<String, int> counts, int total) {
+      final rows = <pw.TableRow>[];
       for (final fam in canonicalOrder) {
         final c = counts[fam] ?? 0;
         final pctStr = total > 0 ? '${(c / total * 100).toStringAsFixed(1).replaceAll('.', ',')} %' : '0,0 %';
@@ -1157,32 +1232,34 @@ class PdfExecutiveSummaryBuilder {
           ],
         ),
       );
-      return rows;
+
+      return pw.Table(
+        border: pw.TableBorder(
+          left: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
+          right: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
+          bottom: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
+          horizontalInside: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
+          verticalInside: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
+        ),
+        columnWidths: riskColWidths,
+        children: rows,
+      );
     }
 
-    return PdfMergedTable(
-      customBorder: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.5),
-      columnWidths: const {
-        0: pw.FlexColumnWidth(5.5),
-        1: pw.FlexColumnWidth(2.2),
-        2: pw.FlexColumnWidth(2.3),
-      },
+    return pw.Column(
       children: [
-        pw.TableRow(
-          decoration: pw.BoxDecoration(color: PdfReportStyles.headerColor),
-          children: [
-            _buildTableHeaderCell('Famille de risque'),
-            _buildTableHeaderCell('Constats'),
-            _buildTableHeaderCell('Part'),
-          ],
-        ),
-        buildBanner('HTA', PdfReportStyles.headerColor, PdfColors.white),
-        ...buildSubSection('DISPOSITION CONSTRUCTIVE', matrix.htaDispositionsConstructives, matrix.totalHtaDispo),
-        ...buildSubSection('EXPLOITATION ET MAINTENANCE', matrix.htaExploitationMaintenance, matrix.totalHtaExploit),
+        riskHeaderTable,
+        buildRiskBannerTable('HTA', PdfReportStyles.headerColor, PdfColors.white),
+        buildRiskBannerTable('DISPOSITION CONSTRUCTIVE', PdfReportStyles.lightBlue, PdfReportStyles.headerColor),
+        buildRiskDataTable(matrix.htaDispositionsConstructives, matrix.totalHtaDispo),
+        buildRiskBannerTable('EXPLOITATION ET MAINTENANCE', PdfReportStyles.lightBlue, PdfReportStyles.headerColor),
+        buildRiskDataTable(matrix.htaExploitationMaintenance, matrix.totalHtaExploit),
 
-        buildBanner('BT', PdfReportStyles.headerColor, PdfColors.white),
-        ...buildSubSection('DISPOSITION CONSTRUCTIVE', matrix.btDispositionsConstructives, matrix.totalBtDispo),
-        ...buildSubSection('EXPLOITATION ET MAINTENANCE', matrix.btExploitationMaintenance, matrix.totalBtExploit),
+        buildRiskBannerTable('BT', PdfReportStyles.headerColor, PdfColors.white),
+        buildRiskBannerTable('DISPOSITION CONSTRUCTIVE', PdfReportStyles.lightBlue, PdfReportStyles.headerColor),
+        buildRiskDataTable(matrix.btDispositionsConstructives, matrix.totalBtDispo),
+        buildRiskBannerTable('EXPLOITATION ET MAINTENANCE', PdfReportStyles.lightBlue, PdfReportStyles.headerColor),
+        buildRiskDataTable(matrix.btExploitationMaintenance, matrix.totalBtExploit),
       ],
     );
   }
