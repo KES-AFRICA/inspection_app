@@ -1064,7 +1064,7 @@ class PdfExecutiveSummaryBuilder {
         children: [
           pw.TableRow(
             verticalAlignment: pw.TableCellVerticalAlignment.middle,
-            decoration: pw.BoxDecoration(color: PdfReportStyles.headerColor),
+            decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
             children: [
               pw.Container(
                 padding: const pw.EdgeInsets.symmetric(vertical: 4),
@@ -1087,6 +1087,7 @@ class PdfExecutiveSummaryBuilder {
         left: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
         right: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
         bottom: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
+        verticalInside: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
       ),
       columnWidths: domainColWidths,
       children: [
@@ -1193,6 +1194,7 @@ class PdfExecutiveSummaryBuilder {
         left: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
         right: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
         bottom: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
+        verticalInside: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
       ),
       columnWidths: riskColWidths,
       children: [
@@ -1249,13 +1251,13 @@ class PdfExecutiveSummaryBuilder {
     return pw.Column(
       children: [
         riskHeaderTable,
-        buildRiskBannerTable('HTA', PdfReportStyles.headerColor, PdfColors.white),
+        buildRiskBannerTable('HTA', PdfReportStyles.accentColor, PdfColors.white),
         buildRiskBannerTable('DISPOSITION CONSTRUCTIVE', PdfReportStyles.lightBlue, PdfReportStyles.headerColor),
         buildRiskDataTable(matrix.htaDispositionsConstructives, matrix.totalHtaDispo),
         buildRiskBannerTable('EXPLOITATION ET MAINTENANCE', PdfReportStyles.lightBlue, PdfReportStyles.headerColor),
         buildRiskDataTable(matrix.htaExploitationMaintenance, matrix.totalHtaExploit),
 
-        buildRiskBannerTable('BT', PdfReportStyles.headerColor, PdfColors.white),
+        buildRiskBannerTable('BT', PdfReportStyles.accentColor, PdfColors.white),
         buildRiskBannerTable('DISPOSITION CONSTRUCTIVE', PdfReportStyles.lightBlue, PdfReportStyles.headerColor),
         buildRiskDataTable(matrix.btDispositionsConstructives, matrix.totalBtDispo),
         buildRiskBannerTable('EXPLOITATION ET MAINTENANCE', PdfReportStyles.lightBlue, PdfReportStyles.headerColor),
