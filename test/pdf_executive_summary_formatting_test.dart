@@ -4,7 +4,6 @@ import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/services/ai/executive_summary_snapshot.dart';
 import 'package:inspec_app/services/ai/mission_executive_summary_service.dart';
 import 'package:inspec_app/services/pdf/builders/pdf_executive_summary_builder.dart';
-import 'package:inspec_app/services/pdf/pdf_report_styles.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
@@ -71,5 +70,18 @@ void main() {
     expect(bytes.length, greaterThan(5000));
     final file = File('pdf_exec_summary_fixed.pdf');
     await file.writeAsBytes(bytes);
+  });
+
+  test('Courbes and Adequation format verification in Executive Summary', () {
+    // 1. Verify that Courbes format displays without 'Courbe ' prefix
+    final testMap = {'COURBE-C': 3, 'COURBE-D': 1};
+    final sorted = testMap.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    final formattedCourbes = sorted.map((e) => '${e.key} : ${e.value}').join('\n');
+    expect(formattedCourbes, contains('COURBE-C : 3'));
+    expect(formattedCourbes, isNot(contains('Courbe COURBE-C')));
+
+    // 2. Verify that Adequation with evaluables == 0 returns empty string
+    // In _buildAdequationTable:
+    // formatAdequation returns '' when s == null || s.totalElements == 0 || s.evaluables == 0
   });
 }

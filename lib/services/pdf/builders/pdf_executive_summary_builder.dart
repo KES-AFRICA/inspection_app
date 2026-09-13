@@ -869,7 +869,7 @@ class PdfExecutiveSummaryBuilder {
       children: [
         pw.TableRow(
           verticalAlignment: pw.TableCellVerticalAlignment.middle,
-          decoration: pw.BoxDecoration(color: PdfReportStyles.headerColor),
+          decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
           children: [
             pw.Container(
               alignment: pw.Alignment.center,
@@ -1091,7 +1091,7 @@ class PdfExecutiveSummaryBuilder {
       columnWidths: domainColWidths,
       children: [
         pw.TableRow(
-          decoration: pw.BoxDecoration(color: PdfReportStyles.headerColor),
+          decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
           children: [
             _buildTableHeaderCell('Criticité'),
             _buildTableHeaderCell('Nombre'),
@@ -1197,7 +1197,7 @@ class PdfExecutiveSummaryBuilder {
       columnWidths: riskColWidths,
       children: [
         pw.TableRow(
-          decoration: pw.BoxDecoration(color: PdfReportStyles.headerColor),
+          decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
           children: [
             _buildTableHeaderCell('Famille de risque'),
             _buildTableHeaderCell('Constats'),
@@ -1273,7 +1273,7 @@ class PdfExecutiveSummaryBuilder {
       },
       children: [
         pw.TableRow(
-          decoration: pw.BoxDecoration(color: PdfReportStyles.headerColor),
+          decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
           children: [
             _buildTableHeaderCell('Domaine'),
             _buildTableHeaderCell('Nombre d’observations recensées'),
@@ -1320,7 +1320,7 @@ class PdfExecutiveSummaryBuilder {
       },
       children: [
         pw.TableRow(
-          decoration: pw.BoxDecoration(color: PdfReportStyles.headerColor),
+          decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
           children: [
             _buildTableHeaderCell(domainLabel == 'BT' ? 'Catégorie BT' : 'Catégorie'),
             _buildTableHeaderCell(domainLabel == 'BT' ? 'Equipements' : 'Équipements'),
@@ -1385,7 +1385,7 @@ class PdfExecutiveSummaryBuilder {
         border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.5),
         children: [
           pw.TableRow(
-            decoration: pw.BoxDecoration(color: PdfReportStyles.headerColor),
+            decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
             children: [
               _buildTableHeaderCell('N`'),
               _buildTableHeaderCell('Observation'),
@@ -1412,7 +1412,7 @@ class PdfExecutiveSummaryBuilder {
       },
       children: [
         pw.TableRow(
-          decoration: pw.BoxDecoration(color: PdfReportStyles.headerColor),
+          decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
           children: [
             _buildTableHeaderCell('N`'),
             _buildTableHeaderCell('Observation'),
@@ -1466,7 +1466,7 @@ class PdfExecutiveSummaryBuilder {
       },
       children: [
         pw.TableRow(
-          decoration: pw.BoxDecoration(color: PdfReportStyles.headerColor),
+          decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
           children: [
             _buildTableHeaderCell(''),
             _buildTableHeaderCell('ORGANE DE TETE'),
@@ -1504,7 +1504,7 @@ class PdfExecutiveSummaryBuilder {
     String formatCourbes(Map<String, int> m) {
       if (m.isEmpty) return '';
       final sorted = m.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
-      return sorted.map((e) => 'Courbe ${e.key} : ${e.value}').join('\n');
+      return sorted.map((e) => '${e.key} : ${e.value}').join('\n');
     }
 
     const categories = [
@@ -1524,7 +1524,7 @@ class PdfExecutiveSummaryBuilder {
       },
       children: [
         pw.TableRow(
-          decoration: pw.BoxDecoration(color: PdfReportStyles.headerColor),
+          decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
           children: [
             _buildTableHeaderCell(''),
             _buildTableHeaderCell('ORGANE DE TETE'),
@@ -1560,11 +1560,8 @@ class PdfExecutiveSummaryBuilder {
 
   static pw.Widget _buildAdequationTable(TechnicalEnrichmentResult technical) {
     String formatAdequation(AdequationIccPdcStats? s) {
-      if (s == null || s.totalElements == 0) {
+      if (s == null || s.totalElements == 0 || s.evaluables == 0) {
         return '';
-      }
-      if (s.evaluables == 0) {
-        return 'Non renseigné';
       }
       return '${s.conformes} / ${s.evaluables} (${s.formattedComplianceRate})';
     }
@@ -1586,7 +1583,7 @@ class PdfExecutiveSummaryBuilder {
       },
       children: [
         pw.TableRow(
-          decoration: pw.BoxDecoration(color: PdfReportStyles.headerColor),
+          decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
           children: [
             _buildTableHeaderCell(''),
             _buildTableHeaderCell('ORGANE DE TETE'),
@@ -1653,7 +1650,7 @@ class PdfExecutiveSummaryBuilder {
       },
       children: [
         pw.TableRow(
-          decoration: pw.BoxDecoration(color: PdfReportStyles.headerColor),
+          decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
           children: [
             _buildTableHeaderCell(''),
             _buildTableHeaderCell('DEPART'),
@@ -1696,7 +1693,7 @@ class PdfExecutiveSummaryBuilder {
       },
       children: [
         pw.TableRow(
-          decoration: pw.BoxDecoration(color: PdfReportStyles.headerColor),
+          decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
           children: [
             _buildTableHeaderCell('Classement'),
             _buildTableHeaderCell('Taux de conformité adéquation des equipements'),
