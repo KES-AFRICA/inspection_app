@@ -1781,9 +1781,20 @@ class PdfExecutiveSummaryBuilder {
       if (total == 0) {
         return _buildTableCell('0 équipement (non évaluable)', align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft);
       }
-      final confPct = (item.conformes / total * 100.0).toStringAsFixed(1).replaceAll('.', ',');
-      final nonConfPct = (item.nonConformes / total * 100.0).toStringAsFixed(1).replaceAll('.', ',');
       final indPct = (item.indicesPresents / total * 100.0).toStringAsFixed(1).replaceAll('.', ',');
+
+      final String rateStr;
+      final String detailStr;
+      if (item.pointsVerifies > 0) {
+        final pct = item.nonComplianceRate.toStringAsFixed(1).replaceAll('.', ',');
+        rateStr = '$pct %';
+        detailStr = '(${item.pointsNonConformes} NC / ${item.pointsVerifies} point${item.pointsVerifies > 1 ? "s" : ""} vérifié${item.pointsVerifies > 1 ? "s" : ""})';
+      } else {
+        rateStr = 'Non évaluable';
+        detailStr = '(0 point vérifié)';
+      }
+
+      final hasNc = item.pointsNonConformes > 0;
 
       return pw.Container(
         alignment: pw.Alignment.centerLeft,
@@ -1802,14 +1813,18 @@ class PdfExecutiveSummaryBuilder {
                   ),
                   const pw.TextSpan(text: ' , '),
                   pw.TextSpan(
-                    text: 'Conformes : ${item.conformes} / $total — $confPct %',
+                    text: 'Taux de non-conformité : ',
+                    style: pw.TextStyle(font: fontBold, color: PdfReportStyles.headerColor),
                   ),
-                  const pw.TextSpan(text: ', '),
                   pw.TextSpan(
-                    text: 'Non conformes : ${item.nonConformes} / $total — $nonConfPct %',
-                    style: item.nonConformes > 0
-                        ? pw.TextStyle(color: PdfColor.fromHex('#B71C1C'), font: fontBold)
-                        : null,
+                    text: rateStr,
+                    style: pw.TextStyle(
+                      font: fontBold,
+                      color: hasNc ? PdfColor.fromHex('#B71C1C') : PdfReportStyles.conformeColor,
+                    ),
+                  ),
+                  pw.TextSpan(
+                    text: ' $detailStr',
                   ),
                 ],
               ),

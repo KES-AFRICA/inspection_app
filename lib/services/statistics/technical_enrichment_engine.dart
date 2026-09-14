@@ -6,7 +6,6 @@ import '../../models/classement_zone.dart';
 import '../../models/mesures_essais.dart';
 import '../dispositions_constructives_registry.dart';
 import '../hive_service.dart';
-import '../ip_ik_evaluator_service.dart';
 import 'audit_finding.dart';
 import 'canonical_defect_category_registry.dart';
 import 'domain_entity_instance.dart';
@@ -195,6 +194,9 @@ class IpIkZoneItem {
   final int nonRenseignes;
   final int indicesPresents;
 
+  final int pointsVerifies;
+  final int pointsNonConformes;
+
   const IpIkZoneItem({
     required this.zoneNom,
     this.ipRequis,
@@ -204,11 +206,20 @@ class IpIkZoneItem {
     required this.nonConformes,
     required this.nonRenseignes,
     this.indicesPresents = 0,
+    this.pointsVerifies = 0,
+    this.pointsNonConformes = 0,
   });
 
-  int get evaluables => conformes + nonConformes;
+  int get evaluables => pointsVerifies > 0 ? pointsVerifies : (conformes + nonConformes);
   double get complianceRate =>
-      evaluables > 0 ? (conformes / evaluables) * 100.0 : 0.0;
+      evaluables > 0 ? ((evaluables - pointsNonConformes) / evaluables) * 100.0 : 0.0;
+
+  double get nonComplianceRate =>
+      pointsVerifies > 0 ? (pointsNonConformes / pointsVerifies) * 100.0 : 0.0;
+
+  String get formattedNonComplianceRate => pointsVerifies > 0
+      ? '${nonComplianceRate.toStringAsFixed(1).replaceAll('.', ',')} %'
+      : 'Non évaluable';
 
   String get formattedRate => evaluables > 0
       ? '${complianceRate.toStringAsFixed(1).replaceAll('.', ',')} %'
@@ -1240,9 +1251,17 @@ class TechnicalEnrichmentEngine {
       emplacements = [];
     }
 
-    final allEquipments = domainInventory.instances
-        .map((i) => i.rawModelRef)
-        .whereType<CoffretArmoire>()
+    const equipmentCategories = {
+      DomainObjectType.celluleMT,
+      DomainObjectType.transformateurMTBT,
+      DomainObjectType.tgbt,
+      DomainObjectType.armoire,
+      DomainObjectType.coffret,
+      DomainObjectType.inverseur,
+    };
+
+    final allEquipmentInstances = domainInventory.instances
+        .where((i) => equipmentCategories.contains(i.category))
         .toList();
 
     final result = <IpIkZoneItem>[];
@@ -1250,49 +1269,37 @@ class TechnicalEnrichmentEngine {
     // Pour chaque zone
     for (final z in zones) {
       final zoneName = z.nomZone.trim();
-      final equipInZone = allEquipments.where((c) {
-        final pz = domainInventory.instances
-            .firstWhere(
-              (i) => identical(i.rawModelRef, c),
-              orElse: () => domainInventory.instances.first,
-            )
-            .parentZone;
-        return pz?.trim().toLowerCase() == zoneName.toLowerCase();
+      final equipInZone = allEquipmentInstances.where((i) {
+        return i.parentZone?.trim().toLowerCase() == zoneName.toLowerCase();
       }).toList();
 
-      int conf = 0;
-      int nonConf = 0;
-      int nonRens = 0;
+      int totalPoints = 0;
+      int nonConformesPoints = 0;
       int indPresents = 0;
 
-      final reqIpIk = ParsedIpIk(
-        ip: z.ip?.trim().isNotEmpty == true ? z.ip!.trim() : null,
-        ik: z.ik?.trim().isNotEmpty == true ? z.ik!.trim() : null,
-      );
+      for (final inst in equipInZone) {
+        final comp = inst.compliantCheckpoints;
+        final nonComp = inst.findings.isNotEmpty
+            ? inst.findings.length
+            : inst.nonCompliantCheckpoints;
+        totalPoints += (comp + nonComp);
+        nonConformesPoints += nonComp;
 
-      for (final eq in equipInZone) {
-        final hasIndice = eq.indiceIpIk != null &&
-            eq.indiceIpIk!.trim().isNotEmpty &&
-            eq.indiceIpIk!.trim() != '-';
-        if (hasIndice) {
-          indPresents++;
-        }
-        if (!hasIndice) {
-          nonRens++;
-          continue;
-        }
-        if (reqIpIk.hasIpOrIk) {
-          final isOk = IpIkEvaluatorService.comparerIndicesIpIk(
-            eq.indiceIpIk,
-            reqIpIk.toString(),
-          );
-          if (isOk) {
-            conf++;
-          } else {
-            nonConf++;
+        final raw = inst.rawModelRef;
+        if (raw is CoffretArmoire) {
+          final ipVal = raw.indiceIpIk?.trim();
+          final repVal = raw.indiceIpIkRepere?.trim();
+          final hasIp = ipVal != null &&
+              ipVal.isNotEmpty &&
+              ipVal != '-' &&
+              ipVal.toLowerCase() != 'absent';
+          final hasRep = repVal != null &&
+              repVal.isNotEmpty &&
+              repVal != '-' &&
+              repVal.toLowerCase() != 'absent';
+          if (hasIp || hasRep) {
+            indPresents++;
           }
-        } else {
-          nonRens++;
         }
       }
 
@@ -1302,10 +1309,12 @@ class TechnicalEnrichmentEngine {
           ipRequis: z.ip,
           ikRequis: z.ik,
           totalEquipements: equipInZone.length,
-          conformes: conf,
-          nonConformes: nonConf,
-          nonRenseignes: nonRens,
+          conformes: totalPoints > 0 ? (totalPoints - nonConformesPoints) : 0,
+          nonConformes: nonConformesPoints,
+          nonRenseignes: 0,
           indicesPresents: indPresents,
+          pointsVerifies: totalPoints,
+          pointsNonConformes: nonConformesPoints,
         ),
       );
     }
@@ -1317,51 +1326,40 @@ class TechnicalEnrichmentEngine {
         continue;
       }
 
-      final equipInEmp = allEquipments.where((c) {
-        final pl = domainInventory.instances
-            .firstWhere(
-              (i) => identical(i.rawModelRef, c),
-              orElse: () => domainInventory.instances.first,
-            )
-            .parentLocal;
-        return pl?.trim().toLowerCase() == empName.toLowerCase();
+      final equipInEmp = allEquipmentInstances.where((i) {
+        final pl = i.parentLocal?.trim().toLowerCase();
+        final pz = i.parentZone?.trim().toLowerCase();
+        final target = empName.toLowerCase();
+        return pl == target || (pl == null && pz == target);
       }).toList();
 
-      if (equipInEmp.isEmpty) continue;
-
-      int conf = 0;
-      int nonConf = 0;
-      int nonRens = 0;
+      int totalPoints = 0;
+      int nonConformesPoints = 0;
       int indPresents = 0;
 
-      final reqIpIk = ParsedIpIk(
-        ip: emp.ip?.trim().isNotEmpty == true ? emp.ip!.trim() : null,
-        ik: emp.ik?.trim().isNotEmpty == true ? emp.ik!.trim() : null,
-      );
+      for (final inst in equipInEmp) {
+        final comp = inst.compliantCheckpoints;
+        final nonComp = inst.findings.isNotEmpty
+            ? inst.findings.length
+            : inst.nonCompliantCheckpoints;
+        totalPoints += (comp + nonComp);
+        nonConformesPoints += nonComp;
 
-      for (final eq in equipInEmp) {
-        final hasIndice = eq.indiceIpIk != null &&
-            eq.indiceIpIk!.trim().isNotEmpty &&
-            eq.indiceIpIk!.trim() != '-';
-        if (hasIndice) {
-          indPresents++;
-        }
-        if (!hasIndice) {
-          nonRens++;
-          continue;
-        }
-        if (reqIpIk.hasIpOrIk) {
-          final isOk = IpIkEvaluatorService.comparerIndicesIpIk(
-            eq.indiceIpIk,
-            reqIpIk.toString(),
-          );
-          if (isOk) {
-            conf++;
-          } else {
-            nonConf++;
+        final raw = inst.rawModelRef;
+        if (raw is CoffretArmoire) {
+          final ipVal = raw.indiceIpIk?.trim();
+          final repVal = raw.indiceIpIkRepere?.trim();
+          final hasIp = ipVal != null &&
+              ipVal.isNotEmpty &&
+              ipVal != '-' &&
+              ipVal.toLowerCase() != 'absent';
+          final hasRep = repVal != null &&
+              repVal.isNotEmpty &&
+              repVal != '-' &&
+              repVal.toLowerCase() != 'absent';
+          if (hasIp || hasRep) {
+            indPresents++;
           }
-        } else {
-          nonRens++;
         }
       }
 
@@ -1371,10 +1369,12 @@ class TechnicalEnrichmentEngine {
           ipRequis: emp.ip,
           ikRequis: emp.ik,
           totalEquipements: equipInEmp.length,
-          conformes: conf,
-          nonConformes: nonConf,
-          nonRenseignes: nonRens,
+          conformes: totalPoints > 0 ? (totalPoints - nonConformesPoints) : 0,
+          nonConformes: nonConformesPoints,
+          nonRenseignes: 0,
           indicesPresents: indPresents,
+          pointsVerifies: totalPoints,
+          pointsNonConformes: nonConformesPoints,
         ),
       );
     }

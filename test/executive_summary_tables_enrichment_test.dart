@@ -144,26 +144,24 @@ void main() {
       final zoneItem = const IpIkZoneItem(
         zoneNom: 'Local TGBT',
         totalEquipements: 20,
-        conformes: 15,
+        conformes: 35,
         nonConformes: 5,
         nonRenseignes: 0,
         indicesPresents: 18,
+        pointsVerifies: 40,
+        pointsNonConformes: 5,
       );
 
       expect(zoneItem.totalEquipements, equals(20));
-      expect(zoneItem.conformes, equals(15));
-      expect(zoneItem.nonConformes, equals(5));
+      expect(zoneItem.pointsVerifies, equals(40));
+      expect(zoneItem.pointsNonConformes, equals(5));
+      expect(zoneItem.nonComplianceRate, equals(12.5));
+      expect(zoneItem.formattedNonComplianceRate, equals('12,5 %'));
       expect(zoneItem.indicesPresents, equals(18));
 
-      // Calculations:
-      final confPct = (zoneItem.conformes / zoneItem.totalEquipements * 100);
-      final nonConfPct = (zoneItem.nonConformes / zoneItem.totalEquipements * 100);
+      // Index calculation:
       final indPct = (zoneItem.indicesPresents / zoneItem.totalEquipements * 100);
-
-      expect(confPct, equals(75.0));
-      expect(nonConfPct, equals(25.0));
       expect(indPct, equals(90.0));
-      expect(confPct + nonConfPct, equals(100.0));
 
       // Test with 0 equipments (cas limite)
       final emptyZone = const IpIkZoneItem(
@@ -173,9 +171,12 @@ void main() {
         nonConformes: 0,
         nonRenseignes: 0,
         indicesPresents: 0,
+        pointsVerifies: 0,
+        pointsNonConformes: 0,
       );
       expect(emptyZone.totalEquipements, equals(0));
       expect(emptyZone.complianceRate, equals(0.0));
+      expect(emptyZone.formattedNonComplianceRate, equals('Non évaluable'));
     });
   });
 }
