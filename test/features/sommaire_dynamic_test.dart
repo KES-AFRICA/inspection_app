@@ -52,7 +52,7 @@ void main() {
       expect(titles, contains("3.1. Identification des sources d’alimentation"));
       expect(titles, contains("3.2. Présence organe de coupure en tête d’installation"));
       expect(titles, contains("3.3. Présence parafoudre"));
-      expect(titles, contains("4. Statistique par type de défaut : analyse de Pareto (corrigée)"));
+      expect(titles, contains("4. Statistique par type de défaut : analyse de Pareto"));
       expect(titles, contains("5. Analyse comparative avec la visite précédente"));
       expect(titles, contains("6. Synthèse de l'analyse statistique"));
       expect(titles, contains("7. Recommandation pour le renforcement des capacités des agents d’entretien"));

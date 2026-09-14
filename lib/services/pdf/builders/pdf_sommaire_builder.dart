@@ -375,7 +375,7 @@ class PdfSommaireBuilder {
     );
     entries.add(
       SommaireEntry(
-        titre: "4. Statistique par type de défaut : analyse de Pareto (corrigée)",
+        titre: "4. Statistique par type de défaut : analyse de Pareto",
         key: 'stat_pareto',
         level: 1,
       ),

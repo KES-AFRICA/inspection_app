@@ -226,7 +226,10 @@ class PdfStatisticsBuilder {
     widgets.add(PdfStatisticsCharts.buildBtParafoudreStackedBarChart(technical));
     widgets.add(pw.SizedBox(height: 12));
 
-    // ── 4. Statistique par type de défaut : analyse de Pareto (corrigée) ──
+    // Saut de page systématique pour regrouper le titre 4, son texte et le diagramme de Pareto
+    widgets.add(pw.NewPage());
+
+    // ── 4. Statistique par type de défaut : analyse de Pareto
     final totalOccur = summary.paretoResult.totalOccurrences > 0
         ? summary.paretoResult.totalOccurrences
         : summary.criticalityStats.total;
@@ -256,7 +259,7 @@ class PdfStatisticsBuilder {
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
             PdfReportStyles.subTitle(
-              '4. Statistique par type de défaut : analyse de Pareto (corrigée)',
+              '4. Statistique par type de défaut : analyse de Pareto',
             ),
             pw.SizedBox(height: 5),
             PdfReportStyles.bodyText(paretoP1),
@@ -356,6 +359,9 @@ class PdfStatisticsBuilder {
       'Un déficit généralisé de renseignement des caractéristiques techniques du parc BT : ${technical.globalIpIkAdequationRateStr} d\'indices IP/IK renseignés, $nonIdentSources sources d\'alimentation non identifiées, ${pctSansCoupure.toStringAsFixed(1).replaceAll('.', ',')} % d\'équipements sans disjoncteur de tête identifié - un chantier de fiabilisation des données à mener en parallèle du plan d\'actions correctives ;',
       'Une incohérence récurrente dans la formule de synthèse Pareto générée par l\'outil (mélange des seuils "10 catégories" et "$pareto80K catégories"), à corriger au niveau de la génération automatique des rapports.',
     ];
+
+    // Saut de page systématique pour que la section 6 (Synthèse) soit toujours sur la même page que la section 7
+    widgets.add(pw.NewPage());
 
     widgets.add(
       PageTracker(
