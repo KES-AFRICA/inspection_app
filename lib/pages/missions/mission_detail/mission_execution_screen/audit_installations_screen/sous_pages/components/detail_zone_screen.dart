@@ -1885,6 +1885,10 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
                   }
                 }
               }
+              if (coffret.qrCode.isNotEmpty) {
+                await HiveService.deleteCoffretDraft(coffret.qrCode);
+              }
+              await HiveService.deleteCoffretDraft(coffret.equipmentId);
               _rechargerZone();
               _showSuccess('Coffret supprimé');
             },

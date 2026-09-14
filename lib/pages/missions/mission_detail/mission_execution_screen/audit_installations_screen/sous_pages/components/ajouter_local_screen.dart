@@ -2468,6 +2468,7 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
   String? _transfoTypeReseau;
   final _transfoPccAmontController = TextEditingController();
   String? _transfoPuissanceUcc;
+  final _transfoPuissanceUccController = TextEditingController();
   final _transfoIk3MaxController = TextEditingController();
   String? _transfoPhoto;
   List<String> _transfoPhotos = [];
@@ -2604,6 +2605,9 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
     _transfoTensionController.clear();
     _customSaisirFields.remove('transfoPuissanceAssignee');
     _customSaisirFields.remove('transfoTension');
+    _customSaisirFields.remove('transfoPuissanceUcc');
+    _customSaisirFields.remove('transfoRefroidissement');
+    _transfoPuissanceUccController.clear();
     _transfoBuchholzController.text = '';
     _transfoTypeImmersionController.text = '';
     _transfoDgpt2Controller.text = '';
@@ -2705,6 +2709,7 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
     _transfoTypeReseau = transfo.typeReseau;
     _transfoPccAmontController.text = transfo.pccAmont ?? '';
     _transfoPuissanceUcc = transfo.puissanceUcc;
+    _transfoPuissanceUccController.text = transfo.puissanceUcc ?? '';
     _transfoIk3MaxController.text = transfo.ik3Max ?? '';
     _transfoPhoto = transfo.photo;
     _transfoPhotos = List.from(transfo.photos);
@@ -4571,17 +4576,22 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
           SizedBox(height: isSmallScreen ? 12 : 16),
 
           // 9. Puissance UCC (%)
-          _buildDropdownVal(
-            _transfoPuissanceUcc,
-            'Puissance UCC',
-            InstallationFieldsRegistry.puissanceUccOptions,
-            isSmallScreen,
-            (value) {
+          _buildSelectOrCustomInput(
+            fieldKey: 'transfoPuissanceUcc',
+            label: 'Puissance UCC',
+            standardOptions: InstallationFieldsRegistry.puissanceUccOptions,
+            currentValue: _transfoPuissanceUcc,
+            customController: _transfoPuissanceUccController,
+            isSmallScreen: isSmallScreen,
+            onValueChanged: (val) {
               setState(() {
-                _transfoPuissanceUcc = value;
+                _transfoPuissanceUcc = val;
+                _transfoPuissanceUccController.text = val ?? '';
                 recalculateIk3Max();
               });
             },
+            suffixText: '%',
+            keyboardType: TextInputType.text,
             optional: true,
           ),
           SizedBox(height: isSmallScreen ? 12 : 16),
@@ -4597,7 +4607,21 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
           SizedBox(height: isSmallScreen ? 12 : 16),
 
           // 12. Type de refroidissement
-          _buildDropdown(_transfoRefroidissementController, 'Type de refroidissement', InstallationFieldsRegistry.typeRefroidissementOptions, isSmallScreen, optional: true),
+          _buildSelectOrCustomInput(
+            fieldKey: 'transfoRefroidissement',
+            label: 'Type de refroidissement',
+            standardOptions: InstallationFieldsRegistry.typeRefroidissementOptions,
+            currentValue: _transfoRefroidissementController.text,
+            customController: _transfoRefroidissementController,
+            isSmallScreen: isSmallScreen,
+            onValueChanged: (val) {
+              setState(() {
+                _transfoRefroidissementController.text = val ?? '';
+              });
+            },
+            keyboardType: TextInputType.text,
+            optional: true,
+          ),
           SizedBox(height: isSmallScreen ? 12 : 16),
 
           // 13. Régime du neutre
@@ -5402,6 +5426,7 @@ Widget _buildPrioriteButton({
     _transfoMarqueController.dispose();
     _transfoAnneeController.dispose();
     _transfoPuissanceController.dispose();
+    _transfoPuissanceUccController.dispose();
     _transfoTensionController.dispose();
     _transfoBuchholzController.dispose();
     _transfoTypeImmersionController.dispose();

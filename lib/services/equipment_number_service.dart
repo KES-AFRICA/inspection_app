@@ -55,13 +55,27 @@ class EquipmentNumberService {
   }
 
   /// Extrait l'entier numérique pur de la chaîne [numeroEquipement].
+  /// Accepte uniquement les entiers purs strictement positifs (ex: "1", "400").
+  /// Rejette les tensions (ex: "400V"), les dates/années (ex: "2024") ou codes non-entiers
+  /// pour éviter toute explosion de séquence non intentionnelle.
   static int? parseNumericSequence(String? numeroStr) {
     if (numeroStr == null) return null;
     final str = numeroStr.trim();
     if (str.isEmpty) return null;
-    final match = RegExp(r'\d+').firstMatch(str);
+
+    // Entier pur strict
+    final directInt = int.tryParse(str);
+    if (directInt != null && directInt > 0 && directInt <= 99999) {
+      return directInt;
+    }
+
+    // Préfixe identificateur explicite (ex: "EQ-123", "N° 12")
+    final match = RegExp(r'^(?:EQ-?|N°\s*|NO\s*)(\d+)$', caseSensitive: false).firstMatch(str);
     if (match != null) {
-      return int.tryParse(match.group(0)!);
+      final parsed = int.tryParse(match.group(1)!);
+      if (parsed != null && parsed > 0 && parsed <= 99999) {
+        return parsed;
+      }
     }
     return null;
   }
@@ -130,8 +144,9 @@ class EquipmentNumberService {
   ///
   /// - Attribue un [equipmentId] immuable aux équipements legacy qui en manquent.
   /// - Conserve intacts tous les numéros métier uniques et valides.
-  /// - Résout les numéros manquants ou dupliqués en réattribuant intelligemment
-  ///   les numéros suivants dans la séquence, sans altérer aucune autre donnée métier.
+  /// - En cas de doublons ou numéros manquants, attribue des numéros STRICTEMENT
+  ///   au-delà du maximum existant pour ne jamais réutiliser les trous laissés
+  ///   par des suppressions et ne jamais altérer l'ordre des ~400 équipements.
   static AuditNumberReport auditAndFixMissionNumbers(AuditInstallationsElectriques audit) {
     final allCoffrets = _extractAllCoffretsFromAudit(audit);
     int missingIdsFixed = 0;
@@ -153,7 +168,7 @@ class EquipmentNumberService {
         if (!usedNumbers.contains(numVal)) {
           usedNumbers.add(numVal);
         } else {
-          // Doublon détecté ! Le premier conserve son numéro, le suivant sera réattribué.
+          // Doublon détecté ! Le premier conserve son numéro, le suivant sera réattribué au-delà du max.
           coffretsToAssign.add(coffret);
           duplicatesFixed++;
         }
@@ -177,8 +192,9 @@ class EquipmentNumberService {
       return 0;
     });
 
-    // 3. Attribution séquentielle intelligente des numéros manquants/dupliqués
-    int currentCandidate = 1;
+    // 3. Attribution séquentielle monotone au-delà du maximum existant
+    // NE JAMAIS commencer à 1 pour combler les trous (résistance absolue à la suppression)
+    int currentCandidate = usedNumbers.isEmpty ? 1 : (usedNumbers.reduce((a, b) => a > b ? a : b) + 1);
     for (final coffret in coffretsToAssign) {
       while (usedNumbers.contains(currentCandidate)) {
         currentCandidate++;

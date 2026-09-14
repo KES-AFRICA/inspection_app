@@ -1377,6 +1377,7 @@ static Future<AuditInstallationsElectriques> getOrCreateAuditInstallations(Strin
       if (report.hasChanges) {
         await existing.save();
       }
+      reconcileQrCodes(missionId);
     }
     return existing;
   }
@@ -2113,6 +2114,199 @@ static Future<bool> validateUniqueQrCode({
   
   return false; // QR code déjà utilisé
 }
+
+  /// Supprime un équipement (BT ou MT) de façon propre et atomique dans la mission
+  /// en le localisant par son [equipmentId] immuable (ou fallback QR/nom).
+  /// Libère et délie IMMÉDIATEMENT le QR code associé en purgeant la boîte de brouillons.
+  static Future<bool> deleteCoffret({
+    required String missionId,
+    required String equipmentId,
+    String? qrCode,
+  }) async {
+    return PersistenceQueue.enqueue('audit_$missionId', () async {
+      try {
+        final audit = await getOrCreateAuditInstallations(missionId);
+        String? foundQrCode = qrCode;
+
+        bool removeInList(List<CoffretArmoire> list) {
+          int index = list.indexWhere((c) => c.equipmentId == equipmentId || (c.id != null && c.id == equipmentId));
+          if (index == -1 && qrCode != null && qrCode.trim().isNotEmpty) {
+            index = list.indexWhere((c) => c.qrCode.trim() == qrCode.trim());
+          }
+          if (index != -1) {
+            foundQrCode ??= list[index].qrCode;
+            list.removeAt(index);
+            return true;
+          }
+          return false;
+        }
+
+        bool deleted = false;
+        // MT Locaux
+        for (var local in audit.moyenneTensionLocaux) {
+          if (removeInList(local.coffrets)) { deleted = true; break; }
+        }
+        // MT Zones
+        if (!deleted) {
+          for (var zone in audit.moyenneTensionZones) {
+            if (removeInList(zone.coffrets)) { deleted = true; break; }
+            for (var local in zone.locaux) {
+              if (removeInList(local.coffrets)) { deleted = true; break; }
+            }
+            if (deleted) break;
+          }
+        }
+        // BT Zones
+        if (!deleted) {
+          for (var zone in audit.basseTensionZones) {
+            if (removeInList(zone.coffretsDirects)) { deleted = true; break; }
+            for (var local in zone.locaux) {
+              if (removeInList(local.coffrets)) { deleted = true; break; }
+            }
+            if (deleted) break;
+          }
+        }
+
+        // 2. Libération immédiate du QR Code et purge des brouillons orphelins
+        if (foundQrCode != null && foundQrCode!.trim().isNotEmpty) {
+          await deleteCoffretDraft(foundQrCode!.trim());
+        }
+        // Purge d'éventuels brouillons indexés sous l'equipmentId
+        await deleteCoffretDraft(equipmentId);
+
+        if (deleted) {
+          await saveAuditInstallations(audit, skipDescriptionSync: true);
+          if (kDebugMode) {
+            print('✅ Équipement supprimé avec succès ($equipmentId). QR code délié et libéré.');
+          }
+          return true;
+        }
+
+        // Même si absent de l'arborescence (déjà supprimé), purger les résidus de brouillons
+        if (foundQrCode != null && foundQrCode!.trim().isNotEmpty) {
+          await deleteCoffretDraft(foundQrCode!.trim());
+        }
+        return false;
+      } catch (e, stack) {
+        if (kDebugMode) {
+          print('❌ Erreur deleteCoffret: $e');
+          print(stack);
+        }
+        return false;
+      }
+    });
+  }
+
+  /// Procédure idempotente et sécurisée de réconciliation des QR codes d'une mission.
+  /// Identifie les entrées orphelines dans `coffret_drafts` dont l'équipement parent ou
+  /// l'équipement lui-même a été supprimé de l'audit, et libère leurs QR codes.
+  static Future<int> reconcileQrCodes(String missionId) async {
+    int freedCount = 0;
+    try {
+      if (!Hive.isBoxOpen(_coffretDraftsBox)) {
+        await Hive.openBox(_coffretDraftsBox);
+      }
+      final box = Hive.box(_coffretDraftsBox);
+      final audit = getAuditInstallationsByMissionId(missionId);
+      if (audit == null) return 0;
+
+      // Rassembler tous les QR codes d'équipements valides existant dans l'audit
+      final activeEquipmentsByQr = <String, CoffretArmoire>{};
+      final activeEquipmentIds = <String>{};
+
+      for (var local in audit.moyenneTensionLocaux) {
+        for (var c in local.coffrets) {
+          if (c.qrCode.trim().isNotEmpty) activeEquipmentsByQr[c.qrCode.trim()] = c;
+          activeEquipmentIds.add(c.equipmentId);
+        }
+      }
+      for (var zone in audit.moyenneTensionZones) {
+        for (var c in zone.coffrets) {
+          if (c.qrCode.trim().isNotEmpty) activeEquipmentsByQr[c.qrCode.trim()] = c;
+          activeEquipmentIds.add(c.equipmentId);
+        }
+        for (var local in zone.locaux) {
+          for (var c in local.coffrets) {
+            if (c.qrCode.trim().isNotEmpty) activeEquipmentsByQr[c.qrCode.trim()] = c;
+            activeEquipmentIds.add(c.equipmentId);
+          }
+        }
+      }
+      for (var zone in audit.basseTensionZones) {
+        for (var c in zone.coffretsDirects) {
+          if (c.qrCode.trim().isNotEmpty) activeEquipmentsByQr[c.qrCode.trim()] = c;
+          activeEquipmentIds.add(c.equipmentId);
+        }
+        for (var local in zone.locaux) {
+          for (var c in local.coffrets) {
+            if (c.qrCode.trim().isNotEmpty) activeEquipmentsByQr[c.qrCode.trim()] = c;
+            activeEquipmentIds.add(c.equipmentId);
+          }
+        }
+      }
+
+      // Parcourir les clés de coffret_drafts
+      final keysToDelete = <dynamic>[];
+      for (var key in box.keys) {
+        final val = box.get(key);
+        if (val is Map && val['missionId'] == missionId) {
+          final coffret = val['coffret'];
+          final isCompleted = coffret is CoffretArmoire && coffret.statut == 'complet';
+          final draftQr = key.toString();
+
+          // Si le brouillon est marqué 'complet' et correspond à un équipement déjà dans l'audit, purger le brouillon
+          if (isCompleted && activeEquipmentsByQr.containsKey(draftQr)) {
+            keysToDelete.add(key);
+            freedCount++;
+            continue;
+          }
+
+          // Si le brouillon référence un emplacement parent inexistant (zone ou local supprimé)
+          final isMt = val['isMoyenneTension'] as bool? ?? false;
+          final pType = val['parentType'] as String?;
+          final pIdx = val['parentIndex'] as int?;
+          final zIdx = val['zoneIndex'] as int?;
+
+          bool parentExists = true;
+          if (pType == 'local') {
+            if (isMt) {
+              if (zIdx != null) {
+                if (zIdx >= audit.moyenneTensionZones.length || pIdx == null || pIdx >= audit.moyenneTensionZones[zIdx].locaux.length) {
+                  parentExists = false;
+                }
+              } else if (pIdx == null || pIdx >= audit.moyenneTensionLocaux.length) {
+                parentExists = false;
+              }
+            } else {
+              if (zIdx == null || zIdx >= audit.basseTensionZones.length || pIdx == null || pIdx >= audit.basseTensionZones[zIdx].locaux.length) {
+                parentExists = false;
+              }
+            }
+          } else if (pType == 'zone_mt') {
+            if (pIdx == null || pIdx >= audit.moyenneTensionZones.length) parentExists = false;
+          } else if (pType == 'zone_bt') {
+            if (pIdx == null || pIdx >= audit.basseTensionZones.length) parentExists = false;
+          }
+
+          if (!parentExists) {
+            keysToDelete.add(key);
+            freedCount++;
+          }
+        }
+      }
+
+      for (var k in keysToDelete) {
+        await box.delete(k);
+      }
+
+      if (kDebugMode && freedCount > 0) {
+        print('🧹 Réconciliation QR codes : $freedCount brouillons/QR orphelins libérés pour la mission $missionId');
+      }
+    } catch (e) {
+      if (kDebugMode) print('⚠️ Erreur reconcileQrCodes: $e');
+    }
+    return freedCount;
+  }
 
 /// Mettre à jour les informations d'un coffret après scan du QR code
 static Future<bool> updateCoffretAfterQrScan({

@@ -4291,6 +4291,19 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         _loadDraftByQrCode(_draftQrCode!);
       }
     }
+
+    _nomController.addListener(() {
+      _hasUnsavedChanges = true;
+      _scheduleAutoSave();
+    });
+    _repereController.addListener(() {
+      _hasUnsavedChanges = true;
+      _scheduleAutoSave();
+    });
+    _numeroEquipementController.addListener(() {
+      _hasUnsavedChanges = true;
+      _scheduleAutoSave();
+    });
   }
 
   Future<void> _loadDraftByQrCode(String qrCode) async {
@@ -4487,53 +4500,59 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
     });
   }
 
-  Future<void> _autoSaveEdition() async {
-    if (!mounted || widget.coffret == null) return;
+  CoffretArmoire _buildCurrentCoffret({String? forcedStatut}) {
+    final toutesPhotos = [..._coffretPhotosExterne, ..._coffretPhotosInterne];
+    final now = DateTime.now().toUtc();
+    return CoffretArmoire(
+      id: widget.coffret?.equipmentId ?? _draftEquipmentId,
+      createdAt: widget.coffret?.createdAt ?? (widget.isEdition ? null : now),
+      updatedAt: now,
+      qrCode: _qrCodeController.text.trim(),
+      nom: _nomController.text.trim(),
+      type: _selectedType ?? '',
+      accessible: _accessible,
+      departPrisAvecProtection: _departPrisAvecProtection,
+      numeroEquipement: _numeroEquipementController.text.trim().isEmpty ? null : _numeroEquipementController.text.trim(),
+      repere: _repereController.text.trim().isEmpty ? null : _repereController.text.trim(),
+      alimenteeParTransformateur: _alimenteeParTransformateur,
+      transformateurId: _transformateurId,
+      transformateurNomComplet: _transformateurNomComplet,
+      presenceCPI: (_selectedType == 'INVERSEUR') ? null : _presenceCPI,
+      zoneAtex: _zoneAtex,
+      domaineTension: _domaineTension,
+      identificationArmoire: _identificationArmoire,
+      signalisationDanger: _signalisationDanger,
+      presenceSchema: _presenceSchema,
+      presenceParafoudre: _presenceParafoudre,
+      verificationThermographie: _verificationThermographie,
+      presenceDefautThermo: _presenceDefautThermo,
+      indiceIpIk: _indiceIpIkController.text.trim().isEmpty ? null : _indiceIpIkController.text.trim(),
+      indiceIpIkRepere: _resolveRepereIpIk().hasIpOrIk ? _resolveRepereIpIk().toString() : null,
+      departures: List.from(_departures),
+      terminalCircuits: List.from(_terminalCircuits),
+      sourceEquipementId: _sourceEquipementId,
+      sourceNomComplet: _sourceNomComplet,
+      sourceDepartId: _sourceDepartId,
+      alimentations: List.from(_alimentations),
+      protectionTete: _protectionTete,
+      pointsVerification: List.from(_pointsVerification),
+      observationsLibres: List.from(_observationsLibresCoffret),
+      photos: toutesPhotos,
+      photosExternes: List.from(_coffretPhotosExterne),
+      photosInternes: List.from(_coffretPhotosInterne),
+      observationsParafoudre: const [],
+      observationsParafoudreEnrichies: List.from(_observationsParafoudre),
+      statut: forcedStatut ?? widget.coffret?.statut ?? (_pointsValid ? 'complet' : 'incomplet'),
+      currentStep: _currentStep,
+    );
+  }
+
+  Future<bool> _autoSaveEdition() async {
+    if (!mounted || widget.coffret == null) return false;
     _isAutoSavingNotifier.value = true;
     _lastAutoSaveErrorNotifier.value = false;
     try {
-      final now = DateTime.now().toUtc();
-      final nouveauCoffret = CoffretArmoire(
-        id: widget.coffret?.equipmentId,
-        createdAt: widget.coffret?.createdAt ?? now,
-        updatedAt: now,
-        qrCode: _qrCodeController.text.trim(),
-        nom: _nomController.text.trim(),
-        type: _selectedType ?? '',
-        accessible: _accessible,
-        departPrisAvecProtection: _departPrisAvecProtection,
-        numeroEquipement: _numeroEquipementController.text.trim().isEmpty ? null : _numeroEquipementController.text.trim(),
-        repere: _repereController.text.trim().isEmpty ? null : _repereController.text.trim(),
-        alimenteeParTransformateur: _alimenteeParTransformateur,
-        transformateurId: _transformateurId,
-        transformateurNomComplet: _transformateurNomComplet,
-        presenceCPI: _presenceCPI,
-        zoneAtex: _zoneAtex,
-        domaineTension: _domaineTension,
-        identificationArmoire: _identificationArmoire,
-        signalisationDanger: _signalisationDanger,
-        presenceSchema: _presenceSchema,
-        presenceParafoudre: _presenceParafoudre,
-        verificationThermographie: _verificationThermographie,
-        presenceDefautThermo: _presenceDefautThermo,
-        indiceIpIk: _indiceIpIkController.text.trim().isEmpty ? null : _indiceIpIkController.text.trim(),
-        indiceIpIkRepere: _resolveRepereIpIk().hasIpOrIk ? _resolveRepereIpIk().toString() : null,
-        departures: List.from(_departures),
-        terminalCircuits: List.from(_terminalCircuits),
-        sourceEquipementId: _sourceEquipementId,
-        sourceNomComplet: _sourceNomComplet,
-        sourceDepartId: _sourceDepartId,
-        alimentations: _alimentations,
-        protectionTete: _protectionTete,
-        pointsVerification: _pointsVerification,
-        observationsLibres: List.from(_observationsLibresCoffret),
-        photos: [..._coffretPhotosExterne, ..._coffretPhotosInterne],
-        photosExternes: List.from(_coffretPhotosExterne),
-        photosInternes: List.from(_coffretPhotosInterne),
-        observationsParafoudre: List.from(_observationsParafoudre),
-        statut: widget.coffret?.statut ?? 'incomplet',
-        currentStep: _currentStep,
-      );
+      final nouveauCoffret = _buildCurrentCoffret();
       final ok = await HiveService.updateCoffretById(
         missionId: widget.mission.id,
         equipmentId: widget.coffret!.equipmentId,
@@ -4547,12 +4566,14 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
           _hasUnsavedChanges = false;
         }
       }
+      return ok;
     } catch (e) {
       if (kDebugMode) print('⚠️ [AUTO SAVE EDITION EXCEPTION] $e');
       if (mounted) {
         _isAutoSavingNotifier.value = false;
         _lastAutoSaveErrorNotifier.value = true;
       }
+      return false;
     }
   }
 
@@ -4748,7 +4769,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
     _scheduleAutoSave();
   }
 
-  bool _validateAllFields() {
+  bool _validateAllFields({bool isFinishing = false}) {
     bool allValid = true;
     if (_nomController.text.trim().isEmpty) { _nomValid = false; allValid = false; }
     if (_selectedType == null || _selectedType!.isEmpty) { _typeValid = false; allValid = false; }
@@ -4756,7 +4777,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
     if (_accessible) {
       _alimentationsValid = true;
       _validatePoints();
-      if (!_pointsValid) allValid = false;
+      if ((!widget.isEdition || isFinishing) && !_pointsValid) allValid = false;
       if (_domaineTension.isEmpty) { _domaineTensionValid = false; allValid = false; }
       if (_coffretPhotosExterne.isEmpty) { _photosExterneValid = false; allValid = false; _showError('La photo EXTERNE est obligatoire'); } else { _photosExterneValid = true; }
       if (_coffretPhotosInterne.isEmpty) { _photosInterneValid = false; allValid = false; _showError('La photo INTERNE est obligatoire'); } else { _photosInterneValid = true; }
@@ -5125,9 +5146,9 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
     _scheduleAutoSave();
   }
 
-  void _sauvegarder() async {
+  void _sauvegarder({bool isFinishing = false}) async {
     if (_isSaving) return;
-    if (!_validateAllFields()) { _showError('Veuillez remplir tous les champs obligatoires'); return; }
+    if (!_validateAllFields(isFinishing: isFinishing)) { _showError('Veuillez remplir tous les champs obligatoires'); return; }
     
     setState(() => _isSaving = true);
 
@@ -5159,50 +5180,9 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
       parentName: _getParentLocationName(),
     );
     try {
-      final toutesPhotos = [..._coffretPhotosExterne, ..._coffretPhotosInterne];
-      final now = DateTime.now().toUtc();
-      final nouveauCoffret = CoffretArmoire(
-        id: widget.coffret?.equipmentId ?? _draftEquipmentId,
-        createdAt: widget.coffret?.createdAt ?? (widget.isEdition ? null : now),
-        updatedAt: now,
-        qrCode: _qrCodeController.text.trim(),
-        nom: _nomController.text.trim(),
-        type: _selectedType!,
-        accessible: _accessible,
-        departPrisAvecProtection: _departPrisAvecProtection,
-        numeroEquipement: _numeroEquipementController.text.trim().isEmpty ? null : _numeroEquipementController.text.trim(),
-        repere: _repereController.text.trim().isEmpty ? null : _repereController.text.trim(),
-        alimenteeParTransformateur: _alimenteeParTransformateur,
-        transformateurId: _transformateurId,
-        transformateurNomComplet: _transformateurNomComplet,
-        presenceCPI: _presenceCPI,
-        zoneAtex: _zoneAtex,
-        domaineTension: _domaineTension,
-        identificationArmoire: _identificationArmoire,
-        signalisationDanger: _signalisationDanger,
-        presenceSchema: _presenceSchema,
-        presenceParafoudre: _presenceParafoudre,
-        verificationThermographie: _verificationThermographie,
-        presenceDefautThermo: _presenceDefautThermo,
-        indiceIpIk: _indiceIpIkController.text.trim().isEmpty ? null : _indiceIpIkController.text.trim(),
-        indiceIpIkRepere: _resolveRepereIpIk().hasIpOrIk ? _resolveRepereIpIk().toString() : null,
-        departures: _departures,
-        terminalCircuits: _terminalCircuits,
-        sourceEquipementId: _sourceEquipementId,
-        sourceNomComplet: _sourceNomComplet,
-        sourceDepartId: _sourceDepartId,
-        alimentations: _alimentations,
-        protectionTete: _protectionTete,
-        pointsVerification: _pointsVerification,
-        observationsLibres: List.from(_observationsLibresCoffret),
-        photos: toutesPhotos,
-        photosExternes: List.from(_coffretPhotosExterne),
-        photosInternes: List.from(_coffretPhotosInterne),
-        statut: 'complet',
-        currentStep: 0,
-        observationsParafoudre: const [],
-        observationsParafoudreEnrichies: _observationsParafoudre,
-      );
+      final statut = _pointsValid ? 'complet' : (widget.coffret?.statut ?? 'incomplet');
+      final nouveauCoffret = _buildCurrentCoffret(forcedStatut: statut);
+      nouveauCoffret.currentStep = 0;
 
       if (kDebugMode) {
         print('💾 [SAVE PIPELINE] Model constructed successfully: ${nouveauCoffret.nom} (${nouveauCoffret.equipmentId})');
@@ -5308,6 +5288,24 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _handleExit() async {
+    if (widget.isEdition && widget.coffret != null) {
+      _autoSaveTimer?.cancel();
+      if (_hasUnsavedChanges || _isAutoSavingNotifier.value) {
+        await _autoSaveEdition();
+      }
+      if (mounted) {
+        Navigator.pop(context, _buildCurrentCoffret());
+      }
+    } else {
+      if (_hasUnsavedChanges) {
+        _showExitConfirmation();
+      } else {
+        Navigator.pop(context);
+      }
+    }
   }
   
   Future<bool> _addCoffretToLocalInMoyenneTensionZone(CoffretArmoire coffret) async {
@@ -5458,10 +5456,10 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
     } else if (_currentStep == lastStepIndex) {
       final pointsState = _etapePointsKey?.currentState;
       if (pointsState != null) {
-        if (pointsState.canGoNext()) _sauvegarder();
+        if (pointsState.canGoNext()) _sauvegarder(isFinishing: true);
         else pointsState.nextSlide();
       } else {
-        _sauvegarder();
+        _sauvegarder(isFinishing: true);
       }
     }
   }
@@ -5756,19 +5754,25 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
   @override
   Widget build(BuildContext context) {
     final totalSteps = _getTotalSteps();
-    return GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(),
-      child: Scaffold(
-        backgroundColor: Colors.grey.shade50,
-        appBar: AppBar(
-          title: Text(widget.isEdition ? 'Modifier l\'équipement' : 'Ajouter un équipement', style: TextStyle(fontSize: context.fontSizeL)),
-          backgroundColor: AppTheme.primaryBlue,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () { if (_hasUnsavedChanges) _showExitConfirmation(); else Navigator.pop(context); },
-          ),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        await _handleExit();
+      },
+      child: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: Scaffold(
+          backgroundColor: Colors.grey.shade50,
+          appBar: AppBar(
+            title: Text(widget.isEdition ? 'Modifier l\'équipement' : 'Ajouter un équipement', style: TextStyle(fontSize: context.fontSizeL)),
+            backgroundColor: AppTheme.primaryBlue,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: _handleExit,
+            ),
           actions: [
             if (widget.isEdition) ...[
               ValueListenableBuilder<bool>(
@@ -6009,8 +6013,9 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 List<String> _getSourcesDisponibles() {

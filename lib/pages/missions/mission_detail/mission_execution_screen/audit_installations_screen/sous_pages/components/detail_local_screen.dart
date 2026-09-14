@@ -1050,10 +1050,17 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
+              final coffretToDelete = (index >= 0 && index < _local.coffrets.length) ? _local.coffrets[index] : null;
               setState(() {
                 _local.coffrets.removeAt(index);
               });
               await _sauvegarderLocal();
+              if (coffretToDelete != null) {
+                if (coffretToDelete.qrCode.isNotEmpty) {
+                  await HiveService.deleteCoffretDraft(coffretToDelete.qrCode);
+                }
+                await HiveService.deleteCoffretDraft(coffretToDelete.equipmentId);
+              }
               ScaffoldMessenger.of(
                 context,
               ).showSnackBar(SnackBar(content: Text('Équipement supprimé')));
@@ -2118,6 +2125,10 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
               }
               if (saved) {
                 await HiveService.saveAuditInstallations(audit);
+                if (coffretTarget.qrCode.isNotEmpty) {
+                  await HiveService.deleteCoffretDraft(coffretTarget.qrCode);
+                }
+                await HiveService.deleteCoffretDraft(coffretTarget.equipmentId);
                 _rechargerLocal();
               }
             },
