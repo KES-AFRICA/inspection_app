@@ -1260,17 +1260,32 @@ class TechnicalEnrichmentEngine {
       DomainObjectType.inverseur,
     };
 
-    final allEquipmentInstances = domainInventory.instances
-        .where((i) => equipmentCategories.contains(i.category))
-        .toList();
+    // ─── Filtre brouillons ────────────────────────────────────────
+    // On ne retient que les équipements "complets" (pas les brouillons /
+    // incomplets). Pour les CoffretArmoire, la règle est statut == 'complet'.
+    // Les cellules MT et transformateurs ne portent pas de champ statut :
+    // ils sont toujours retenus.
+    final allEquipmentInstances = domainInventory.instances.where((i) {
+      if (!equipmentCategories.contains(i.category)) return false;
+      final raw = i.rawModelRef;
+      if (raw is CoffretArmoire) {
+        return raw.statut == 'complet';
+      }
+      return true;
+    }).toList();
 
     final result = <IpIkZoneItem>[];
 
-    // Pour chaque zone
+    // ─── Zones classifiées ────────────────────────────────────────
+    // Règle hiérarchique : un équipement appartient à la ZONE uniquement s'il
+    // y est directement rattaché (parentLocal == null). S'il est dans un local
+    // lui-même contenu dans la zone (parentLocal != null), il est comptabilisé
+    // sous ce local et non sous la zone.
     for (final z in zones) {
       final zoneName = z.nomZone.trim();
       final equipInZone = allEquipmentInstances.where((i) {
-        return i.parentZone?.trim().toLowerCase() == zoneName.toLowerCase();
+        return i.parentZone?.trim().toLowerCase() == zoneName.toLowerCase() &&
+            i.parentLocal == null;
       }).toList();
 
       int totalPoints = 0;
@@ -1319,7 +1334,11 @@ class TechnicalEnrichmentEngine {
       );
     }
 
-    // Pour chaque local / emplacement classé s'il n'a pas déjà été couvert
+    // ─── Locaux / emplacements classifiés ────────────────────────
+    // Règle hiérarchique : un équipement appartient à ce local uniquement si
+    // son parentLocal correspond exactement à ce local. On ne se replie PAS
+    // sur parentZone : cela évite d'attribuer par erreur des équipements de
+    // zone à un emplacement homonyme, et empêche tout double-comptage.
     for (final emp in emplacements) {
       final empName = emp.localisation.trim();
       if (result.any((r) => r.zoneNom.toLowerCase() == empName.toLowerCase())) {
@@ -1327,10 +1346,7 @@ class TechnicalEnrichmentEngine {
       }
 
       final equipInEmp = allEquipmentInstances.where((i) {
-        final pl = i.parentLocal?.trim().toLowerCase();
-        final pz = i.parentZone?.trim().toLowerCase();
-        final target = empName.toLowerCase();
-        return pl == target || (pl == null && pz == target);
+        return i.parentLocal?.trim().toLowerCase() == empName.toLowerCase();
       }).toList();
 
       int totalPoints = 0;
