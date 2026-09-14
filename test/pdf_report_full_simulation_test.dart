@@ -12,6 +12,7 @@ import 'package:inspec_app/services/pdf/pdf_page_tracker.dart';
 import 'package:inspec_app/services/pdf/builders/pdf_mesures_essais_builder.dart';
 import 'package:inspec_app/services/pdf/builders/pdf_photos_schemas_builder.dart';
 import 'package:inspec_app/services/pdf/builders/pdf_executive_summary_builder.dart';
+import 'package:inspec_app/services/pdf/builders/pdf_statistics_builder.dart';
 import 'package:inspec_app/services/ai/executive_summary_snapshot.dart';
 import 'package:inspec_app/services/ai/mission_executive_summary_service.dart';
 
@@ -297,6 +298,103 @@ void main() {
       final bytes = await doc.save();
       expect(bytes.isNotEmpty, isTrue);
       expect(trackedPages['resume_executif'], equals(1));
+    });
+
+    test('Alignement dynamique du Sommaire avec le Résumé Exécutif et l\'Analyse Statistique', () async {
+      final mission = Mission(
+        id: 'M-SOMMAIRE-ALIGN-TEST',
+        nomClient: 'KES ENERGIE AFRICA',
+        nomSite: 'SITE YAOUNDE',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        status: 'active',
+      );
+
+      final snapshot = ExecutiveSummarySnapshot.fromMission(mission.id);
+      final summaryData = MissionExecutiveSummaryService.buildDeterministicFallback(
+        mission.id,
+        snapshot,
+      );
+
+      final trackedPages = <String, int>{};
+      const initialOffset = 3; // Simule Couverture (p.1) + Intervenants (p.2) + Sommaire (p.3)
+
+      final doc = pw.Document();
+      doc.addPage(
+        pw.MultiPage(
+          pageTheme: pw.PageTheme(
+            theme: pw.ThemeData.withFont(
+              base: robotoRegular,
+              bold: robotoBold,
+            ),
+          ),
+          build: (ctx) => [
+            ...PdfExecutiveSummaryBuilder.buildResumeExecutif(
+              mission,
+              trackedPages,
+              'KES-2026-001',
+              summaryData: summaryData,
+              offset: initialOffset,
+            ),
+            pw.NewPage(),
+            ...PdfStatisticsBuilder.buildAnalyseStatistique(
+              mission,
+              trackedPages,
+              'KES-2026-001',
+              offset: initialOffset,
+            ),
+          ],
+        ),
+      );
+
+      final bytes = await doc.save();
+      expect(bytes.isNotEmpty, isTrue);
+
+      // 1. Vérification que Résumé Exécutif a bien renseigné ses pages
+      expect(trackedPages['resume_executif'], isNotNull);
+      expect(trackedPages['resume_executif'], greaterThanOrEqualTo(4));
+      expect(trackedPages['resume_executif_1_1'], isNotNull);
+      expect(trackedPages['resume_executif_1_12'], isNotNull);
+
+      // 2. Vérification que l'Analyse Statistique est bien renseignée et commence APRES le résumé
+      expect(trackedPages['analyse_statistique'], isNotNull);
+      expect(trackedPages['analyse_statistique']!, greaterThan(trackedPages['resume_executif']!));
+      expect(trackedPages['stat_tension'], isNotNull);
+      expect(trackedPages['stat_croisee_mt'], isNotNull);
+      expect(trackedPages['stat_croisee_bt'], isNotNull);
+      expect(trackedPages['stat_securite_bt'], isNotNull);
+      expect(trackedPages['stat_sources_alim'], isNotNull);
+      expect(trackedPages['stat_coupure_tete'], isNotNull);
+      expect(trackedPages['stat_parafoudres'], isNotNull);
+      expect(trackedPages['stat_pareto'], isNotNull);
+      expect(trackedPages['stat_synthese'], isNotNull);
+      expect(trackedPages['stat_formation'], isNotNull);
+
+      // 3. Vérification que toutes les entrées du Sommaire pour ces sections sont résolues sans '--'
+      final sommaireEntries = PdfSommaireBuilder.collectSommaireEntries(
+        mission: mission,
+        rg: null,
+        desc: null,
+        audit: null,
+        mesures: null,
+        foudres: [],
+      );
+
+      final execEntries = sommaireEntries.where((e) => e.key.startsWith('resume_executif')).toList();
+      final statEntries = sommaireEntries.where((e) => e.key.startsWith('stat_') || e.key == 'analyse_statistique').toList();
+
+      expect(execEntries, isNotEmpty);
+      expect(statEntries, isNotEmpty);
+
+      for (final entry in execEntries) {
+        final pageNum = trackedPages[entry.key];
+        expect(pageNum, isNotNull, reason: 'La clé de résumé exécutif ${entry.key} (${entry.titre}) doit être présente dans trackedPages');
+      }
+
+      for (final entry in statEntries) {
+        final pageNum = trackedPages[entry.key];
+        expect(pageNum, isNotNull, reason: 'La clé d\'analyse statistique ${entry.key} (${entry.titre}) doit être présente dans trackedPages');
+      }
     });
   });
 }
