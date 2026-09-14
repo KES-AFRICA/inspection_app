@@ -66,7 +66,7 @@ class MissionExecutiveSummaryService {
         'properties': {
           'paragraph': {
             'type': 'STRING',
-            'description': 'Synthèse factuelle du contexte, du site, du rapporteur, de la période et du périmètre MT/BT.',
+            'description': 'Synthèse factuelle du contexte, du site, du rapporteur, de la période et du périmètre HTA/BT.',
           },
         },
         'required': ['paragraph'],

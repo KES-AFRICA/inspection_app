@@ -335,10 +335,10 @@ class PdfStatisticsBuilder {
     void addMap(Map<String, int> m) {
       m.forEach((k, v) => familyCounts[k] = (familyCounts[k] ?? 0) + v);
     }
-    addMap(technical.riskFamilyMatrix.htaDispositionsConstructives);
-    addMap(technical.riskFamilyMatrix.htaExploitationMaintenance);
-    addMap(technical.riskFamilyMatrix.btDispositionsConstructives);
-    addMap(technical.riskFamilyMatrix.btExploitationMaintenance);
+    addMap(technical.riskFamilyMatrix.htaDispositionsConstructives.counts);
+    addMap(technical.riskFamilyMatrix.htaExploitationMaintenance.counts);
+    addMap(technical.riskFamilyMatrix.btDispositionsConstructives.counts);
+    addMap(technical.riskFamilyMatrix.btExploitationMaintenance.counts);
 
     final sortedFamilies = familyCounts.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));

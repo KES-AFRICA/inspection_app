@@ -16,7 +16,6 @@ import 'package:inspec_app/widgets/app_bottom_sheet.dart';
 // Liste des vérificateurs prédéfinis
 const List<Map<String, String>> _verificateursPredefinis = [
   {'nom': 'Patrick ESSAME', 'email': 'patrick.essame@kes-africa.com'},
-  {'nom': 'Lucien BOYOMO', 'email': 'lucien.boyomo@kes-africa.com'},
   {'nom': 'Leandre MBAMACK', 'email': 'leandre.mbamack@kes-africa.com'},
   {'nom': 'Fabrice NKOUASSI', 'email': 'fabrice.nkouassi@kes-africa.com'},
 ];

@@ -2393,6 +2393,7 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
     'Socomec',
     'TOMZN',
     'Terasaki',
+    'Inconnu',
   ];
 
   static const List<String> _courbeOptions = [
@@ -6490,6 +6491,7 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
     'Socomec',
     'TOMZN',
     'Terasaki',
+    'Inconnu',
   ];
 
   static const List<String> _courbeOptions = [

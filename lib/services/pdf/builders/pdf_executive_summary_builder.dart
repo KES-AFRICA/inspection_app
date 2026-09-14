@@ -68,7 +68,7 @@ class PdfExecutiveSummaryBuilder {
           ),
           pw.SizedBox(height: 4),
           pw.Text(
-            data.contexte.paragraph,
+            data.contexte.paragraph.replaceAll('(MT/BT)', '(HTA/BT)'),
             style: pw.TextStyle(
               font: fontRegular,
               fontSize: fsBody,
@@ -860,6 +860,32 @@ class PdfExecutiveSummaryBuilder {
     final btDispoPct = btTot > 0 ? (btDispo / btTot * 100).toStringAsFixed(1).replaceAll('.', ',') : '0,0';
     final btExploitPct = btTot > 0 ? (btExploit / btTot * 100).toStringAsFixed(1).replaceAll('.', ',') : '0,0';
 
+    String formatCoupure(DomainObjectType type) {
+      final s = technical.coupureTeteStats[type];
+      final presents = s?.presents ?? 0;
+      final total = s?.totalEquipments ?? 0;
+      final pct = s?.formattedPercentage ?? '0,0 %';
+      return '$presents/$total, soit $pct';
+    }
+
+    String formatSource(DomainObjectType type) {
+      final s = technical.sourceStats[type];
+      final identifiees = s?.identifiees ?? 0;
+      final total = s?.totalEquipments ?? 0;
+      final pct = s?.formattedPercentage ?? '0,0 %';
+      return '$identifiees/$total, soit $pct';
+    }
+
+    String formatAdequation(DomainObjectType type) {
+      final s = technical.adequationIccPdcStats[type];
+      final conformes = s?.conformes ?? 0;
+      final denom = (s != null && s.evaluables > 0) ? s.evaluables : (s?.totalElements ?? 0);
+      final rate = (s != null && s.evaluables > 0 && s.formattedComplianceRate != 'Non évaluable')
+          ? s.formattedComplianceRate
+          : '0,0 %';
+      return '$conformes/$denom, soit $rate';
+    }
+
     return pw.Table(
       border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.5),
       columnWidths: const {
@@ -938,24 +964,24 @@ class PdfExecutiveSummaryBuilder {
         ),
         buildRow(
           'Présence organe de coupure en tête d’installation',
-          'Inverseur : ${technical.coupureTeteStats[DomainObjectType.inverseur]?.ratioStr ?? '-'}\n'
-          'TGBT : ${technical.coupureTeteStats[DomainObjectType.tgbt]?.ratioStr ?? '-'}\n'
-          'Armoires : ${technical.coupureTeteStats[DomainObjectType.armoire]?.ratioStr ?? '-'}\n'
-          'Coffrets : ${technical.coupureTeteStats[DomainObjectType.coffret]?.ratioStr ?? '-'}',
+          'Inverseur : ${formatCoupure(DomainObjectType.inverseur)}\n'
+          'TGBT : ${formatCoupure(DomainObjectType.tgbt)}\n'
+          'Armoire : ${formatCoupure(DomainObjectType.armoire)}\n'
+          'Coffret : ${formatCoupure(DomainObjectType.coffret)}',
         ),
         buildRow(
           'Identification des sources d\'alimentation',
-          'Inverseur : ${technical.sourceStats[DomainObjectType.inverseur]?.ratioStr ?? '-'}\n'
-          'TGBT : ${technical.sourceStats[DomainObjectType.tgbt]?.ratioStr ?? '-'}\n'
-          'Armoires : ${technical.sourceStats[DomainObjectType.armoire]?.ratioStr ?? '-'}\n'
-          'Coffrets : ${technical.sourceStats[DomainObjectType.coffret]?.ratioStr ?? '-'}',
+          'Inverseur : ${formatSource(DomainObjectType.inverseur)}\n'
+          'TGBT : ${formatSource(DomainObjectType.tgbt)}\n'
+          'Armoire : ${formatSource(DomainObjectType.armoire)}\n'
+          'Coffret : ${formatSource(DomainObjectType.coffret)}',
         ),
         buildRow(
           'Adéquation entre l’ Intensité du courant de court circuit et le pouvoir de coupure des appareillages de protection',
-          'Inverseur : ${(technical.adequationIccPdcStats[DomainObjectType.inverseur]?.evaluables ?? 0) > 0 ? "${technical.adequationIccPdcStats[DomainObjectType.inverseur]?.conformes}/${technical.adequationIccPdcStats[DomainObjectType.inverseur]?.evaluables}" : "Non renseigné"}\n'
-          'TGBT : ${(technical.adequationIccPdcStats[DomainObjectType.tgbt]?.evaluables ?? 0) > 0 ? "${technical.adequationIccPdcStats[DomainObjectType.tgbt]?.conformes}/${technical.adequationIccPdcStats[DomainObjectType.tgbt]?.evaluables}" : "Non renseigné"}\n'
-          'Armoires : ${(technical.adequationIccPdcStats[DomainObjectType.armoire]?.evaluables ?? 0) > 0 ? "${technical.adequationIccPdcStats[DomainObjectType.armoire]?.conformes}/${technical.adequationIccPdcStats[DomainObjectType.armoire]?.evaluables}" : "Non renseigné"}\n'
-          'Coffrets : ${(technical.adequationIccPdcStats[DomainObjectType.coffret]?.evaluables ?? 0) > 0 ? "${technical.adequationIccPdcStats[DomainObjectType.coffret]?.conformes}/${technical.adequationIccPdcStats[DomainObjectType.coffret]?.evaluables}" : "Non renseigné"}',
+          'Inverseur : ${formatAdequation(DomainObjectType.inverseur)}\n'
+          'TGBT : ${formatAdequation(DomainObjectType.tgbt)}\n'
+          'Armoire : ${formatAdequation(DomainObjectType.armoire)}\n'
+          'Coffret : ${formatAdequation(DomainObjectType.coffret)}',
         ),
         buildRow(
           'Présence Parafoudre',
@@ -1146,14 +1172,6 @@ class PdfExecutiveSummaryBuilder {
   }
 
   static pw.Widget _buildEnrichedRiskFamilyMatrixTable(RiskFamilyCrossMatrix matrix) {
-    const canonicalOrder = [
-      'Erreur d\'exploitation / maintenance',
-      'Dégradation des canalisations et matériels',
-      'Électrisation / électrocution',
-      'Échauffement / surcharge / risque d\'incendie',
-      'Surintensité / court-circuit',
-    ];
-
     const riskColWidths = {
       0: pw.FlexColumnWidth(5.5),
       1: pw.FlexColumnWidth(2.2),
@@ -1209,28 +1227,38 @@ class PdfExecutiveSummaryBuilder {
       ],
     );
 
-    pw.Widget buildRiskDataTable(Map<String, int> counts, int total) {
+    pw.Widget buildRiskDataTable(RiskFamilyQuadrantStats quadrant) {
       final rows = <pw.TableRow>[];
-      for (final fam in canonicalOrder) {
-        final c = counts[fam] ?? 0;
-        final pctStr = total > 0 ? '${(c / total * 100).toStringAsFixed(1).replaceAll('.', ',')} %' : '0,0 %';
+      if (quadrant.topFamilies.isEmpty) {
         rows.add(
           pw.TableRow(
             children: [
-              _buildTableCell(fam, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
-              _buildTableCell('$c'),
-              _buildTableCell(pctStr),
+              _buildTableCell('Aucun facteur de risque identifié', align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
+              _buildTableCell('0'),
+              _buildTableCell('0,0 %'),
             ],
           ),
         );
+      } else {
+        for (final item in quadrant.topFamilies) {
+          rows.add(
+            pw.TableRow(
+              children: [
+                _buildTableCell(item.famille, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
+                _buildTableCell('${item.constats}'),
+                _buildTableCell(item.formattedPart),
+              ],
+            ),
+          );
+        }
       }
       rows.add(
         pw.TableRow(
           decoration: pw.BoxDecoration(color: PdfReportStyles.tableRowAlt),
           children: [
             _buildTableCell('TOTAL', isBold: true, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
-            _buildTableCell('$total', isBold: true),
-            _buildTableCell(''),
+            _buildTableCell('${quadrant.totalConstats}', isBold: true),
+            _buildTableCell(quadrant.totalConstats > 0 ? '100,0 %' : '', isBold: true),
           ],
         ),
       );
@@ -1253,15 +1281,15 @@ class PdfExecutiveSummaryBuilder {
         riskHeaderTable,
         buildRiskBannerTable('HTA', PdfReportStyles.accentColor, PdfColors.white),
         buildRiskBannerTable('DISPOSITION CONSTRUCTIVE', PdfReportStyles.lightBlue, PdfReportStyles.headerColor),
-        buildRiskDataTable(matrix.htaDispositionsConstructives, matrix.totalHtaDispo),
+        buildRiskDataTable(matrix.htaDispositionsConstructives),
         buildRiskBannerTable('EXPLOITATION ET MAINTENANCE', PdfReportStyles.lightBlue, PdfReportStyles.headerColor),
-        buildRiskDataTable(matrix.htaExploitationMaintenance, matrix.totalHtaExploit),
+        buildRiskDataTable(matrix.htaExploitationMaintenance),
 
         buildRiskBannerTable('BT', PdfReportStyles.accentColor, PdfColors.white),
         buildRiskBannerTable('DISPOSITION CONSTRUCTIVE', PdfReportStyles.lightBlue, PdfReportStyles.headerColor),
-        buildRiskDataTable(matrix.btDispositionsConstructives, matrix.totalBtDispo),
+        buildRiskDataTable(matrix.btDispositionsConstructives),
         buildRiskBannerTable('EXPLOITATION ET MAINTENANCE', PdfReportStyles.lightBlue, PdfReportStyles.headerColor),
-        buildRiskDataTable(matrix.btExploitationMaintenance, matrix.totalBtExploit),
+        buildRiskDataTable(matrix.btExploitationMaintenance),
       ],
     );
   }

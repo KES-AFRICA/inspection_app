@@ -4,11 +4,11 @@ import '../../models/audit_installations_electriques.dart';
 import '../../models/classement_locaux.dart';
 import '../../models/classement_zone.dart';
 import '../../models/mesures_essais.dart';
+import '../dispositions_constructives_registry.dart';
 import '../hive_service.dart';
 import '../ip_ik_evaluator_service.dart';
 import 'audit_finding.dart';
 import 'canonical_defect_category_registry.dart';
-import 'canonical_risk_family_registry.dart';
 import 'domain_entity_instance.dart';
 import 'mission_domain_inventory_engine.dart';
 
@@ -225,12 +225,60 @@ class EssaisCoverageStats {
       arretUrgenceCount;
 }
 
-/// Matrice à 4 quadrants croisant Domaine de tension x Nature de contrôle avec les 5 familles de risques canoniques.
+/// Élément statistique unitaire pour une famille de risque réelle.
+class RiskFamilyStatItem {
+  final String famille;
+  final int constats;
+  final double part;
+  final String formattedPart;
+
+  const RiskFamilyStatItem({
+    required this.famille,
+    required this.constats,
+    required this.part,
+    required this.formattedPart,
+  });
+
+  String get partStr => formattedPart;
+}
+
+/// Synthèse statistique d'un quadrant (HTA/BT x Dispo/Exploit).
+class RiskFamilyQuadrantStats {
+  final String domainTitle;
+  final String sectionTitle;
+  final int totalConstats;
+  final Map<String, int> counts;
+  final List<RiskFamilyStatItem> topFamilies;
+  final List<RiskFamilyStatItem> allFamilies;
+
+  const RiskFamilyQuadrantStats({
+    required this.domainTitle,
+    required this.sectionTitle,
+    required this.totalConstats,
+    required this.counts,
+    required this.topFamilies,
+    required this.allFamilies,
+  });
+
+  const RiskFamilyQuadrantStats.empty({
+    this.domainTitle = '',
+    this.sectionTitle = '',
+    this.totalConstats = 0,
+    this.counts = const {},
+    this.topFamilies = const [],
+    this.allFamilies = const [],
+  });
+
+  int get total => totalConstats;
+  List<RiskFamilyStatItem> get items => topFamilies;
+}
+
+/// Matrice à 4 quadrants croisant Domaine de tension x Nature de contrôle avec les familles de risques réelles.
 class RiskFamilyCrossMatrix {
-  final Map<String, int> htaDispositionsConstructives;
-  final Map<String, int> htaExploitationMaintenance;
-  final Map<String, int> btDispositionsConstructives;
-  final Map<String, int> btExploitationMaintenance;
+  final RiskFamilyQuadrantStats htaDispositionsConstructives;
+  final RiskFamilyQuadrantStats htaExploitationMaintenance;
+  final RiskFamilyQuadrantStats btDispositionsConstructives;
+  final RiskFamilyQuadrantStats btExploitationMaintenance;
 
   const RiskFamilyCrossMatrix({
     required this.htaDispositionsConstructives,
@@ -239,14 +287,16 @@ class RiskFamilyCrossMatrix {
     required this.btExploitationMaintenance,
   });
 
-  int get totalHtaDispo =>
-      htaDispositionsConstructives.values.fold(0, (s, e) => s + e);
-  int get totalHtaExploit =>
-      htaExploitationMaintenance.values.fold(0, (s, e) => s + e);
-  int get totalBtDispo =>
-      btDispositionsConstructives.values.fold(0, (s, e) => s + e);
-  int get totalBtExploit =>
-      btExploitationMaintenance.values.fold(0, (s, e) => s + e);
+  const RiskFamilyCrossMatrix.empty()
+      : htaDispositionsConstructives = const RiskFamilyQuadrantStats.empty(),
+        htaExploitationMaintenance = const RiskFamilyQuadrantStats.empty(),
+        btDispositionsConstructives = const RiskFamilyQuadrantStats.empty(),
+        btExploitationMaintenance = const RiskFamilyQuadrantStats.empty();
+
+  int get totalHtaDispo => htaDispositionsConstructives.totalConstats;
+  int get totalHtaExploit => htaExploitationMaintenance.totalConstats;
+  int get totalBtDispo => btDispositionsConstructives.totalConstats;
+  int get totalBtExploit => btExploitationMaintenance.totalConstats;
 
   int get totalHta => totalHtaDispo + totalHtaExploit;
   int get totalBt => totalBtDispo + totalBtExploit;
@@ -637,7 +687,7 @@ class TechnicalEnrichmentEngine {
     }
 
     // 5. Matrice 4 quadrants des Familles de risques
-    final riskMatrix = _computeRiskFamilyMatrix(findingInventory.findings);
+    final riskMatrix = _computeRiskFamilyMatrix(domainInventory);
 
     // 6. Top 5 des défaillances HTA et BT
     final top5Hta = _computeTopDefectsForDomain(
@@ -687,7 +737,6 @@ class TechnicalEnrichmentEngine {
     );
 
     // 8. Lignes de conformité croisée par catégorie pour Moyenne Tension
-    final totalNcMt = findingInventory.findings.where((f) => f.tensionDomain == TensionDomain.mt).length;
     final totalMissionNc = findingInventory.classifiedCount > 0 ? findingInventory.classifiedCount : findingInventory.totalFindings;
     final mtCatRows = <CategoryCrossAuditRow>[];
 
@@ -1282,50 +1331,114 @@ class TechnicalEnrichmentEngine {
     return result;
   }
 
-  static RiskFamilyCrossMatrix _computeRiskFamilyMatrix(
-    List<AuditFinding> findings,
-  ) {
-    final htaDispo = <String, int>{};
-    final htaExploit = <String, int>{};
-    final btDispo = <String, int>{};
-    final btExploit = <String, int>{};
-
-    for (final fam in CanonicalRiskFamilyRegistry.canonicalFamilies) {
-      htaDispo[fam] = 0;
-      htaExploit[fam] = 0;
-      btDispo[fam] = 0;
-      btExploit[fam] = 0;
-    }
-
-    for (final f in findings) {
-      final canonRisk = CanonicalRiskFamilyRegistry.mapToCanonical(
-        f.riskFamily,
-        verificationPoint: f.verificationPoint,
+  static RiskFamilyQuadrantStats _computeQuadrantStats({
+    required String domainTitle,
+    required String sectionTitle,
+    required List<AuditFinding> findings,
+  }) {
+    final totalConstats = findings.length;
+    if (totalConstats == 0) {
+      return RiskFamilyQuadrantStats(
+        domainTitle: domainTitle,
+        sectionTitle: sectionTitle,
+        totalConstats: 0,
+        counts: const {},
+        topFamilies: const [],
+        allFamilies: const [],
       );
-
-      final isDispo = _isDispositionConstructiveFinding(f);
-      final isHta = f.tensionDomain == TensionDomain.mt;
-
-      if (isHta) {
-        if (isDispo) {
-          htaDispo[canonRisk] = (htaDispo[canonRisk] ?? 0) + 1;
-        } else {
-          htaExploit[canonRisk] = (htaExploit[canonRisk] ?? 0) + 1;
-        }
-      } else {
-        if (isDispo) {
-          btDispo[canonRisk] = (btDispo[canonRisk] ?? 0) + 1;
-        } else {
-          btExploit[canonRisk] = (btExploit[canonRisk] ?? 0) + 1;
-        }
-      }
     }
+
+    final counts = <String, int>{};
+    for (final f in findings) {
+      final rawFamily = f.riskFamily?.trim();
+      final family = (rawFamily != null && rawFamily.isNotEmpty)
+          ? rawFamily
+          : (DispositionsConstructivesRegistry.getMetadata(f.verificationPoint)?.familleRisque ??
+             DispositionsConstructivesRegistry.getCoffretMetadata(f.verificationPoint)?.familleRisque ??
+             'Non spécifiée');
+      counts[family] = (counts[family] ?? 0) + 1;
+    }
+
+    final sortedEntries = counts.entries.toList()
+      ..sort((a, b) {
+        final cmp = b.value.compareTo(a.value);
+        if (cmp != 0) return cmp;
+        return a.key.compareTo(b.key);
+      });
+
+    final allFamilies = sortedEntries.map((e) {
+      final part = totalConstats > 0 ? (e.value / totalConstats) * 100.0 : 0.0;
+      final formattedPart = '${part.toStringAsFixed(1).replaceAll('.', ',')} %';
+      return RiskFamilyStatItem(
+        famille: e.key,
+        constats: e.value,
+        part: part,
+        formattedPart: formattedPart,
+      );
+    }).toList();
+
+    final topFamilies = allFamilies.take(5).toList();
+
+    return RiskFamilyQuadrantStats(
+      domainTitle: domainTitle,
+      sectionTitle: sectionTitle,
+      totalConstats: totalConstats,
+      counts: counts,
+      topFamilies: topFamilies,
+      allFamilies: allFamilies,
+    );
+  }
+
+  static RiskFamilyCrossMatrix _computeRiskFamilyMatrix(
+    MissionDomainInventory domainInventory,
+  ) {
+    // 1. HTA — DISPOSITION CONSTRUCTIVE : Locaux MT / HTA
+    final htaLocauxFindings = domainInventory
+        .getInstancesByCategory(DomainObjectType.localMT)
+        .expand((i) => i.findings)
+        .toList();
+
+    // 2. HTA — EXPLOITATION ET MAINTENANCE : Cellules MT + Transformateurs MT/BT
+    final htaEquipFindings = [
+      ...domainInventory.getInstancesByCategory(DomainObjectType.celluleMT),
+      ...domainInventory.getInstancesByCategory(DomainObjectType.transformateurMTBT),
+    ].expand((i) => i.findings).toList();
+
+    // 3. BT — DISPOSITION CONSTRUCTIVE : Locaux BT + Locaux GE
+    final btLocauxFindings = [
+      ...domainInventory.getInstancesByCategory(DomainObjectType.localBT),
+      ...domainInventory.getInstancesByCategory(DomainObjectType.localGE),
+    ].expand((i) => i.findings).toList();
+
+    // 4. BT — EXPLOITATION ET MAINTENANCE : TGBT + Armoires + Coffrets + Inverseurs
+    final btEquipFindings = [
+      ...domainInventory.getInstancesByCategory(DomainObjectType.tgbt),
+      ...domainInventory.getInstancesByCategory(DomainObjectType.armoire),
+      ...domainInventory.getInstancesByCategory(DomainObjectType.coffret),
+      ...domainInventory.getInstancesByCategory(DomainObjectType.inverseur),
+    ].expand((i) => i.findings).toList();
 
     return RiskFamilyCrossMatrix(
-      htaDispositionsConstructives: htaDispo,
-      htaExploitationMaintenance: htaExploit,
-      btDispositionsConstructives: btDispo,
-      btExploitationMaintenance: btExploit,
+      htaDispositionsConstructives: _computeQuadrantStats(
+        domainTitle: 'HTA',
+        sectionTitle: 'DISPOSITION CONSTRUCTIVE',
+        findings: htaLocauxFindings,
+      ),
+      htaExploitationMaintenance: _computeQuadrantStats(
+        domainTitle: 'HTA',
+        sectionTitle: 'EXPLOITATION ET MAINTENANCE',
+        findings: htaEquipFindings,
+      ),
+      btDispositionsConstructives: _computeQuadrantStats(
+        domainTitle: 'BT',
+        sectionTitle: 'DISPOSITION CONSTRUCTIVE',
+        findings: btLocauxFindings,
+      ),
+      btExploitationMaintenance: _computeQuadrantStats(
+        domainTitle: 'BT',
+        sectionTitle: 'EXPLOITATION ET MAINTENANCE',
+        findings: btEquipFindings,
+      ),
     );
   }
 

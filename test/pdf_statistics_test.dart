@@ -95,7 +95,7 @@ void main() {
       pdcTerminalStats: {},
       cablesMatrix: [],
       ipIkZoneItems: [],
-      riskFamilyMatrix: const RiskFamilyCrossMatrix(htaDispositionsConstructives: {}, htaExploitationMaintenance: {}, btDispositionsConstructives: {}, btExploitationMaintenance: {}),
+      riskFamilyMatrix: const RiskFamilyCrossMatrix.empty(),
       top5Hta: [],
       top5Bt: [],
       totalZonesClassees: 0,

@@ -603,7 +603,6 @@ class PdfCoverBuilder {
             pw.Padding(
               padding: const pw.EdgeInsets.all(6),
               child: buildBulletList([
-                'Lucien BOYOMO',
                 'Patrick ESSAME',
               ], trackerKey: 'intervenants_verification'),
             ),

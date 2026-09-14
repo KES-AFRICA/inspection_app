@@ -89,7 +89,7 @@ class ExecutiveSummarySnapshot {
 
       final cStats = summary.criticalityStats;
       final tensionStats = summary.tensionDomainStats;
-      final domainStr = (tensionStats.mtCount > 0) ? 'Moyenne et Basse Tension (MT/BT)' : 'Basse Tension (BT)';
+      final domainStr = (tensionStats.mtCount > 0) ? 'Moyenne et Basse Tension (HTA/BT)' : 'Basse Tension (BT)';
 
       final eqCount = summary.totalEquipments;
       final totalNc = summary.totalNC;
