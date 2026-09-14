@@ -14,14 +14,14 @@ class PdfStatisticsCharts {
 
   static pw.Font get fontBold => PdfReportStyles.fontBold;
   static set fontBold(pw.Font font) => PdfReportStyles.fontBold = font;
-  // Couleurs harmonisées selon la charte KES
+  // Couleurs harmonisées selon la charte KES (orange/rouge des diagrammes MT et BT)
   static final PdfColor colorNavy = PdfColor.fromHex('#1B365D');
   static final PdfColor colorBlueMT = PdfColor.fromHex('#4A7BB0');
   static final PdfColor colorCritique = PdfColor.fromHex('#A91D22');
   static final PdfColor colorMajeure = PdfColor.fromHex('#D35400');
-  static final PdfColor colorPresent = PdfColor.fromHex('#2E7D32');
-  static final PdfColor colorAbsent = PdfColor.fromHex('#A91D22');
-  static final PdfColor colorSansParafoudre = PdfColor.fromHex('#7E909A');
+  static final PdfColor colorPresent = colorMajeure; // Orange (#D35400)
+  static final PdfColor colorAbsent = colorCritique; // Rouge (#A91D22)
+  static final PdfColor colorSansParafoudre = colorCritique; // Rouge (#A91D22)
   static final PdfColor textGrey = PdfColor.fromHex('#64748B');
   static final PdfColor axisBlack = PdfColors.black;
 
