@@ -1764,9 +1764,9 @@
     "semantic_hash": ""
   },
   "lib/services/pdf/builders/pdf_executive_summary_builder.dart": {
-    "mtime": 1789380848.930676,
-    "seen": 1789380988.7831903,
-    "ast_hash": "19efaf8534e4b4fcf08ac2ce569357c5",
+    "mtime": 1789384806.598424,
+    "seen": 1789385843.410259,
+    "ast_hash": "dc0cbc3c169714c3ea58f2694f9dd2e4",
     "semantic_hash": ""
   },
   "lib/services/pdf/builders/pdf_mesures_essais_builder.dart": {
@@ -1806,9 +1806,9 @@
     "semantic_hash": ""
   },
   "lib/services/pdf/builders/pdf_statistics_builder.dart": {
-    "mtime": 1789354285.3740017,
-    "seen": 1789354470.5440955,
-    "ast_hash": "d01982c6b220a50b7ee4d7dfbe9d72c9",
+    "mtime": 1789384823.4897504,
+    "seen": 1789385843.4102695,
+    "ast_hash": "2eb778a0847f155a6fc1e5e2bdfd4027",
     "semantic_hash": ""
   },
   "lib/services/pdf/pdf_chunk_merger.dart": {
@@ -3204,9 +3204,9 @@
     "semantic_hash": ""
   },
   "lib/services/statistics/technical_enrichment_engine.dart": {
-    "mtime": 1789338621.21349,
-    "seen": 1789340103.6907222,
-    "ast_hash": "2b60dfced1e287fa702babd01a18e880",
+    "mtime": 1789385748.6569285,
+    "seen": 1789385843.4103768,
+    "ast_hash": "9452d497af7ee2a89bf41b619a691436",
     "semantic_hash": ""
   },
   "test/features/statistics_enrichment_test.dart": {
@@ -3234,15 +3234,15 @@
     "semantic_hash": ""
   },
   "test/pdf_statistics_test.dart": {
-    "mtime": 1789339645.8145144,
-    "seen": 1789340103.690902,
-    "ast_hash": "91cd7e199130ed9bbebf75a3bfcee7bf",
+    "mtime": 1789385633.1227634,
+    "seen": 1789385843.4106863,
+    "ast_hash": "ac38ca94065a010eb5ebd66d68f467cc",
     "semantic_hash": ""
   },
   "scratch/test_statistics_full_output.pdf": {
-    "mtime": 1789354310.943923,
-    "seen": 1789354470.5445387,
-    "ast_hash": "10457d8462dc491937cb1caf58d99959",
+    "mtime": 1789385677.92419,
+    "seen": 1789385843.4107604,
+    "ast_hash": "894ff4dd5cb7c99e958a1724bb116f70",
     "semantic_hash": ""
   },
   "scratch/test_statistics_output.pdf": {
@@ -3513,6 +3513,12 @@
     "mtime": 1789356828.063611,
     "seen": 1789356904.3062844,
     "ast_hash": "36656e86185230e2f43c959b1b986c01",
+    "semantic_hash": ""
+  },
+  "test/risk_family_matrix_dynamic_test.dart": {
+    "mtime": 1789385498.7920644,
+    "seen": 1789385843.4106877,
+    "ast_hash": "e4f67725e3f1032ec6c4f64750a01208",
     "semantic_hash": ""
   }
 }

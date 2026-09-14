@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:inspec_app/services/ai/executive_summary_snapshot.dart';
 import 'package:inspec_app/services/ai/mission_executive_summary_service.dart';
 import 'package:pdf/pdf.dart';
@@ -1381,7 +1382,7 @@ class PdfExecutiveSummaryBuilder {
         pw.TableRow(
           decoration: pw.BoxDecoration(color: PdfReportStyles.lightBlue),
           children: [
-            _buildTableCell(domainLabel == 'BT' ? 'Total BT' : 'Total', isBold: true, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
+            _buildTableCell('TOTAL', isBold: true, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
             _buildTableCell('${totalRow.equipementsCount}', isBold: true),
             _buildTableCell('${totalRow.ncCount}', isBold: true),
             _buildTableCell(
@@ -1393,18 +1394,6 @@ class PdfExecutiveSummaryBuilder {
             _buildTableCell(totalRow.densiteStr, isBold: true),
           ],
         ),
-        if (domainLabel == 'BT')
-          pw.TableRow(
-            decoration: pw.BoxDecoration(color: PdfReportStyles.tableRowAlt),
-            children: [
-              _buildTableCell('Total', isBold: true, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
-              _buildTableCell('${totalRow.equipementsCount}', isBold: true),
-              _buildTableCell('${totalRow.ncCount}', isBold: true),
-              _buildTableCell('${totalRow.critiquesCount}', isBold: true),
-              _buildTableCell('${totalRow.majeuresCount}', isBold: true),
-              _buildTableCell(totalRow.densiteStr, isBold: true),
-            ],
-          ),
       ],
     );
   }
@@ -1417,7 +1406,7 @@ class PdfExecutiveSummaryBuilder {
           pw.TableRow(
             decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
             children: [
-              _buildTableHeaderCell('N`'),
+              _buildTableHeaderCell('N°'),
               _buildTableHeaderCell('Observation'),
               _buildTableHeaderCell('Stats'),
             ],
@@ -1433,6 +1422,10 @@ class PdfExecutiveSummaryBuilder {
       );
     }
 
+    final totalCount = items.fold<int>(0, (sum, it) => sum + it.count);
+    final totalPct = items.fold<double>(0.0, (sum, it) => sum + it.percentageOfDomain);
+    final totalCountStr = totalCount > 1 ? '$totalCount constats' : '$totalCount constat';
+
     return pw.Table(
       border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.5),
       columnWidths: const {
@@ -1444,7 +1437,7 @@ class PdfExecutiveSummaryBuilder {
         pw.TableRow(
           decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
           children: [
-            _buildTableHeaderCell('N`'),
+            _buildTableHeaderCell('N°'),
             _buildTableHeaderCell('Observation'),
             _buildTableHeaderCell('Stats'),
           ],
@@ -1468,15 +1461,33 @@ class PdfExecutiveSummaryBuilder {
               ),
             ],
           ),
+        pw.TableRow(
+          decoration: pw.BoxDecoration(color: PdfReportStyles.lightBlue),
+          children: [
+            _buildTableCell('', isBold: true),
+            _buildTableCell('TOTAL', isBold: true, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
+            _buildTableCell(
+              '$totalCountStr, ${totalPct.toStringAsFixed(1).replaceAll('.', ',')}%',
+              isBold: true,
+              align: pw.TextAlign.center,
+            ),
+          ],
+        ),
       ],
     );
   }
 
   static pw.Widget _buildMarquesTable(TechnicalEnrichmentResult technical) {
-    String formatBrands(Map<String, int> m) {
-      if (m.isEmpty) return '';
+    String formatBrands(Map<String, int> m, int total) {
+      if (m.isEmpty) {
+        return total > 0 ? '0 / $total, soit 0,0 %' : '-';
+      }
       final sorted = m.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
-      return sorted.map((e) => '${e.key} : ${e.value}').join('\n');
+      return sorted.map((e) {
+        final pct = total > 0 ? (e.value / total) * 100.0 : 0.0;
+        final pctStr = '${pct.toStringAsFixed(1).replaceAll('.', ',')} %';
+        return '${e.key} : ${e.value} / $total, soit $pctStr';
+      }).join('\n');
     }
 
     const categories = [
@@ -1505,36 +1516,55 @@ class PdfExecutiveSummaryBuilder {
           ],
         ),
         for (final c in categories)
-          pw.TableRow(
-            verticalAlignment: pw.TableCellVerticalAlignment.middle,
-            children: [
-              _buildTableCell(c.$2, isBold: true, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
-              _buildTableCell(
-                formatBrands(technical.marquesMatrix.firstWhere((r) => r.category == c.$1, orElse: () => MarquesMatrixRow(category: c.$1, organeDeTete: {}, departs: {}, circuitsTerminaux: {})).organeDeTete),
-                align: pw.TextAlign.left,
-                alignment: pw.Alignment.centerLeft,
-              ),
-              _buildTableCell(
-                formatBrands(technical.marquesMatrix.firstWhere((r) => r.category == c.$1, orElse: () => MarquesMatrixRow(category: c.$1, organeDeTete: {}, departs: {}, circuitsTerminaux: {})).departs),
-                align: pw.TextAlign.left,
-                alignment: pw.Alignment.centerLeft,
-              ),
-              _buildTableCell(
-                formatBrands(technical.marquesMatrix.firstWhere((r) => r.category == c.$1, orElse: () => MarquesMatrixRow(category: c.$1, organeDeTete: {}, departs: {}, circuitsTerminaux: {})).circuitsTerminaux),
-                align: pw.TextAlign.left,
-                alignment: pw.Alignment.centerLeft,
-              ),
-            ],
-          ),
+          ...[
+            () {
+              final row = technical.marquesMatrix.firstWhere(
+                (r) => r.category == c.$1,
+                orElse: () => MarquesMatrixRow(
+                  category: c.$1,
+                  organeDeTete: {},
+                  departs: {},
+                  circuitsTerminaux: {},
+                ),
+              );
+              return pw.TableRow(
+                verticalAlignment: pw.TableCellVerticalAlignment.middle,
+                children: [
+                  _buildTableCell(c.$2, isBold: true, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
+                  _buildTableCell(
+                    formatBrands(row.organeDeTete, row.totalTete),
+                    align: pw.TextAlign.left,
+                    alignment: pw.Alignment.centerLeft,
+                  ),
+                  _buildTableCell(
+                    formatBrands(row.departs, row.totalDeparts),
+                    align: pw.TextAlign.left,
+                    alignment: pw.Alignment.centerLeft,
+                  ),
+                  _buildTableCell(
+                    formatBrands(row.circuitsTerminaux, row.totalTerminaux),
+                    align: pw.TextAlign.left,
+                    alignment: pw.Alignment.centerLeft,
+                  ),
+                ],
+              );
+            }(),
+          ],
       ],
     );
   }
 
   static pw.Widget _buildCourbesTable(TechnicalEnrichmentResult technical) {
-    String formatCourbes(Map<String, int> m) {
-      if (m.isEmpty) return '';
+    String formatCourbes(Map<String, int> m, int total) {
+      if (m.isEmpty) {
+        return total > 0 ? '0 / $total, soit 0,0 %' : '-';
+      }
       final sorted = m.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
-      return sorted.map((e) => '${e.key} : ${e.value}').join('\n');
+      return sorted.map((e) {
+        final pct = total > 0 ? (e.value / total) * 100.0 : 0.0;
+        final pctStr = '${pct.toStringAsFixed(1).replaceAll('.', ',')} %';
+        return '${e.key} : ${e.value} / $total, soit $pctStr';
+      }).join('\n');
     }
 
     const categories = [
@@ -1563,37 +1593,53 @@ class PdfExecutiveSummaryBuilder {
           ],
         ),
         for (final c in categories)
-          pw.TableRow(
-            verticalAlignment: pw.TableCellVerticalAlignment.middle,
-            children: [
-              _buildTableCell(c.$2, isBold: true, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
-              _buildTableCell(
-                formatCourbes(technical.courbesMatrix.firstWhere((r) => r.category == c.$1, orElse: () => CourbesMatrixRow(category: c.$1, organeDeTete: {}, departs: {}, circuitsTerminaux: {})).organeDeTete),
-                align: pw.TextAlign.left,
-                alignment: pw.Alignment.centerLeft,
-              ),
-              _buildTableCell(
-                formatCourbes(technical.courbesMatrix.firstWhere((r) => r.category == c.$1, orElse: () => CourbesMatrixRow(category: c.$1, organeDeTete: {}, departs: {}, circuitsTerminaux: {})).departs),
-                align: pw.TextAlign.left,
-                alignment: pw.Alignment.centerLeft,
-              ),
-              _buildTableCell(
-                formatCourbes(technical.courbesMatrix.firstWhere((r) => r.category == c.$1, orElse: () => CourbesMatrixRow(category: c.$1, organeDeTete: {}, departs: {}, circuitsTerminaux: {})).circuitsTerminaux),
-                align: pw.TextAlign.left,
-                alignment: pw.Alignment.centerLeft,
-              ),
-            ],
-          ),
+          ...[
+            () {
+              final row = technical.courbesMatrix.firstWhere(
+                (r) => r.category == c.$1,
+                orElse: () => CourbesMatrixRow(
+                  category: c.$1,
+                  organeDeTete: {},
+                  departs: {},
+                  circuitsTerminaux: {},
+                ),
+              );
+              return pw.TableRow(
+                verticalAlignment: pw.TableCellVerticalAlignment.middle,
+                children: [
+                  _buildTableCell(c.$2, isBold: true, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
+                  _buildTableCell(
+                    formatCourbes(row.organeDeTete, row.totalTete),
+                    align: pw.TextAlign.left,
+                    alignment: pw.Alignment.centerLeft,
+                  ),
+                  _buildTableCell(
+                    formatCourbes(row.departs, row.totalDeparts),
+                    align: pw.TextAlign.left,
+                    alignment: pw.Alignment.centerLeft,
+                  ),
+                  _buildTableCell(
+                    formatCourbes(row.circuitsTerminaux, row.totalTerminaux),
+                    align: pw.TextAlign.left,
+                    alignment: pw.Alignment.centerLeft,
+                  ),
+                ],
+              );
+            }(),
+          ],
       ],
     );
   }
 
   static pw.Widget _buildAdequationTable(TechnicalEnrichmentResult technical) {
     String formatAdequation(AdequationIccPdcStats? s) {
-      if (s == null || s.totalElements == 0 || s.evaluables == 0) {
-        return '';
+      if (s == null || s.totalElements == 0) {
+        return '-';
       }
-      return '${s.conformes} / ${s.evaluables} (${s.formattedComplianceRate})';
+      if (s.evaluables == 0) {
+        return 'Conforme : 0 / ${s.totalElements}, soit 0,0 %';
+      }
+      return 'Conforme : ${s.conformes} / ${s.evaluables}, soit ${s.formattedComplianceRate}';
     }
 
     const categories = [
@@ -1648,27 +1694,36 @@ class PdfExecutiveSummaryBuilder {
   }
 
   static pw.Widget _buildCablesTable(TechnicalEnrichmentResult technical) {
-    String formatBreakdown(Map<String, CablesSectionBreakdown> b, bool isAluPreferred) {
-      if (b.isEmpty) {
-        return '';
+    String formatBreakdown(Map<String, CablesSectionBreakdown> b, int totalCables) {
+      if (b.isEmpty || totalCables == 0) {
+        return '-';
       }
       final parts = <String>[];
       for (final e in b.entries) {
         final sb = e.value;
         if (sb.count > 0) {
           final sortedSec = sb.sectionsCount.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
-          final secStr = sortedSec.take(2).map((s) => '${s.key} (${s.value})').join(', ');
-          parts.add('${sb.metal} : ${sb.count}${secStr.isNotEmpty ? " [$secStr]" : ""}');
+          if (sortedSec.isNotEmpty) {
+            for (final s in sortedSec) {
+              final secPct = totalCables > 0 ? (s.value / totalCables * 100.0) : 0.0;
+              final secPctStr = '${secPct.toStringAsFixed(1).replaceAll('.', ',')} %';
+              parts.add('${sb.metal} — ${s.key} : ${s.value} / $totalCables, soit $secPctStr');
+            }
+          } else {
+            final metalPct = totalCables > 0 ? (sb.count / totalCables * 100.0) : 0.0;
+            final metalPctStr = '${metalPct.toStringAsFixed(1).replaceAll('.', ',')} %';
+            parts.add('${sb.metal} : ${sb.count} / $totalCables, soit $metalPctStr');
+          }
         }
       }
-      return parts.isNotEmpty ? parts.join('\n') : '';
+      return parts.isNotEmpty ? parts.join('\n') : '-';
     }
 
     const categories = [
-      (DomainObjectType.inverseur, 'INVERSEUR', true),
-      (DomainObjectType.tgbt, 'TGBT', false),
-      (DomainObjectType.armoire, 'ARMOIRES', true),
-      (DomainObjectType.coffret, 'COFFRETS', false),
+      (DomainObjectType.inverseur, 'INVERSEUR'),
+      (DomainObjectType.tgbt, 'TGBT'),
+      (DomainObjectType.armoire, 'ARMOIRES'),
+      (DomainObjectType.coffret, 'COFFRETS'),
     ];
 
     return pw.Table(
@@ -1688,63 +1743,134 @@ class PdfExecutiveSummaryBuilder {
           ],
         ),
         for (final c in categories)
-          pw.TableRow(
-            verticalAlignment: pw.TableCellVerticalAlignment.middle,
-            children: [
-              _buildTableCell(c.$2, isBold: true, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
-              _buildTableCell(
-                formatBreakdown(
-                  technical.cablesMatrix.firstWhere((r) => r.category == c.$1, orElse: () => CablesMatrixRow(category: c.$1, departsBreakdown: {}, circuitsTerminauxBreakdown: {})).departsBreakdown,
-                  c.$3,
+          ...[
+            () {
+              final row = technical.cablesMatrix.firstWhere(
+                (r) => r.category == c.$1,
+                orElse: () => CablesMatrixRow(
+                  category: c.$1,
+                  departsBreakdown: {},
+                  circuitsTerminauxBreakdown: {},
                 ),
-                align: pw.TextAlign.left,
-                alignment: pw.Alignment.centerLeft,
-              ),
-              _buildTableCell(
-                formatBreakdown(
-                  technical.cablesMatrix.firstWhere((r) => r.category == c.$1, orElse: () => CablesMatrixRow(category: c.$1, departsBreakdown: {}, circuitsTerminauxBreakdown: {})).circuitsTerminauxBreakdown,
-                  c.$3,
-                ),
-                align: pw.TextAlign.left,
-                alignment: pw.Alignment.centerLeft,
-              ),
-            ],
-          ),
+              );
+              return pw.TableRow(
+                verticalAlignment: pw.TableCellVerticalAlignment.middle,
+                children: [
+                  _buildTableCell(c.$2, isBold: true, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
+                  _buildTableCell(
+                    formatBreakdown(row.departsBreakdown, row.totalDepartsCables),
+                    align: pw.TextAlign.left,
+                    alignment: pw.Alignment.centerLeft,
+                  ),
+                  _buildTableCell(
+                    formatBreakdown(row.circuitsTerminauxBreakdown, row.totalTerminauxCables),
+                    align: pw.TextAlign.left,
+                    alignment: pw.Alignment.centerLeft,
+                  ),
+                ],
+              );
+            }(),
+          ],
       ],
     );
   }
 
   static pw.Widget _buildIpIkTable(TechnicalEnrichmentResult technical) {
+    pw.Widget buildRichStatsCell(IpIkZoneItem item) {
+      final total = item.totalEquipements;
+      if (total == 0) {
+        return _buildTableCell('0 équipement (non évaluable)', align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft);
+      }
+      final confPct = (item.conformes / total * 100.0).toStringAsFixed(1).replaceAll('.', ',');
+      final nonConfPct = (item.nonConformes / total * 100.0).toStringAsFixed(1).replaceAll('.', ',');
+      final indPct = (item.indicesPresents / total * 100.0).toStringAsFixed(1).replaceAll('.', ',');
+
+      return pw.Container(
+        alignment: pw.Alignment.centerLeft,
+        padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3.5),
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          mainAxisSize: pw.MainAxisSize.min,
+          children: [
+            pw.RichText(
+              text: pw.TextSpan(
+                style: pw.TextStyle(font: fontRegular, fontSize: fsSmall, color: PdfReportStyles.darkGrey),
+                children: [
+                  pw.TextSpan(
+                    text: '$total équipement${total > 1 ? "s" : ""}',
+                    style: pw.TextStyle(font: fontBold, color: PdfReportStyles.headerColor),
+                  ),
+                  const pw.TextSpan(text: ' , '),
+                  pw.TextSpan(
+                    text: 'Conformes : ${item.conformes} / $total — $confPct %',
+                  ),
+                  const pw.TextSpan(text: ', '),
+                  pw.TextSpan(
+                    text: 'Non conformes : ${item.nonConformes} / $total — $nonConfPct %',
+                    style: item.nonConformes > 0
+                        ? pw.TextStyle(color: PdfColor.fromHex('#B71C1C'), font: fontBold)
+                        : null,
+                  ),
+                ],
+              ),
+            ),
+            pw.SizedBox(height: 1.5),
+            pw.RichText(
+              text: pw.TextSpan(
+                style: pw.TextStyle(font: fontRegular, fontSize: fsSmall, color: PdfReportStyles.darkGrey),
+                children: [
+                  pw.TextSpan(
+                    text: 'Indice présent : ${item.indicesPresents} / $total — $indPct %',
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return pw.Table(
       border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.5),
       columnWidths: const {
-        0: pw.FlexColumnWidth(5.0),
-        1: pw.FlexColumnWidth(5.0),
+        0: pw.FlexColumnWidth(3.2),
+        1: pw.FlexColumnWidth(6.8),
       },
       children: [
         pw.TableRow(
           decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
           children: [
             _buildTableHeaderCell('Classement'),
-            _buildTableHeaderCell('Taux de conformité adéquation des equipements'),
+            _buildTableHeaderCell('Taux de conformité adéquation des équipements'),
           ],
         ),
         if (technical.ipIkZoneItems.isEmpty)
           pw.TableRow(
             children: [
               _buildTableCell('Ambiance générale site (sans zone classée spécifique)', isBold: true, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
-              _buildTableCell('Donnée non renseignée sur le terrain'),
+              _buildTableCell('Donnée non renseignée sur le terrain', align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
             ],
           )
         else
           for (final item in technical.ipIkZoneItems)
             pw.TableRow(
+              verticalAlignment: pw.TableCellVerticalAlignment.middle,
               children: [
                 _buildTableCell(item.zoneNom, isBold: true, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
-                _buildTableCell(item.formattedRate),
+                buildRichStatsCell(item),
               ],
             ),
       ],
     );
+  }
+
+  @visibleForTesting
+  static pw.Widget buildTopFindingsTableForTesting(List<TopDefectDomainItem> items, String emptyLabel) {
+    return _buildTopFindingsTable(items, emptyLabel);
+  }
+
+  @visibleForTesting
+  static pw.Widget buildCategoryCrossTableForTesting(List<CategoryCrossAuditRow> rows, CategoryCrossAuditRow totalRow, String domainLabel) {
+    return _buildCategoryCrossTable(rows, totalRow, domainLabel);
   }
 }

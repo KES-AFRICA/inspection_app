@@ -114,12 +114,18 @@ class MarquesMatrixRow {
   final Map<String, int> organeDeTete;
   final Map<String, int> departs;
   final Map<String, int> circuitsTerminaux;
+  final int totalTete;
+  final int totalDeparts;
+  final int totalTerminaux;
 
   const MarquesMatrixRow({
     required this.category,
     required this.organeDeTete,
     required this.departs,
     required this.circuitsTerminaux,
+    this.totalTete = 0,
+    this.totalDeparts = 0,
+    this.totalTerminaux = 0,
   });
 }
 
@@ -129,12 +135,18 @@ class CourbesMatrixRow {
   final Map<String, int> organeDeTete;
   final Map<String, int> departs;
   final Map<String, int> circuitsTerminaux;
+  final int totalTete;
+  final int totalDeparts;
+  final int totalTerminaux;
 
   const CourbesMatrixRow({
     required this.category,
     required this.organeDeTete,
     required this.departs,
     required this.circuitsTerminaux,
+    this.totalTete = 0,
+    this.totalDeparts = 0,
+    this.totalTerminaux = 0,
   });
 }
 
@@ -142,12 +154,14 @@ class CourbesMatrixRow {
 class CablesSectionBreakdown {
   final String metal;
   final int count;
+  final int totalCables;
   final double percentageOfTotal;
   final Map<String, int> sectionsCount;
 
   const CablesSectionBreakdown({
     required this.metal,
     required this.count,
+    this.totalCables = 0,
     required this.percentageOfTotal,
     required this.sectionsCount,
   });
@@ -158,11 +172,15 @@ class CablesMatrixRow {
   final DomainObjectType category;
   final Map<String, CablesSectionBreakdown> departsBreakdown;
   final Map<String, CablesSectionBreakdown> circuitsTerminauxBreakdown;
+  final int totalDepartsCables;
+  final int totalTerminauxCables;
 
   const CablesMatrixRow({
     required this.category,
     required this.departsBreakdown,
     required this.circuitsTerminauxBreakdown,
+    this.totalDepartsCables = 0,
+    this.totalTerminauxCables = 0,
   });
 }
 
@@ -175,6 +193,7 @@ class IpIkZoneItem {
   final int conformes;
   final int nonConformes;
   final int nonRenseignes;
+  final int indicesPresents;
 
   const IpIkZoneItem({
     required this.zoneNom,
@@ -184,6 +203,7 @@ class IpIkZoneItem {
     required this.conformes,
     required this.nonConformes,
     required this.nonRenseignes,
+    this.indicesPresents = 0,
   });
 
   int get evaluables => conformes + nonConformes;
@@ -612,12 +632,19 @@ class TechnicalEnrichmentEngine {
         }
       }
 
+      final totalTete = total;
+      final totalDeparts = coffrets.fold<int>(0, (s, c) => s + (c.departures?.length ?? 0));
+      final totalTerminaux = coffrets.fold<int>(0, (s, c) => s + (c.terminalCircuits?.length ?? 0));
+
       marquesRows.add(
         MarquesMatrixRow(
           category: cat,
           organeDeTete: tMarques,
           departs: dMarques,
           circuitsTerminaux: ctMarques,
+          totalTete: totalTete,
+          totalDeparts: totalDeparts,
+          totalTerminaux: totalTerminaux,
         ),
       );
 
@@ -651,26 +678,32 @@ class TechnicalEnrichmentEngine {
           organeDeTete: tCourbes,
           departs: dCourbes,
           circuitsTerminaux: ctCourbes,
+          totalTete: totalTete,
+          totalDeparts: totalDeparts,
+          totalTerminaux: totalTerminaux,
         ),
       );
 
       // H. Câbles (Alu vs Cuivre et Sections)
-      final dCables = _computeCablesBreakdown(
-        coffrets
-            .expand((c) => c.departures ?? <DepartEquipement>[])
-            .map((d) => _CableData(d.natureCable, d.sectionCable)),
-      );
-      final ctCables = _computeCablesBreakdown(
-        coffrets
-            .expand((c) => c.terminalCircuits ?? <CircuitTerminalEquipement>[])
-            .map((ct) => _CableData(ct.natureCable, ct.sectionCable)),
-      );
+      final dCablesList = coffrets
+          .expand((c) => c.departures ?? <DepartEquipement>[])
+          .map((d) => _CableData(d.natureCable, d.sectionCable))
+          .toList();
+      final dCables = _computeCablesBreakdown(dCablesList);
+
+      final ctCablesList = coffrets
+          .expand((c) => c.terminalCircuits ?? <CircuitTerminalEquipement>[])
+          .map((ct) => _CableData(ct.natureCable, ct.sectionCable))
+          .toList();
+      final ctCables = _computeCablesBreakdown(ctCablesList);
 
       cablesRows.add(
         CablesMatrixRow(
           category: cat,
           departsBreakdown: dCables,
           circuitsTerminauxBreakdown: ctCables,
+          totalDepartsCables: dCablesList.length,
+          totalTerminauxCables: ctCablesList.length,
         ),
       );
     }
@@ -1157,6 +1190,7 @@ class TechnicalEnrichmentEngine {
       result['Aluminium'] = CablesSectionBreakdown(
         metal: 'Aluminium',
         count: aluCount,
+        totalCables: total,
         percentageOfTotal: (aluCount / total) * 100.0,
         sectionsCount: aluSections,
       );
@@ -1165,6 +1199,7 @@ class TechnicalEnrichmentEngine {
       result['Cuivre'] = CablesSectionBreakdown(
         metal: 'Cuivre',
         count: cuCount,
+        totalCables: total,
         percentageOfTotal: (cuCount / total) * 100.0,
         sectionsCount: cuSections,
       );
@@ -1228,6 +1263,7 @@ class TechnicalEnrichmentEngine {
       int conf = 0;
       int nonConf = 0;
       int nonRens = 0;
+      int indPresents = 0;
 
       final reqIpIk = ParsedIpIk(
         ip: z.ip?.trim().isNotEmpty == true ? z.ip!.trim() : null,
@@ -1235,7 +1271,13 @@ class TechnicalEnrichmentEngine {
       );
 
       for (final eq in equipInZone) {
-        if (eq.indiceIpIk == null || eq.indiceIpIk!.trim().isEmpty) {
+        final hasIndice = eq.indiceIpIk != null &&
+            eq.indiceIpIk!.trim().isNotEmpty &&
+            eq.indiceIpIk!.trim() != '-';
+        if (hasIndice) {
+          indPresents++;
+        }
+        if (!hasIndice) {
           nonRens++;
           continue;
         }
@@ -1263,6 +1305,7 @@ class TechnicalEnrichmentEngine {
           conformes: conf,
           nonConformes: nonConf,
           nonRenseignes: nonRens,
+          indicesPresents: indPresents,
         ),
       );
     }
@@ -1289,6 +1332,7 @@ class TechnicalEnrichmentEngine {
       int conf = 0;
       int nonConf = 0;
       int nonRens = 0;
+      int indPresents = 0;
 
       final reqIpIk = ParsedIpIk(
         ip: emp.ip?.trim().isNotEmpty == true ? emp.ip!.trim() : null,
@@ -1296,7 +1340,13 @@ class TechnicalEnrichmentEngine {
       );
 
       for (final eq in equipInEmp) {
-        if (eq.indiceIpIk == null || eq.indiceIpIk!.trim().isEmpty) {
+        final hasIndice = eq.indiceIpIk != null &&
+            eq.indiceIpIk!.trim().isNotEmpty &&
+            eq.indiceIpIk!.trim() != '-';
+        if (hasIndice) {
+          indPresents++;
+        }
+        if (!hasIndice) {
           nonRens++;
           continue;
         }
@@ -1324,6 +1374,7 @@ class TechnicalEnrichmentEngine {
           conformes: conf,
           nonConformes: nonConf,
           nonRenseignes: nonRens,
+          indicesPresents: indPresents,
         ),
       );
     }
