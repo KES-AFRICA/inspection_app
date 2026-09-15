@@ -156,15 +156,18 @@ class TestArretUrgenceAdapter extends TypeAdapter<TestArretUrgence> {
     };
     return TestArretUrgence(
       observation: fields[0] as String?,
+      presence: fields[1] as bool?,
     );
   }
 
   @override
   void write(BinaryWriter writer, TestArretUrgence obj) {
     writer
-      ..writeByte(1)
+      ..writeByte(2)
       ..writeByte(0)
-      ..write(obj.observation);
+      ..write(obj.observation)
+      ..writeByte(1)
+      ..write(obj.presence);
   }
 
   @override

@@ -439,7 +439,7 @@ class PdfMesuresEssaisBuilder {
   static pw.Widget _resultBox(String text) {
     final lower = text.toLowerCase();
     final isOk = lower.contains('satisfaisant') && !lower.contains('non');
-    final isSansObjet = lower.contains('sans objet');
+    final isSansObjet = lower.contains('sans objet') || lower.contains('absent');
     final bg = isSansObjet
         ? sansObjetColor
         : (isOk ? conformeColor : nonConformeColor);
@@ -2740,7 +2740,11 @@ class PdfMesuresEssaisBuilder {
             ),
           ),
           pw.SizedBox(height: 5),
-          _resultBox(mesures.testArretUrgence.observation ?? 'Satisfaisant'),
+          _resultBox(
+            !mesures.testArretUrgence.estPresent
+                ? "Arrêt d'urgence général absent"
+                : (mesures.testArretUrgence.observation ?? 'Sans objet'),
+          ),
         ],
       ),
     );

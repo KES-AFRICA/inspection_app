@@ -102,7 +102,7 @@ class MesuresEssais extends HiveObject {
       'cpi_renseigne': cpiTests.isNotEmpty,
       'condition_mesure_renseignee': conditionMesure.observation != null && conditionMesure.observation!.isNotEmpty,
       'demarrage_auto_renseigne': essaiDemarrageAuto.observation != null && essaiDemarrageAuto.observation!.isNotEmpty,
-      'arret_urgence_renseigne': testArretUrgence.observation != null && testArretUrgence.observation!.isNotEmpty,
+      'arret_urgence_renseigne': testArretUrgence.isRenseigne,
       'avis_mesures_renseigne': avisMesuresTerre.observation != null && avisMesuresTerre.observation!.isNotEmpty,
     };
   }
@@ -134,7 +134,39 @@ class TestArretUrgence {
   @HiveField(0)
   String? observation;
 
-  TestArretUrgence({this.observation});
+  @HiveField(1)
+  bool? presence; // true = Présent, false = Absent, null = non explicitement renseigné
+
+  TestArretUrgence({
+    this.observation,
+    this.presence,
+  });
+
+  /// Indique si l'arrêt d'urgence est présent.
+  /// Règle de rétrocompatibilité stricte pour les missions existantes :
+  /// - Si presence est explicitement défini (true/false), on l'utilise.
+  /// - Si presence est null et qu'une observation a déjà été enregistrée (non vide),
+  ///   on considère que l'arrêt d'urgence est Présent (true) et que le choix a été fait.
+  /// - Sinon (nouvelle mission ou non renseigné), par défaut c'est Absent (false).
+  bool get estPresent {
+    if (presence != null) return presence!;
+    if (observation != null && observation!.trim().isNotEmpty) {
+      return true;
+    }
+    return false;
+  }
+
+  /// Indique si le sous-menu est formellement renseigné :
+  /// - Si presence == false (Absent), le constat est complet et valide.
+  /// - Si presence == true (Présent), il faut avoir sélectionné un résultat.
+  /// - Rétrocompatibilité : observation non vide => valide.
+  bool get isRenseigne {
+    if (presence != null) {
+      if (!presence!) return true;
+      return observation != null && observation!.trim().isNotEmpty;
+    }
+    return observation != null && observation!.trim().isNotEmpty;
+  }
 }
 
 // SECTION 4: PRISE DE TERRE (MODIFIÉ)

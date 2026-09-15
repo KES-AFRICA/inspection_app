@@ -14,8 +14,28 @@ class EssaiDemarrageAutoEntity {
 
 class TestArretUrgenceEntity {
   final String? observation;
+  final bool? presence;
 
-  const TestArretUrgenceEntity({this.observation});
+  const TestArretUrgenceEntity({
+    this.observation,
+    this.presence,
+  });
+
+  bool get estPresent {
+    if (presence != null) return presence!;
+    if (observation != null && observation!.trim().isNotEmpty) {
+      return true;
+    }
+    return false;
+  }
+
+  bool get isRenseigne {
+    if (presence != null) {
+      if (!presence!) return true;
+      return observation != null && observation!.trim().isNotEmpty;
+    }
+    return observation != null && observation!.trim().isNotEmpty;
+  }
 }
 
 class PriseTerreEntity {

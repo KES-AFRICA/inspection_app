@@ -16,6 +16,7 @@ class MesuresEssaisMapper {
       ),
       testArretUrgence: TestArretUrgenceEntity(
         observation: model.testArretUrgence.observation,
+        presence: model.testArretUrgence.presence,
       ),
       prisesTerre: model.prisesTerre.map((pt) {
         return PriseTerreEntity(
@@ -127,6 +128,7 @@ class MesuresEssaisMapper {
       ),
       testArretUrgence: TestArretUrgence(
         observation: entity.testArretUrgence.observation,
+        presence: entity.testArretUrgence.presence,
       ),
       prisesTerre: entity.prisesTerre.map((pt) {
         return PriseTerre(

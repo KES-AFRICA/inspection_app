@@ -60,6 +60,7 @@ void main() {
       expect(entity.conditionMesure.observation, model.conditionMesure.observation);
       expect(entity.essaiDemarrageAuto.observation, model.essaiDemarrageAuto.observation);
       expect(entity.testArretUrgence.observation, model.testArretUrgence.observation);
+      expect(entity.testArretUrgence.presence, model.testArretUrgence.presence);
       
       expect(entity.prisesTerre.length, 1);
       expect(entity.prisesTerre[0].localisation, 'Local transfo');
@@ -76,10 +77,38 @@ void main() {
       expect(mappedModel.conditionMesure.observation, entity.conditionMesure.observation);
       expect(mappedModel.essaiDemarrageAuto.observation, entity.essaiDemarrageAuto.observation);
       expect(mappedModel.testArretUrgence.observation, entity.testArretUrgence.observation);
+      expect(mappedModel.testArretUrgence.presence, entity.testArretUrgence.presence);
       expect(mappedModel.prisesTerre.length, 1);
       expect(mappedModel.avisMesuresTerre.satisfaisants, ['PT1']);
       expect(mappedModel.essaisDeclenchement.length, 1);
       expect(mappedModel.continuiteResistances.length, 1);
+    });
+
+    test('TestArretUrgence presence & backward compatibility logic', () {
+      // 1. Ancienne mission : présence non définie mais observation existante => Présent (rétrocompatibilité)
+      final legacyWithChoice = TestArretUrgence(observation: 'Satisfaisant');
+      expect(legacyWithChoice.estPresent, true);
+      expect(legacyWithChoice.isRenseigne, true);
+
+      // 2. Ancienne mission / nouvelle sans saisie => Absent par défaut
+      final emptyMission = TestArretUrgence();
+      expect(emptyMission.estPresent, false);
+      expect(emptyMission.isRenseigne, false);
+
+      // 3. Nouvelle saisie explicite : Absent => estPresent false, isRenseigne true
+      final explicitAbsent = TestArretUrgence(presence: false);
+      expect(explicitAbsent.estPresent, false);
+      expect(explicitAbsent.isRenseigne, true);
+
+      // 4. Nouvelle saisie explicite : Présent avec résultat => estPresent true, isRenseigne true
+      final explicitPresent = TestArretUrgence(presence: true, observation: 'Sans objet');
+      expect(explicitPresent.estPresent, true);
+      expect(explicitPresent.isRenseigne, true);
+
+      // 5. Présent sans résultat choisi => isRenseigne false
+      final presentWithoutChoice = TestArretUrgence(presence: true);
+      expect(presentWithoutChoice.estPresent, true);
+      expect(presentWithoutChoice.isRenseigne, false);
     });
   });
 

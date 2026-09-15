@@ -1121,13 +1121,14 @@ class WordReportService {
     }
 
     // Test arrêt urgence
-    if (mesures.testArretUrgence.observation?.isNotEmpty == true) {
-      _subTitle(doc, 'Test de fonctionnement de l\'arrêt d\'urgence');
-      doc.addTable(Table(rows: [
-        _headerRow(['Résultat']),
-        TableRow(cells: [TableCell.text(mesures.testArretUrgence.observation!)]),
-      ], borders: TableBorders.all()));
-    }
+    _subTitle(doc, 'Test de fonctionnement de l\'arrêt d\'urgence');
+    final arretText = !mesures.testArretUrgence.estPresent
+        ? "Arrêt d'urgence général absent"
+        : (mesures.testArretUrgence.observation ?? 'Sans objet');
+    doc.addTable(Table(rows: [
+      _headerRow(['Résultat']),
+      TableRow(cells: [TableCell.text(arretText)]),
+    ], borders: TableBorders.all()));
 
     // Prises de terre
     if (mesures.prisesTerre.isNotEmpty) {

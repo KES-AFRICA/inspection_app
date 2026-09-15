@@ -1030,7 +1030,10 @@ class BackupService {
         'essaiDemarrageAuto': {
           'observation': m.essaiDemarrageAuto.observation
         },
-        'testArretUrgence': {'observation': m.testArretUrgence.observation},
+        'testArretUrgence': {
+          'observation': m.testArretUrgence.observation,
+          'presence': m.testArretUrgence.presence,
+        },
         'avisMesuresTerre': {
           'satisfaisants': m.avisMesuresTerre.satisfaisants,
           'nonSatisfaisants': m.avisMesuresTerre.nonSatisfaisants,
@@ -2868,8 +2871,10 @@ class BackupService {
             ConditionMesure(observation: cm?['observation'] as String?),
         essaiDemarrageAuto:
             EssaiDemarrageAuto(observation: eda?['observation'] as String?),
-        testArretUrgence:
-            TestArretUrgence(observation: tau?['observation'] as String?),
+        testArretUrgence: TestArretUrgence(
+          observation: tau?['observation'] as String?,
+          presence: tau?['presence'] as bool?,
+        ),
         avisMesuresTerre: AvisMesuresTerre(
           satisfaisants: _strList(amt?['satisfaisants']),
           nonSatisfaisants: _strList(amt?['nonSatisfaisants']),

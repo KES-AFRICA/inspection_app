@@ -5286,13 +5286,19 @@ static Future<bool> updateEssaiDemarrageAuto({
 /// Mettre à jour les tests d'arrêt d'urgence
 static Future<bool> updateTestArretUrgence({
   required String missionId,
-  required String observation,
+  bool? presence,
+  String? observation,
 }) async {
   try {
     final mesures = await getOrCreateMesuresEssais(missionId);
-    mesures.testArretUrgence.observation = observation;
+    if (presence != null) {
+      mesures.testArretUrgence.presence = presence;
+    }
+    if (observation != null) {
+      mesures.testArretUrgence.observation = observation;
+    }
     await saveMesuresEssais(mesures);
-    if (kDebugMode) print('✅ Tests arrêt urgence mis à jour');
+    if (kDebugMode) print('✅ Tests arrêt urgence mis à jour (presence: $presence, obs: $observation)');
     return true;
   } catch (e) {
     if (kDebugMode) print('❌ Erreur updateTestArretUrgence: $e');
