@@ -192,17 +192,20 @@ class MissionDomainInventory {
     int paretoK = 0;
     double paretoCumulPct = 0.0;
     double runningAll = 0.0;
+    bool thresholdReached = false;
     for (int i = 0; i < sortedEntries.length; i++) {
       final p = total > 0 ? (sortedEntries[i].value / total) * 100.0 : 0.0;
       runningAll += p;
-      if (paretoK == 0 && (runningAll >= 80.0 || i == sortedEntries.length - 1)) {
+      if (!thresholdReached && (runningAll >= 80.0 || (runningAll - 80.0).abs() < 0.001)) {
         paretoK = i + 1;
         paretoCumulPct = runningAll;
+        thresholdReached = true;
       }
     }
-    if (paretoK == 0 && sortedEntries.isNotEmpty) {
+    if (!thresholdReached && sortedEntries.isNotEmpty) {
       paretoK = sortedEntries.length;
       paretoCumulPct = runningAll;
+      thresholdReached = runningAll >= 80.0;
     }
 
     double runningCumul = 0.0;
@@ -222,13 +225,24 @@ class MissionDomainInventory {
     }
 
     final totalDistinctCategories = counts.length;
-    final top10Sum = topList.take(10).fold(0, (s, e) => s + e.count);
-    final top10Pct = total > 0 ? (top10Sum / total * 100) : 0.0;
-    final top10Length = topList.take(10).length;
+    final ratio = totalDistinctCategories > 0 ? (paretoK / totalDistinctCategories) : 0.0;
 
-    final summary = total > 0
-        ? 'L\'analyse porte sur l\'intégralité des $total non-conformités relevées sur le site, regroupées sous $totalDistinctCategories catégories de défauts normalisées. Les $top10Length catégories principales concentrent $top10Sum occurrences, soit ${top10Pct.toStringAsFixed(1).replaceAll('.', ',')} % du total des défaillances. Par ailleurs, les $paretoK premières catégories permettent d\'atteindre ou dépasser le seuil critique de 80 % (${paretoCumulPct.toStringAsFixed(1).replaceAll('.', ',')} % du volume global des anomalies).'
-        : 'Aucune non-conformité recensée pour l\'analyse de Pareto.';
+    final String summary;
+    if (total == 0) {
+      summary = 'Aucune non-conformité recensée pour l\'analyse de Pareto.';
+    } else if (sortedEntries.length == 1 || (paretoK == 1 && (sortedEntries[0].value / total * 100) >= 80.0)) {
+      summary = 'L\'analyse porte sur l\'intégralité des $total non-conformités relevées sur le site, toutes regroupées sous une unique catégorie prépondérante ("${sortedEntries[0].key}"). Cette seule typologie concentre à elle seule ${paretoCumulPct.toStringAsFixed(1).replaceAll('.', ',')} % du total des anomalies, constituant un monopole critique de défaillance.';
+    } else if (thresholdReached) {
+      if (ratio <= 0.25 || (totalDistinctCategories <= 4 && paretoK <= 1)) {
+        summary = 'L\'analyse porte sur l\'intégralité des $total non-conformités relevées sur le site, réparties en $totalDistinctCategories typologies distinctes. Une forte concentration compatible avec la loi de Pareto (80/20) est observée : les $paretoK premières catégories (soit ${(ratio * 100).toStringAsFixed(1).replaceAll('.', ',')} % des typologies) concentrent ${paretoCumulPct.toStringAsFixed(1).replaceAll('.', ',')} % des anomalies.';
+      } else if (ratio <= 0.50) {
+        summary = 'L\'analyse porte sur l\'intégralité des $total non-conformités relevées sur le site, réparties en $totalDistinctCategories typologies distinctes. Une concentration modérée est observée : $paretoK catégories (soit ${(ratio * 100).toStringAsFixed(1).replaceAll('.', ',')} % des typologies) sont nécessaires pour atteindre le seuil de 80 % (${paretoCumulPct.toStringAsFixed(1).replaceAll('.', ',')} % des anomalies).';
+      } else {
+        summary = 'L\'analyse porte sur l\'intégralité des $total non-conformités relevées sur le site, réparties en $totalDistinctCategories typologies distinctes. Contrairement à une distribution de Pareto classique, les anomalies présentent une répartition relativement homogène et dispersée : $paretoK catégories sur $totalDistinctCategories (soit ${(ratio * 100).toStringAsFixed(1).replaceAll('.', ',')} % des typologies) sont nécessaires pour totaliser ${paretoCumulPct.toStringAsFixed(1).replaceAll('.', ',')} % des défaillances.';
+      }
+    } else {
+      summary = 'L\'analyse porte sur l\'intégralité des $total non-conformités relevées sur le site, réparties en $totalDistinctCategories typologies distinctes. Le seuil de 80 % n\'est pas atteint sur la distribution observée (cumul maximal : ${paretoCumulPct.toStringAsFixed(1).replaceAll('.', ',')} %), traduisant une forte dispersion des défaillances.';
+    }
 
     return ParetoAnalysisResult(
       items: topList,
@@ -237,6 +251,7 @@ class MissionDomainInventory {
       paretoCumulativePercentage: paretoCumulPct,
       summaryText: summary,
       totalDistinctCategories: totalDistinctCategories,
+      isThresholdReached: thresholdReached,
     );
   }
 
@@ -818,7 +833,7 @@ class MissionDomainInventoryEngine {
         originNom: originNom,
         parentZone: parentZone,
         parentLocal: local.nom,
-        defaultTensionDomain: TensionDomain.bt,
+        defaultTensionDomain: TensionDomain.mt,
         instances: instances,
         addFinding: addFinding,
         visitedCoffrets: visitedCoffrets,

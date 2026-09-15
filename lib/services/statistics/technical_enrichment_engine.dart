@@ -1,4 +1,4 @@
-// lib/services/statistics/technical_enrichment_engine.dart
+import 'package:meta/meta.dart';
 
 import '../../models/audit_installations_electriques.dart';
 import '../../models/classement_locaux.dart';
@@ -1238,6 +1238,13 @@ class TechnicalEnrichmentEngine {
     return '$s mm²';
   }
 
+  @visibleForTesting
+  static List<IpIkZoneItem> computeIpIkZones(
+    String missionId,
+    MissionDomainInventory domainInventory,
+  ) =>
+      _computeIpIkZones(missionId, domainInventory);
+
   static List<IpIkZoneItem> _computeIpIkZones(
     String missionId,
     MissionDomainInventory domainInventory,
@@ -1261,32 +1268,35 @@ class TechnicalEnrichmentEngine {
       DomainObjectType.inverseur,
     };
 
-    // ─── Filtre brouillons ────────────────────────────────────────
-    // On ne retient que les équipements "complets" (pas les brouillons /
-    // incomplets). Pour les CoffretArmoire, la règle est statut == 'complet'.
-    // Les cellules MT et transformateurs ne portent pas de champ statut :
-    // ils sont toujours retenus.
+    // ─── Filtre brouillons & éléments non finalisés ─────────────────
+    // On ne retient que les équipements finalisés (pas les brouillons / incomplets).
+    // Pour CoffretArmoire : on exclut explicitement 'incomplet' et 'brouillon'.
+    // Les enregistrements sans statut ou 'complet' sont conservés (rétrocompatibilité).
+    // Les cellules MT et transformateurs persistés dans l'audit sont retenus.
     final allEquipmentInstances = domainInventory.instances.where((i) {
       if (!equipmentCategories.contains(i.category)) return false;
       final raw = i.rawModelRef;
       if (raw is CoffretArmoire) {
-        return raw.statut == 'complet';
+        final st = raw.statut.trim().toLowerCase();
+        if (st == 'incomplet' || st == 'brouillon') {
+          return false;
+        }
       }
       return true;
     }).toList();
 
     final result = <IpIkZoneItem>[];
 
-    // ─── Zones classifiées ────────────────────────────────────────
-    // Règle hiérarchique : un équipement appartient à la ZONE uniquement s'il
-    // y est directement rattaché (parentLocal == null). S'il est dans un local
-    // lui-même contenu dans la zone (parentLocal != null), il est comptabilisé
-    // sous ce local et non sous la zone.
+    // ─── 1. Zones classifiées ──────────────────────────────────────
+    // Hiérarchie stricte : Mission -> Zone -> Local -> Équipement.
+    // Tous les équipements rattachés à une zone (qu'ils soient enregistrés
+    // directement dans la zone, ou dans un local situé au sein de cette zone)
+    // appartiennent indirectement à la zone et doivent être comptabilisés dans son total.
     for (final z in zones) {
       final zoneName = z.nomZone.trim();
       final equipInZone = allEquipmentInstances.where((i) {
-        return i.parentZone?.trim().toLowerCase() == zoneName.toLowerCase() &&
-            i.parentLocal == null;
+        final pZone = i.parentZone?.trim();
+        return pZone != null && pZone.toLowerCase() == zoneName.toLowerCase();
       }).toList();
 
       int totalPoints = 0;
@@ -1335,19 +1345,36 @@ class TechnicalEnrichmentEngine {
       );
     }
 
-    // ─── Locaux / emplacements classifiés ────────────────────────
-    // Règle hiérarchique : un équipement appartient à ce local uniquement si
-    // son parentLocal correspond exactement à ce local. On ne se replie PAS
-    // sur parentZone : cela évite d'attribuer par erreur des équipements de
-    // zone à un emplacement homonyme, et empêche tout double-comptage.
+    // ─── 2. Locaux / emplacements classifiés ────────────────────────
+    // Un équipement appartient au local dans lequel il est enregistré.
+    // Un local classifié évalue précisément les équipements rattachés à ce local.
+    final processedLocalKeys = <String>{};
     for (final emp in emplacements) {
       final empName = emp.localisation.trim();
-      if (result.any((r) => r.zoneNom.toLowerCase() == empName.toLowerCase())) {
+      if (empName.isEmpty) continue;
+
+      // Si l'emplacement est de type 'zone' et correspond déjà à une zone classifiée,
+      // on évite le doublon pour ne pas polluer l'agrégation.
+      if (emp.isZone && zones.any((z) => z.nomZone.trim().toLowerCase() == empName.toLowerCase())) {
         continue;
       }
 
+      // Clé unique pour éviter les doublons accidentels d'emplacements
+      final empKey = '${emp.typeEmplacement}_${emp.zone?.trim().toLowerCase() ?? ""}_${empName.toLowerCase()}';
+      if (processedLocalKeys.contains(empKey)) continue;
+      processedLocalKeys.add(empKey);
+
       final equipInEmp = allEquipmentInstances.where((i) {
-        return i.parentLocal?.trim().toLowerCase() == empName.toLowerCase();
+        final pLocal = i.parentLocal?.trim();
+        if (pLocal == null || pLocal.toLowerCase() != empName.toLowerCase()) {
+          return false;
+        }
+        // Si l'emplacement a une zone parente spécifiée et que l'instance a une parentZone,
+        // vérifier la concordance de zone pour éviter toute attribution croisée homonyme.
+        if (emp.zone != null && emp.zone!.trim().isNotEmpty && i.parentZone != null && i.parentZone!.trim().isNotEmpty) {
+          return i.parentZone!.trim().toLowerCase() == emp.zone!.trim().toLowerCase();
+        }
+        return true;
       }).toList();
 
       int totalPoints = 0;
@@ -1380,11 +1407,15 @@ class TechnicalEnrichmentEngine {
         }
       }
 
+      final label = (emp.zone != null && emp.zone!.trim().isNotEmpty && !emp.isZone)
+          ? '$empName (${emp.zone!.trim()})'
+          : empName;
+
       result.add(
         IpIkZoneItem(
-          zoneNom: empName,
-          ipRequis: emp.ip,
-          ikRequis: emp.ik,
+          zoneNom: label,
+          ipRequis: emp.ipEffective ?? emp.ip,
+          ikRequis: emp.ikEffective ?? emp.ik,
           totalEquipements: equipInEmp.length,
           conformes: totalPoints > 0 ? (totalPoints - nonConformesPoints) : 0,
           nonConformes: nonConformesPoints,

@@ -104,6 +104,16 @@ class TopNonConformityCategoriesResult {
   });
 }
 
+/// Profils de concentration statistique de Pareto réels
+enum ParetoConcentrationProfile {
+  noData,
+  singleDominant,
+  highConcentration,
+  moderateConcentration,
+  homogeneousOrDispersed,
+  thresholdNotReached,
+}
+
 /// Résultat complet de l'analyse de Pareto (80/20) dynamique sur les points de vérification.
 class ParetoAnalysisResult {
   final List<TopDefectItem> items;
@@ -112,6 +122,7 @@ class ParetoAnalysisResult {
   final double paretoCumulativePercentage;
   final String summaryText;
   final int totalDistinctCategories;
+  final bool isThresholdReached;
 
   ParetoAnalysisResult({
     required this.items,
@@ -120,7 +131,9 @@ class ParetoAnalysisResult {
     required this.paretoCumulativePercentage,
     required this.summaryText,
     int? totalDistinctCategories,
-  }) : totalDistinctCategories = totalDistinctCategories ?? items.length;
+    bool? isThresholdReached,
+  })  : totalDistinctCategories = totalDistinctCategories ?? items.length,
+        isThresholdReached = isThresholdReached ?? (paretoCumulativePercentage >= 80.0);
 
   /// Nombre d'occurrences cumulées concentrées par les 10 premières catégories de défauts.
   int get top10Count => items.take(10).fold(0, (sum, e) => sum + e.count);
@@ -128,6 +141,31 @@ class ParetoAnalysisResult {
   /// Pourcentage cumulé représenté par les 10 premières catégories de défauts.
   double get top10Percentage =>
       totalOccurrences > 0 ? (top10Count / totalOccurrences) * 100.0 : 0.0;
+
+  /// Ratio de concentration : proportion de catégories nécessaires pour atteindre le seuil de 80%
+  double get k80Ratio => totalDistinctCategories > 0
+      ? (paretoCategoryCount / totalDistinctCategories)
+      : 0.0;
+
+  /// Profil de concentration objectivement observé (sans forcer le 80/20)
+  ParetoConcentrationProfile get profile {
+    if (totalOccurrences == 0 || items.isEmpty) {
+      return ParetoConcentrationProfile.noData;
+    }
+    if (items.length == 1 || (paretoCategoryCount == 1 && items.first.percentage >= 80.0)) {
+      return ParetoConcentrationProfile.singleDominant;
+    }
+    if (!isThresholdReached) {
+      return ParetoConcentrationProfile.thresholdNotReached;
+    }
+    if (k80Ratio <= 0.25 || (totalDistinctCategories <= 4 && paretoCategoryCount <= 1)) {
+      return ParetoConcentrationProfile.highConcentration;
+    }
+    if (k80Ratio <= 0.50) {
+      return ParetoConcentrationProfile.moderateConcentration;
+    }
+    return ParetoConcentrationProfile.homogeneousOrDispersed;
+  }
 }
 
 /// Item de Pareto par catégorie d'équipement / d'installation

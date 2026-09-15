@@ -30,7 +30,7 @@ class CanonicalDefectCategoryRegistry {
         combined.contains('mesure de terre') ||
         combined.contains('liaison équipotentielle') ||
         combined.contains('prise de terre') ||
-        combined.contains('pe ')) {
+        RegExp(r'\bpe\b').hasMatch(combined)) {
       return terreEtDifferentiel;
     }
 
