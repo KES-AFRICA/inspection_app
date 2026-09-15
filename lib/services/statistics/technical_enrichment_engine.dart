@@ -736,11 +736,11 @@ class TechnicalEnrichmentEngine {
 
     // 6. Top 5 des défaillances HTA et BT
     final top5Hta = _computeTopDefectsForDomain(
-      findingInventory.findings,
+      findingInventory.pertinentFindings,
       TensionDomain.mt,
     );
     final top5Bt = _computeTopDefectsForDomain(
-      findingInventory.findings,
+      findingInventory.pertinentFindings,
       TensionDomain.bt,
     );
 
@@ -748,7 +748,7 @@ class TechnicalEnrichmentEngine {
     int mtLocauxDispo = 0;
     int mtLocauxExploit = 0;
     for (final inst in domainInventory.getInstancesByCategory(DomainObjectType.localMT)) {
-      for (final f in inst.findings) {
+      for (final f in inst.pertinentFindings) {
         if (_isDispositionConstructiveFinding(f)) {
           mtLocauxDispo++;
         } else {
@@ -768,7 +768,7 @@ class TechnicalEnrichmentEngine {
       ...domainInventory.getInstancesByCategory(DomainObjectType.localGE),
     ];
     for (final inst in btLocauxInstances) {
-      for (final f in inst.findings) {
+      for (final f in inst.pertinentFindings) {
         if (_isDispositionConstructiveFinding(f)) {
           btLocauxDispo++;
         } else {
@@ -782,7 +782,7 @@ class TechnicalEnrichmentEngine {
     );
 
     // 8. Lignes de conformité croisée par catégorie pour Moyenne Tension
-    final totalMissionNc = findingInventory.classifiedCount > 0 ? findingInventory.classifiedCount : findingInventory.totalFindings;
+    final totalMissionNc = findingInventory.pertinentFindings.length;
     final mtCatRows = <CategoryCrossAuditRow>[];
 
     CategoryCrossAuditRow buildCategoryRow(
@@ -791,7 +791,7 @@ class TechnicalEnrichmentEngine {
       int totalNcDenominator,
     ) {
       final eqCount = instances.length;
-      final findings = instances.expand((i) => i.findings).toList();
+      final findings = instances.expand((i) => i.pertinentFindings).toList();
       final ncCount = findings.length;
       final critCount = findings.where((f) => f.criticality.toLowerCase().contains('critique')).length;
       final majCount = findings.where((f) => f.criticality.toLowerCase().contains('majeur')).length;
@@ -1463,20 +1463,20 @@ class TechnicalEnrichmentEngine {
     // 1. HTA — DISPOSITION CONSTRUCTIVE : Locaux MT / HTA
     var htaLocauxFindings = domainInventory
         .getInstancesByCategory(DomainObjectType.localMT)
-        .expand((i) => i.findings)
+        .expand((i) => i.pertinentFindings)
         .toList();
 
     // 2. HTA — EXPLOITATION ET MAINTENANCE : Cellules MT + Transformateurs MT/BT
     var htaEquipFindings = [
       ...domainInventory.getInstancesByCategory(DomainObjectType.celluleMT),
       ...domainInventory.getInstancesByCategory(DomainObjectType.transformateurMTBT),
-    ].expand((i) => i.findings).toList();
+    ].expand((i) => i.pertinentFindings).toList();
 
     // 3. BT — DISPOSITION CONSTRUCTIVE : Locaux BT + Locaux GE
     var btLocauxFindings = [
       ...domainInventory.getInstancesByCategory(DomainObjectType.localBT),
       ...domainInventory.getInstancesByCategory(DomainObjectType.localGE),
-    ].expand((i) => i.findings).toList();
+    ].expand((i) => i.pertinentFindings).toList();
 
     // 4. BT — EXPLOITATION ET MAINTENANCE : TGBT + Armoires + Coffrets + Inverseurs
     var btEquipFindings = [
@@ -1484,29 +1484,29 @@ class TechnicalEnrichmentEngine {
       ...domainInventory.getInstancesByCategory(DomainObjectType.armoire),
       ...domainInventory.getInstancesByCategory(DomainObjectType.coffret),
       ...domainInventory.getInstancesByCategory(DomainObjectType.inverseur),
-    ].expand((i) => i.findings).toList();
+    ].expand((i) => i.pertinentFindings).toList();
 
     if (htaLocauxFindings.isEmpty &&
         htaEquipFindings.isEmpty &&
         btLocauxFindings.isEmpty &&
         btEquipFindings.isEmpty &&
-        domainInventory.allFindings.isNotEmpty) {
-      htaLocauxFindings = domainInventory.allFindings
+        domainInventory.pertinentFindings.isNotEmpty) {
+      htaLocauxFindings = domainInventory.pertinentFindings
           .where((f) =>
               f.tensionDomain == TensionDomain.mt &&
               _isDispositionConstructiveFinding(f))
           .toList();
-      htaEquipFindings = domainInventory.allFindings
+      htaEquipFindings = domainInventory.pertinentFindings
           .where((f) =>
               f.tensionDomain == TensionDomain.mt &&
               !_isDispositionConstructiveFinding(f))
           .toList();
-      btLocauxFindings = domainInventory.allFindings
+      btLocauxFindings = domainInventory.pertinentFindings
           .where((f) =>
               f.tensionDomain == TensionDomain.bt &&
               _isDispositionConstructiveFinding(f))
           .toList();
-      btEquipFindings = domainInventory.allFindings
+      btEquipFindings = domainInventory.pertinentFindings
           .where((f) =>
               f.tensionDomain == TensionDomain.bt &&
               !_isDispositionConstructiveFinding(f))

@@ -230,25 +230,21 @@ class PdfStatisticsBuilder {
     widgets.add(pw.NewPage());
 
     // ── 4. Statistique par type de défaut : analyse de Pareto
-    final totalOccur = summary.paretoResult.totalOccurrences > 0
-        ? summary.paretoResult.totalOccurrences
-        : summary.criticalityStats.total;
+    final totalOccur = summary.totalNC > 0
+        ? summary.totalNC
+        : (summary.paretoResult.totalOccurrences > 0
+            ? summary.paretoResult.totalOccurrences
+            : summary.criticalityStats.total);
     final top10Items = summary.paretoResult.items.take(10).toList();
     final top10Count = top10Items.isNotEmpty ? top10Items.length : 10;
     final top10Sum = top10Items.fold<int>(0, (sum, e) => sum + e.count);
     final top10Pct = totalOccur > 0 && top10Sum > 0
         ? (top10Sum / totalOccur * 100)
-        : 73.6;
+        : (summary.paretoResult.top10Percentage > 0 ? summary.paretoResult.top10Percentage : 0.0);
     final top10PctStr = top10Pct.toStringAsFixed(1).replaceAll('.', ',');
-    final pareto80K = summary.paretoResult.paretoCategoryCount > 0
-        ? summary.paretoResult.paretoCategoryCount
-        : 38;
 
     final paretoP1 =
-        'Les $totalOccur occurrences de non-conformités ont été classées par fréquence décroissante. Les $top10Count catégories principales concentrent ${top10Sum > 0 ? top10Sum : 365} occurrences, soit $top10PctStr % du total :';
-
-    final paretoCalloutText =
-        'Incohérence relevée (récurrente) : Le rapport source indique par ailleurs que « les $pareto80K premières catégories permettent d\'atteindre ou dépasser le seuil critique de 80 % », puis reprend ce chiffre de $pareto80K dans sa synthèse finale en l\'associant à tort aux $top10PctStr % (qui correspondent en réalité aux $top10Count premières catégories, non aux $pareto80K premières). Il s\'agit d\'une confusion entre deux seuils de lecture du diagramme de Pareto (palier des $top10Count catégories les plus fréquentes vs palier des $pareto80K catégories cumulant 80 %), déjà identifiée sur un précédent rapport du même format ; il est recommandé de corriger la formule de synthèse générée automatiquement par l\'outil.';
+        'Les $totalOccur occurrences de non-conformités ont été classées par fréquence décroissante. Les $top10Count catégories principales concentrent $top10Sum occurrences, soit $top10PctStr % du total :';
 
     widgets.add(
       PageTracker(
@@ -273,8 +269,8 @@ class PdfStatisticsBuilder {
             // Tableau récapitulatif Top 10 Pareto
             _buildParetoTop10Table(summary.paretoResult, totalOccur),
             pw.SizedBox(height: 8),
-            // Boîte d'alerte explicative de l'incohérence relevée
-            _buildCalloutBox(paretoCalloutText),
+            // Explication dynamique et rigoureuse de la loi de Pareto
+            _buildDynamicParetoExplanation(summary.paretoResult, totalOccur),
           ],
         ),
       ),
@@ -346,18 +342,25 @@ class PdfStatisticsBuilder {
     final topRisk2 = sortedFamilies.length > 1 ? sortedFamilies[1] : null;
     final topRisk1Count = topRisk1?.value ?? 0;
     final topRisk2Count = topRisk2?.value ?? 0;
-    final totalRisksCount = totalOccur > 0 ? totalOccur : 496;
+    final totalRisksCount = totalOccur > 0 ? totalOccur : summary.totalNC;
     final topRisk1Pct = totalRisksCount > 0 && topRisk1Count > 0 ? (topRisk1Count / totalRisksCount * 100).toStringAsFixed(1).replaceAll('.', ',') : '61,5';
     final topRisk2Pct = totalRisksCount > 0 && topRisk2Count > 0 ? (topRisk2Count / totalRisksCount * 100).toStringAsFixed(1).replaceAll('.', ',') : '25,6';
     final topRisk1Name = topRisk1?.key ?? 'Erreur d\'exploitation/maintenance';
     final topRisk2Name = topRisk2?.key ?? 'Dégradation des canalisations et matériels';
+
+    final pareto80K = summary.paretoResult.paretoCategoryCount > 0
+        ? summary.paretoResult.paretoCategoryCount
+        : 38;
+    final paretoCumPctStr = summary.paretoResult.paretoCumulativePercentage > 0
+        ? summary.paretoResult.paretoCumulativePercentage.toStringAsFixed(1).replaceAll('.', ',')
+        : '80,0';
 
     final syntheseBullets = [
       'Une densité globale élevée (${summary.globalDensityStr} NC/équipement) et un déséquilibre total vers les criticités critique et majeure (${(cStats.pctCritique + cStats.pctMajeure).toStringAsFixed(1).replaceAll('.', ',')} % du total, aucune non-conformité mineure) ;',
       'Une concentration confirmée du risque sur les $topCatNames ($top2Pct % du total), avec un point de vigilance qualitatif sur les $critWatchText ;',
       'Une déduplication des familles de risque qui ramène le référentiel à 5 catégories homogènes, avec "$topRisk1Name" comme premier facteur ($topRisk1Pct %) devant "$topRisk2Name" ($topRisk2Pct %) ;',
       'Un déficit généralisé de renseignement des caractéristiques techniques du parc BT : ${technical.globalIpIkAdequationRateStr} d\'indices IP/IK renseignés, $nonIdentSources sources d\'alimentation non identifiées, ${pctSansCoupure.toStringAsFixed(1).replaceAll('.', ',')} % d\'équipements sans disjoncteur de tête identifié - un chantier de fiabilisation des données à mener en parallèle du plan d\'actions correctives ;',
-      'Une incohérence récurrente dans la formule de synthèse Pareto générée par l\'outil (mélange des seuils "10 catégories" et "$pareto80K catégories"), à corriger au niveau de la génération automatique des rapports.',
+      'Une concentration marquée des anomalies selon la loi de Pareto : les $top10Count premières catégories concentrent $top10PctStr % des non-conformités, le seuil de 80 % étant atteint à partir de la ${pareto80K == 1 ? "1ère" : "$pareto80K"}${pareto80K > 1 ? "e" : ""} catégorie ($paretoCumPctStr % du total analysé) ;',
     ];
 
     // Saut de page systématique pour que la section 6 (Synthèse) soit toujours sur la même page que la section 7
@@ -419,6 +422,7 @@ class PdfStatisticsBuilder {
           topRisk2Name,
           topRisk2Pct,
           totalOccur,
+          summary.paretoResult,
         ),
       ),
     );
@@ -789,12 +793,104 @@ class PdfStatisticsBuilder {
     );
   }
 
+  static pw.Widget _buildDynamicParetoExplanation(
+    ParetoAnalysisResult pareto,
+    int totalOccurrences,
+  ) {
+    final top10Items = pareto.items.take(10).toList();
+    final top10Count = top10Items.length;
+    final top10Sum = top10Items.fold<int>(0, (sum, e) => sum + e.count);
+    final top10PctStr = totalOccurrences > 0 && top10Sum > 0
+        ? (top10Sum / totalOccurrences * 100).toStringAsFixed(1).replaceAll('.', ',')
+        : '0,0';
+    final pareto80K = pareto.paretoCategoryCount > 0 ? pareto.paretoCategoryCount : 1;
+    final paretoCumPctStr = pareto.paretoCumulativePercentage > 0
+        ? pareto.paretoCumulativePercentage.toStringAsFixed(1).replaceAll('.', ',')
+        : '80,0';
+    final totalDistinct = pareto.totalDistinctCategories > 0
+        ? pareto.totalDistinctCategories
+        : (pareto.items.isNotEmpty ? pareto.items.length : 1);
+
+    return pw.Container(
+      margin: const pw.EdgeInsets.symmetric(vertical: 6),
+      padding: const pw.EdgeInsets.all(8),
+      decoration: pw.BoxDecoration(
+        color: PdfColor.fromHex('#F8FAFC'),
+        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+        border: pw.Border.all(color: PdfColor.fromHex('#CBD5E1'), width: 0.5),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Row(
+            children: [
+              pw.Container(
+                width: 3,
+                height: 12,
+                color: PdfReportStyles.headerColor,
+                margin: const pw.EdgeInsets.only(right: 6),
+              ),
+              pw.Text(
+                'Lecture et enseignements du diagramme de Pareto (loi des 80/20)',
+                style: pw.TextStyle(
+                  font: fontBold,
+                  fontSize: fsH3,
+                  color: PdfReportStyles.headerColor,
+                ),
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 6),
+          pw.RichText(
+            textAlign: pw.TextAlign.justify,
+            text: pw.TextSpan(
+              children: [
+                pw.TextSpan(
+                  text: '• Périmètre analysé : ',
+                  style: pw.TextStyle(font: fontBold, fontSize: fsBody, color: PdfReportStyles.headerColor),
+                ),
+                pw.TextSpan(
+                  text: 'L\'ensemble des $totalOccurrences occurrences de non-conformités normatives relevées sur les installations ont été classées sous $totalDistinct typologies de défauts ordonnées par fréquence décroissante.\n',
+                  style: pw.TextStyle(font: fontRegular, fontSize: fsBody, color: PdfReportStyles.darkGrey, lineSpacing: 1.6),
+                ),
+                pw.TextSpan(
+                  text: '• Palier Top $top10Count : ',
+                  style: pw.TextStyle(font: fontBold, fontSize: fsBody, color: PdfReportStyles.headerColor),
+                ),
+                pw.TextSpan(
+                  text: 'Les $top10Count catégories de défauts les plus fréquentes concentrent à elles seules $top10Sum non-conformités, soit $top10PctStr % du volume total des anomalies du site.\n',
+                  style: pw.TextStyle(font: fontRegular, fontSize: fsBody, color: PdfReportStyles.darkGrey, lineSpacing: 1.6),
+                ),
+                pw.TextSpan(
+                  text: '• Seuil critique des 80 % (règle de Pareto) : ',
+                  style: pw.TextStyle(font: fontBold, fontSize: fsBody, color: PdfReportStyles.headerColor),
+                ),
+                pw.TextSpan(
+                  text: 'Le seuil de 80 % du volume global ($paretoCumPctStr %) est atteint dès la ${pareto80K == 1 ? "1ère" : "$pareto80K"}${pareto80K > 1 ? "e" : ""} catégorie de défauts, mettant en évidence une forte concentration du risque sur un nombre restreint de défaillances récurrentes.\n',
+                  style: pw.TextStyle(font: fontRegular, fontSize: fsBody, color: PdfReportStyles.darkGrey, lineSpacing: 1.6),
+                ),
+                pw.TextSpan(
+                  text: '• Portée opérationnelle : ',
+                  style: pw.TextStyle(font: fontBold, fontSize: fsBody, color: PdfReportStyles.headerColor),
+                ),
+                pw.TextSpan(
+                  text: 'Pour maximiser l\'efficacité des investissements et sécuriser rapidement le site, le plan d\'action prioritaire doit cibler en premier lieu ces $pareto80K typologies (et singulièrement le Top $top10Count ci-dessus), permettant ainsi d\'éliminer l\'immense majorité des risques identifiés sans dispersion d\'efforts.',
+                  style: pw.TextStyle(font: fontRegular, fontSize: fsBody, color: PdfReportStyles.darkGrey, lineSpacing: 1.6),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   static pw.Widget _buildCalloutBox(String text) {
-    String title = 'Note technique : ';
+    String title = 'Note : ';
     String body = text;
-    if (text.startsWith('Incohérence relevée (récurrente) : ')) {
-      title = 'Incohérence relevée (récurrente) : ';
-      body = text.substring('Incohérence relevée (récurrente) : '.length);
+    if (text.startsWith('Portée de la recommandation : ')) {
+      title = 'Portée de la recommandation : ';
+      body = text.substring('Portée de la recommandation : '.length);
     }
 
     return pw.Container(
@@ -902,16 +998,28 @@ class PdfStatisticsBuilder {
     String topRisk1Pct,
     String topRisk2Name,
     String topRisk2Pct,
-    int totalOccurrences,
-  ) {
+    int totalOccurrences, [
+    ParetoAnalysisResult? paretoResult,
+  ]) {
+    final topDefect1 = (paretoResult != null && paretoResult.items.isNotEmpty) ? paretoResult.items[0] : null;
+    final topDefect2 = (paretoResult != null && paretoResult.items.length > 1) ? paretoResult.items[1] : null;
+    final topDefect1Count = topDefect1?.count ?? 112;
+    final topDefect1Pct = totalOccurrences > 0 && topDefect1 != null
+        ? (topDefect1Count / totalOccurrences * 100).toStringAsFixed(1).replaceAll('.', ',')
+        : '22,6';
+    final topDefect2Count = topDefect2?.count ?? 107;
+    final topDefect2Pct = totalOccurrences > 0 && topDefect2 != null
+        ? (topDefect2Count / totalOccurrences * 100).toStringAsFixed(1).replaceAll('.', ',')
+        : '21,6';
+
     final recoBullets = [
       (
         'Identification, repérage et documentation des circuits électriques',
-        'former les agents à la tenue à jour des schémas unifilaires, au repérage systématique des départs et au respect du code couleur des câbles, axe correspondant à lui seul à 112 non-conformités (22,6 % du total) ;',
+        'former les agents à la tenue à jour des schémas unifilaires, au repérage systématique des départs et au respect du code couleur des câbles, axe correspondant à lui seul à $topDefect1Count non-conformités ($topDefect1Pct % du total) ;',
       ),
       (
         'Bonnes pratiques de câblage et de raccordement',
-        'renforcer les compétences sur le serrage et le contrôle périodique des connexions, la pose et la protection mécanique des canalisations, afin de réduire les risques d\'échauffement et de dégradation (107 non-conformités, 21,6 % du total) ;',
+        'renforcer les compétences sur le serrage et le contrôle périodique des connexions, la pose et la protection mécanique des canalisations, afin de réduire les risques d\'échauffement et de dégradation ($topDefect2Count non-conformités, $topDefect2Pct % du total) ;',
       ),
       (
         'Utilisation et entretien des équipements de protection individuelle (EPI électriques) et du matériel de consignation',

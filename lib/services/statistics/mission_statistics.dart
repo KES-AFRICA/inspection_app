@@ -156,8 +156,8 @@ class MissionStatisticsSummary {
     required this.equipmentInventory,
   });
 
-  /// Nombre total de non-conformités pertinentes pour l'ensemble du rapport.
-  int get totalNC => criticalityStats.total > 0 ? criticalityStats.total : inventory.totalFindings;
+  /// Nombre total de non-conformités pertinentes pour l'ensemble du rapport (Source Unique de Vérité).
+  int get totalNC => inventory.pertinentFindings.length;
 
   /// Nombre total d'équipements et de locaux physiques contrôlés (Source de vérité unifiée).
   int get totalEquipments {

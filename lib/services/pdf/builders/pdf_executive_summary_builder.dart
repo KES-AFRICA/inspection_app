@@ -724,7 +724,7 @@ class PdfExecutiveSummaryBuilder {
     ExecutiveSummarySnapshot snapshot,
     TechnicalEnrichmentResult technical,
   ) {
-    final findings = summary.inventory.findings;
+    final findings = summary.inventory.pertinentFindings;
     final htaFindings = findings.where((f) => f.tensionDomain == TensionDomain.mt).toList();
     final btFindings = findings.where((f) => f.tensionDomain == TensionDomain.bt).toList();
 
@@ -1015,8 +1015,8 @@ class PdfExecutiveSummaryBuilder {
     required int totalEquipments,
   }) {
     final inv = stats.inventory;
-    final mtFindings = inv.findings.where((f) => f.tensionDomain == TensionDomain.mt).toList();
-    final btFindings = inv.findings.where((f) => f.tensionDomain == TensionDomain.bt).toList();
+    final mtFindings = inv.pertinentFindings.where((f) => f.tensionDomain == TensionDomain.mt).toList();
+    final btFindings = inv.pertinentFindings.where((f) => f.tensionDomain == TensionDomain.bt).toList();
 
     final mtCrit = mtFindings.where((f) => f.criticality.toLowerCase() == 'critique').length;
     final mtMaj = mtFindings.where((f) => f.criticality.toLowerCase() == 'majeure').length;
@@ -1031,7 +1031,7 @@ class PdfExecutiveSummaryBuilder {
     final totCrit = stats.criticalityStats.critique;
     final totMaj = stats.criticalityStats.majeure;
     final totMin = stats.criticalityStats.mineure;
-    final totGlobal = stats.criticalityStats.total;
+    final totGlobal = stats.totalNC;
 
     final mtCritPct = mtTot > 0 ? (mtCrit / mtTot * 100).toStringAsFixed(1).replaceAll('.', ',') : '0,0';
     final mtMajPct = mtTot > 0 ? (mtMaj / mtTot * 100).toStringAsFixed(1).replaceAll('.', ',') : '0,0';

@@ -111,6 +111,7 @@ class ParetoAnalysisResult {
   final int paretoCategoryCount;
   final double paretoCumulativePercentage;
   final String summaryText;
+  final int totalDistinctCategories;
 
   ParetoAnalysisResult({
     required this.items,
@@ -118,7 +119,8 @@ class ParetoAnalysisResult {
     required this.paretoCategoryCount,
     required this.paretoCumulativePercentage,
     required this.summaryText,
-  });
+    int? totalDistinctCategories,
+  }) : totalDistinctCategories = totalDistinctCategories ?? items.length;
 
   /// Nombre d'occurrences cumulées concentrées par les 10 premières catégories de défauts.
   int get top10Count => items.take(10).fold(0, (sum, e) => sum + e.count);
@@ -326,24 +328,34 @@ class AuditFindingInventory {
     List<CategoryCrossItem>? crossCategoryItems,
   }) : crossCategoryItems = crossCategoryItems ?? [];
 
-  /// Non-conformités exhaustives pour l'ensemble du Résumé Exécutif et des Analyses Statistiques.
-  List<AuditFinding> get pertinentFindings => findings;
+  /// Règle métier stricte : une non-conformité doit obligatoirement être catégorisée
+  /// en Critique, Majeure ou Mineure. Les observations libres ou constats non catégorisés sont exclus.
+  static bool isNormativeNonConformity(AuditFinding f) {
+    final table = f.tableName.trim().toLowerCase();
+    final point = f.verificationPoint.trim().toLowerCase();
+    if (table.contains('libre') || point.contains('observation libre')) {
+      return false;
+    }
+    final crit = f.criticality.trim().toLowerCase();
+    return crit == 'critique' || crit == 'majeure' || crit == 'mineure';
+  }
+
+  /// Non-conformités exhaustives et certifiées pour l'ensemble du Résumé Exécutif et des Analyses Statistiques.
+  List<AuditFinding> get pertinentFindings => findings.where(isNormativeNonConformity).toList();
 
   int get totalFindings => pertinentFindings.length;
   int get totalEquipments => crossCategoryItems.fold<int>(0, (sum, e) => sum + e.equipmentCount);
 
-  int get critiqueCount => pertinentFindings.where((f) => f.criticality == 'Critique').length;
-  int get majeureCount => pertinentFindings.where((f) => f.criticality == 'Majeure').length;
-  int get mineureCount => pertinentFindings.where((f) => f.criticality == 'Mineure').length;
-  int get unspecifiedCount => findings.where((f) => f.criticality != 'Critique' && f.criticality != 'Majeure' && f.criticality != 'Mineure').length;
+  int get critiqueCount => pertinentFindings.where((f) => f.criticality.trim().toLowerCase() == 'critique').length;
+  int get majeureCount => pertinentFindings.where((f) => f.criticality.trim().toLowerCase() == 'majeure').length;
+  int get mineureCount => pertinentFindings.where((f) => f.criticality.trim().toLowerCase() == 'mineure').length;
+  int get unspecifiedCount => 0;
 
   /// Nombre de findings possédant une criticité normative résolue (Critique, Majeure ou Mineure).
   int get classifiedCount => critiqueCount + majeureCount + mineureCount;
 
   /// Findings possédant une criticité normative résolue.
-  List<AuditFinding> get classifiedFindings => pertinentFindings.where(
-    (f) => f.criticality == 'Critique' || f.criticality == 'Majeure' || f.criticality == 'Mineure'
-  ).toList();
+  List<AuditFinding> get classifiedFindings => pertinentFindings;
 
   double get pctCritique => classifiedCount > 0 ? (critiqueCount / classifiedCount) * 100 : 0.0;
   double get pctMajeure => classifiedCount > 0 ? (majeureCount / classifiedCount) * 100 : 0.0;

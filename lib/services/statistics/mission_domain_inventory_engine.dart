@@ -23,8 +23,9 @@ class MissionDomainInventory {
     required this.allFindings,
   });
 
-  /// Non-conformités exhaustives pour l'ensemble du Résumé Exécutif et des Analyses Statistiques.
-  List<AuditFinding> get pertinentFindings => allFindings;
+  /// Non-conformités exhaustives et certifiées pour l'ensemble du Résumé Exécutif et des Analyses Statistiques.
+  List<AuditFinding> get pertinentFindings =>
+      allFindings.where(AuditFindingInventory.isNormativeNonConformity).toList();
 
   /// Retourne toutes les instances d'une catégorie donnée.
   List<DomainEntityInstance> getInstancesByCategory(DomainObjectType cat) {
@@ -47,14 +48,15 @@ class MissionDomainInventory {
     for (final inst in catInstances) {
       totalPoints += inst.totalCheckpoints;
       compliant += inst.compliantCheckpoints;
+      final instPertinentFindings = inst.pertinentFindings;
       if (inst.findings.isNotEmpty) {
-        final instPertinentFindings = inst.findings;
         nonCompliant += instPertinentFindings.length;
-        critique += instPertinentFindings.where((f) => f.criticality == 'Critique').length;
-        majeure += instPertinentFindings.where((f) => f.criticality == 'Majeure').length;
-        mineure += instPertinentFindings.where((f) => f.criticality == 'Mineure').length;
+        critique += instPertinentFindings.where((f) => f.criticality.trim().toLowerCase() == 'critique').length;
+        majeure += instPertinentFindings.where((f) => f.criticality.trim().toLowerCase() == 'majeure').length;
+        mineure += instPertinentFindings.where((f) => f.criticality.trim().toLowerCase() == 'mineure').length;
       } else {
-        nonCompliant += inst.nonCompliantCheckpoints;
+        final classified = inst.critiqueCount + inst.majeureCount + inst.mineureCount;
+        nonCompliant += classified > 0 ? classified : inst.nonCompliantCheckpoints;
         critique += inst.critiqueCount;
         majeure += inst.majeureCount;
         mineure += inst.mineureCount;
@@ -234,6 +236,7 @@ class MissionDomainInventory {
       paretoCategoryCount: paretoK,
       paretoCumulativePercentage: paretoCumulPct,
       summaryText: summary,
+      totalDistinctCategories: totalDistinctCategories,
     );
   }
 
@@ -441,9 +444,9 @@ class MissionDomainInventory {
     }).toList();
   }
 
-  int get critiqueCount => allFindings.where((f) => f.criticality == 'Critique').length;
-  int get majeureCount => allFindings.where((f) => f.criticality == 'Majeure').length;
-  int get mineureCount => allFindings.where((f) => f.criticality == 'Mineure').length;
+  int get critiqueCount => pertinentFindings.where((f) => f.criticality.trim().toLowerCase() == 'critique').length;
+  int get majeureCount => pertinentFindings.where((f) => f.criticality.trim().toLowerCase() == 'majeure').length;
+  int get mineureCount => pertinentFindings.where((f) => f.criticality.trim().toLowerCase() == 'mineure').length;
   int get classifiedCount => critiqueCount + majeureCount + mineureCount;
   double get pctCritique => classifiedCount > 0 ? (critiqueCount / classifiedCount) * 100 : 0.0;
   double get pctMajeure => classifiedCount > 0 ? (majeureCount / classifiedCount) * 100 : 0.0;

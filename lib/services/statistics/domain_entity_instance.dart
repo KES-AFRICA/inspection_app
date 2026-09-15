@@ -229,6 +229,9 @@ class DomainEntityInstance {
   final List<AuditFinding> findings;
   final dynamic rawModelRef;
 
+  /// Non-conformités normées réelles rattachées à cette instance (Critique, Majeure, Mineure, hors observations libres).
+  List<AuditFinding> get pertinentFindings => findings.where(AuditFindingInventory.isNormativeNonConformity).toList();
+
   DomainEntityInstance({
     required this.instanceId,
     required this.category,
