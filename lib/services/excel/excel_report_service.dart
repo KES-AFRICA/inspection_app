@@ -520,9 +520,19 @@ class ExcelReportService {
         for (final equipGroup in localGroup.equipGroups) {
           final bool isNewEquip = (equipGroup != localGroup.equipGroups.first);
           final int equipStartRow = currentRow;
-          final String equipName = equipGroup.coffret.isNotEmpty
-              ? equipGroup.coffret
-              : 'ÉQUIPEMENT SANS NOM';
+          final rawEquip = equipGroup.coffret.trim();
+          final bool isGenericEquip = rawEquip.isEmpty ||
+              rawEquip.toLowerCase() == 'équipement sans nom' ||
+              rawEquip.toLowerCase() == 'equipement sans nom' ||
+              rawEquip.toLowerCase() == 'sans nom';
+
+          final String equipName = !isGenericEquip
+              ? rawEquip
+              : (localGroup.localName.trim().isNotEmpty
+                  ? 'Équipement (${localGroup.localName.trim()})'
+                  : (zoneGroup.zoneName.trim().isNotEmpty
+                      ? 'Équipement (${zoneGroup.zoneName.trim()})'
+                      : 'Équipement'));
 
           for (final obs in equipGroup.items) {
             final isEven = (currentRow % 2 == 0);

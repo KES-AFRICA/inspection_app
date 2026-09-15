@@ -14,6 +14,22 @@ class AppImageUtils {
     return _cachedDocDir!;
   }
 
+  static const List<String> supportedFolderKeywords = [
+    'mission_photos',
+    'cellules',
+    'transformateurs',
+    'audit_photos',
+    'client_logos',
+    'locaux',
+    'zones',
+    'coffrets',
+    'coffrets_externe',
+    'coffrets_interne',
+    'observations',
+    'observations_coffret',
+    'element_photos',
+  ];
+
   /// Résolution synchrone (rapide si le fichier existe ou si le dossier app_flutter est en cache).
   static String? resolvePathSync(String? path) {
     if (path == null || path.trim().isEmpty) return null;
@@ -26,7 +42,7 @@ class AppImageUtils {
 
       // 2. Ré-ancrage si le répertoire app_flutter courant est déjà en mémoire cache
       if (_cachedDocDir != null) {
-        for (final folderKeyword in ['audit_photos', 'client_logos']) {
+        for (final folderKeyword in supportedFolderKeywords) {
           if (cleanPath.contains(folderKeyword)) {
             final separator = cleanPath.contains('\\$folderKeyword') ? '\\' : '/';
             final idx = cleanPath.indexOf(folderKeyword);
@@ -58,7 +74,7 @@ class AppImageUtils {
       final direct = File(cleanPath);
       if (await direct.exists()) return direct.path;
 
-      for (final folderKeyword in ['audit_photos', 'client_logos']) {
+      for (final folderKeyword in supportedFolderKeywords) {
         if (cleanPath.contains(folderKeyword)) {
           final separator = cleanPath.contains('\\$folderKeyword') ? '\\' : '/';
           final idx = cleanPath.indexOf(folderKeyword);

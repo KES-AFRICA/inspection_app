@@ -466,9 +466,22 @@ class PdfObservationsRecapBuilder {
             widgets.add(pw.SizedBox(height: 3.5));
           }
 
-          final equipName = equipGroup.coffret.isNotEmpty
-              ? equipGroup.coffret
-              : 'ÉQUIPEMENT SANS NOM';
+          final rawEquip = equipGroup.coffret.trim();
+          final bool isGenericEquip = rawEquip.isEmpty ||
+              rawEquip.toLowerCase() == 'équipement sans nom' ||
+              rawEquip.toLowerCase() == 'equipement sans nom' ||
+              rawEquip.toLowerCase() == 'sans nom';
+
+          final String equipName;
+          if (!isGenericEquip) {
+            equipName = rawEquip;
+          } else if (localGroup.localName.trim().isNotEmpty) {
+            equipName = 'Équipement (${localGroup.localName.trim()})';
+          } else if (zoneGroup.zoneName.trim().isNotEmpty) {
+            equipName = 'Équipement (${zoneGroup.zoneName.trim()})';
+          } else {
+            equipName = 'Équipement';
+          }
           final obsCountStr = '${equipGroup.items.length} observation(s)';
 
           // Subtable indissociable par équipement
@@ -694,6 +707,21 @@ class PdfObservationsRecapBuilder {
     final coffretRepere = coffret.repere?.isNotEmpty == true
         ? coffret.repere
         : coffret.numeroEquipement;
+    final rawNom = coffret.nom.trim();
+    final bool isGeneric = rawNom.isEmpty ||
+        rawNom.toLowerCase() == 'équipement sans nom' ||
+        rawNom.toLowerCase() == 'equipement sans nom' ||
+        rawNom.toLowerCase() == 'sans nom';
+    final effectiveEquipNom = !isGeneric
+        ? rawNom
+        : ((coffretRepere != null &&
+                coffretRepere.trim().isNotEmpty &&
+                coffretRepere.trim().toLowerCase() != 'sans nom')
+            ? coffretRepere.trim()
+            : (localisation.trim().isNotEmpty
+                ? 'Équipement (${localisation.trim()})'
+                : 'Équipement'));
+
     for (var pv in coffret.pointsVerification) {
       final conf = pv.conformite.toLowerCase().trim();
       if (conf == 'non' || conf == 'non conforme') {
@@ -702,7 +730,7 @@ class PdfObservationsRecapBuilder {
             list.add(
               PdfObsRecap(
                 localisation: localisation,
-                coffret: coffret.nom,
+                coffret: effectiveEquipNom,
                 observation: obs.observation?.isNotEmpty == true
                     ? obs.observation!
                     : pv.pointVerification,
@@ -716,7 +744,7 @@ class PdfObservationsRecapBuilder {
           list.add(
             PdfObsRecap(
               localisation: localisation,
-              coffret: coffret.nom,
+              coffret: effectiveEquipNom,
               observation: pv.observation ?? pv.pointVerification,
               refNorm: pv.referenceNormative ?? '',
               priorite: pv.priorite?.toString() ?? '',
@@ -730,7 +758,7 @@ class PdfObservationsRecapBuilder {
       list.add(
         PdfObsRecap(
           localisation: localisation,
-          coffret: coffret.nom,
+          coffret: effectiveEquipNom,
           observation: obs.texte,
           refNorm: _getNormativeReferenceForFreeObs(obs),
           priorite: _getCriticiteForFreeObs(obs),
@@ -833,7 +861,7 @@ class PdfObservationsRecapBuilder {
         list.add(
           PdfObsRecap(
             localisation: local.nom,
-            coffret: '',
+            coffret: 'Observations du local',
             observation: obs.texte,
             refNorm: _getNormativeReferenceForFreeObs(obs),
             priorite: _getCriticiteForFreeObs(obs),
@@ -872,7 +900,7 @@ class PdfObservationsRecapBuilder {
           list.add(
             PdfObsRecap(
               localisation: '${zone.nom} / ${local.nom}',
-              coffret: '',
+              coffret: 'Observations du local',
               observation: obs.texte,
               refNorm: _getNormativeReferenceForFreeObs(obs),
               priorite: _getCriticiteForFreeObs(obs),
@@ -884,7 +912,7 @@ class PdfObservationsRecapBuilder {
         list.add(
           PdfObsRecap(
             localisation: zone.nom,
-            coffret: '',
+            coffret: 'Observations de la zone',
             observation: obs.texte,
             refNorm: _getNormativeReferenceForFreeObs(obs),
             priorite: _getCriticiteForFreeObs(obs),
@@ -967,7 +995,7 @@ class PdfObservationsRecapBuilder {
           list.add(
             PdfObsRecap(
               localisation: '${zone.nom} / ${local.nom}',
-              coffret: '',
+              coffret: 'Observations du local',
               observation: obs.texte,
               refNorm: _getNormativeReferenceForFreeObs(obs),
               priorite: _getCriticiteForFreeObs(obs),
@@ -979,7 +1007,7 @@ class PdfObservationsRecapBuilder {
         list.add(
           PdfObsRecap(
             localisation: zone.nom,
-            coffret: '',
+            coffret: 'Observations de la zone',
             observation: obs.texte,
             refNorm: _getNormativeReferenceForFreeObs(obs),
             priorite: _getCriticiteForFreeObs(obs),

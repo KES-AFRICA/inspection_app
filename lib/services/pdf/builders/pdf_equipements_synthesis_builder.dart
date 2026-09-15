@@ -395,6 +395,27 @@ class PdfEquipementsSynthesisBuilder {
       }
     }
 
+    int celluleSeq = 0;
+    int transfoSeq = 0;
+
+    bool isGenericDesignation(String s) {
+      final clean = s.trim().toLowerCase();
+      return clean.isEmpty ||
+          clean == 'présent' ||
+          clean == 'present' ||
+          clean == 'absent' ||
+          clean == 'absente' ||
+          clean == 'oui' ||
+          clean == 'non' ||
+          clean == 'cellule' ||
+          clean == 'transformateur' ||
+          clean == 'sans nom' ||
+          clean == 'n/a' ||
+          clean == '-' ||
+          clean == 'aucun' ||
+          clean == 'aucune';
+    }
+
     void processCellulesAndTransfos(
       List<Cellule> cellules,
       List<TransformateurMTBT> transfos, {
@@ -402,45 +423,33 @@ class PdfEquipementsSynthesisBuilder {
       String localName = '',
     }) {
       for (final c in cellules) {
+        celluleSeq++;
+        final seqDesignation = 'Cellule ${celluleSeq.toString().padLeft(2, '0')}';
         final rep = c.getEffectiveRepere(localName);
 
         String equipNom = '';
         final rawNom = c.nom?.trim() ?? '';
-        final isGenericNom = rawNom.isEmpty ||
-            rawNom.toLowerCase() == 'présent' ||
-            rawNom.toLowerCase() == 'present' ||
-            rawNom.toLowerCase() == 'oui' ||
-            rawNom.toLowerCase() == 'non' ||
-            rawNom.toLowerCase() == 'cellule';
 
-        if (!isGenericNom) {
+        if (!isGenericDesignation(rawNom)) {
           equipNom = rawNom;
         } else if (c.repere?.trim().isNotEmpty == true &&
-            c.repere!.trim() != localName) {
+            c.repere!.trim() != localName &&
+            !isGenericDesignation(c.repere!)) {
           equipNom = c.repere!.trim();
-        } else if (c.numerotation.trim().isNotEmpty) {
+        } else if (c.numerotation.trim().isNotEmpty &&
+            !isGenericDesignation(c.numerotation)) {
           equipNom = c.numerotation.trim().toLowerCase().contains('cellule')
               ? c.numerotation.trim()
               : 'Cellule ${c.numerotation.trim()}';
-        } else if (c.fonction.trim().isNotEmpty) {
-          equipNom = c.fonction.trim().toLowerCase().contains('cellule')
-              ? c.fonction.trim()
-              : 'Cellule ${c.fonction.trim()}';
-        } else if (c.type.trim().isNotEmpty) {
-          equipNom = c.type.trim().toLowerCase().contains('cellule')
-              ? c.type.trim()
-              : 'Cellule ${c.type.trim()}';
-        } else if (rep.isNotEmpty) {
-          equipNom = rep;
         } else {
-          equipNom = 'Cellule';
+          equipNom = seqDesignation;
         }
 
         addEquipement(
           refObj: c,
           zoneName: zoneName,
           localName: localName,
-          repere: rep,
+          repere: rep.isNotEmpty ? rep : seqDesignation,
           nom: equipNom,
           type: 'Cellule',
           accessible: true,
@@ -448,33 +457,32 @@ class PdfEquipementsSynthesisBuilder {
       }
 
       for (final t in transfos) {
+        transfoSeq++;
+        final seqDesignation = 'Transformateur ${transfoSeq.toString().padLeft(2, '0')}';
         final rep = t.getEffectiveRepere(localName);
 
         String equipNom = '';
         final rawNom = t.nom?.trim() ?? '';
-        final isGenericNom = rawNom.isEmpty ||
-            rawNom == localName ||
-            rawNom.toLowerCase() == 'présent' ||
-            rawNom.toLowerCase() == 'present' ||
-            rawNom.toLowerCase() == 'oui' ||
-            rawNom.toLowerCase() == 'non' ||
-            rawNom.toLowerCase() == 'transformateur';
 
-        if (!isGenericNom) {
+        if (!isGenericDesignation(rawNom) && rawNom != localName) {
           equipNom = rawNom;
         } else if (t.repere?.trim().isNotEmpty == true &&
-            t.repere!.trim() != localName) {
+            t.repere!.trim() != localName &&
+            !isGenericDesignation(t.repere!)) {
           equipNom = t.repere!.trim();
-        } else if (t.puissanceAssignee.trim().isNotEmpty) {
+        } else if (t.puissanceAssignee.trim().isNotEmpty &&
+            !isGenericDesignation(t.puissanceAssignee)) {
           equipNom = 'Transformateur ${t.puissanceAssignee.trim()}';
-        } else if (t.marqueAnnee.trim().isNotEmpty) {
+        } else if (t.marqueAnnee.trim().isNotEmpty &&
+            !isGenericDesignation(t.marqueAnnee)) {
           equipNom = 'Transformateur ${t.marqueAnnee.trim()}';
-        } else if (t.typeTransformateur.trim().isNotEmpty) {
+        } else if (t.typeTransformateur.trim().isNotEmpty &&
+            !isGenericDesignation(t.typeTransformateur)) {
           equipNom = 'Transformateur ${t.typeTransformateur.trim()}';
         } else if (rep.isNotEmpty) {
           equipNom = rep;
         } else {
-          equipNom = 'Transformateur';
+          equipNom = seqDesignation;
         }
 
         addEquipement(

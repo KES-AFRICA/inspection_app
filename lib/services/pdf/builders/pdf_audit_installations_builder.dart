@@ -1669,18 +1669,37 @@ class PdfAuditInstallationsBuilder {
     String safe(String v) => v.trim().isEmpty ? '-' : v;
 
     final hasNom = cellule.nom != null && cellule.nom!.trim().isNotEmpty;
-    final rawPhotoPath =
-        (cellule.photo != null && cellule.photo!.trim().isNotEmpty)
-        ? cellule.photo!.trim()
-        : (cellule.photos.isNotEmpty ? cellule.photos.first.trim() : null);
-    final hasPhoto = rawPhotoPath != null && rawPhotoPath.isNotEmpty;
+    final candidatePhotos = <String>[
+      if (cellule.photo != null && cellule.photo!.trim().isNotEmpty)
+        cellule.photo!.trim(),
+      ...cellule.photos.map((p) => p.trim()).where((p) => p.isNotEmpty),
+    ];
+    final hasPhoto = candidatePhotos.isNotEmpty;
 
     pw.MemoryImage? photoImg;
     if (hasPhoto) {
       if (photoCache != null && photoCache.containsKey(cellule)) {
         photoImg = photoCache[cellule];
-      } else if (!saveFilesToDisk) {
+      }
+      if (photoImg == null && !saveFilesToDisk) {
         photoImg = _placeholder1x1;
+      }
+      if (photoImg == null && saveFilesToDisk) {
+        for (final src in candidatePhotos) {
+          try {
+            final resolved = AppImageUtils.resolvePathSync(src);
+            if (resolved != null) {
+              final f = File(resolved);
+              if (f.existsSync()) {
+                final bytes = f.readAsBytesSync();
+                if (bytes.isNotEmpty) {
+                  photoImg = pw.MemoryImage(bytes);
+                  break;
+                }
+              }
+            }
+          } catch (_) {}
+        }
       }
     }
 
@@ -2213,18 +2232,37 @@ class PdfAuditInstallationsBuilder {
     );
     String safe(String v) => v.trim().isEmpty ? '-' : v;
 
-    final rawPhotoPath =
-        (transfo.photo != null && transfo.photo!.trim().isNotEmpty)
-        ? transfo.photo!.trim()
-        : (transfo.photos.isNotEmpty ? transfo.photos.first.trim() : null);
-    final hasPhoto = rawPhotoPath != null && rawPhotoPath.isNotEmpty;
+    final candidatePhotos = <String>[
+      if (transfo.photo != null && transfo.photo!.trim().isNotEmpty)
+        transfo.photo!.trim(),
+      ...transfo.photos.map((p) => p.trim()).where((p) => p.isNotEmpty),
+    ];
+    final hasPhoto = candidatePhotos.isNotEmpty;
 
     pw.MemoryImage? photoImg;
     if (hasPhoto) {
       if (photoCache != null && photoCache.containsKey(transfo)) {
         photoImg = photoCache[transfo];
-      } else if (!saveFilesToDisk) {
+      }
+      if (photoImg == null && !saveFilesToDisk) {
         photoImg = _placeholder1x1;
+      }
+      if (photoImg == null && saveFilesToDisk) {
+        for (final src in candidatePhotos) {
+          try {
+            final resolved = AppImageUtils.resolvePathSync(src);
+            if (resolved != null) {
+              final f = File(resolved);
+              if (f.existsSync()) {
+                final bytes = f.readAsBytesSync();
+                if (bytes.isNotEmpty) {
+                  photoImg = pw.MemoryImage(bytes);
+                  break;
+                }
+              }
+            }
+          } catch (_) {}
+        }
       }
     }
 

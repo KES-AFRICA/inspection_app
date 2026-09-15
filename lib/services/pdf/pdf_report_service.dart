@@ -2100,10 +2100,12 @@ class PdfReportService {
           }
         }
       } else if (item is Cellule) {
-        final rawPath = (item.photo != null && item.photo!.trim().isNotEmpty)
-            ? item.photo!.trim()
-            : (item.photos.isNotEmpty ? item.photos.first.trim() : null);
-        if (rawPath != null && rawPath.isNotEmpty) {
+        final candidates = <String>[
+          if (item.photo != null && item.photo!.trim().isNotEmpty)
+            item.photo!.trim(),
+          ...item.photos.map((p) => p.trim()).where((p) => p.isNotEmpty),
+        ];
+        for (final rawPath in candidates) {
           final img = await _loadAndOptimizeImage(
             rawPath,
             photoContext: PdfPhotoContext.equipmentObs,
@@ -2111,13 +2113,16 @@ class PdfReportService {
           );
           if (img != null) {
             cache[item] = img;
+            break;
           }
         }
       } else if (item is TransformateurMTBT) {
-        final rawPath = (item.photo != null && item.photo!.trim().isNotEmpty)
-            ? item.photo!.trim()
-            : (item.photos.isNotEmpty ? item.photos.first.trim() : null);
-        if (rawPath != null && rawPath.isNotEmpty) {
+        final candidates = <String>[
+          if (item.photo != null && item.photo!.trim().isNotEmpty)
+            item.photo!.trim(),
+          ...item.photos.map((p) => p.trim()).where((p) => p.isNotEmpty),
+        ];
+        for (final rawPath in candidates) {
           final img = await _loadAndOptimizeImage(
             rawPath,
             photoContext: PdfPhotoContext.equipmentObs,
@@ -2125,34 +2130,31 @@ class PdfReportService {
           );
           if (img != null) {
             cache[item] = img;
+            break;
           }
         }
       } else if (item is MoyenneTensionLocal) {
-        if (item.photos.isNotEmpty) {
-          final rawPath = item.photos.first.trim();
-          if (rawPath.isNotEmpty) {
-            final img = await _loadAndOptimizeImage(
-              rawPath,
-              photoContext: PdfPhotoContext.equipmentObs,
-              saveFilesToDisk: loadImages,
-            );
-            if (img != null) {
-              cache[item] = img;
-            }
+        for (final rawPath in item.photos.map((p) => p.trim()).where((p) => p.isNotEmpty)) {
+          final img = await _loadAndOptimizeImage(
+            rawPath,
+            photoContext: PdfPhotoContext.equipmentObs,
+            saveFilesToDisk: loadImages,
+          );
+          if (img != null) {
+            cache[item] = img;
+            break;
           }
         }
       } else if (item is BasseTensionLocal) {
-        if (item.photos.isNotEmpty) {
-          final rawPath = item.photos.first.trim();
-          if (rawPath.isNotEmpty) {
-            final img = await _loadAndOptimizeImage(
-              rawPath,
-              photoContext: PdfPhotoContext.equipmentObs,
-              saveFilesToDisk: loadImages,
-            );
-            if (img != null) {
-              cache[item] = img;
-            }
+        for (final rawPath in item.photos.map((p) => p.trim()).where((p) => p.isNotEmpty)) {
+          final img = await _loadAndOptimizeImage(
+            rawPath,
+            photoContext: PdfPhotoContext.equipmentObs,
+            saveFilesToDisk: loadImages,
+          );
+          if (img != null) {
+            cache[item] = img;
+            break;
           }
         }
       }
