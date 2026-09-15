@@ -17,6 +17,24 @@ allprojects {
             }
         }
     }
+
+    tasks.configureEach {
+        if (name.contains("NativeLibs", ignoreCase = true) || name.contains("merge", ignoreCase = true)) {
+            doFirst {
+                val bDir = project.layout.buildDirectory.orNull?.asFile
+                if (bDir != null && bDir.exists()) {
+                    val nativeLibsDir = File(bDir, "intermediates/merged_native_libs")
+                    if (nativeLibsDir.exists()) {
+                        nativeLibsDir.walkBottomUp().forEach { file ->
+                            try {
+                                java.nio.file.Files.setAttribute(file.toPath(), "dos:readonly", false)
+                            } catch (_: Throwable) {}
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 val newBuildDir: Directory =
