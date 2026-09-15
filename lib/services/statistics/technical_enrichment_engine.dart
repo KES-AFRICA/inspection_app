@@ -302,6 +302,7 @@ class RiskFamilyQuadrantStats {
 
   int get total => totalConstats;
   List<RiskFamilyStatItem> get items => topFamilies;
+  int? operator [](String family) => counts[family];
 }
 
 /// Matrice à 4 quadrants croisant Domaine de tension x Nature de contrôle avec les familles de risques réelles.
@@ -1460,30 +1461,57 @@ class TechnicalEnrichmentEngine {
     MissionDomainInventory domainInventory,
   ) {
     // 1. HTA — DISPOSITION CONSTRUCTIVE : Locaux MT / HTA
-    final htaLocauxFindings = domainInventory
+    var htaLocauxFindings = domainInventory
         .getInstancesByCategory(DomainObjectType.localMT)
         .expand((i) => i.findings)
         .toList();
 
     // 2. HTA — EXPLOITATION ET MAINTENANCE : Cellules MT + Transformateurs MT/BT
-    final htaEquipFindings = [
+    var htaEquipFindings = [
       ...domainInventory.getInstancesByCategory(DomainObjectType.celluleMT),
       ...domainInventory.getInstancesByCategory(DomainObjectType.transformateurMTBT),
     ].expand((i) => i.findings).toList();
 
     // 3. BT — DISPOSITION CONSTRUCTIVE : Locaux BT + Locaux GE
-    final btLocauxFindings = [
+    var btLocauxFindings = [
       ...domainInventory.getInstancesByCategory(DomainObjectType.localBT),
       ...domainInventory.getInstancesByCategory(DomainObjectType.localGE),
     ].expand((i) => i.findings).toList();
 
     // 4. BT — EXPLOITATION ET MAINTENANCE : TGBT + Armoires + Coffrets + Inverseurs
-    final btEquipFindings = [
+    var btEquipFindings = [
       ...domainInventory.getInstancesByCategory(DomainObjectType.tgbt),
       ...domainInventory.getInstancesByCategory(DomainObjectType.armoire),
       ...domainInventory.getInstancesByCategory(DomainObjectType.coffret),
       ...domainInventory.getInstancesByCategory(DomainObjectType.inverseur),
     ].expand((i) => i.findings).toList();
+
+    if (htaLocauxFindings.isEmpty &&
+        htaEquipFindings.isEmpty &&
+        btLocauxFindings.isEmpty &&
+        btEquipFindings.isEmpty &&
+        domainInventory.allFindings.isNotEmpty) {
+      htaLocauxFindings = domainInventory.allFindings
+          .where((f) =>
+              f.tensionDomain == TensionDomain.mt &&
+              _isDispositionConstructiveFinding(f))
+          .toList();
+      htaEquipFindings = domainInventory.allFindings
+          .where((f) =>
+              f.tensionDomain == TensionDomain.mt &&
+              !_isDispositionConstructiveFinding(f))
+          .toList();
+      btLocauxFindings = domainInventory.allFindings
+          .where((f) =>
+              f.tensionDomain == TensionDomain.bt &&
+              _isDispositionConstructiveFinding(f))
+          .toList();
+      btEquipFindings = domainInventory.allFindings
+          .where((f) =>
+              f.tensionDomain == TensionDomain.bt &&
+              !_isDispositionConstructiveFinding(f))
+          .toList();
+    }
 
     return RiskFamilyCrossMatrix(
       htaDispositionsConstructives: _computeQuadrantStats(

@@ -45,7 +45,7 @@ class _BasseTensionScreenState extends ConsumerState<BasseTensionScreen> {
     setState(() => _isLoading = true);
     
     try {
-      final audit = await ref.read(auditInstallationsProvider(widget.mission.id).notifier).load();
+      final audit = await ref.read(auditInstallationsProvider(widget.mission.id).notifier).load(force: true);
 
       final draftsIndex = HiveService.getIndexedCoffretDraftsForMission(
         missionId: widget.mission.id,

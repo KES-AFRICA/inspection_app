@@ -99,29 +99,56 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
       widget.mission.id,
     );
 
+    final String targetId = _local.localId;
+    final String targetNom = _local.nom;
+
     setState(() {
+      dynamic foundLocal;
       if (widget.isMoyenneTension) {
         if (widget.isInZone && widget.zoneIndex != null) {
           if (widget.zoneIndex! < audit.moyenneTensionZones.length) {
             final zone = audit.moyenneTensionZones[widget.zoneIndex!];
-            if (widget.localIndex < zone.locaux.length) {
-              _local = zone.locaux[widget.localIndex];
+            final idx = zone.locaux.indexWhere((l) =>
+                (l.id != null && l.id == targetId) ||
+                l.localId == targetId ||
+                l.nom == targetNom);
+            if (idx != -1) {
+              foundLocal = zone.locaux[idx];
+            } else if (widget.localIndex < zone.locaux.length) {
+              foundLocal = zone.locaux[widget.localIndex];
             }
           }
         } else {
-          if (widget.localIndex < audit.moyenneTensionLocaux.length) {
-            _local = audit.moyenneTensionLocaux[widget.localIndex];
+          final idx = audit.moyenneTensionLocaux.indexWhere((l) =>
+              (l.id != null && l.id == targetId) ||
+              l.localId == targetId ||
+              l.nom == targetNom);
+          if (idx != -1) {
+            foundLocal = audit.moyenneTensionLocaux[idx];
+          } else if (widget.localIndex < audit.moyenneTensionLocaux.length) {
+            foundLocal = audit.moyenneTensionLocaux[widget.localIndex];
           }
         }
       } else {
         if (widget.zoneIndex != null &&
             widget.zoneIndex! < audit.basseTensionZones.length) {
           final zone = audit.basseTensionZones[widget.zoneIndex!];
-          if (widget.localIndex < zone.locaux.length) {
-            _local = zone.locaux[widget.localIndex];
+          final idx = zone.locaux.indexWhere((l) =>
+              (l.id != null && l.id == targetId) ||
+              l.localId == targetId ||
+              l.nom == targetNom);
+          if (idx != -1) {
+            foundLocal = zone.locaux[idx];
+          } else if (widget.localIndex < zone.locaux.length) {
+            foundLocal = zone.locaux[widget.localIndex];
           }
         }
       }
+
+      if (foundLocal != null) {
+        _local = foundLocal;
+      }
+
       // Migration automatique à chaque rechargement
       if (_local is MoyenneTensionLocal) {
         (_local as MoyenneTensionLocal).migrateFromOldFields();
@@ -1041,7 +1068,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Confirmer la suppression'),
-        content: Text('Voulez-vous vraiment supprimer ce Équipement ?'),
+        content: Text('Voulez-vous vraiment supprimer cet équipement ?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -1051,19 +1078,23 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
             onPressed: () async {
               Navigator.pop(context);
               final coffretToDelete = (index >= 0 && index < _local.coffrets.length) ? _local.coffrets[index] : null;
+              if (coffretToDelete != null) {
+                await HiveService.deleteCoffret(
+                  missionId: widget.mission.id,
+                  equipmentId: coffretToDelete.equipmentId,
+                  qrCode: coffretToDelete.qrCode.isNotEmpty ? coffretToDelete.qrCode : null,
+                );
+              }
               setState(() {
                 _local.coffrets.removeAt(index);
               });
-              await _sauvegarderLocal();
-              if (coffretToDelete != null) {
-                if (coffretToDelete.qrCode.isNotEmpty) {
-                  await HiveService.deleteCoffretDraft(coffretToDelete.qrCode);
-                }
-                await HiveService.deleteCoffretDraft(coffretToDelete.equipmentId);
+              await _sauvegarderLocal(preserveExistingCoffrets: false);
+              await _refreshLocal();
+              if (mounted) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text('Équipement supprimé')));
               }
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(SnackBar(content: Text('Équipement supprimé')));
             },
             child: Text('Supprimer', style: TextStyle(color: Colors.red)),
           ),
@@ -1072,7 +1103,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
     );
   }
 
-  Future<void> _sauvegarderLocal() async {
+  Future<void> _sauvegarderLocal({bool preserveExistingCoffrets = false}) async {
     try {
       await HiveService.updateLocalById(
         missionId: widget.mission.id,
@@ -1082,6 +1113,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
         isInZone: widget.isInZone,
         fallbackZoneIndex: widget.zoneIndex,
         fallbackLocalIndex: widget.localIndex,
+        preserveExistingCoffrets: preserveExistingCoffrets,
       );
     } catch (e) {
       print('❌ Erreur sauvegarderLocal: $e');

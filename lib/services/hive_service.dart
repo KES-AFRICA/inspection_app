@@ -2910,6 +2910,7 @@ static Future<bool> addLocalToBasseTensionZone({
     int? fallbackZoneIndex,
     int? fallbackLocalIndex,
     bool skipDescriptionSync = false,
+    bool preserveExistingCoffrets = true,
   }) async {
     return PersistenceQueue.enqueue('audit_$missionId', () async {
       try {
@@ -2950,15 +2951,18 @@ static Future<bool> addLocalToBasseTensionZone({
               final existing = targetZone.locaux[targetIdx];
               mtLocal.id = existing.localId;
 
-              // Fusion protectrice des coffrets
-              // Fusion protectrice des coffrets sans duplication
-              if (existing.coffrets.isNotEmpty) {
-                if (mtLocal.coffrets.isEmpty) {
-                  mtLocal.coffrets = existing.coffrets;
-                } else {
-                  mtLocal.coffrets = deduplicateCoffrets([...mtLocal.coffrets, ...existing.coffrets]);
+              // Gestion protectrice ou directe des coffrets
+              if (preserveExistingCoffrets) {
+                if (existing.coffrets.isNotEmpty) {
+                  if (mtLocal.coffrets.isEmpty) {
+                    mtLocal.coffrets = existing.coffrets;
+                  } else {
+                    mtLocal.coffrets = deduplicateCoffrets([...mtLocal.coffrets, ...existing.coffrets]);
+                  }
+                } else if (mtLocal.coffrets.isNotEmpty) {
+                  mtLocal.coffrets = deduplicateCoffrets(mtLocal.coffrets);
                 }
-              } else if (mtLocal.coffrets.isNotEmpty) {
+              } else {
                 mtLocal.coffrets = deduplicateCoffrets(mtLocal.coffrets);
               }
 
@@ -2996,14 +3000,18 @@ static Future<bool> addLocalToBasseTensionZone({
               final existing = audit.moyenneTensionLocaux[targetIdx];
               mtLocal.id = existing.localId;
 
-              // Fusion protectrice des coffrets sans duplication
-              if (existing.coffrets.isNotEmpty) {
-                if (mtLocal.coffrets.isEmpty) {
-                  mtLocal.coffrets = existing.coffrets;
-                } else {
-                  mtLocal.coffrets = deduplicateCoffrets([...mtLocal.coffrets, ...existing.coffrets]);
+              // Gestion protectrice ou directe des coffrets
+              if (preserveExistingCoffrets) {
+                if (existing.coffrets.isNotEmpty) {
+                  if (mtLocal.coffrets.isEmpty) {
+                    mtLocal.coffrets = existing.coffrets;
+                  } else {
+                    mtLocal.coffrets = deduplicateCoffrets([...mtLocal.coffrets, ...existing.coffrets]);
+                  }
+                } else if (mtLocal.coffrets.isNotEmpty) {
+                  mtLocal.coffrets = deduplicateCoffrets(mtLocal.coffrets);
                 }
-              } else if (mtLocal.coffrets.isNotEmpty) {
+              } else {
                 mtLocal.coffrets = deduplicateCoffrets(mtLocal.coffrets);
               }
               if (existing.cellules.isNotEmpty && mtLocal.cellules.isEmpty) {
@@ -3054,14 +3062,18 @@ static Future<bool> addLocalToBasseTensionZone({
             final existing = targetZone.locaux[targetIdx];
             btLocal.id = existing.localId;
 
-            // Fusion protectrice des coffrets sans duplication
-            if (existing.coffrets.isNotEmpty) {
-              if (btLocal.coffrets.isEmpty) {
-                btLocal.coffrets = existing.coffrets;
-              } else {
-                btLocal.coffrets = deduplicateCoffrets([...btLocal.coffrets, ...existing.coffrets]);
+            // Gestion protectrice ou directe des coffrets
+            if (preserveExistingCoffrets) {
+              if (existing.coffrets.isNotEmpty) {
+                if (btLocal.coffrets.isEmpty) {
+                  btLocal.coffrets = existing.coffrets;
+                } else {
+                  btLocal.coffrets = deduplicateCoffrets([...btLocal.coffrets, ...existing.coffrets]);
+                }
+              } else if (btLocal.coffrets.isNotEmpty) {
+                btLocal.coffrets = deduplicateCoffrets(btLocal.coffrets);
               }
-            } else if (btLocal.coffrets.isNotEmpty) {
+            } else {
               btLocal.coffrets = deduplicateCoffrets(btLocal.coffrets);
             }
 

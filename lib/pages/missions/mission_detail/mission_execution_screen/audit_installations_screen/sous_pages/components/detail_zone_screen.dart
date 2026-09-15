@@ -1065,13 +1065,28 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
       widget.mission.id,
     );
 
+    final String targetZoneId = _zone.zoneId;
+    final String targetZoneNom = _zone.nom;
+
     setState(() {
       if (widget.isMoyenneTension) {
-        if (widget.zoneIndex < audit.moyenneTensionZones.length) {
+        final idx = audit.moyenneTensionZones.indexWhere((z) =>
+            (z.id != null && z.id == targetZoneId) ||
+            z.zoneId == targetZoneId ||
+            z.nom == targetZoneNom);
+        if (idx != -1) {
+          _zone = audit.moyenneTensionZones[idx];
+        } else if (widget.zoneIndex < audit.moyenneTensionZones.length) {
           _zone = audit.moyenneTensionZones[widget.zoneIndex];
         }
       } else {
-        if (widget.zoneIndex < audit.basseTensionZones.length) {
+        final idx = audit.basseTensionZones.indexWhere((z) =>
+            (z.id != null && z.id == targetZoneId) ||
+            z.zoneId == targetZoneId ||
+            z.nom == targetZoneNom);
+        if (idx != -1) {
+          _zone = audit.basseTensionZones[idx];
+        } else if (widget.zoneIndex < audit.basseTensionZones.length) {
           _zone = audit.basseTensionZones[widget.zoneIndex];
         }
       }
@@ -1085,13 +1100,42 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
       widget.mission.id,
     );
 
+    final String targetZoneId = _zone.zoneId;
+    final String targetZoneNom = _zone.nom;
+
     if (widget.isMoyenneTension) {
-      if (widget.zoneIndex < audit.moyenneTensionZones.length) {
-        audit.moyenneTensionZones[widget.zoneIndex] = _zone;
+      int idx = audit.moyenneTensionZones.indexWhere((z) =>
+          (z.id != null && z.id == targetZoneId) ||
+          z.zoneId == targetZoneId ||
+          z.nom == targetZoneNom);
+      if (idx == -1 && widget.zoneIndex < audit.moyenneTensionZones.length) {
+        idx = widget.zoneIndex;
+      }
+      if (idx != -1 && idx < audit.moyenneTensionZones.length) {
+        final existingZone = audit.moyenneTensionZones[idx];
+        existingZone.photos = List.from(_zone.photos);
+        existingZone.observationsLibres = List.from(_zone.observationsLibres);
+        existingZone.nom = _zone.nom;
+        existingZone.description = _zone.description;
+        existingZone.isRiskZone = _zone.isRiskZone;
+        existingZone.classementZoneId = _zone.classementZoneId;
       }
     } else {
-      if (widget.zoneIndex < audit.basseTensionZones.length) {
-        audit.basseTensionZones[widget.zoneIndex] = _zone;
+      int idx = audit.basseTensionZones.indexWhere((z) =>
+          (z.id != null && z.id == targetZoneId) ||
+          z.zoneId == targetZoneId ||
+          z.nom == targetZoneNom);
+      if (idx == -1 && widget.zoneIndex < audit.basseTensionZones.length) {
+        idx = widget.zoneIndex;
+      }
+      if (idx != -1 && idx < audit.basseTensionZones.length) {
+        final existingZone = audit.basseTensionZones[idx];
+        existingZone.photos = List.from(_zone.photos);
+        existingZone.observationsLibres = List.from(_zone.observationsLibres);
+        existingZone.nom = _zone.nom;
+        existingZone.description = _zone.description;
+        existingZone.isRiskZone = _zone.isRiskZone;
+        existingZone.classementZoneId = _zone.classementZoneId;
       }
     }
 
@@ -1857,40 +1901,13 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
-              final audit = await HiveService.getOrCreateAuditInstallations(
-                widget.mission.id,
+              await HiveService.deleteCoffret(
+                missionId: widget.mission.id,
+                equipmentId: coffret.equipmentId,
+                qrCode: coffret.qrCode.isNotEmpty ? coffret.qrCode : null,
               );
-              if (isMoyenneTension) {
-                if (widget.zoneIndex < audit.moyenneTensionZones.length) {
-                  final realIndex = audit
-                      .moyenneTensionZones[widget.zoneIndex]
-                      .coffrets
-                      .indexWhere((c) => c.equipmentId == coffret.equipmentId);
-                  if (realIndex >= 0) {
-                    audit.moyenneTensionZones[widget.zoneIndex].coffrets
-                        .removeAt(realIndex);
-                    await HiveService.saveAuditInstallations(audit);
-                  }
-                }
-              } else {
-                if (widget.zoneIndex < audit.basseTensionZones.length) {
-                  final realIndex = audit
-                      .basseTensionZones[widget.zoneIndex]
-                      .coffretsDirects
-                      .indexWhere((c) => c.equipmentId == coffret.equipmentId);
-                  if (realIndex >= 0) {
-                    audit.basseTensionZones[widget.zoneIndex].coffretsDirects
-                        .removeAt(realIndex);
-                    await HiveService.saveAuditInstallations(audit);
-                  }
-                }
-              }
-              if (coffret.qrCode.isNotEmpty) {
-                await HiveService.deleteCoffretDraft(coffret.qrCode);
-              }
-              await HiveService.deleteCoffretDraft(coffret.equipmentId);
               _rechargerZone();
-              _showSuccess('Coffret supprimé');
+              _showSuccess('Équipement supprimé');
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child: const Text('Supprimer'),

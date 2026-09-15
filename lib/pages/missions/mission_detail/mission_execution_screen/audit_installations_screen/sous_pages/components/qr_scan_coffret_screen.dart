@@ -147,8 +147,11 @@ class _QrScanCoffretScreenState extends State<QrScanCoffretScreen> {
           ),
         ),
       ).then((value) {
-        if (value == true) {
+        if (!mounted) return;
+        if (value == true || value is CoffretArmoire) {
           Navigator.pop(context, true);
+        } else {
+          _resetScanner();
         }
       });
       return;
@@ -175,8 +178,11 @@ class _QrScanCoffretScreenState extends State<QrScanCoffretScreen> {
         ),
       ),
     ).then((value) {
-      if (value == true) {
+      if (!mounted) return;
+      if (value == true || value is CoffretArmoire) {
         Navigator.pop(context, true);
+      } else {
+        _resetScanner();
       }
     });
   }
@@ -294,7 +300,12 @@ class _QrScanCoffretScreenState extends State<QrScanCoffretScreen> {
           ),
         ),
       ).then((value) {
-        if (value == true) Navigator.pop(context, true);
+        if (!mounted) return;
+        if (value == true || value is CoffretArmoire) {
+          Navigator.pop(context, true);
+        } else {
+          _resetScanner();
+        }
       });
     }
   }

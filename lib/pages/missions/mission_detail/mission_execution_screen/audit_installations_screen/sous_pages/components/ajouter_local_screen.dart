@@ -6765,6 +6765,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       final choix = await _showChoixClassementDialog(local);
       
       if (choix == null) {
+        if (mounted) Navigator.pop(context, true);
         return;
       }
       
@@ -6785,6 +6786,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
             if (choix2 == 'specifique') {
               // Continuer vers classement spécifique
             } else {
+              if (mounted) Navigator.pop(context, true);
               return;
             }
           } else {
@@ -6822,7 +6824,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
         typeLocal: local.type,
       );
       
-      final result = await Navigator.push(
+      await Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => ClassementEmplacementScreen(
@@ -6832,7 +6834,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
         ),
       );
       
-      if (result == true) {
+      if (mounted) {
         Navigator.pop(context, true);
       }
     } else {
@@ -6844,7 +6846,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
         typeLocal: local.type,
       );
       
-      final result = await Navigator.push(
+      await Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => ClassementEmplacementScreen(
@@ -6854,7 +6856,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
         ),
       );
       
-      if (result == true) {
+      if (mounted) {
         Navigator.pop(context, true);
       }
     }

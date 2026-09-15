@@ -48,7 +48,7 @@ class _MoyenneTensionScreenState extends ConsumerState<MoyenneTensionScreen> {
     
     try {
       // Recharger l'audit
-      final audit = await ref.read(auditInstallationsProvider(widget.mission.id).notifier).load();
+      final audit = await ref.read(auditInstallationsProvider(widget.mission.id).notifier).load(force: true);
 
       // Indexer les brouillons en UNE SEULE passe O(N)
       final draftsIndex = HiveService.getIndexedCoffretDraftsForMission(
