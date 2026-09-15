@@ -429,9 +429,17 @@ class _ObservationEnrichieWidgetState extends State<ObservationEnrichieWidget> {
 
   @override
   Widget build(BuildContext context) {
+    // Si l'élément requiert une priorité (non-conforme) et n'en a pas encore,
+    // on assure la valeur par défaut dans le modèle de données sans l'exposer dans l'UI
+    if (widget.showPriority && widget.element.priorite == null) {
+      widget.element.priorite = 3;
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Notion de priorité masquée de l'interface utilisateur (données et modèle conservés)
+        /*
         if (widget.showPriority) ...[
           Row(
             children: [
@@ -449,6 +457,7 @@ class _ObservationEnrichieWidgetState extends State<ObservationEnrichieWidget> {
           _buildModernPrioriteSelector(context),
           SizedBox(height: context.spacingM),
         ],
+        */
         _buildModernObservationField(context),
         SizedBox(height: context.spacingM),
         _buildModernElementPhotos(context),

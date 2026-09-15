@@ -1305,27 +1305,44 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
                   spacing: 12,
                   runSpacing: 6,
                   children: [
-                    _buildMiniStat(
-                      Icons.electrical_services_outlined,
-                      '${(local.coffrets as List).length}',
-                      'coffrets',
-                    ),
-                    _buildMiniStat(
-                      Icons.photo_outlined,
-                      '$totalPhotos',
-                      'photos',
-                    ),
-                    _buildMiniStat(
-                      Icons.comment_outlined,
-                      '${(local.observationsLibres as List).length}',
-                      'obs.',
-                    ),
-                    if (isFlowLong && local is MoyenneTensionLocal)
+                    if (isFlowLong) ...[
+                      _buildMiniStat(
+                        Icons.electrical_services_outlined,
+                        '${(local.coffrets as List).length}',
+                        'coffrets',
+                      ),
+                      _buildMiniStat(
+                        Icons.comment_outlined,
+                        '${(local.observationsLibres as List).length}',
+                        'obs',
+                      ),
                       _buildMiniStat(
                         Icons.memory_outlined,
-                        '${local.cellules.length}',
+                        '${local is MoyenneTensionLocal ? local.cellules.length : (local as BasseTensionLocal).cellules?.length ?? 0}',
                         'cellules',
                       ),
+                      _buildMiniStat(
+                        Icons.bolt_outlined,
+                        '${local is MoyenneTensionLocal ? local.transformateurs.length : (local as BasseTensionLocal).transformateurs?.length ?? 0}',
+                        'transfo',
+                      ),
+                    ] else ...[
+                      _buildMiniStat(
+                        Icons.electrical_services_outlined,
+                        '${(local.coffrets as List).length}',
+                        'coffrets',
+                      ),
+                      _buildMiniStat(
+                        Icons.photo_outlined,
+                        '$totalPhotos',
+                        'photos',
+                      ),
+                      _buildMiniStat(
+                        Icons.comment_outlined,
+                        '${(local.observationsLibres as List).length}',
+                        'obs',
+                      ),
+                    ],
                   ],
                 ),
 

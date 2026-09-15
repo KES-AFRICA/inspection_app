@@ -1682,7 +1682,8 @@ class _EtapeElementsControleState extends State<_EtapeElementsControle> {
           
           SizedBox(height: context.spacingM),
           
-          // Ligne 2 : Priorité (seule, sur toute la largeur)
+          // Notion de priorité masquée de l'interface utilisateur (données et modèle conservés)
+          /*
           if (element.conforme == false)
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1703,8 +1704,8 @@ class _EtapeElementsControleState extends State<_EtapeElementsControle> {
               _buildModernPrioriteSelector(context, element, color, index, sectionType),
             ],
           ),
-          
           SizedBox(height: context.spacingM),
+          */
           
           // Toggle Observation
           _buildModernObservationToggle(
@@ -2754,13 +2755,9 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
         final elements = elementsSlides[slideIndex];
         final nonRemplis = elements.where((e) => e.conforme == null && !e.estNA).toList();
         final sansPriorite = elements.where((e) => e.conforme == false && e.priorite == null).toList();
-          if (sansPriorite.isNotEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text('Priorité manquante pour ${sansPriorite.length} élément${sansPriorite.length > 1 ? 's' : ''}'),
-              backgroundColor: Colors.orange, duration: const Duration(seconds: 2),
-            ));
-            return;
-          }
+        for (var e in sansPriorite) {
+          e.priorite = 3;
+        }
         if (nonRemplis.isNotEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -2949,12 +2946,9 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
             return;
           }
           if (sansPriorite.isNotEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text('Veuillez renseigner la priorité des éléments Non (${sansPriorite.length} manquant${sansPriorite.length > 1 ? 's' : ''})'),
-              backgroundColor: Colors.orange, duration: const Duration(seconds: 2),
-            ));
-            widget.onFormStateChanged?.call();
-            return;
+            for (var e in sansPriorite) {
+              e.priorite = 3;
+            }
           }
         }
       }
@@ -5597,6 +5591,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       _conditionsValid = _validateElements(_conditionsExploitation);
     } else {
       _initializeElementsControle();
+      _accessible = true;
       if (widget.isMoyenneTension) {
         _selectedType = 'LOCAL_TRANSFORMATEUR';
         _typeValid = true;
@@ -5814,7 +5809,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       coffrets: widget.isEdition && widget.local is MoyenneTensionLocal
           ? (widget.local as MoyenneTensionLocal).coffrets
           : [],
-      accessible: _accessible ?? true,
+      accessible: _accessible ?? (widget.isEdition && existingLocal != null ? existingLocal.accessible : true),
       aReverifier: (_accessible == false),
       isRiskZone: _isRiskZone,
     );
@@ -5862,7 +5857,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       conditionsExploitation: _conditionsExploitation,
       observationsLibres: _observationsExistantes,
       photos: _localPhotos,
-      accessible: _accessible ?? true,
+      accessible: _accessible ?? (widget.isEdition && existingLocal != null ? (existingLocal.accessible ?? true) : true),
       aReverifier: (_accessible == false),
       cellules: isFlowLong ? _cellules : [],
       transformateurs: isFlowLong ? _transformateurs : [],
@@ -6012,7 +6007,9 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     if (elements.isEmpty) return false;
     for (var element in elements) {
       if (!(_conformeSelected[element] ?? false)) return false;
-      if (element.conforme == false && element.priorite == null) return false;
+      if (element.conforme == false && element.priorite == null) {
+        element.priorite = 3;
+      }
     }
     return true;
   }

@@ -65,20 +65,14 @@ class _MoyenneTensionScreenState extends ConsumerState<MoyenneTensionScreen> {
       int totalCoffrets = 0;
       for (int i = 0; i < audit.moyenneTensionLocaux.length; i++) {
         final local = audit.moyenneTensionLocaux[i];
-        final drafts = draftsIndex['local_${i}_null'] ?? [];
-        final savedQrCodes = local.coffrets.map((c) => c.qrCode).toSet();
-        final uniqueDrafts = drafts.where((d) => !savedQrCodes.contains(d.qrCode)).length;
-        totalCoffrets += uniqueDrafts + local.coffrets.length;
+        totalCoffrets += local.coffrets.length;
       }
       for (int z = 0; z < audit.moyenneTensionZones.length; z++) {
         final zone = audit.moyenneTensionZones[z];
         totalCoffrets += zone.coffrets.length;
         for (int i = 0; i < zone.locaux.length; i++) {
           final local = zone.locaux[i];
-          final drafts = draftsIndex['local_in_zone_${i}_$z'] ?? [];
-          final savedQrCodes = local.coffrets.map((c) => c.qrCode).toSet();
-          final uniqueDrafts = drafts.where((d) => !savedQrCodes.contains(d.qrCode)).length;
-          totalCoffrets += uniqueDrafts + local.coffrets.length;
+          totalCoffrets += local.coffrets.length;
         }
       }
 
@@ -1039,10 +1033,6 @@ void _ouvrirClassementZone(ClassementZone classement) async {
     final pourcentage =
         totalCount > 0 ? (conformiteCount / totalCount * 100).round() : 0;
 
-    final allCoffrets = _getCoffretsForLocal(local, localIndex);
-    final totalPhotos = local.photos.length +
-        local.observationsLibres.fold<int>(0, (s, o) => s + o.photos.length);
-
     final localTypes = HiveService.getLocalTypes();
     final typeLabel = localTypes[local.type] ?? local.type;
     final isFlowLong = local.type == 'LOCAL_TRANSFORMATEUR' || local.type == 'LOCAL_MTBT';
@@ -1128,11 +1118,10 @@ void _ouvrirClassementZone(ClassementZone classement) async {
                   spacing: 12,
                   runSpacing: 6,
                   children: [
-                    _buildMiniStat(Icons.electrical_services_outlined, '${allCoffrets.length}', 'coffret(s)'),
-                    _buildMiniStat(Icons.photo_outlined, '$totalPhotos', 'photo(s)'),
-                    _buildMiniStat(Icons.comment_outlined, '${local.observationsLibres.length}', 'obs.'),
-                    if (isFlowLong)
-                      _buildMiniStat(Icons.memory_outlined, '${local.cellules.length}', 'cellule(s)'),
+                    _buildMiniStat(Icons.electrical_services_outlined, '${local.coffrets.length}', 'coffrets'),
+                    _buildMiniStat(Icons.comment_outlined, '${local.observationsLibres.length}', 'obs'),
+                    _buildMiniStat(Icons.memory_outlined, '${local.cellules.length}', 'cellules'),
+                    _buildMiniStat(Icons.bolt_outlined, '${local.transformateurs.length}', 'transfo'),
                   ],
                 ),
                 if (totalCount > 0) ...[
