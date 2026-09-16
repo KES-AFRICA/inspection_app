@@ -45,6 +45,7 @@ class MissionEntity {
   final List<String> autresDocuments;
   final String? installation;
   final List<String>? perimetreMission;
+  final bool afficherTableauFoudre;
 
   const MissionEntity({
     required this.id,
@@ -92,6 +93,7 @@ class MissionEntity {
     this.autresDocuments = const [],
     this.installation,
     this.perimetreMission,
+    this.afficherTableauFoudre = false,
   });
 
   bool get isEnAttente => status.toLowerCase() == 'en_attente';

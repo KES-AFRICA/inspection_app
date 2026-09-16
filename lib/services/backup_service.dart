@@ -35,6 +35,7 @@ import '../models/foudre.dart';
 import '../models/mesures_essais.dart';
 import '../models/jsa.dart';
 import '../models/renseignements_generaux.dart';
+import '../models/lighting_inspection.dart';
 import 'hive_service.dart';
 import 'installation_description_sync_service.dart';
 import 'sequence_progress_service.dart';
@@ -501,9 +502,15 @@ class BackupService {
           final normalizedPath = p.replaceAll('\\', '/');
           final parts = normalizedPath.split('/');
           final idx = parts.indexOf('audit_photos');
+          final idxLogo = parts.indexOf('client_logos');
+          final idxQr = parts.indexOf('client_qrcodes');
           String relativePath;
           if (idx != -1 && idx < parts.length) {
             relativePath = parts.sublist(idx).join('/');
+          } else if (idxLogo != -1 && idxLogo < parts.length) {
+            relativePath = parts.sublist(idxLogo).join('/');
+          } else if (idxQr != -1 && idxQr < parts.length) {
+            relativePath = parts.sublist(idxQr).join('/');
           } else {
             relativePath = 'audit_photos/misc/${photoFile.path.split('/').last}';
           }
@@ -682,12 +689,60 @@ class BackupService {
         .map((t) => t.toJson())
         .toList();
 
-    // Ne pas collecter le base64 ici, seulement collecter la liste de chemins physiques
-    final photoPaths = audit != null ? _collectAllPhotoPaths(audit) : <String>[];
+    final lightingBox = Hive.box<LightingInspection>('lighting_inspections');
+    final lightings = lightingBox.values
+        .where((l) => l.missionId == id)
+        .map((l) => l.toJson())
+        .toList();
+
+    // Collecter exhaustivement toutes les photos physiques de la mission
+    final allCollectedPhotos = <String>{};
+    if (m.logoClient != null && m.logoClient!.trim().isNotEmpty) {
+      allCollectedPhotos.add(m.logoClient!.trim());
+    }
+    if (m.qrCodeClient != null && m.qrCodeClient!.trim().isNotEmpty) {
+      allCollectedPhotos.add(m.qrCodeClient!.trim());
+    }
+    if (audit != null) {
+      allCollectedPhotos.addAll(_collectAllPhotoPaths(audit));
+    }
+    if (desc != null) {
+      for (final item in [
+        ...desc.alimentationMoyenneTension,
+        ...desc.alimentationBasseTension,
+        ...desc.groupeElectrogene,
+        ...desc.alimentationCarburant,
+        ...desc.inverseur,
+        ...desc.stabilisateur,
+        ...desc.onduleurs,
+        ...desc.cpi,
+      ]) {
+        allCollectedPhotos.addAll(item.photoPaths.where((p) => p.isNotEmpty));
+      }
+      for (final obs in desc.foudreObservations) {
+        allCollectedPhotos.addAll(obs.photos.where((p) => p.isNotEmpty));
+      }
+    }
+    if (mesures != null) {
+      for (final pt in mesures.prisesTerre) {
+        if (pt.photo != null && pt.photo!.isNotEmpty) {
+          allCollectedPhotos.add(pt.photo!);
+        }
+      }
+    }
+    for (final l in lightingBox.values.where((l) => l.missionId == id)) {
+      for (final ncl in l.nonConformingLuminaires) {
+        for (final ans in ncl.answers) {
+          allCollectedPhotos.addAll(ans.photoPaths.where((p) => p.isNotEmpty));
+        }
+      }
+    }
+
+    final photoPaths = allCollectedPhotos.toList();
 
     return {
       'mission': m.toJson(),
-      'photo_paths': photoPaths, // Utilisé uniquement pour l'Isolate de streaming
+      'photo_paths': photoPaths, // Utilisé pour l'Isolate de streaming V4 et l'export photos legacy
       'audit': audit != null ? _serializeAudit(audit) : null,
 
       'description_installations':
@@ -699,6 +754,7 @@ class BackupService {
       'foudre_observations': foudres.map(_f).toList(),
       'classements_locaux': classements,
       'classements_zones': classementZones,
+      'lighting_inspections': lightings,
       'sequence_progress': sequenceProgress,
       'trash_items': trashItems,
     };
@@ -721,10 +777,14 @@ class BackupService {
   }
 
   static Map<String, dynamic> _serializeMTLocal(MoyenneTensionLocal l) => {
+        'id': l.id,
         'nom': l.nom,
         'type': l.type,
         'accessible': l.accessible,
         'aReverifier': l.aReverifier,
+        'isRiskZone': l.isRiskZone,
+        'createdAt': l.createdAt?.toIso8601String(),
+        'updatedAt': l.updatedAt?.toIso8601String(),
         'photos': l.photos,
         'dispositionsConstructives':
             l.dispositionsConstructives.map(_serializeElement).toList(),
@@ -745,8 +805,12 @@ class BackupService {
       };
 
   static Map<String, dynamic> _serializeMTZone(MoyenneTensionZone z) => {
+        'id': z.id,
         'nom': z.nom,
         'description': z.description,
+        'isRiskZone': z.isRiskZone,
+        'createdAt': z.createdAt?.toIso8601String(),
+        'updatedAt': z.updatedAt?.toIso8601String(),
         'photos': z.photos,
         'classementZoneId': z.classementZoneId,
         'coffrets': z.coffrets.map(_serializeCoffret).toList(),
@@ -755,8 +819,12 @@ class BackupService {
       };
 
   static Map<String, dynamic> _serializeBTZone(BasseTensionZone z) => {
+        'id': z.id,
         'nom': z.nom,
         'description': z.description,
+        'isRiskZone': z.isRiskZone,
+        'createdAt': z.createdAt?.toIso8601String(),
+        'updatedAt': z.updatedAt?.toIso8601String(),
         'photos': z.photos,
         'classementZoneId': z.classementZoneId,
         'coffretsDirects': z.coffretsDirects.map(_serializeCoffret).toList(),
@@ -765,10 +833,14 @@ class BackupService {
       };
 
   static Map<String, dynamic> _serializeBTLocal(BasseTensionLocal l) => {
+        'id': l.id,
         'nom': l.nom,
         'type': l.type,
         'accessible': l.accessible,
         'aReverifier': l.aReverifier,
+        'isRiskZone': l.isRiskZone,
+        'createdAt': l.createdAt?.toIso8601String(),
+        'updatedAt': l.updatedAt?.toIso8601String(),
         'photos': l.photos,
         'dispositionsConstructives':
             (l.dispositionsConstructives ?? []).map(_serializeElement).toList(),
@@ -789,6 +861,8 @@ class BackupService {
         'photos': e.photos,
         'referenceNormative': e.referenceNormative,
         'estNA': e.estNA,
+        'familleRisque': e.familleRisque,
+        'criticite': e.criticite,
       };
 
   static Map<String, dynamic> _serializeCellule(Cellule c) => {
@@ -817,6 +891,11 @@ class BackupService {
         'photo': c.photo,
         'elementsVerifies':
             c.elementsVerifies.map(_serializeElement).toList(),
+        'observations': c.observations?.map(_serializeElement).toList(),
+        'syncId': c.syncId,
+        'tensionService': c.tensionService,
+        'createdAt': c.createdAt?.toIso8601String(),
+        'updatedAt': c.updatedAt?.toIso8601String(),
       };
 
   static Map<String, dynamic> _serializeTransformateur(
@@ -861,7 +940,45 @@ class BackupService {
   @visibleForTesting
   static List<CoffretArmoire> testParseCoffrets(dynamic raw) => _parseCoffrets(raw);
 
+  @visibleForTesting
+  static dynamic testFixPathsRecursively(dynamic value, String appDirPath) => _fixPathsRecursively(value, appDirPath);
+
+  @visibleForTesting
+  static Map<String, dynamic> testSerializeCellule(Cellule c) => _serializeCellule(c);
+
+  @visibleForTesting
+  static Cellule testParseCellule(Map<String, dynamic> d) => _parseCellule(d);
+
+  @visibleForTesting
+  static Map<String, dynamic> testSerializeTransformateur(TransformateurMTBT t) => _serializeTransformateur(t);
+
+  @visibleForTesting
+  static TransformateurMTBT testParseTransformateur(Map<String, dynamic> d) => _parseTransformateur(d);
+
+  @visibleForTesting
+  static Map<String, dynamic> testSerializePoint(PointVerification p) => _serializePoint(p);
+
+  @visibleForTesting
+  static PointVerification testParsePoint(Map<String, dynamic> d) => _parsePoint(d);
+
+  @visibleForTesting
+  static Map<String, dynamic> testSerializeObs(ObservationLibre o) => _serializeObs(o);
+
+  @visibleForTesting
+  static List<ObservationLibre> testParseObs(dynamic raw) => _parseObs(raw);
+
+  @visibleForTesting
+  static Map<String, dynamic> testSerializeRenseignements(RenseignementsGeneraux r) => _serializeRenseignements(r);
+
+  @visibleForTesting
+  static Map<String, dynamic> testRemapMissionId(
+          Map<String, dynamic> data, String oldId, String newId, String newClientName) =>
+      _remapMissionId(data, oldId, newId, newClientName);
+
   static Map<String, dynamic> _serializeCoffret(CoffretArmoire c) => {
+        'id': c.id,
+        'createdAt': c.createdAt?.toIso8601String(),
+        'updatedAt': c.updatedAt?.toIso8601String(),
         'qrCode': c.qrCode,
         'nom': c.nom,
         'type': c.type,
@@ -896,6 +1013,9 @@ class BackupService {
         'observationsLibres': c.observationsLibres.map(_serializeObs).toList(),
         'observationsParafoudre':
             c.observationsParafoudre.map(_serializeObs).toList(),
+        'observationsParafoudreEnrichies': c.observationsParafoudreEnrichies
+            ?.map(_serializeElement)
+            .toList(),
         'departures': c.effectiveDepartures.map(_serializeDepart).toList(),
         'terminalCircuits': c.effectiveTerminalCircuits.map(_serializeCircuit).toList(),
         'sourceEquipementId': c.sourceEquipementId,
@@ -944,6 +1064,7 @@ class BackupService {
       };
 
   static Map<String, dynamic> _serializeAlim(Alimentation a) => {
+        'id': a.id,
         'typeProtection': a.typeProtection,
         'courbe': a.courbe,
         'ddr': a.ddr,
@@ -953,6 +1074,7 @@ class BackupService {
         'source': a.source,
         'sourceKnown': a.sourceKnown,
         'marqueDisjoncteur': a.marqueDisjoncteur,
+        'icc3Max': a.icc3Max,
         'photos': a.photos,
         'nombreCables': a.nombreCables,
         'sectionCableNeutre': a.sectionCableNeutre,
@@ -968,6 +1090,9 @@ class BackupService {
         'referenceNormative': p.referenceNormative,
         'priorite': p.priorite,
         'photos': p.photos,
+        'observations': p.observations?.map(_serializeElement).toList(),
+        'criticite': p.criticite,
+        'familleRisque': p.familleRisque,
       };
 
   static Map<String, dynamic> _serializeObs(ObservationLibre o) => {
@@ -979,6 +1104,7 @@ class BackupService {
         'referenceNormative': o.referenceNormative,
         'familleRisque': o.familleRisque,
         'criticite': o.criticite,
+        'isAutoLinked': o.isAutoLinked,
       };
 
   // ── Description des installations ──
@@ -1209,6 +1335,8 @@ class BackupService {
         'compteRendu': r.compteRendu,
         'accompagnateurs': r.accompagnateurs,
         'verificateurs': r.verificateurs,
+        'formationHabilitationElectrique': r.formationHabilitationElectrique,
+        'createdAt': r.createdAt?.toIso8601String(),
         'updatedAt': r.updatedAt.toIso8601String(),
         'nomSite': r.nomSite,
         'activiteSurSite': r.activiteSurSite,
@@ -1514,13 +1642,15 @@ class BackupService {
   // Helper récursif pour corriger les chemins de photos absolus dans les données importées
   static dynamic _fixPathsRecursively(dynamic value, String appDirPath) {
     if (value is String) {
-      if (value.contains('/audit_photos/') || value.contains('\\audit_photos\\')) {
-        final separator = value.contains('\\audit_photos\\') ? '\\' : '/';
-        final keyword = '${separator}audit_photos${separator}';
-        final parts = value.split(keyword);
-        if (parts.length >= 2) {
-          final suffix = parts.sublist(1).join(keyword);
-          return '$appDirPath${separator}audit_photos${separator}$suffix';
+      for (final folder in const ['audit_photos', 'client_logos', 'client_qrcodes']) {
+        if (value.contains('/$folder/') || value.contains('\\$folder\\')) {
+          final separator = value.contains('\\$folder\\') ? '\\' : '/';
+          final keyword = '$separator$folder$separator';
+          final parts = value.split(keyword);
+          if (parts.length >= 2) {
+            final suffix = parts.sublist(1).join(keyword);
+            return '$appDirPath$separator$folder$separator$suffix';
+          }
         }
       }
       return value;
@@ -1535,6 +1665,7 @@ class BackupService {
     }
     return value;
   }
+
 
   // ── INSPECTION ET VALIDATION PRÉALABLE D'UN CONTENU JSON ──
 
@@ -1780,14 +1911,25 @@ class BackupService {
     final zipPath = params['zipPath']!;
     final extractPath = params['extractPath']!;
     final appPhotosPath = params['appPhotosPath']!;
+    final appDirPath = params['appDirPath'] ?? Directory(appPhotosPath).parent.path;
 
     // 1. Extraction zip sur le disque
     await extractFileToDisk(zipPath, extractPath);
 
-    // 2. Déplacement/copie des photos extraites
+    // 2. Déplacement/copie des photos et médias extraits (audit_photos, client_logos, client_qrcodes)
     final extractedPhotosDir = Directory('$extractPath/photos/audit_photos');
     if (extractedPhotosDir.existsSync()) {
-      _syncCopyDirRecursively(extractedPhotosDir, Directory(appPhotosPath));
+      _syncCopyDirRecursively(extractedPhotosDir, Directory('$appDirPath/audit_photos'));
+    }
+
+    final extractedLogosDir = Directory('$extractPath/photos/client_logos');
+    if (extractedLogosDir.existsSync()) {
+      _syncCopyDirRecursively(extractedLogosDir, Directory('$appDirPath/client_logos'));
+    }
+
+    final extractedQrcodesDir = Directory('$extractPath/photos/client_qrcodes');
+    if (extractedQrcodesDir.existsSync()) {
+      _syncCopyDirRecursively(extractedQrcodesDir, Directory('$appDirPath/client_qrcodes'));
     }
   }
 
@@ -1815,8 +1957,18 @@ class BackupService {
   // ── COLLECTEUR DE CHEMINS PHOTOS POUR EXPORT V4 ──
   static void _collectPhotoPathsRecursively(dynamic value, Set<String> paths) {
     if (value is String) {
-      if ((value.contains('/audit_photos/') || value.contains('\\audit_photos\\')) &&
-          (value.endsWith('.jpg') || value.endsWith('.jpeg') || value.endsWith('.png') || value.endsWith('.webp'))) {
+      final vLower = value.toLowerCase();
+      final hasMediaFolder = value.contains('/audit_photos/') ||
+          value.contains(r'\audit_photos\') ||
+          value.contains('/client_logos/') ||
+          value.contains(r'\client_logos\') ||
+          value.contains('/client_qrcodes/') ||
+          value.contains(r'\client_qrcodes\');
+      final isImageExt = vLower.endsWith('.jpg') ||
+          vLower.endsWith('.jpeg') ||
+          vLower.endsWith('.png') ||
+          vLower.endsWith('.webp');
+      if (hasMediaFolder && isImageExt) {
         paths.add(value);
       }
     } else if (value is Map) {
@@ -1829,6 +1981,7 @@ class BackupService {
       }
     }
   }
+
 
   // ── ENTREE UNIFIEE D'IMPORTATION (DUAL-MODE AUTOMATIQUE BIN/ZIP & LEGACY JSON) ──
   static Future<ImportResult> importerMissions(
@@ -1911,6 +2064,7 @@ class BackupService {
         'zipPath': effectiveZipPath,
         'extractPath': extractDir.path,
         'appPhotosPath': '${appDir.path}/audit_photos',
+        'appDirPath': appDir.path,
       }));
 
       onProgress?.call('Analyse du manifeste V4...', 0.35);
@@ -1943,7 +2097,9 @@ class BackupService {
           final f = files[i];
           try {
             final content = await f.readAsString();
-            final mData = jsonDecode(content) as Map<String, dynamic>;
+            var mData = jsonDecode(content) as Map<String, dynamic>;
+            // ✅ CORRECTION FORENSIC CRITIQUE V4 : Réécrire les chemins physiques vers l'appareil récepteur
+            mData = _fixPathsRecursively(mData, appDir.path) as Map<String, dynamic>;
             final r = await _importMission(
               mData,
               ecraser: ecraserExistants,
@@ -2263,6 +2419,7 @@ class BackupService {
     remapIdInList('trash_items');
     remapIdInList('local_drafts');
     remapIdInList('coffret_drafts');
+    remapIdInList('lighting_inspections');
 
     return copy;
   }
@@ -2344,24 +2501,61 @@ class BackupService {
         createdPhotoPaths.addAll(paths);
       }
 
+      // Nettoyage en cas d'écrasement explicite pour éviter les orphelins et doublons
+      if (ecraser) {
+        final foudreBox = Hive.box<Foudre>('foudre_observations');
+        final fKeys = foudreBox.values.where((f) => f.missionId == targetMissionId).map((f) => f.key).toList();
+        for (final k in fKeys) {
+          await foudreBox.delete(k);
+        }
+
+        final cBox = Hive.box<ClassementEmplacement>('classement_locaux');
+        final cKeys = cBox.values.where((c) => c.missionId == targetMissionId).map((c) => c.key).toList();
+        for (final k in cKeys) {
+          await cBox.delete(k);
+        }
+
+        final czBox = Hive.box<ClassementZone>('classement_zones');
+        final czKeys = czBox.values.where((c) => c.missionId == targetMissionId).map((c) => c.key).toList();
+        for (final k in czKeys) {
+          await czBox.delete(k);
+        }
+
+        final tBox = Hive.box<TrashItem>('trash_items');
+        final tKeys = tBox.values.where((t) => t.missionId == targetMissionId).map((t) => t.key).toList();
+        for (final k in tKeys) {
+          await tBox.delete(k);
+        }
+
+        final lBox = Hive.box<LightingInspection>('lighting_inspections');
+        final lKeys = lBox.values.where((l) => l.missionId == targetMissionId).map((l) => l.id).toList();
+        for (final k in lKeys) {
+          await lBox.delete(k);
+        }
+      }
+
       // Sub-modules avec targetMissionId
       final auditData = _safeMap(targetData['audit']);
-      if (auditData.isNotEmpty) await _importAudit(auditData);
+      if (auditData.isNotEmpty) await _importAudit(auditData, ecraser: ecraser);
 
       final descData = _safeMap(targetData['description_installations']);
-      if (descData.isNotEmpty) await _importDescription(descData);
+      if (descData.isNotEmpty) await _importDescription(descData, ecraser: ecraser);
 
       final mesuresData = _safeMap(targetData['mesures_essais']);
-      if (mesuresData.isNotEmpty) await _importMesures(mesuresData);
+      if (mesuresData.isNotEmpty) await _importMesures(mesuresData, ecraser: ecraser);
 
       final jsaData = _safeMap(targetData['jsa']);
-      if (jsaData.isNotEmpty) await _importJSA(jsaData);
+      if (jsaData.isNotEmpty) await _importJSA(jsaData, ecraser: ecraser);
 
       final rensData = _safeMap(targetData['renseignements_generaux']);
-      if (rensData.isNotEmpty) await _importRenseignements(rensData);
+      if (rensData.isNotEmpty) await _importRenseignements(rensData, ecraser: ecraser);
+
+      for (final l in _safeList(targetData['lighting_inspections'])) {
+        if (l is Map) await _importLightingInspection(_safeMap(l), ecraser: ecraser);
+      }
 
       for (final f in _safeList(targetData['foudre_observations'])) {
-        if (f is Map) await _importFoudre(_safeMap(f));
+        if (f is Map) await _importFoudre(_safeMap(f), ecraser: ecraser);
       }
 
       for (final c in _safeList(targetData['classements_locaux'])) {
@@ -2425,15 +2619,22 @@ class BackupService {
   }
 
   // ── Audit ──
-  static Future<void> _importAudit(Map<String, dynamic> d) async {
+  static Future<void> _importAudit(Map<String, dynamic> d, {bool ecraser = false}) async {
     final missionId = d['missionId'] as String;
 
     // Vérifier si un audit existe déjà pour cette mission
     final box = Hive.box<AuditInstallationsElectriques>(
         'audit_installations_electriques');
-    final exists =
-        box.values.any((a) => a.missionId == missionId);
-    if (exists) return;
+    final existingKeys = box.values
+        .where((a) => a.missionId == missionId)
+        .map((a) => a.key)
+        .toList();
+    if (existingKeys.isNotEmpty) {
+      if (!ecraser) return;
+      for (final k in existingKeys) {
+        await box.delete(k);
+      }
+    }
 
     final audit = AuditInstallationsElectriques(
       missionId: missionId,
@@ -2474,10 +2675,14 @@ class BackupService {
 
   static MoyenneTensionLocal _parseMTLocal(Map<String, dynamic> d) {
     final local = MoyenneTensionLocal(
+      id: d['id'] as String?,
       nom: d['nom'] as String? ?? '',
       type: d['type'] as String? ?? 'LOCAL_ELECTRIQUE',
       accessible: d['accessible'] as bool? ?? true,
       aReverifier: d['aReverifier'] as bool? ?? false,
+      isRiskZone: d['isRiskZone'] as bool? ?? false,
+      createdAt: d['createdAt'] != null ? _dt(d['createdAt']) : null,
+      updatedAt: d['updatedAt'] != null ? _dt(d['updatedAt']) : null,
       photos: _strList(d['photos']),
       dispositionsConstructives: _parseElements(d['dispositionsConstructives']),
       conditionsExploitation: _parseElements(d['conditionsExploitation']),
@@ -2504,10 +2709,14 @@ class BackupService {
 
   static MoyenneTensionZone _parseMTZone(Map<String, dynamic> d) =>
       MoyenneTensionZone(
+        id: d['id'] as String?,
         nom: d['nom'] as String? ?? '',
         description: d['description'] as String?,
         photos: _strList(d['photos']),
         classementZoneId: d['classementZoneId'] as String?,
+        isRiskZone: d['isRiskZone'] as bool? ?? false,
+        createdAt: d['createdAt'] != null ? _dt(d['createdAt']) : null,
+        updatedAt: d['updatedAt'] != null ? _dt(d['updatedAt']) : null,
         coffrets: _parseCoffrets(d['coffrets']),
         observationsLibres: _parseObs(d['observationsLibres']),
         locaux: (d['locaux'] as List<dynamic>?)
@@ -2518,10 +2727,14 @@ class BackupService {
 
   static BasseTensionZone _parseBTZone(Map<String, dynamic> d) =>
       BasseTensionZone(
+        id: d['id'] as String?,
         nom: d['nom'] as String? ?? '',
         description: d['description'] as String?,
         photos: _strList(d['photos']),
         classementZoneId: d['classementZoneId'] as String?,
+        isRiskZone: d['isRiskZone'] as bool? ?? false,
+        createdAt: d['createdAt'] != null ? _dt(d['createdAt']) : null,
+        updatedAt: d['updatedAt'] != null ? _dt(d['updatedAt']) : null,
         coffretsDirects: _parseCoffrets(d['coffretsDirects']),
         observationsLibres: _parseObs(d['observationsLibres']),
         locaux: (d['locaux'] as List<dynamic>?)
@@ -2532,10 +2745,14 @@ class BackupService {
 
   static BasseTensionLocal _parseBTLocal(Map<String, dynamic> d) =>
       BasseTensionLocal(
+        id: d['id'] as String?,
         nom: d['nom'] as String? ?? '',
         type: d['type'] as String? ?? 'LOCAL_ELECTRIQUE',
         accessible: d['accessible'] as bool? ?? true,
         aReverifier: d['aReverifier'] as bool? ?? false,
+        isRiskZone: d['isRiskZone'] as bool? ?? false,
+        createdAt: d['createdAt'] != null ? _dt(d['createdAt']) : null,
+        updatedAt: d['updatedAt'] != null ? _dt(d['updatedAt']) : null,
         photos: _strList(d['photos']),
         dispositionsConstructives: _parseElements(d['dispositionsConstructives']),
         conditionsExploitation: _parseElements(d['conditionsExploitation']),
@@ -2568,6 +2785,8 @@ class BackupService {
         photos: _strList(m['photos']),
         referenceNormative: m['referenceNormative'] as String?,
         estNA: estNA,
+        familleRisque: m['familleRisque'] as String?,
+        criticite: m['criticite'] as String?,
       );
     }).toList();
   }
@@ -2589,6 +2808,11 @@ class BackupService {
       parafoudres: d['parafoudres'] as String? ?? '',
       photos: _strList(d['photos']),
       elementsVerifies: _parseElements(d['elementsVerifies']),
+      observations: _parseElements(d['observations']),
+      syncId: d['syncId'] as String?,
+      tensionService: d['tensionService'] as String?,
+      createdAt: d['createdAt'] != null ? _dt(d['createdAt']) : null,
+      updatedAt: d['updatedAt'] != null ? _dt(d['updatedAt']) : null,
       gamme: d['gamme'] as String?,
       calibreDisjoncteur: d['calibreDisjoncteur'] as String?,
       sectionCables: legacySection ?? secPhase,
@@ -2640,6 +2864,8 @@ class BackupService {
       nom: d['nom'] as String?,
       photo: d['photo'] as String?,
       repere: d['repere'] as String?,
+      createdAt: d['createdAt'] != null ? _dt(d['createdAt']) : null,
+      updatedAt: d['updatedAt'] != null ? _dt(d['updatedAt']) : null,
     );
   }
 
@@ -2648,6 +2874,7 @@ class BackupService {
     return (raw as List<dynamic>).map((e) {
       final d = e as Map<String, dynamic>;
       return CoffretArmoire(
+        id: d['id'] as String?,
         qrCode: d['qrCode'] as String? ?? '',
         nom: d['nom'] as String? ?? '',
         type: d['type'] as String? ?? '',
@@ -2671,6 +2898,8 @@ class BackupService {
         presenceCPI: d['presenceCPI'] as bool?,
         departPrisAvecProtection: d['departPrisAvecProtection'] as bool?,
         accessible: d['accessible'] as bool? ?? true,
+        createdAt: d['createdAt'] != null ? _dt(d['createdAt']) : null,
+        updatedAt: d['updatedAt'] != null ? _dt(d['updatedAt']) : null,
         photos: _strList(d['photos']),
         photosExternes: _strList(d['photosExternes']),
         photosInternes: _strList(d['photosInternes']),
@@ -2687,6 +2916,8 @@ class BackupService {
             [],
         observationsLibres: _parseObs(d['observationsLibres']),
         observationsParafoudre: _parseObs(d['observationsParafoudre']),
+        observationsParafoudreEnrichies:
+            _parseElements(d['observationsParafoudreEnrichies']),
         departures: (d['departures'] as List<dynamic>?)
                 ?.map((dep) => _parseDepart(dep as Map<String, dynamic>))
                 .toList() ??
@@ -2743,6 +2974,7 @@ class BackupService {
       );
 
   static Alimentation _parseAlim(Map<String, dynamic> d) => Alimentation(
+        id: d['id'] as String?,
         typeProtection: d['typeProtection'] as String? ?? '',
         courbe: d['courbe'] as String? ?? '',
         ddr: d['ddr'] as String?,
@@ -2753,6 +2985,7 @@ class BackupService {
         sourceKnown: d['sourceKnown'] as String?,
         marqueDisjoncteur: d['marqueDisjoncteur'] as String?,
         photos: _strList(d['photos']),
+        icc3Max: d['icc3Max'] as String? ?? '',
         nombreCables: d['nombreCables'] as String?,
         sectionCableNeutre: d['sectionCableNeutre'] as String?,
         conducteursPhase: d['conducteursPhase'] as int?,
@@ -2773,6 +3006,9 @@ class BackupService {
       referenceNormative: d['referenceNormative'] as String?,
       priorite: priorite,
       photos: _strList(d['photos']),
+      observations: _parseElements(d['observations']),
+      criticite: d['criticite'] as String?,
+      familleRisque: d['familleRisque'] as String?,
     );
   }
 
@@ -2789,18 +3025,26 @@ class BackupService {
         referenceNormative: m['referenceNormative'] as String?,
         familleRisque: m['familleRisque'] as String?,
         criticite: m['criticite'] as String?,
+        isAutoLinked: m['isAutoLinked'] as bool? ?? false,
       );
     }).toList();
   }
 
   // ── Description ──
-  static Future<void> _importDescription(Map<String, dynamic> d) async {
+  static Future<void> _importDescription(Map<String, dynamic> d, {bool ecraser = false}) async {
     final missionId = d['missionId'] as String;
     final box = Hive.box<DescriptionInstallations>('description_installations');
 
-    // Ne pas écraser une description existante
-    final exists = box.values.any((v) => v.missionId == missionId);
-    if (exists) return;
+    final existingKeys = box.values
+        .where((v) => v.missionId == missionId)
+        .map((v) => v.key)
+        .toList();
+    if (existingKeys.isNotEmpty) {
+      if (!ecraser) return;
+      for (final k in existingKeys) {
+        await box.delete(k);
+      }
+    }
 
     final desc = DescriptionInstallations(
       missionId: missionId,
@@ -2852,12 +3096,20 @@ class BackupService {
   }
 
   // ── Mesures et essais ──
-  static Future<void> _importMesures(Map<String, dynamic> d) async {
+  static Future<void> _importMesures(Map<String, dynamic> d, {bool ecraser = false}) async {
     try {
       final missionId = d['missionId'] as String;
       final box = Hive.box<MesuresEssais>('mesures_essais');
-      final exists = box.values.any((m) => m.missionId == missionId);
-      if (exists) return; // Ne pas écraser
+      final existingKeys = box.values
+          .where((m) => m.missionId == missionId)
+          .map((m) => m.key)
+          .toList();
+      if (existingKeys.isNotEmpty) {
+        if (!ecraser) return;
+        for (final k in existingKeys) {
+          await box.delete(k);
+        }
+      }
 
       final cm = d['conditionMesure'] as Map<String, dynamic>?;
       final eda = d['essaiDemarrageAuto'] as Map<String, dynamic>?;
@@ -2976,12 +3228,20 @@ class BackupService {
   }
 
   // ── JSA ──
-  static Future<void> _importJSA(Map<String, dynamic> d) async {
+  static Future<void> _importJSA(Map<String, dynamic> d, {bool ecraser = false}) async {
     try {
       final missionId = d['missionId'] as String;
       final box = Hive.box<JSA>('jsa');
-      final exists = box.values.any((j) => j.missionId == missionId);
-      if (exists) return;
+      final existingKeys = box.values
+          .where((j) => j.missionId == missionId)
+          .map((j) => j.key)
+          .toList();
+      if (existingKeys.isNotEmpty) {
+        if (!ecraser) return;
+        for (final k in existingKeys) {
+          await box.delete(k);
+        }
+      }
 
       final pu = d['planUrgence'] as Map<String, dynamic>?;
       final da = d['dangers'] as Map<String, dynamic>?;
@@ -3096,13 +3356,21 @@ class BackupService {
   }
 
   // ── Renseignements généraux ──
-  static Future<void> _importRenseignements(Map<String, dynamic> d) async {
+  static Future<void> _importRenseignements(Map<String, dynamic> d, {bool ecraser = false}) async {
     try {
       final missionId = d['missionId'] as String;
       final box =
           Hive.box<RenseignementsGeneraux>('renseignements_generaux');
-      final exists = box.values.any((r) => r.missionId == missionId);
-      if (exists) return;
+      final existingKeys = box.values
+          .where((r) => r.missionId == missionId)
+          .map((r) => r.key)
+          .toList();
+      if (existingKeys.isNotEmpty) {
+        if (!ecraser) return;
+        for (final k in existingKeys) {
+          await box.delete(k);
+        }
+      }
       final rens = RenseignementsGeneraux(
         missionId: missionId,
         etablissement: d['etablissement'] as String? ?? '',
@@ -3128,6 +3396,11 @@ class BackupService {
             [],
         nomSite: d['nomSite'] as String? ?? '',
         updatedAt: _dt(d['updatedAt']),
+        formationHabilitationElectrique:
+            d['formationHabilitationElectrique'] as String?,
+        createdAt: d['createdAt'] != null
+            ? DateTime.tryParse(d['createdAt'] as String)
+            : null,
         activiteSurSite: d['activiteSurSite'] as String?,
         classementReglementaireType: d['classementReglementaireType'] as String?,
         classementReglementaireCategorie: d['classementReglementaireCategorie'] as String?,
@@ -3139,13 +3412,31 @@ class BackupService {
   }
 
   // ── Foudre ──
-  static Future<void> _importFoudre(Map<String, dynamic> d) async {
+  static Future<void> _importFoudre(Map<String, dynamic> d, {bool ecraser = false}) async {
     try {
       final foudre = Foudre.fromJson(d);
       final box = Hive.box<Foudre>('foudre_observations');
+      if (!ecraser) {
+        final exists = box.values.any((f) =>
+            f.missionId == foudre.missionId &&
+            f.observation == foudre.observation);
+        if (exists) return;
+      }
       await box.add(foudre);
     } catch (e) {
       if (kDebugMode) print('⚠️ Foudre import: $e');
+    }
+  }
+
+  // ── Inspection d'éclairage ──
+  static Future<void> _importLightingInspection(Map<String, dynamic> d, {bool ecraser = false}) async {
+    try {
+      final item = LightingInspection.fromJson(d);
+      final box = Hive.box<LightingInspection>('lighting_inspections');
+      if (box.containsKey(item.id) && !ecraser) return;
+      await box.put(item.id, item);
+    } catch (e) {
+      if (kDebugMode) print('⚠️ LightingInspection import: $e');
     }
   }
 
@@ -3316,7 +3607,15 @@ class BackupService {
       addPhotos(c.photosInternes);
       addObs(c.observationsLibres);
       addObs(c.observationsParafoudre);
-      for (final p in c.pointsVerification) addPhotos(p.photos);
+      if (c.observationsParafoudreEnrichies != null) {
+        c.observationsParafoudreEnrichies!.forEach(addElement);
+      }
+      for (final p in c.pointsVerification) {
+        addPhotos(p.photos);
+        if (p.observations != null) {
+          p.observations!.forEach(addElement);
+        }
+      }
       for (final al in c.alimentations) addPhotos(al.photos);
       if (c.protectionTete != null) addPhotos(c.protectionTete!.photos);
     }
@@ -3328,11 +3627,15 @@ class BackupService {
       for (final c in l.coffrets) addCoffret(c);
       for (final cell in l.cellules) {
         addPhotos(cell.photos);
+        if (cell.photo != null && cell.photo!.isNotEmpty) paths.add(cell.photo!);
         cell.elementsVerifies.forEach(addElement);
+        if (cell.observations != null) cell.observations!.forEach(addElement);
       }
       for (final t in l.transformateurs) {
         addPhotos(t.photos);
+        if (t.photo != null && t.photo!.isNotEmpty) paths.add(t.photo!);
         t.elementsVerifies.forEach(addElement);
+        if (t.observations != null) t.observations!.forEach(addElement);
       }
     }
     void addBTLocal(BasseTensionLocal l) {
@@ -3341,6 +3644,18 @@ class BackupService {
       (l.dispositionsConstructives ?? []).forEach(addElement);
       (l.conditionsExploitation ?? []).forEach(addElement);
       for (final c in l.coffrets) addCoffret(c);
+      for (final cell in l.cellules) {
+        addPhotos(cell.photos);
+        if (cell.photo != null && cell.photo!.isNotEmpty) paths.add(cell.photo!);
+        cell.elementsVerifies.forEach(addElement);
+        if (cell.observations != null) cell.observations!.forEach(addElement);
+      }
+      for (final t in l.transformateurs) {
+        addPhotos(t.photos);
+        if (t.photo != null && t.photo!.isNotEmpty) paths.add(t.photo!);
+        t.elementsVerifies.forEach(addElement);
+        if (t.observations != null) t.observations!.forEach(addElement);
+      }
     }
 
     addPhotos(a.photos);
@@ -3506,6 +3821,7 @@ class BackupService {
     await cleanBox<MesuresEssais>('mesures_essais', (m) => m.missionId == missionId);
     await cleanBox<JSA>('jsa', (j) => j.missionId == missionId);
     await cleanBox<RenseignementsGeneraux>('renseignements_generaux', (r) => r.missionId == missionId);
+    await cleanBox<LightingInspection>('lighting_inspections', (l) => l.missionId == missionId);
 
     // Brouillons
     try {
@@ -3565,10 +3881,58 @@ class BackupService {
 
     try {
       // ── 1. Collecter les chemins photos AVANT suppression ─────────
-      final allPhotoPaths = <String>[];
+      final allPhotoPaths = <String>{};
+      final missionBox = Hive.box<Mission>('missions');
+      final mission = missionBox.get(missionId);
+      if (mission != null) {
+        if (mission.logoClient != null && mission.logoClient!.trim().isNotEmpty) {
+          allPhotoPaths.add(mission.logoClient!.trim());
+        }
+        if (mission.qrCodeClient != null && mission.qrCodeClient!.trim().isNotEmpty) {
+          allPhotoPaths.add(mission.qrCodeClient!.trim());
+        }
+      }
+
       final audit = HiveService.getAuditInstallationsByMissionId(missionId);
       if (audit != null) {
         allPhotoPaths.addAll(_collectAllPhotoPaths(audit));
+      }
+
+      final desc = HiveService.getDescriptionInstallationsByMissionId(missionId);
+      if (desc != null) {
+        for (final item in [
+          ...desc.alimentationMoyenneTension,
+          ...desc.alimentationBasseTension,
+          ...desc.groupeElectrogene,
+          ...desc.alimentationCarburant,
+          ...desc.inverseur,
+          ...desc.stabilisateur,
+          ...desc.onduleurs,
+          ...desc.cpi,
+        ]) {
+          allPhotoPaths.addAll(item.photoPaths.where((p) => p.isNotEmpty));
+        }
+        for (final obs in desc.foudreObservations) {
+          allPhotoPaths.addAll(obs.photos.where((p) => p.isNotEmpty));
+        }
+      }
+
+      final mesures = HiveService.getMesuresEssaisByMissionId(missionId);
+      if (mesures != null) {
+        for (final pt in mesures.prisesTerre) {
+          if (pt.photo != null && pt.photo!.isNotEmpty) {
+            allPhotoPaths.add(pt.photo!);
+          }
+        }
+      }
+
+      final lightingBox = Hive.box<LightingInspection>('lighting_inspections');
+      for (final l in lightingBox.values.where((l) => l.missionId == missionId)) {
+        for (final ncl in l.nonConformingLuminaires) {
+          for (final ans in ncl.answers) {
+            allPhotoPaths.addAll(ans.photoPaths.where((p) => p.isNotEmpty));
+          }
+        }
       }
 
       // ── 2. Supprimer toutes les boxes Hive liées ──────────────────
@@ -3610,6 +3974,9 @@ class BackupService {
       await cleanBox<RenseignementsGeneraux>(
           'renseignements_generaux',
           (r) => r.missionId == missionId);
+      await cleanBox<LightingInspection>(
+          'lighting_inspections',
+          (l) => l.missionId == missionId);
 
       // Brouillons coffrets
       try {
@@ -3650,7 +4017,6 @@ class BackupService {
       }
 
       // ── 3. Supprimer la mission elle-même ─────────────────────────
-      final missionBox = Hive.box<Mission>('missions');
       await missionBox.delete(missionId);
 
       // ── 4. Supprimer les photos du disque ─────────────────────────

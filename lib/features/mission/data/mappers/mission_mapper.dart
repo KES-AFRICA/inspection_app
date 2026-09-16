@@ -50,6 +50,7 @@ class MissionMapper {
       autresDocuments: model.autresDocuments,
       installation: model.installation,
       perimetreMission: model.perimetreMission,
+      afficherTableauFoudre: model.afficherTableauFoudre,
     );
   }
   static Mission toModel(MissionEntity entity) {
@@ -100,6 +101,7 @@ class MissionMapper {
       perimetreMission: entity.perimetreMission != null
           ? List<String>.from(entity.perimetreMission!)
           : null,
+      afficherTableauFoudre: entity.afficherTableauFoudre,
     );
     
     // renseignementsGenerauxId n'est pas présent dans le constructeur de Mission
