@@ -12,6 +12,7 @@ import 'package:inspec_app/services/statistics/domain_entity_instance.dart';
 import 'package:inspec_app/services/statistics/audit_finding.dart';
 import 'package:inspec_app/services/pdf/pdf_page_tracker.dart';
 import 'package:inspec_app/services/pdf/pdf_report_styles.dart';
+import 'package:inspec_app/services/statistics/global_assessment_engine.dart';
 
 /// Builder responsable du Résumé Exécutif KES (12 sections officielles, fidélité stricte au document de référence)
 class PdfExecutiveSummaryBuilder {
@@ -642,7 +643,7 @@ class PdfExecutiveSummaryBuilder {
               child: _subSectionHeader('12. Appréciation globale'),
             ),
             pw.SizedBox(height: 6),
-            _buildAppreciationGlobaleText(statsSummary, technical),
+            _buildAppreciationGlobaleText(statsSummary, snapshot, technical),
           ],
         ),
       ),
@@ -653,29 +654,62 @@ class PdfExecutiveSummaryBuilder {
 
   static pw.Widget _buildAppreciationGlobaleText(
     MissionStatisticsSummary stats,
+    ExecutiveSummarySnapshot snapshot,
     TechnicalEnrichmentResult technical,
   ) {
-    final cStats = stats.criticalityStats;
-    final density = stats.globalDensityStr;
-    final pctCrit = cStats.pctCritique.toStringAsFixed(1).replaceAll('.', ',');
-    final pctMaj = cStats.pctMajeure.toStringAsFixed(1).replaceAll('.', ',');
+    final result = GlobalAssessmentEngine.analyze(
+      summary: stats,
+      snapshot: snapshot,
+      technical: technical,
+    );
 
-    final p1 = 'La vérification périodique des installations électriques du site met en évidence un niveau de maîtrise du risque électrique insuffisant, avec une densité de $density NC/équipement et 100 % des écarts classés critiques ($pctCrit %) ou majeurs ($pctMaj %). Au-delà des non-conformités réglementaires classiques, l\'analyse enrichie révèle un déficit générique de documentation technique du parc (sources d\'alimentation, protections de tête, indices IP/IK), qui constitue en soi un facteur de risque et un frein à la maintenance préventive.';
-    final p2 = 'Les vulnérabilités majeures relevées concernent prioritairement :\n'
-        '• L\'absence systématique ou le faible taux d\'équipement en parafoudres sur les tableaux de distribution BT (armoires, coffrets, TGBT) ;\n'
-        '• La présence significative de départs et circuits terminaux non identifiés, privant les exploitants de schémas unifilaires fiables ;\n'
-        '• L\'absence de dispositifs de coupure et de sectionnement dédiés en tête d\'une proportion notable de coffrets et armoires divisionnaires.';
-    final p3 = 'Une intervention corrective immédiate sur les non-conformités critiques s\'impose pour neutraliser les risques d\'électrisation et d\'incendie, complétée d\'un programme de fiabilisation de la documentation technique et de renforcement des compétences des équipes d\'exploitation.';
+    final children = <pw.Widget>[];
+
+    for (int i = 0; i < result.blocks.length; i++) {
+      final block = result.blocks[i];
+      switch (block.type) {
+        case GlobalAssessmentBlockType.paragraph:
+          children.add(_buildFormattedText(block.content));
+          children.add(pw.SizedBox(height: 6));
+          break;
+        case GlobalAssessmentBlockType.bulletsIntro:
+          children.add(_buildFormattedText(block.content));
+          children.add(pw.SizedBox(height: 4));
+          break;
+        case GlobalAssessmentBlockType.bulletItem:
+          children.add(
+            pw.Padding(
+              padding: const pw.EdgeInsets.only(left: 12, bottom: 2.5),
+              child: pw.Row(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text('• ', style: pw.TextStyle(font: fontBold, fontSize: fsBody, color: PdfReportStyles.darkGrey)),
+                  pw.Expanded(
+                    child: pw.Text(
+                      block.content,
+                      style: pw.TextStyle(
+                        font: fontRegular,
+                        fontSize: fsBody,
+                        color: PdfReportStyles.darkGrey,
+                        lineSpacing: 2.2,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+          break;
+        case GlobalAssessmentBlockType.conclusion:
+          children.add(pw.SizedBox(height: 3));
+          children.add(_buildFormattedText(block.content));
+          break;
+      }
+    }
 
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        _buildFormattedText(p1),
-        pw.SizedBox(height: 6),
-        _buildFormattedText(p2),
-        pw.SizedBox(height: 6),
-        _buildFormattedText(p3),
-      ],
+      children: children,
     );
   }
 
