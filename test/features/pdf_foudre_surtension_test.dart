@@ -491,5 +491,67 @@ void main() {
       expect(headerTexts, contains('OBSERVATION'));
       expect(headerTexts, contains('PHOTO'));
     });
+
+    test('Cas 11: La colonne N est présente et contient le numéro réel de l’équipement', () {
+      final coffret = CoffretArmoire(
+        nom: 'Armoire Climatisation',
+        type: 'ARMOIRE',
+        qrCode: 'QR999',
+        repere: 'ARM-CLIM',
+        numeroEquipement: 'EQ-402',
+        presenceParafoudre: true,
+        observationsParafoudre: [
+          ObservationLibre(
+            texte: 'Défaut parafoudre',
+            photos: [],
+          ),
+        ],
+      );
+
+      final audit = AuditInstallationsElectriques(
+        missionId: 'm11',
+        updatedAt: DateTime.now(),
+        basseTensionZones: [
+          BasseTensionZone(
+            nom: 'Zone Technique',
+            coffretsDirects: [coffret],
+          ),
+        ],
+      );
+
+      final rows = PdfReportService.collectParafoudreRowsForTest(audit);
+      expect(rows.length, equals(1));
+      expect(rows.first.numero, equals('EQ-402'));
+
+      final widgets = PdfClassementFoudreBuilder.buildFoudre(
+        audit,
+        [],
+        {},
+        afficherTableauFoudre: true,
+      );
+
+      final tables = widgets.whereType<pw.Table>().toList();
+      final foudreTable = tables.last;
+      final headerRow = foudreTable.children.first;
+
+      final headerTexts = <String>[];
+      for (final cell in headerRow.children) {
+        if (cell is pw.Container && cell.child is pw.Text) {
+          headerTexts.add(((cell.child as pw.Text).text as pw.TextSpan).text ?? '');
+        }
+      }
+
+      expect(headerTexts, contains('N'));
+      final idxRep = headerTexts.indexOf('REPÈRE');
+      final idxN = headerTexts.indexOf('N');
+      final idxDes = headerTexts.indexOf('DÉSIGNATION');
+      expect(idxN, equals(idxRep + 1));
+      expect(idxDes, equals(idxN + 1));
+
+      final dataRow = foudreTable.children[1];
+      final cellN = dataRow.children[idxN] as pw.Container;
+      final textN = ((cellN.child as pw.Text).text as pw.TextSpan).text;
+      expect(textN, equals('EQ-402'));
+    });
   });
 }

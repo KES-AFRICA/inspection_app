@@ -183,7 +183,7 @@ class ExcelReportService {
     // 3. TABLEAU 2 : Équipements Basse Tension (BT)
     final equipementsBT =
         PdfEquipementsSynthesisBuilder.collectEquipementsBT(audit, description);
-    _renderEquipementsTable(
+    currentRow = _renderEquipementsTable(
       sheet: sheet,
       items: equipementsBT,
       sectionTitle: '2. ÉQUIPEMENTS BASSE TENSION',
@@ -191,6 +191,31 @@ class ExcelReportService {
       startRow: currentRow,
       reportDateStr: reportDateStr,
     );
+
+    // 4. TABLEAU 3 : Équipements aux sources d'alimentation non identifiées
+    if (audit != null) {
+      final unknownSources =
+          PdfEquipementsSynthesisBuilder.collectUnknownSources(audit);
+      if (unknownSources.isNotEmpty) {
+        currentRow += 2;
+        final unknownHeaders = [
+          'Zone',
+          'Repère',
+          'N°',
+          'Désignation',
+          'Type',
+          'Source',
+        ];
+        _renderUnknownSourcesTable(
+          sheet: sheet,
+          items: unknownSources,
+          sectionTitle:
+              '3. ÉQUIPEMENTS AUX SOURCES D\'ALIMENTATION NON IDENTIFIÉES',
+          headers: unknownHeaders,
+          startRow: currentRow,
+        );
+      }
+    }
   }
 
   static int _renderEquipementsTable({
@@ -257,8 +282,6 @@ class ExcelReportService {
       rGroup.items.add(eq);
     }
 
-    int currentEqNum = 1;
-
     for (final zoneGroup in zoneGroups) {
       final bool isNewZone = (zoneGroup != zoneGroups.first);
       final int zoneStartRow = currentRow;
@@ -293,7 +316,14 @@ class ExcelReportService {
 
           // Col 3 : N°
           final cellNum = sheet.getRangeByIndex(currentRow, 3);
-          cellNum.setNumber(currentEqNum.toDouble());
+          final parsedNum = int.tryParse(item.numero);
+          if (parsedNum != null) {
+            cellNum.setNumber(parsedNum.toDouble());
+          } else if (item.numero.isNotEmpty) {
+            cellNum.setText(item.numero);
+          } else {
+            cellNum.setText('-');
+          }
           _styleDataCell(cellNum,
               bgColor: bgColor, hAlign: xlsio.HAlignType.center, bold: true);
 
@@ -336,7 +366,6 @@ class ExcelReportService {
           sheet.getRangeByIndex(currentRow, 1).rowHeight = 22;
 
           currentRow++;
-          currentEqNum++;
         }
 
         // Renforcement ciblé des bordures de séparation (hiérarchie visuelle)
@@ -355,6 +384,187 @@ class ExcelReportService {
             repereStartRow,
             2,
             9,
+            color: _colorSepRepere,
+            lineStyle: xlsio.LineStyle.medium,
+          );
+        }
+
+        // Fusion verticale dynamique de Repère
+        final int repereEndRow = repereStartRow + repereCount - 1;
+        if (repereEndRow > repereStartRow) {
+          final repereMerge =
+              sheet.getRangeByIndex(repereStartRow, 2, repereEndRow, 2);
+          repereMerge.merge();
+          repereMerge.cellStyle.vAlign = xlsio.VAlignType.center;
+          repereMerge.cellStyle.hAlign = xlsio.HAlignType.center;
+        }
+      }
+
+      // Fusion verticale dynamique de Zone
+      final int zoneEndRow = zoneStartRow + totalZoneItems - 1;
+      if (zoneEndRow > zoneStartRow) {
+        final zoneMerge = sheet.getRangeByIndex(zoneStartRow, 1, zoneEndRow, 1);
+        zoneMerge.merge();
+        zoneMerge.cellStyle.vAlign = xlsio.VAlignType.center;
+        zoneMerge.cellStyle.hAlign = xlsio.HAlignType.center;
+      }
+    }
+
+    return currentRow;
+  }
+
+  static int _renderUnknownSourcesTable({
+    required xlsio.Worksheet sheet,
+    required List<PdfUnknownSourceItem> items,
+    required String sectionTitle,
+    required List<String> headers,
+    required int startRow,
+  }) {
+    int currentRow = startRow;
+
+    // Titre de section (tableau 3)
+    final sectionRange = sheet.getRangeByIndex(currentRow, 1, currentRow, 6);
+    sectionRange.merge();
+    sectionRange.setText(sectionTitle);
+    sectionRange.rowHeight = 24;
+    _styleBanner(sectionRange, _colorAccentBlue, 11);
+    currentRow++;
+
+    // Ligne d'en-tête de tableau
+    for (int col = 1; col <= headers.length; col++) {
+      final cell = sheet.getRangeByIndex(currentRow, col);
+      cell.setText(headers[col - 1]);
+      _styleHeaderCell(cell);
+    }
+    sheet.getRangeByIndex(currentRow, 1).rowHeight = 26;
+    currentRow++;
+
+    if (items.isEmpty) {
+      final emptyRange = sheet.getRangeByIndex(currentRow, 1, currentRow, 6);
+      emptyRange.merge();
+      emptyRange.setText('Aucun équipement à source d\'alimentation non identifiée.');
+      emptyRange.rowHeight = 22;
+      _styleEmptyRow(emptyRange);
+      return currentRow + 1;
+    }
+
+    // Regroupement identique au PDF : Zone -> Repère -> Items
+    final zoneGroups = <PdfUnknownSourceZoneGroup>[];
+    for (final it in items) {
+      final normZone = it.zoneName.trim();
+      final normLoc = it.localName.trim();
+
+      var zGroup = zoneGroups.firstWhere(
+        (zg) => zg.zoneName.toLowerCase() == normZone.toLowerCase(),
+        orElse: () {
+          final zg = PdfUnknownSourceZoneGroup(zoneName: normZone, repereGroups: []);
+          zoneGroups.add(zg);
+          return zg;
+        },
+      );
+
+      var rGroup = zGroup.repereGroups.firstWhere(
+        (rg) => rg.localName.toLowerCase() == normLoc.toLowerCase(),
+        orElse: () {
+          final rg = PdfUnknownSourceRepereGroup(localName: normLoc, items: []);
+          zGroup.repereGroups.add(rg);
+          return rg;
+        },
+      );
+
+      rGroup.items.add(it);
+    }
+
+    for (final zoneGroup in zoneGroups) {
+      final bool isNewZone = (zoneGroup != zoneGroups.first);
+      final int zoneStartRow = currentRow;
+      final int totalZoneItems =
+          zoneGroup.repereGroups.fold<int>(0, (sum, g) => sum + g.items.length);
+
+      for (final repereGroup in zoneGroup.repereGroups) {
+        final bool isNewRepere =
+            (repereGroup != zoneGroup.repereGroups.first);
+        final int repereStartRow = currentRow;
+        final int repereCount = repereGroup.items.length;
+        final String displayRepere = repereGroup.localName.isNotEmpty
+            ? repereGroup.localName
+            : (zoneGroup.zoneName.isNotEmpty ? zoneGroup.zoneName : '-');
+
+        for (final item in repereGroup.items) {
+          final isEven = (currentRow % 2 == 0);
+          final bgColor = isEven ? _colorZebra : _colorWhite;
+
+          // Col 1 : Zone
+          final cellZone = sheet.getRangeByIndex(currentRow, 1);
+          cellZone.setText(
+              zoneGroup.zoneName.isNotEmpty ? zoneGroup.zoneName : '-');
+          _styleDataCell(cellZone,
+              bgColor: bgColor, hAlign: xlsio.HAlignType.center, bold: true);
+
+          // Col 2 : Repère
+          final cellRepere = sheet.getRangeByIndex(currentRow, 2);
+          cellRepere.setText(displayRepere);
+          _styleDataCell(cellRepere,
+              bgColor: bgColor, hAlign: xlsio.HAlignType.center, bold: true);
+
+          // Col 3 : N°
+          final cellNum = sheet.getRangeByIndex(currentRow, 3);
+          final parsedNum = int.tryParse(item.numero);
+          if (parsedNum != null) {
+            cellNum.setNumber(parsedNum.toDouble());
+          } else if (item.numero.isNotEmpty) {
+            cellNum.setText(item.numero);
+          } else {
+            cellNum.setText('-');
+          }
+          _styleDataCell(cellNum,
+              bgColor: bgColor, hAlign: xlsio.HAlignType.center, bold: true);
+
+          // Col 4 : Désignation
+          final cellNom = sheet.getRangeByIndex(currentRow, 4);
+          cellNom.setText(item.nom);
+          _styleDataCell(cellNom,
+              bgColor: bgColor, hAlign: xlsio.HAlignType.left, wrapText: true);
+
+          // Col 5 : Type
+          final cellType = sheet.getRangeByIndex(currentRow, 5);
+          cellType.setText(item.type);
+          _styleDataCell(cellType,
+              bgColor: bgColor, hAlign: xlsio.HAlignType.center);
+
+          // Col 6 : Source (Règle unifiée PDF/Excel : "Identifiée" ou "non identifié")
+          final cellSource = sheet.getRangeByIndex(currentRow, 6);
+          final isIdentified = PdfEquipementsSynthesisBuilder.isSourceIdentified(item.source);
+          final sourceText = PdfEquipementsSynthesisBuilder.formatSourceDisplay(item.source);
+          cellSource.setText(sourceText);
+          _styleDataCell(
+            cellSource,
+            bgColor: bgColor,
+            hAlign: xlsio.HAlignType.center,
+            bold: true,
+            fontColor: isIdentified ? '#15803D' : '#C62828',
+          );
+
+          sheet.getRangeByIndex(currentRow, 1).rowHeight = 22;
+          currentRow++;
+        }
+
+        // Bordures séparatrices
+        if (isNewZone && repereStartRow == zoneStartRow) {
+          _applyHorizontalSeparator(
+            sheet,
+            repereStartRow,
+            1,
+            6,
+            color: _colorNavy,
+            lineStyle: xlsio.LineStyle.medium,
+          );
+        } else if (isNewRepere) {
+          _applyHorizontalSeparator(
+            sheet,
+            repereStartRow,
+            2,
+            6,
             color: _colorSepRepere,
             lineStyle: xlsio.LineStyle.medium,
           );
@@ -684,12 +894,13 @@ class ExcelReportService {
     required xlsio.HAlignType hAlign,
     bool bold = false,
     bool wrapText = false,
+    String? fontColor,
   }) {
     cell.cellStyle.backColor = bgColor;
     cell.cellStyle.fontName = 'Calibri';
     cell.cellStyle.fontSize = 9.5;
     cell.cellStyle.bold = bold;
-    cell.cellStyle.fontColor = '#1E293B';
+    cell.cellStyle.fontColor = fontColor ?? '#1E293B';
     cell.cellStyle.hAlign = hAlign;
     cell.cellStyle.vAlign = xlsio.VAlignType.center;
     cell.cellStyle.wrapText = wrapText;

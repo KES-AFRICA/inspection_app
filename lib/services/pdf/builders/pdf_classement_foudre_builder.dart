@@ -16,6 +16,7 @@ class PdfParafoudreEquipementRow {
   final String localName;
   final String equipementName;
   final String repere;
+  final String numero;
   final String pointVerification;
   final String referenceNormative;
   final String criticite;
@@ -28,6 +29,7 @@ class PdfParafoudreEquipementRow {
     this.localName = '',
     this.equipementName = '',
     required this.repere,
+    this.numero = '',
     this.pointVerification = '-',
     this.referenceNormative = '-',
     this.criticite = '-',
@@ -1068,6 +1070,7 @@ class PdfClassementFoudreBuilder {
       final equipName = cNom.isNotEmpty ? cNom : (cRep.isNotEmpty ? cRep : '-');
       final repereDisplay = cRep.isNotEmpty ? cRep : (cNom.isNotEmpty ? cNom : '-');
       final zoneDisplay = zoneName.trim().isNotEmpty ? zoneName.trim() : '-';
+      final numeroDisplay = c.numeroEquipement?.trim() ?? '';
 
       rows.add(
         PdfParafoudreEquipementRow(
@@ -1075,6 +1078,7 @@ class PdfClassementFoudreBuilder {
           localName: localName.trim(),
           equipementName: equipName,
           repere: repereDisplay,
+          numero: numeroDisplay,
           pointVerification: defaultParafoudrePointPV,
           referenceNormative: pvRef,
           criticite: pvCrit,
@@ -1444,6 +1448,7 @@ class PdfClassementFoudreBuilder {
           PdfReportStyles.tableHeaderRow([
             'ZONE',
             'REPÈRE',
+            'N',
             'DÉSIGNATION',
             'POINT DE VÉRIFICATION',
             'RÉF. NORMATIVE',
@@ -1484,7 +1489,18 @@ class PdfClassementFoudreBuilder {
                   ),
                 ),
 
-                // Cellule 2 : DÉSIGNATION
+                // Cellule 2 : N
+                pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 5),
+                  alignment: pw.Alignment.center,
+                  child: pw.Text(
+                    o.numero.isNotEmpty ? o.numero : '-',
+                    style: pw.TextStyle(font: fontBold, fontSize: 8.0, color: PdfReportStyles.headerColor),
+                    textAlign: pw.TextAlign.center,
+                  ),
+                ),
+
+                // Cellule 3 : DÉSIGNATION
                 pw.Container(
                   padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 5),
                   alignment: pw.Alignment.center,
@@ -1568,13 +1584,14 @@ class PdfClassementFoudreBuilder {
             border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.4),
             columnWidths: const {
               0: pw.FlexColumnWidth(1.1), // ZONE
-              1: pw.FlexColumnWidth(1.2), // REPÈRE
-              2: pw.FlexColumnWidth(1.5), // DÉSIGNATION
-              3: pw.FlexColumnWidth(2.0), // POINT DE VÉRIFICATION
-              4: pw.FlexColumnWidth(1.4), // RÉF. NORMATIVE
-              5: pw.FlexColumnWidth(0.9), // CRITICITÉ
-              6: pw.FlexColumnWidth(2.9), // OBSERVATION
-              7: pw.FlexColumnWidth(1.0), // PHOTO
+              1: pw.FlexColumnWidth(1.1), // REPÈRE
+              2: pw.FlexColumnWidth(0.7), // N
+              3: pw.FlexColumnWidth(1.5), // DÉSIGNATION
+              4: pw.FlexColumnWidth(1.9), // POINT DE VÉRIFICATION
+              5: pw.FlexColumnWidth(1.3), // RÉF. NORMATIVE
+              6: pw.FlexColumnWidth(0.8), // CRITICITÉ
+              7: pw.FlexColumnWidth(2.7), // OBSERVATION
+              8: pw.FlexColumnWidth(0.9), // PHOTO
             },
             children: tableRows,
           ),

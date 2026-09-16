@@ -10,67 +10,46 @@ class PdfRegulatoryBuilder {
   static pw.Font fontBold = pw.Font.helveticaBold();
 
   static pw.Widget buildNormesTable({pw.Font? fontBold, pw.Font? fontRegular}) {
-    final fireNormes = [
-      'Articles 6, 112, 113 - Arrêté 039/MTPS/IMT du 26 novembre 1984 fixant les mesures générales d\'hygiène et de sécurité sur les lieux de travail',
-      'Cahier de prescription technique applicable au Décret N° 20181969/PM du 15 mars 2018, fixant les règles de base de sécurité incendie dans les bâtiments',
+    final normes = [
+      [
+        'Loi n° 2011/022 du 14 décembre 2011',
+        'Loi régissant le secteur de l’électricité au Cameroun. Le numéro de projet adopté par l’Assemblée nationale était n° 896/PJL/AN le 15 novembre 2011.',
+      ],
+      [
+        'Arrêté conjoint n° 002164/MINIMDT/MINEE du 20 juin 2012',
+        'Arrêté conjoint rendant d’application obligatoire la norme camerounaise NC 244 C 15 100 relative aux installations électriques à basse tension.',
+      ],
+      [
+        'NC 244 C 15 100 : 2011-08',
+        'Installations électriques à basse tension – norme camerounaise rendue d’application obligatoire par l’arrêté conjoint n° 002164/MINIMDT/MINEE.',
+      ],
+      [
+        'NF C 15-100',
+        'Installations électriques à basse tension – Règles.',
+      ],
+      [
+        'NF C 13-100',
+        'Postes de livraison alimentés par un réseau public de distribution HTA (jusqu’à 33 kV), notamment pour les postes de livraison établis à l’intérieur d’un bâtiment.',
+      ],
+      [
+        'Décret n° 2018/1969/PM du 15 mars 2018',
+        'Décret fixant les règles de base de sécurité incendie dans les bâtiments.',
+      ],
+      [
+        'Arrêté n° 039/MTPS/IMT du 26 novembre 1984',
+        'Arrêté fixant les mesures générales d’hygiène et de sécurité sur les lieux de travail.',
+      ],
     ];
-
-    final electricNormes = [
-      'Arrêté conjoint 002164 du 21 juin 2012 MNIMIDT/MINEE',
-      'Loi N° 896/PJL/AN du 15/11/2011',
-      'NC 244 C 15 100 - Installation électrique à basse tension',
-      'NF C 15 100 - Installation électrique à basse tension',
-      'Norme NF C 13 100 - Poste de livraison établi à l\'intérieur d\'un bâtiment et alimenté par un réseau de distribution publique de deuxième catégorie',
-    ];
-
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
+    return pw.Table(
+      border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.4),
+      columnWidths: const {
+        0: pw.FlexColumnWidth(4.0),
+        1: pw.FlexColumnWidth(6.0),
+      },
       children: [
-        pw.Table(
-          border: pw.TableBorder.all(
-              color: PdfReportStyles.borderColor, width: 0.4),
-          columnWidths: const {
-            0: pw.FlexColumnWidth(1.0),
-          },
-          children: [
-            pw.TableRow(
-              decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
-              children: [
-                PdfReportStyles.cell(
-                  'Référentiel APSAD D18 (CNPP) — prévention des risques d\'incendie et d\'explosion',
-                  isHeader: true,
-                  centered: false,
-                  fontBold: fontBold,
-                ),
-              ],
-            ),
-            ...fireNormes.asMap().entries.map(
-              (e) => PdfReportStyles.tableDataRow(
-                [e.value],
-                alt: e.key.isOdd,
-                centered: false,
-                fontRegular: fontRegular,
-              ),
-            ),
-          ],
-        ),
-        pw.SizedBox(height: 6),
-        pw.Table(
-          border: pw.TableBorder.all(
-              color: PdfReportStyles.borderColor, width: 0.4),
-          columnWidths: const {
-            0: pw.FlexColumnWidth(1.0),
-          },
-          children: [
-            ...electricNormes.asMap().entries.map(
-              (e) => PdfReportStyles.tableDataRow(
-                [e.value],
-                alt: e.key.isOdd,
-                centered: false,
-                fontRegular: fontRegular,
-              ),
-            ),
-          ],
+        PdfReportStyles.tableHeaderRow(['Référence', 'Libellé'], fontBold: fontBold),
+        ...normes.asMap().entries.map(
+          (e) => PdfReportStyles.tableDataRow(e.value, alt: e.key.isOdd, fontRegular: fontRegular),
         ),
       ],
     );

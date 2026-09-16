@@ -433,5 +433,58 @@ void main() {
       final sheet2Xml = utf8.decode(sheet2File.content as List<int>);
       expect(sheet2Xml.contains('mergeCells'), isTrue);
     });
+
+    test('Validation du Tableau 3 et du numéro réel d\'équipement dans l\'export Excel', () {
+      final coffretAvecSource = CoffretArmoire(
+        qrCode: 'QR-EX-01',
+        nom: 'Armoire Climatisation',
+        type: 'Armoire',
+        repere: 'ARM-CLIM',
+        numeroEquipement: '99',
+        sourceNomComplet: 'Poste MT 1',
+        alimentations: [
+          Alimentation(
+            typeProtection: 'Inconnue',
+            source: 'Poste MT 1',
+            sourceKnown: 'Inconnue',
+            pdcKA: '',
+            calibre: '',
+            sectionCable: '',
+          ),
+        ],
+      );
+
+      final audit = AuditInstallationsElectriques(
+        missionId: 'm_excel_sources',
+        updatedAt: DateTime.now(),
+        basseTensionZones: [
+          BasseTensionZone(
+            nom: 'Zone Technique',
+            coffretsDirects: [coffretAvecSource],
+          ),
+        ],
+      );
+
+      final bytes = ExcelReportService.generateWorkbookBytes(
+        mission: sampleMission,
+        audit: audit,
+        description: sampleDesc,
+        generationDate: DateTime(2026, 9, 16),
+      );
+
+      expect(bytes, isNotEmpty);
+
+      final archive = ZipDecoder().decodeBytes(bytes);
+      final sheet1File = archive.files.firstWhere((f) => f.name == 'xl/worksheets/sheet1.xml');
+      final sheet1Xml = utf8.decode(sheet1File.content as List<int>);
+
+      // Vérification de la présence du Tableau 3
+      final sharedStringsFile = archive.files.firstWhere((f) => f.name == 'xl/sharedStrings.xml');
+      final sharedStringsXml = utf8.decode(sharedStringsFile.content as List<int>);
+
+      expect(sharedStringsXml.contains("ÉQUIPEMENTS AUX SOURCES D'ALIMENTATION NON IDENTIFIÉES"), isTrue);
+      expect(sharedStringsXml.contains('Identifiée'), isTrue);
+      expect(sharedStringsXml.contains('99') || sheet1Xml.contains('99'), isTrue);
+    });
   });
 }

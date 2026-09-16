@@ -9,6 +9,7 @@ class PdfEquipementItem {
   final String zoneName;
   final String localName;
   final String repere;
+  final String numero;
   final String nom;
   final String type;
   final bool isMT;
@@ -21,6 +22,7 @@ class PdfEquipementItem {
     this.zoneName = '',
     this.localName = '',
     required this.repere,
+    this.numero = '',
     required this.nom,
     required this.type,
     required this.isMT,
@@ -35,6 +37,7 @@ class PdfUnknownSourceItem {
   final String zoneName;
   final String localName;
   final String repere;
+  final String numero;
   final String nom;
   final String type;
   final String alimentationConcernee;
@@ -44,6 +47,7 @@ class PdfUnknownSourceItem {
     this.zoneName = '',
     this.localName = '',
     required this.repere,
+    this.numero = '',
     required this.nom,
     required this.type,
     required this.alimentationConcernee,
@@ -99,6 +103,35 @@ class PdfEquipementsSynthesisBuilder {
   static const double fsSmall = PdfReportStyles.fsSmall;
   static const double fsBody = PdfReportStyles.fsBody;
 
+  /// Détermine si une source d'alimentation est formellement identifiée.
+  static bool isSourceIdentified(String? source) {
+    if (source == null) return false;
+    final s = source.trim().toLowerCase();
+    if (s.isEmpty ||
+        s == '-' ||
+        s == '--' ||
+        s == 'aucun' ||
+        s == '-aucun-' ||
+        s == 'n/a' ||
+        s == 'non') {
+      return false;
+    }
+    if (s.contains('inconn') ||
+        s.contains('non identifi') ||
+        s.contains('non renseign') ||
+        s.contains('non repertori')) {
+      return false;
+    }
+    return true;
+  }
+
+  /// Projection textuelle standardisée de la source selon la règle métier :
+  /// Si la source est identifiée -> "Identifiée"
+  /// Sinon -> "non identifié"
+  static String formatSourceDisplay(String? source) {
+    return isSourceIdentified(source) ? 'Identifiée' : 'non identifié';
+  }
+
   static pw.Widget buildEquipementsTableForTesting(
     List<PdfEquipementItem> items, {
     bool isMT = false,
@@ -118,6 +151,7 @@ class PdfEquipementsSynthesisBuilder {
   static List<PdfEquipementItem> _collectEquipementsMT(AuditInstallationsElectriques? audit) => collectEquipementsMT(audit);
   static List<PdfEquipementItem> _collectEquipementsBT(AuditInstallationsElectriques? audit, DescriptionInstallations? desc) => collectEquipementsBT(audit, desc);
   static List<PdfUnknownSourceItem> _collectEquipementsUnknownSource(AuditInstallationsElectriques? audit) => collectEquipementsUnknownSource(audit);
+  static List<PdfUnknownSourceItem> collectUnknownSources(AuditInstallationsElectriques? audit) => collectEquipementsUnknownSource(audit);
   static List<pw.Widget> _buildUnknownSourcesTable(List<PdfUnknownSourceItem> items) => buildUnknownSourcesTable(items);
   static List<pw.Widget> _buildEquipementsTable(List<PdfEquipementItem> items, {bool isMT = false}) => buildEquipementsTable(items, isMT: isMT);
 
@@ -368,6 +402,7 @@ class PdfEquipementsSynthesisBuilder {
       String zoneName = '',
       String localName = '',
       required String repere,
+      String numero = '',
       required String nom,
       required String type,
       bool accessible = true,
@@ -383,6 +418,7 @@ class PdfEquipementsSynthesisBuilder {
             zoneName: zoneName.trim(),
             localName: localName.trim(),
             repere: repere.trim(),
+            numero: numero.trim(),
             nom: equipNom,
             type: type,
             isMT: true,
@@ -450,6 +486,7 @@ class PdfEquipementsSynthesisBuilder {
           zoneName: zoneName,
           localName: localName,
           repere: rep.isNotEmpty ? rep : seqDesignation,
+          numero: c.numerotation.trim(),
           nom: equipNom,
           type: 'Cellule',
           accessible: true,
@@ -490,6 +527,7 @@ class PdfEquipementsSynthesisBuilder {
           zoneName: zoneName,
           localName: localName,
           repere: rep,
+          numero: (t.repere != null && t.repere!.trim().isNotEmpty) ? t.repere!.trim() : '',
           nom: equipNom,
           type: 'Transformateur',
           accessible: true,
@@ -518,6 +556,7 @@ class PdfEquipementsSynthesisBuilder {
             zoneName: zoneName,
             localName: localName,
             repere: rep,
+            numero: coffret.numeroEquipement?.trim() ?? '',
             nom: nom,
             type: normType,
             accessible: coffret.accessible,
@@ -560,6 +599,7 @@ class PdfEquipementsSynthesisBuilder {
       String zoneName = '',
       String localName = '',
       required String repere,
+      String numero = '',
       required String nom,
       required String type,
       bool accessible = true,
@@ -576,6 +616,7 @@ class PdfEquipementsSynthesisBuilder {
             zoneName: zoneName.trim(),
             localName: localName.trim(),
             repere: repere.trim(),
+            numero: numero.trim(),
             nom: equipNom,
             type: type,
             isMT: isMT,
@@ -609,6 +650,7 @@ class PdfEquipementsSynthesisBuilder {
             zoneName: zoneName,
             localName: localName,
             repere: rep,
+            numero: coffret.numeroEquipement?.trim() ?? '',
             nom: nom,
             type: normType,
             accessible: coffret.accessible,
@@ -678,6 +720,7 @@ class PdfEquipementsSynthesisBuilder {
               zoneName: zoneName.trim(),
               localName: localName.trim(),
               repere: rep,
+              numero: coffret.numeroEquipement?.trim() ?? '',
               nom: nom,
               type: 'Inverseur',
               alimentationConcernee: (s.isNotEmpty && s.toLowerCase() != 'inconnu') ? s : 'Source non identifie',
@@ -693,6 +736,7 @@ class PdfEquipementsSynthesisBuilder {
               zoneName: zoneName.trim(),
               localName: localName.trim(),
               repere: rep,
+              numero: coffret.numeroEquipement?.trim() ?? '',
               nom: nom,
               type: 'Inverseur',
               alimentationConcernee: (s.isNotEmpty && s.toLowerCase() != 'inconnu') ? s : 'Source non identifie',
@@ -709,15 +753,21 @@ class PdfEquipementsSynthesisBuilder {
           }
         }
         if (isUnknown) {
+          final resolvedSource = (coffret.sourceNomComplet?.trim().isNotEmpty == true)
+              ? coffret.sourceNomComplet!.trim()
+              : (coffret.alimentations.isNotEmpty ? coffret.alimentations.first.source.trim() : '');
           list.add(
             PdfUnknownSourceItem(
               zoneName: zoneName.trim(),
               localName: localName.trim(),
               repere: rep,
+              numero: coffret.numeroEquipement?.trim() ?? '',
               nom: nom,
               type: normType,
               alimentationConcernee: 'Source d\'alimentation',
-              source: 'non identifie',
+              source: (resolvedSource.isNotEmpty && resolvedSource.toLowerCase() != 'inconnu')
+                  ? resolvedSource
+                  : 'non identifie',
             ),
           );
         }
@@ -840,27 +890,22 @@ class PdfEquipementsSynthesisBuilder {
     }
 
     int globalRowIndex = 0;
-    int globalEquipementNumber = startNumber;
 
     for (final zoneGroup in zoneGroups) {
       final totalZoneItems =
           zoneGroup.repereGroups.fold<int>(0, (sum, g) => sum + g.items.length);
-      final zoneMidIndex = (totalZoneItems - 1) ~/ 2;
 
       int zoneItemIndex = 0;
 
       for (int rIdx = 0; rIdx < zoneGroup.repereGroups.length; rIdx++) {
         final repereGroup = zoneGroup.repereGroups[rIdx];
         final repereCount = repereGroup.items.length;
-        final repereMidIndex = (repereCount - 1) ~/ 2;
-        final isLastRepereInZone = (rIdx == zoneGroup.repereGroups.length - 1);
 
         for (int i = 0; i < repereCount; i++) {
           final item = repereGroup.items[i];
           final currentZoneItemIdx = zoneItemIndex++;
           final currentRepereItemIdx = i;
 
-          final currentNum = globalEquipementNumber++;
           final idx = globalRowIndex++;
           final isEven = idx % 2 == 0;
           final bgColor = isEven ? PdfColors.white : PdfColor.fromInt(0xFFF9FAFB);
@@ -907,11 +952,8 @@ class PdfEquipementsSynthesisBuilder {
           );
 
           final rawSource = item.source.trim();
-          final sourceDisplay = (rawSource.isEmpty ||
-                  rawSource.toLowerCase().contains('inconn') ||
-                  rawSource.toLowerCase().contains('inconnu'))
-              ? 'non identifie'
-              : rawSource;
+          final isIdentified = isSourceIdentified(rawSource);
+          final sourceDisplay = formatSourceDisplay(rawSource);
 
           final displayRepere = repereGroup.localName.isNotEmpty
               ? repereGroup.localName
@@ -947,7 +989,7 @@ class PdfEquipementsSynthesisBuilder {
                   padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
                   alignment: pw.Alignment.center,
                   child: pw.Text(
-                    '$currentNum',
+                    item.numero.isNotEmpty ? item.numero : '-',
                     style: pw.TextStyle(font: fontBold, fontSize: 8.5),
                     textAlign: pw.TextAlign.center,
                   ),
@@ -987,7 +1029,9 @@ class PdfEquipementsSynthesisBuilder {
                     style: pw.TextStyle(
                       font: fontBold,
                       fontSize: fsSmall,
-                      color: PdfColor.fromInt(0xFFC62828),
+                      color: isIdentified
+                          ? const PdfColor.fromInt(0xFF15803D)
+                          : const PdfColor.fromInt(0xFFC62828),
                     ),
                     textAlign: pw.TextAlign.center,
                   ),
@@ -1133,27 +1177,22 @@ class PdfEquipementsSynthesisBuilder {
     }
 
     int globalRowIndex = 0;
-    int globalEquipementNumber = startNumber;
 
     for (final zoneGroup in zoneGroups) {
       final totalZoneItems =
           zoneGroup.repereGroups.fold<int>(0, (sum, g) => sum + g.items.length);
-      final zoneMidIndex = (totalZoneItems - 1) ~/ 2;
 
       int zoneItemIndex = 0;
 
       for (int rIdx = 0; rIdx < zoneGroup.repereGroups.length; rIdx++) {
         final repereGroup = zoneGroup.repereGroups[rIdx];
         final repereCount = repereGroup.items.length;
-        final repereMidIndex = (repereCount - 1) ~/ 2;
-        final isLastRepereInZone = (rIdx == zoneGroup.repereGroups.length - 1);
 
         for (int i = 0; i < repereCount; i++) {
           final eq = repereGroup.items[i];
           final currentZoneItemIdx = zoneItemIndex++;
           final currentRepereItemIdx = i;
 
-          final currentEqNum = globalEquipementNumber++;
           final idx = globalRowIndex++;
           final isEven = idx % 2 == 0;
           final bg = isEven ? PdfColors.white : PdfColor.fromInt(0xFFF9FAFB);
@@ -1228,7 +1267,7 @@ class PdfEquipementsSynthesisBuilder {
               padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
               alignment: pw.Alignment.center,
               child: pw.Text(
-                '$currentEqNum',
+                eq.numero.isNotEmpty ? eq.numero : '-',
                 style: pw.TextStyle(font: fontBold, fontSize: 8.5),
                 textAlign: pw.TextAlign.center,
               ),

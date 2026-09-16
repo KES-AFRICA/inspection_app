@@ -3,6 +3,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:inspec_app/services/pdf/pdf_report_service.dart';
+import 'package:inspec_app/services/pdf/builders/pdf_equipements_synthesis_builder.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
 
 void main() {
@@ -224,6 +225,83 @@ void main() {
       final tableWidget = PdfReportService.buildEquipementsTableForTesting(btItems, isMT: false);
       expect(tableWidget, isNotNull);
       expect(tableWidget, isA<pw.Column>());
+    });
+
+    test('TEST 6 — Préservation du numéro réel dans synthèse MT/BT et statut source identifiée', () {
+      final audit = AuditInstallationsElectriques(
+        missionId: 'm_numeros_reels',
+        updatedAt: DateTime.now(),
+        moyenneTensionLocaux: [
+          MoyenneTensionLocal(
+            nom: 'LOCAL MT',
+            type: 'Local MT',
+            cellules: [
+              Cellule(
+                fonction: 'Arrivée',
+                type: 'IM',
+                marqueModeleAnnee: 'Schneider',
+                tensionAssignee: '20kV',
+                pouvoirCoupure: '16kA',
+                parafoudres: 'Oui',
+                numerotation: 'CEL-01',
+                nom: 'Cellule 1',
+              ),
+            ],
+            transformateurs: [
+              TransformateurMTBT(
+                nom: 'Transfo TR1',
+                typeTransformateur: 'Sec',
+                marqueAnnee: 'ABB',
+                puissanceAssignee: '630kVA',
+                tensionPrimaireSecondaire: '20kV/400V',
+                relaisBuchholz: 'Oui',
+                typeRefroidissement: 'AN',
+                regimeNeutre: 'TN-S',
+                repere: 'TR-100',
+              ),
+            ],
+          ),
+        ],
+        basseTensionZones: [
+          BasseTensionZone(
+            nom: 'Zone BT',
+            coffretsDirects: [
+              CoffretArmoire(
+                qrCode: 'Q40',
+                repere: 'TGBT-01',
+                nom: 'TGBT Principal',
+                type: 'TGBT',
+                numeroEquipement: '42',
+                sourceNomComplet: 'Transformateur TR1',
+              ),
+              CoffretArmoire(
+                qrCode: 'Q41',
+                repere: 'ARM-01',
+                nom: 'Armoire Climatisation',
+                type: 'ARMOIRE',
+                numeroEquipement: '',
+                sourceNomComplet: 'non identifié',
+              ),
+            ],
+          ),
+        ],
+      );
+
+      final mtItems = PdfReportService.collectEquipementsMTForTesting(audit);
+      expect(mtItems[0].numero, equals('CEL-01'));
+      expect(mtItems[1].numero, equals('TR-100'));
+
+      final btItems = PdfReportService.getEquipementsBTForTesting(audit, null);
+      expect(btItems[0].numero, equals('42'));
+      expect(btItems[1].numero, equals(''));
+
+      expect(PdfEquipementsSynthesisBuilder.isSourceIdentified('Transformateur TR1'), isTrue);
+      expect(PdfEquipementsSynthesisBuilder.isSourceIdentified('non identifié'), isFalse);
+      expect(PdfEquipementsSynthesisBuilder.isSourceIdentified('Inconnu'), isFalse);
+      expect(PdfEquipementsSynthesisBuilder.isSourceIdentified(null), isFalse);
+
+      expect(PdfEquipementsSynthesisBuilder.formatSourceDisplay('Transformateur TR1'), equals('Identifiée'));
+      expect(PdfEquipementsSynthesisBuilder.formatSourceDisplay('non identifié'), equals('non identifié'));
     });
   });
 }

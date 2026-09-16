@@ -928,7 +928,6 @@ class PdfDescriptionBuilder {
       return val.trim();
     }
 
-    final natureReseau = safeVal(desc.natureReseauAlimentationSite);
     final tensionRaw = desc.tensionAlimentationSite?.trim();
     final tension = (tensionRaw != null && tensionRaw.isNotEmpty)
         ? PdfReportStyles.stripUnitFromValue(tensionRaw, 'kV')
@@ -938,7 +937,6 @@ class PdfDescriptionBuilder {
 
     final headers = [
       'N°',
-      'Nature du réseau',
       'Tension d\'alimentation (kV)',
       'Nombre d\'alimentation',
       'Présence de l\'IACM',
@@ -951,7 +949,6 @@ class PdfDescriptionBuilder {
         1: pw.FlexColumnWidth(1),
         2: pw.FlexColumnWidth(1),
         3: pw.FlexColumnWidth(1),
-        4: pw.FlexColumnWidth(1),
       },
       children: [
         pw.TableRow(
@@ -978,7 +975,6 @@ class PdfDescriptionBuilder {
                 ),
               ),
             ),
-            PdfReportStyles.cell(natureReseau, isHeader: false, centered: true),
             PdfReportStyles.cell(tension, isHeader: false, centered: true),
             PdfReportStyles.cell(nombre, isHeader: false, centered: true),
             PdfReportStyles.cell(presenceIacm, isHeader: false, centered: true),

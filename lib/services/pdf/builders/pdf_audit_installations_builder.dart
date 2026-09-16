@@ -65,6 +65,15 @@ class PdfAuditInstallationsBuilder {
     return (du: "DE L'ÉQUIPEMENT", deCe: "DE CET ÉQUIPEMENT");
   }
 
+  static String getIndiceIpIkLabel(String? type) {
+    final t = (type ?? '').trim().toUpperCase();
+    if (t == 'INVERSEUR') return "Indice IP/IK de l'Inverseur";
+    if (t == 'ARMOIRE') return "Indice IP/IK de l'Armoire";
+    if (t == 'COFFRET') return "Indice IP/IK du Coffret";
+    if (t == 'TGBT') return "Indice IP/IK du TGBT";
+    return "Indice IP/IK de l'équipement";
+  }
+
   static pw.Widget _resultBox(String text) {
     final lower = text.toLowerCase();
     final isOk = lower.contains('satisfaisant') && !lower.contains('non');
@@ -934,7 +943,7 @@ class PdfAuditInstallationsBuilder {
       return pw.Container(
         alignment: pw.Alignment.center,
         margin: const pw.EdgeInsets.only(top: 4, bottom: 6),
-        child: buildPhotoBox(images[0], 160, 120),
+        child: buildPhotoBox(images[0], 280, 190),
       );
     }
 
@@ -946,9 +955,9 @@ class PdfAuditInstallationsBuilder {
         child: pw.Row(
           mainAxisAlignment: pw.MainAxisAlignment.center,
           children: [
-            buildPhotoBox(images[0], 140, 105),
+            buildPhotoBox(images[0], 225, 155),
             pw.SizedBox(width: 10),
-            buildPhotoBox(images[1], 140, 105),
+            buildPhotoBox(images[1], 225, 155),
           ],
         ),
       );
@@ -962,11 +971,11 @@ class PdfAuditInstallationsBuilder {
         child: pw.Row(
           mainAxisAlignment: pw.MainAxisAlignment.center,
           children: [
-            buildPhotoBox(images[0], 110, 85),
+            buildPhotoBox(images[0], 150, 110),
             pw.SizedBox(width: 8),
-            buildPhotoBox(images[1], 110, 85),
+            buildPhotoBox(images[1], 150, 110),
             pw.SizedBox(width: 8),
-            buildPhotoBox(images[2], 110, 85),
+            buildPhotoBox(images[2], 150, 110),
           ],
         ),
       );
@@ -980,10 +989,10 @@ class PdfAuditInstallationsBuilder {
         pw.Row(
           mainAxisAlignment: pw.MainAxisAlignment.center,
           children: [
-            buildPhotoBox(chunk[0], 135, 100),
+            buildPhotoBox(chunk[0], 225, 150),
             if (chunk.length > 1) ...[
               pw.SizedBox(width: 10),
-              buildPhotoBox(chunk[1], 135, 100),
+              buildPhotoBox(chunk[1], 225, 150),
             ],
           ],
         ),
@@ -1913,8 +1922,8 @@ class PdfAuditInstallationsBuilder {
         verticalInside: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.4),
       ),
       columnWidths: const {
-        0: pw.FlexColumnWidth(6.4),
-        1: pw.FlexColumnWidth(2.6),
+        0: pw.FlexColumnWidth(6.0),
+        1: pw.FlexColumnWidth(3.0),
       },
       children: [
         pw.TableRow(
@@ -1926,11 +1935,11 @@ class PdfAuditInstallationsBuilder {
               child: photoImg != null
                   ? pw.Image(
                       photoImg,
-                      width: 140,
-                      height: 140,
+                      width: 165,
+                      height: 240,
                       fit: pw.BoxFit.contain,
                     )
-                  : pw.SizedBox(width: 140, height: 140),
+                  : pw.SizedBox(width: 165, height: 240),
             ),
           ],
         ),
@@ -2511,8 +2520,8 @@ class PdfAuditInstallationsBuilder {
         verticalInside: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.4),
       ),
       columnWidths: const {
-        0: pw.FlexColumnWidth(6.4),
-        1: pw.FlexColumnWidth(2.6),
+        0: pw.FlexColumnWidth(6.0),
+        1: pw.FlexColumnWidth(3.0),
       },
       children: [
         pw.TableRow(
@@ -2524,11 +2533,11 @@ class PdfAuditInstallationsBuilder {
               child: photoImg != null
                   ? pw.Image(
                       photoImg,
-                      width: 140,
-                      height: 140,
+                      width: 165,
+                      height: 260,
                       fit: pw.BoxFit.contain,
                     )
-                  : pw.SizedBox(width: 140, height: 140),
+                  : pw.SizedBox(width: 165, height: 260),
             ),
           ],
         ),
@@ -3161,7 +3170,7 @@ class PdfAuditInstallationsBuilder {
           repereBgColor,
         ),
         tableRowCustomColor(
-          'Indice IP/IK',
+          getIndiceIpIkLabel(coffret.type),
           equipDisplay,
           equipBgColor,
         ),
@@ -3200,8 +3209,8 @@ class PdfAuditInstallationsBuilder {
               child: photoInterne != null
                   ? pw.Image(
                       photoInterne,
-                      width: 140,
-                      height: 110,
+                      width: 185,
+                      height: 175,
                       fit: pw.BoxFit.contain,
                     )
                   : pw.Text(
@@ -3285,8 +3294,8 @@ class PdfAuditInstallationsBuilder {
               ),
               child: pw.Image(
                 photoInterne,
-                width: 160,
-                height: 120,
+                width: 250,
+                height: 180,
                 fit: pw.BoxFit.contain,
               ),
             ),
