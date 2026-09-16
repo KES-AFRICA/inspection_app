@@ -314,29 +314,22 @@ class PdfDescriptionBuilder {
       ),
     );
 
-    final String rawRegime = safeDesc.regimeNeutre?.trim() ?? '';
-    if (rawRegime.isEmpty ||
-        rawRegime.toLowerCase() == 'non renseigné' ||
-        rawRegime.toLowerCase() == 'absent') {
+    final effectiveRegimes = InstallationDescriptionSyncService.resolveEffectiveRegimes(
+      desc: safeDesc,
+      audit: audit,
+    );
+
+    if (effectiveRegimes.isEmpty) {
       widgets.add(PdfReportStyles.bodyText('- absent'));
     } else {
-      final items = rawRegime
-          .split(RegExp(r'[,/;\n]+'))
-          .map((s) => s.trim())
-          .where((s) => s.isNotEmpty)
-          .toList();
-      if (items.isEmpty) {
-        widgets.add(PdfReportStyles.bodyText('- absent'));
-      } else {
-        for (final item in items) {
-          String displayItem = item;
-          if (item == 'TN' &&
-              safeDesc.regimeNeutreDetail != null &&
-              safeDesc.regimeNeutreDetail!.isNotEmpty) {
-            displayItem = 'TN (TN-${safeDesc.regimeNeutreDetail})';
-          }
-          widgets.add(PdfReportStyles.bodyText('- $displayItem'));
+      for (final item in effectiveRegimes) {
+        String displayItem = item;
+        if (item == 'TN' &&
+            safeDesc.regimeNeutreDetail != null &&
+            safeDesc.regimeNeutreDetail!.isNotEmpty) {
+          displayItem = 'TN (TN-${safeDesc.regimeNeutreDetail})';
         }
+        widgets.add(PdfReportStyles.bodyText('- $displayItem'));
       }
     }
     widgets.add(pw.SizedBox(height: 5));

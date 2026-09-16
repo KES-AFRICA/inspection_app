@@ -167,6 +167,142 @@ class InstallationDescriptionSyncService {
     return true;
   }
 
+  /// Normalise un libellé de régime de neutre vers l'un des 4 standards ('TT', 'TN-C', 'TN-S', 'IT')
+  static String? normalizeRegimeNeutre(String? raw) {
+    if (raw == null) return null;
+    final clean = raw.trim().toUpperCase();
+    if (clean == 'TT') return 'TT';
+    if (clean == 'TN-C' || clean == 'TNC') return 'TN-C';
+    if (clean == 'TN-S' || clean == 'TNS') return 'TN-S';
+    if (clean == 'IT') return 'IT';
+    return null;
+  }
+
+  /// Extrait l'ensemble des régimes standards et personnalisés depuis une chaîne (ex: "TT, TN-S" ou "TN-C / IT")
+  static Set<String> extractRegimesFromText(String? text, {String? detail}) {
+    final result = <String>{};
+    if (text == null || text.trim().isEmpty) return result;
+
+    final trimmed = text.trim();
+    if (trimmed.toLowerCase() == 'non renseigné' ||
+        trimmed.toLowerCase() == 'non renseigne' ||
+        trimmed.toLowerCase() == 'absent') {
+      return result;
+    }
+
+    if (trimmed.toUpperCase() == 'TN') {
+      if (detail != null && detail.trim().toUpperCase() == 'S') {
+        result.add('TN-S');
+      } else {
+        result.add('TN-C');
+      }
+      return result;
+    }
+
+    final parts = trimmed
+        .split(RegExp(r'[,/;\n]+'))
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty);
+
+    for (final part in parts) {
+      final norm = normalizeRegimeNeutre(part);
+      if (norm != null) {
+        result.add(norm);
+      } else if (part.toUpperCase() == 'TN') {
+        if (detail != null && detail.trim().toUpperCase() == 'S') {
+          result.add('TN-S');
+        } else {
+          result.add('TN-C');
+        }
+      } else {
+        result.add(part);
+      }
+    }
+    return result;
+  }
+
+  /// Collecte tous les transformateurs MT/BT présents dans un audit
+  static List<TransformateurMTBT> collectAllTransformateursFromAudit(AuditInstallationsElectriques? audit) {
+    if (audit == null) return [];
+    final List<TransformateurMTBT> transfos = [];
+
+    // 1. Locaux MT directs
+    for (var local in audit.moyenneTensionLocaux) {
+      local.migrateFromOldFields();
+      transfos.addAll(local.transformateurs);
+    }
+
+    // 2. Locaux des zones MT
+    for (var zone in audit.moyenneTensionZones) {
+      for (var local in zone.locaux) {
+        local.migrateFromOldFields();
+        transfos.addAll(local.transformateurs);
+      }
+    }
+
+    // 3. Locaux des zones BT
+    for (var zone in audit.basseTensionZones) {
+      for (var local in zone.locaux) {
+        transfos.addAll(local.transformateurs);
+      }
+    }
+
+    return transfos;
+  }
+
+  /// Récupère l'ensemble des régimes de neutre enregistrés sur tous les transformateurs de l'audit
+  static Set<String> getRegimesNeutreFromAuditTransformers(AuditInstallationsElectriques? audit) {
+    final transfos = collectAllTransformateursFromAudit(audit);
+    final regimes = <String>{};
+    for (final t in transfos) {
+      final r = t.regimeNeutre.trim();
+      if (r.isEmpty) continue;
+      regimes.addAll(extractRegimesFromText(r));
+    }
+    return regimes;
+  }
+
+  /// Résout les régimes de neutre effectifs pour la mission.
+  /// Pour chacun des 4 régimes ('TT', 'TN-C', 'TN-S', 'IT') :
+  /// 1. On vérifie s'il est renseigné dans le formulaire de description.
+  /// 2. S'il n'a pas été renseigné, on vérifie dans la liste de tous les transformateurs
+  ///    de l'audit (locaux MT et BT). S'il y a un transformateur avec ce régime, il est
+  ///    automatiquement sélectionné.
+  /// Conserve également les éventuels régimes personnalisés.
+  static List<String> resolveEffectiveRegimes({
+    required DescriptionInstallations? desc,
+    required AuditInstallationsElectriques? audit,
+  }) {
+    final standardRegimes = ['TT', 'TN-C', 'TN-S', 'IT'];
+    final selectedInDesc = extractRegimesFromText(
+      desc?.regimeNeutre,
+      detail: desc?.regimeNeutreDetail,
+    );
+
+    final auditTransfoRegimes = getRegimesNeutreFromAuditTransformers(audit);
+
+    final result = <String>[];
+
+    // Traitement séquentiel des 4 régimes selon la règle métier :
+    // Vérification dans le formulaire de description, et si absent, auto-sélection depuis les transfos
+    for (final regime in standardRegimes) {
+      if (selectedInDesc.contains(regime)) {
+        result.add(regime);
+      } else if (auditTransfoRegimes.contains(regime)) {
+        result.add(regime);
+      }
+    }
+
+    // Conservation des régimes personnalisés ("Autre") saisis dans la description
+    for (final item in selectedInDesc) {
+      if (!standardRegimes.contains(item) && !result.contains(item)) {
+        result.add(item);
+      }
+    }
+
+    return result;
+  }
+
   /// Synchronise l'ensemble de l'Audit des Installations vers la Description des Installations
   static Future<void> syncAuditToDescription(AuditInstallationsElectriques audit) async {
     try {
@@ -178,6 +314,8 @@ class InstallationDescriptionSyncService {
 
       final oldMTA = List<InstallationItem>.from(desc.alimentationMoyenneTension);
       final oldBTA = List<InstallationItem>.from(desc.alimentationBasseTension);
+      final oldRegime = desc.regimeNeutre;
+      final oldRegimeDetail = desc.regimeNeutreDetail;
 
       bool auditModifie = false;
 
@@ -186,6 +324,20 @@ class InstallationDescriptionSyncService {
 
       // 2. Synchronisation des Transformateurs MT/BT -> alimentationBasseTension
       auditModifie |= await _syncTransformateurs(audit, desc);
+
+      // 3. Synchronisation automatique du Régime de neutre depuis les transformateurs
+      final effectiveRegimes = resolveEffectiveRegimes(desc: desc, audit: audit);
+      if (effectiveRegimes.isNotEmpty) {
+        final newRegimeStr = effectiveRegimes.join(', ');
+        if (desc.regimeNeutre != newRegimeStr) {
+          desc.regimeNeutre = newRegimeStr;
+          if (effectiveRegimes.contains('TN-S') && !effectiveRegimes.contains('TN-C')) {
+            desc.regimeNeutreDetail = 'S';
+          } else if (effectiveRegimes.contains('TN-C') && !effectiveRegimes.contains('TN-S')) {
+            desc.regimeNeutreDetail = 'C';
+          }
+        }
+      }
 
       // Sauvegarde des modifications de l'audit si des syncId ont été générés
       if (auditModifie) {
@@ -200,8 +352,9 @@ class InstallationDescriptionSyncService {
 
       final mtEqual = _areItemListsEqual(oldMTA, desc.alimentationMoyenneTension);
       final btEqual = _areItemListsEqual(oldBTA, desc.alimentationBasseTension);
+      final regimeEqual = (oldRegime == desc.regimeNeutre) && (oldRegimeDetail == desc.regimeNeutreDetail);
 
-      if (!mtEqual || !btEqual || descBox.get(missionId) == null) {
+      if (!mtEqual || !btEqual || !regimeEqual || descBox.get(missionId) == null) {
         desc.updatedAt = DateTime.now();
         await descBox.put(missionId, desc);
         if (kDebugMode) {

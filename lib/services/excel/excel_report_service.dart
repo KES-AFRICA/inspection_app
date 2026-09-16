@@ -532,7 +532,7 @@ class ExcelReportService {
           _styleDataCell(cellType,
               bgColor: bgColor, hAlign: xlsio.HAlignType.center);
 
-          // Col 6 : Source (Règle unifiée PDF/Excel : "Identifiée" ou "non identifié")
+          // Col 6 : Source (Règle unifiée PDF/Excel : "Identifiée" ou "Non identifiée")
           final cellSource = sheet.getRangeByIndex(currentRow, 6);
           final isIdentified = PdfEquipementsSynthesisBuilder.isSourceIdentified(item.source);
           final sourceText = PdfEquipementsSynthesisBuilder.formatSourceDisplay(item.source);

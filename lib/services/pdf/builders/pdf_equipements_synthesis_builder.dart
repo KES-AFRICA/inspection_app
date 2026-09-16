@@ -127,9 +127,9 @@ class PdfEquipementsSynthesisBuilder {
 
   /// Projection textuelle standardisée de la source selon la règle métier :
   /// Si la source est identifiée -> "Identifiée"
-  /// Sinon -> "non identifié"
+  /// Sinon -> "Non identifiée"
   static String formatSourceDisplay(String? source) {
-    return isSourceIdentified(source) ? 'Identifiée' : 'non identifié';
+    return isSourceIdentified(source) ? 'Identifiée' : 'Non identifiée';
   }
 
   static pw.Widget buildEquipementsTableForTesting(
@@ -723,8 +723,8 @@ class PdfEquipementsSynthesisBuilder {
               numero: coffret.numeroEquipement?.trim() ?? '',
               nom: nom,
               type: 'Inverseur',
-              alimentationConcernee: (s.isNotEmpty && s.toLowerCase() != 'inconnu') ? s : 'Source non identifie',
-              source: (s.isNotEmpty && s.toLowerCase() != 'inconnu') ? s : 'non identifie',
+              alimentationConcernee: (s.isNotEmpty && s.toLowerCase() != 'inconnu') ? s : 'Source non identifiée',
+              source: (s.isNotEmpty && s.toLowerCase() != 'inconnu') ? s : 'Non identifiée',
             ),
           );
         }
@@ -739,8 +739,8 @@ class PdfEquipementsSynthesisBuilder {
               numero: coffret.numeroEquipement?.trim() ?? '',
               nom: nom,
               type: 'Inverseur',
-              alimentationConcernee: (s.isNotEmpty && s.toLowerCase() != 'inconnu') ? s : 'Source non identifie',
-              source: (s.isNotEmpty && s.toLowerCase() != 'inconnu') ? s : 'non identifie',
+              alimentationConcernee: (s.isNotEmpty && s.toLowerCase() != 'inconnu') ? s : 'Source non identifiée',
+              source: (s.isNotEmpty && s.toLowerCase() != 'inconnu') ? s : 'Non identifiée',
             ),
           );
         }
@@ -767,7 +767,7 @@ class PdfEquipementsSynthesisBuilder {
               alimentationConcernee: 'Source d\'alimentation',
               source: (resolvedSource.isNotEmpty && resolvedSource.toLowerCase() != 'inconnu')
                   ? resolvedSource
-                  : 'non identifie',
+                  : 'Non identifiée',
             ),
           );
         }

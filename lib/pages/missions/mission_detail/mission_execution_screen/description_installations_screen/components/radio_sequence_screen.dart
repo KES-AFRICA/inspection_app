@@ -5,6 +5,8 @@ import 'package:inspec_app/models/description_installations.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:inspec_app/features/description_installations/presentation/providers/description_installations_provider.dart';
+import 'package:inspec_app/services/hive_service.dart';
+import 'package:inspec_app/services/installation_description_sync_service.dart';
 
 class RadioSequenceScreen extends ConsumerStatefulWidget {
   final Mission mission;
@@ -237,6 +239,15 @@ class _RadioSequenceScreenState extends ConsumerState<RadioSequenceScreen> {
                   _autreController.text = autres.join(', ');
                   _autreSavedValue = autres.join(', ');
                 }
+              }
+            }
+
+            // Automatisation : Vérification dans les transformateurs du système (Audit)
+            final audit = HiveService.getAuditInstallationsByMissionId(widget.mission.id);
+            final transfoRegimes = InstallationDescriptionSyncService.getRegimesNeutreFromAuditTransformers(audit);
+            for (final r in ['TT', 'TN-C', 'TN-S', 'IT']) {
+              if (!_selectedRegimes.contains(r) && transfoRegimes.contains(r)) {
+                _selectedRegimes.add(r);
               }
             }
 

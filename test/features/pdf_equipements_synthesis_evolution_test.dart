@@ -301,7 +301,8 @@ void main() {
       expect(PdfEquipementsSynthesisBuilder.isSourceIdentified(null), isFalse);
 
       expect(PdfEquipementsSynthesisBuilder.formatSourceDisplay('Transformateur TR1'), equals('Identifiée'));
-      expect(PdfEquipementsSynthesisBuilder.formatSourceDisplay('non identifié'), equals('non identifié'));
+      expect(PdfEquipementsSynthesisBuilder.formatSourceDisplay('non identifié'), equals('Non identifiée'));
+      expect(PdfEquipementsSynthesisBuilder.formatSourceDisplay('Non identifiée'), equals('Non identifiée'));
     });
   });
 }
