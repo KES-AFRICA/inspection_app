@@ -33,6 +33,9 @@ class RenseignementsGenerauxLocalDataSourceImpl implements RenseignementsGenerau
         compteRendu: [],
         accompagnateurs: [],
         verificateurs: [],
+        classementReglementaire: mission?.classementReglementaire,
+        classementReglementaireType: mission?.classementReglementaireType,
+        classementReglementaireCategorie: mission?.classementReglementaireCategorie,
       );
 
       await box.add(newData);

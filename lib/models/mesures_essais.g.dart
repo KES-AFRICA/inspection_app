@@ -193,12 +193,12 @@ class PriseTerreAdapter extends TypeAdapter<PriseTerre> {
     };
     return PriseTerre(
       id: fields[20] as String?,
-      localisation: (fields[0] as String?) ?? '',
-      identification: (fields[1] as String?) ?? '',
-      conditionPriseTerre: (fields[2] as String?) ?? '',
-      naturePriseTerre: (fields[3] as String?) ?? '',
-      methodeMesure: (fields[4] as String?) ?? '',
-      valeurMesure: (fields[5] as num?)?.toDouble(),
+      localisation: fields[0] as String,
+      identification: fields[1] as String,
+      conditionPriseTerre: fields[2] as String,
+      naturePriseTerre: fields[3] as String,
+      methodeMesure: fields[4] as String,
+      valeurMesure: fields[5] as double?,
       observation: fields[6] as String?,
       interconnecteAutrePrise: fields[7] as String?,
       photo: fields[8] as String?,
@@ -301,16 +301,16 @@ class EssaiDeclenchementDifferentielAdapter
     };
     return EssaiDeclenchementDifferentiel(
       id: fields[20] as String?,
-      localisation: (fields[0] as String?) ?? '',
+      localisation: fields[0] as String,
       coffret: fields[1] as String?,
       designationCircuit: fields[2] as String?,
-      typeDispositif: (fields[3] as String?) ?? 'Disjoncteur différentiel',
-      reglageIAn: (fields[4] as num?)?.toDouble(),
-      tempo: (fields[5] as num?)?.toDouble(),
-      isolement: (fields[6] as num?)?.toDouble(),
-      essai: (fields[7] as String?) ?? 'NE',
+      typeDispositif: fields[3] as String,
+      reglageIAn: fields[4] as double?,
+      tempo: fields[5] as double?,
+      isolement: fields[6] as double?,
+      essai: fields[7] as String,
       observation: fields[8] as String?,
-      calibre: (fields[9] as num?)?.toDouble(),
+      calibre: fields[9] as double?,
       tempoText: fields[10] as String?,
       createdAt: fields[21] as DateTime?,
       updatedAt: fields[22] as DateTime?,
@@ -389,9 +389,9 @@ class ContinuiteResistanceAdapter extends TypeAdapter<ContinuiteResistance> {
     };
     return ContinuiteResistance(
       id: fields[20] as String?,
-      localisation: (fields[0] as String?) ?? '',
-      designationTableau: (fields[1] as String?) ?? '',
-      origineMesure: (fields[2] as String?) ?? '',
+      localisation: fields[0] as String,
+      designationTableau: fields[1] as String,
+      origineMesure: fields[2] as String,
       observation: fields[3] as String?,
       essai: fields[4] as String?,
       createdAt: fields[21] as DateTime?,
@@ -443,11 +443,11 @@ class EssaiIsolementAdapter extends TypeAdapter<EssaiIsolement> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return EssaiIsolement(
-      syncId: (fields[0] as String?) ?? '',
+      syncId: fields[0] as String,
       equipmentSyncId: fields[1] as String?,
       pointControle: fields[2] as String?,
-      isolement: (fields[3] as num?)?.toDouble() ?? 0.0,
-      appreciation: (fields[4] as String?) ?? 'Satisfaisant',
+      isolement: fields[3] as double,
+      appreciation: fields[4] as String,
       localisation: fields[5] as String?,
       designation: fields[6] as String?,
       reperePointOrigine: fields[7] as String?,
@@ -562,9 +562,9 @@ class CpiTestAdapter extends TypeAdapter<CpiTest> {
       transformateurNom: fields[4] as String?,
       zone: fields[5] as String?,
       repere: fields[6] as String?,
-      cpi: fields[7] as String? ?? '',
-      essaiDeclenchement: fields[8] as String? ?? 'Satisfaisant',
-      reportAlarme: fields[9] as String? ?? 'Satisfaisant',
+      cpi: fields[7] as String,
+      essaiDeclenchement: fields[8] as String,
+      reportAlarme: fields[9] as String,
       createdAt: fields[20] as DateTime?,
       updatedAt: fields[21] as DateTime?,
     );
@@ -610,4 +610,3 @@ class CpiTestAdapter extends TypeAdapter<CpiTest> {
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
-

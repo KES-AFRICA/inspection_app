@@ -25,6 +25,7 @@ class RenseignementsGenerauxMapper {
       nomSite: model.nomSite,
       formationHabilitationElectrique: model.habilitationElectriqueEffective,
       activiteSurSite: model.activiteSurSite,
+      classementReglementaire: model.classementReglementaire,
       classementReglementaireType: model.classementReglementaireType,
       classementReglementaireCategorie: model.classementReglementaireCategorie,
     );
@@ -52,6 +53,7 @@ class RenseignementsGenerauxMapper {
       nomSite: entity.nomSite,
       formationHabilitationElectrique: entity.formationHabilitationElectrique,
       activiteSurSite: entity.activiteSurSite,
+      classementReglementaire: entity.classementReglementaire,
       classementReglementaireType: entity.classementReglementaireType,
       classementReglementaireCategorie: entity.classementReglementaireCategorie,
     );

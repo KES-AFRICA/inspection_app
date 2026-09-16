@@ -21,6 +21,7 @@ class MissionAdapter extends TypeAdapter<Mission> {
       nomClient: fields[1] as String,
       activiteClient: fields[2] as String?,
       activiteSurSite: fields[42] as String?,
+      classementReglementaire: fields[46] as String?,
       classementReglementaireType: fields[43] as String?,
       classementReglementaireCategorie: fields[44] as String?,
       afficherTableauFoudre: fields[45] == null ? false : fields[45] as bool,
@@ -70,7 +71,7 @@ class MissionAdapter extends TypeAdapter<Mission> {
   @override
   void write(BinaryWriter writer, Mission obj) {
     writer
-      ..writeByte(46)
+      ..writeByte(47)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -162,7 +163,9 @@ class MissionAdapter extends TypeAdapter<Mission> {
       ..writeByte(44)
       ..write(obj.classementReglementaireCategorie)
       ..writeByte(45)
-      ..write(obj.afficherTableauFoudre);
+      ..write(obj.afficherTableauFoudre)
+      ..writeByte(46)
+      ..write(obj.classementReglementaire);
   }
 
   @override

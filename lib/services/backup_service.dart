@@ -1340,6 +1340,7 @@ class BackupService {
         'updatedAt': r.updatedAt.toIso8601String(),
         'nomSite': r.nomSite,
         'activiteSurSite': r.activiteSurSite,
+        'classementReglementaire': r.classementReglementaire,
         'classementReglementaireType': r.classementReglementaireType,
         'classementReglementaireCategorie': r.classementReglementaireCategorie,
       };
@@ -3402,6 +3403,7 @@ class BackupService {
             ? DateTime.tryParse(d['createdAt'] as String)
             : null,
         activiteSurSite: d['activiteSurSite'] as String?,
+        classementReglementaire: d['classementReglementaire'] as String?,
         classementReglementaireType: d['classementReglementaireType'] as String?,
         classementReglementaireCategorie: d['classementReglementaireCategorie'] as String?,
       );

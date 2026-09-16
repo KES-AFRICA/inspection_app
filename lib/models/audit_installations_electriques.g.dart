@@ -675,19 +675,20 @@ class CoffretArmoireAdapter extends TypeAdapter<CoffretArmoire> {
           fields[11] == null ? false : fields[11] as bool,
       presenceDefautThermo: fields[24] as String?,
       alimenteeParTransformateur: fields[26] as bool?,
+      transformateurId: fields[38] as String?,
+      transformateurNomComplet: fields[39] as String?,
       presenceCPI: fields[27] as bool?,
       departPrisAvecProtection: fields[29] as bool?,
       createdAt: fields[30] as DateTime?,
       updatedAt: fields[31] as DateTime?,
       indiceIpIk: fields[32] as String?,
       indiceIpIkRepere: fields[40] as String?,
-      departures: fields[33] == null ? null : (fields[33] is List ? (fields[33] as List).whereType<DepartEquipement>().toList() : null),
-      terminalCircuits: fields[34] == null ? null : (fields[34] is List ? (fields[34] as List).whereType<CircuitTerminalEquipement>().toList() : null),
+      departures: (fields[33] as List?)?.cast<DepartEquipement>(),
+      terminalCircuits:
+          (fields[34] as List?)?.cast<CircuitTerminalEquipement>(),
       sourceEquipementId: fields[35] as String?,
       sourceNomComplet: fields[36] as String?,
       sourceDepartId: fields[37] as String?,
-      transformateurId: fields[38] as String?,
-      transformateurNomComplet: fields[39] as String?,
       alimentations: (fields[12] as List?)?.cast<Alimentation>(),
       protectionTete: fields[13] as Alimentation?,
       pointsVerification: (fields[14] as List?)?.cast<PointVerification>(),
@@ -802,165 +803,6 @@ class CoffretArmoireAdapter extends TypeAdapter<CoffretArmoire> {
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
-
-class DepartEquipementAdapter extends TypeAdapter<DepartEquipement> {
-  @override
-  final int typeId = 64;
-
-  @override
-  DepartEquipement read(BinaryReader reader) {
-    final numOfFields = reader.readByte();
-    final fields = <int, dynamic>{
-      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
-    };
-    return DepartEquipement(
-      id: fields[0] as String?,
-      protectionTete: fields[1] == null ? 'Présent' : fields[1] as String,
-      identification: fields[2] == null ? '' : fields[2] as String,
-      typeProtection: fields[3] == null ? '' : fields[3] as String,
-      marque: fields[4] == null ? '' : fields[4] as String,
-      courbe: fields[5] == null ? '' : fields[5] as String,
-      pdcKA: fields[6] == null ? '' : fields[6] as String,
-      icc3Max: fields[7] == null ? '' : fields[7] as String,
-      calibre: fields[8] == null ? '' : fields[8] as String,
-      sectionCable: fields[9] == null ? '' : fields[9] as String,
-      ddr: fields[10] == null ? '' : fields[10] as String,
-      nombreCables: fields[11] as String?,
-      sectionCableNeutre: fields[12] as String?,
-      conducteursPhase: fields[13] as int?,
-      conducteursNeutre: fields[14] as int?,
-      natureCable: fields[15] as String?,
-    );
-  }
-
-  @override
-  void write(BinaryWriter writer, DepartEquipement obj) {
-    writer
-      ..writeByte(16)
-      ..writeByte(0)
-      ..write(obj.id)
-      ..writeByte(1)
-      ..write(obj.protectionTete)
-      ..writeByte(2)
-      ..write(obj.identification)
-      ..writeByte(3)
-      ..write(obj.typeProtection)
-      ..writeByte(4)
-      ..write(obj.marque)
-      ..writeByte(5)
-      ..write(obj.courbe)
-      ..writeByte(6)
-      ..write(obj.pdcKA)
-      ..writeByte(7)
-      ..write(obj.icc3Max)
-      ..writeByte(8)
-      ..write(obj.calibre)
-      ..writeByte(9)
-      ..write(obj.sectionCable)
-      ..writeByte(10)
-      ..write(obj.ddr)
-      ..writeByte(11)
-      ..write(obj.nombreCables)
-      ..writeByte(12)
-      ..write(obj.sectionCableNeutre)
-      ..writeByte(13)
-      ..write(obj.conducteursPhase)
-      ..writeByte(14)
-      ..write(obj.conducteursNeutre)
-      ..writeByte(15)
-      ..write(obj.natureCable);
-  }
-
-  @override
-  int get hashCode => typeId.hashCode;
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is DepartEquipementAdapter &&
-          runtimeType == other.runtimeType &&
-          typeId == other.typeId;
-}
-
-class CircuitTerminalEquipementAdapter extends TypeAdapter<CircuitTerminalEquipement> {
-  @override
-  final int typeId = 65;
-
-  @override
-  CircuitTerminalEquipement read(BinaryReader reader) {
-    final numOfFields = reader.readByte();
-    final fields = <int, dynamic>{
-      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
-    };
-    return CircuitTerminalEquipement(
-      id: fields[0] as String?,
-      protectionTete: fields[1] == null ? 'Oui' : fields[1] as String,
-      identification: fields[2] == null ? '' : fields[2] as String,
-      typeProtection: fields[3] == null ? '' : fields[3] as String,
-      marque: fields[4] == null ? '' : fields[4] as String,
-      courbe: fields[5] == null ? '' : fields[5] as String,
-      pdcKA: fields[6] == null ? '' : fields[6] as String,
-      icc3Max: fields[7] == null ? '' : fields[7] as String,
-      calibre: fields[8] == null ? '' : fields[8] as String,
-      sectionCable: fields[9] == null ? '' : fields[9] as String,
-      ddr: fields[10] == null ? '' : fields[10] as String,
-      nombreCables: fields[11] as String?,
-      sectionCableNeutre: fields[12] as String?,
-      conducteursPhase: fields[13] as int?,
-      conducteursNeutre: fields[14] as int?,
-      natureCable: fields[15] as String?,
-    );
-  }
-
-  @override
-  void write(BinaryWriter writer, CircuitTerminalEquipement obj) {
-    writer
-      ..writeByte(16)
-      ..writeByte(0)
-      ..write(obj.id)
-      ..writeByte(1)
-      ..write(obj.protectionTete)
-      ..writeByte(2)
-      ..write(obj.identification)
-      ..writeByte(3)
-      ..write(obj.typeProtection)
-      ..writeByte(4)
-      ..write(obj.marque)
-      ..writeByte(5)
-      ..write(obj.courbe)
-      ..writeByte(6)
-      ..write(obj.pdcKA)
-      ..writeByte(7)
-      ..write(obj.icc3Max)
-      ..writeByte(8)
-      ..write(obj.calibre)
-      ..writeByte(9)
-      ..write(obj.sectionCable)
-      ..writeByte(10)
-      ..write(obj.ddr)
-      ..writeByte(11)
-      ..write(obj.nombreCables)
-      ..writeByte(12)
-      ..write(obj.sectionCableNeutre)
-      ..writeByte(13)
-      ..write(obj.conducteursPhase)
-      ..writeByte(14)
-      ..write(obj.conducteursNeutre)
-      ..writeByte(15)
-      ..write(obj.natureCable);
-  }
-
-  @override
-  int get hashCode => typeId.hashCode;
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is CircuitTerminalEquipementAdapter &&
-          runtimeType == other.runtimeType &&
-          typeId == other.typeId;
-}
-
 
 class AlimentationAdapter extends TypeAdapter<Alimentation> {
   @override
@@ -1156,6 +998,165 @@ class ObservationLibreAdapter extends TypeAdapter<ObservationLibre> {
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is ObservationLibreAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
+class DepartEquipementAdapter extends TypeAdapter<DepartEquipement> {
+  @override
+  final int typeId = 64;
+
+  @override
+  DepartEquipement read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return DepartEquipement(
+      id: fields[0] as String?,
+      protectionTete: fields[1] as String,
+      identification: fields[2] as String,
+      typeProtection: fields[3] as String,
+      marque: fields[4] as String,
+      courbe: fields[5] as String,
+      pdcKA: fields[6] as String,
+      icc3Max: fields[7] as String,
+      calibre: fields[8] as String,
+      sectionCable: fields[9] as String,
+      ddr: fields[10] as String,
+      nombreCables: fields[11] as String?,
+      sectionCableNeutre: fields[12] as String?,
+      conducteursPhase: fields[13] as int?,
+      conducteursNeutre: fields[14] as int?,
+      natureCable: fields[15] as String?,
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, DepartEquipement obj) {
+    writer
+      ..writeByte(16)
+      ..writeByte(0)
+      ..write(obj.id)
+      ..writeByte(1)
+      ..write(obj.protectionTete)
+      ..writeByte(2)
+      ..write(obj.identification)
+      ..writeByte(3)
+      ..write(obj.typeProtection)
+      ..writeByte(4)
+      ..write(obj.marque)
+      ..writeByte(5)
+      ..write(obj.courbe)
+      ..writeByte(6)
+      ..write(obj.pdcKA)
+      ..writeByte(7)
+      ..write(obj.icc3Max)
+      ..writeByte(8)
+      ..write(obj.calibre)
+      ..writeByte(9)
+      ..write(obj.sectionCable)
+      ..writeByte(10)
+      ..write(obj.ddr)
+      ..writeByte(11)
+      ..write(obj.nombreCables)
+      ..writeByte(12)
+      ..write(obj.sectionCableNeutre)
+      ..writeByte(13)
+      ..write(obj.conducteursPhase)
+      ..writeByte(14)
+      ..write(obj.conducteursNeutre)
+      ..writeByte(15)
+      ..write(obj.natureCable);
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DepartEquipementAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
+class CircuitTerminalEquipementAdapter
+    extends TypeAdapter<CircuitTerminalEquipement> {
+  @override
+  final int typeId = 65;
+
+  @override
+  CircuitTerminalEquipement read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return CircuitTerminalEquipement(
+      id: fields[0] as String?,
+      protectionTete: fields[1] as String,
+      identification: fields[2] as String,
+      typeProtection: fields[3] as String,
+      marque: fields[4] as String,
+      courbe: fields[5] as String,
+      pdcKA: fields[6] as String,
+      icc3Max: fields[7] as String,
+      calibre: fields[8] as String,
+      sectionCable: fields[9] as String,
+      ddr: fields[10] as String,
+      nombreCables: fields[11] as String?,
+      sectionCableNeutre: fields[12] as String?,
+      conducteursPhase: fields[13] as int?,
+      conducteursNeutre: fields[14] as int?,
+      natureCable: fields[15] as String?,
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, CircuitTerminalEquipement obj) {
+    writer
+      ..writeByte(16)
+      ..writeByte(0)
+      ..write(obj.id)
+      ..writeByte(1)
+      ..write(obj.protectionTete)
+      ..writeByte(2)
+      ..write(obj.identification)
+      ..writeByte(3)
+      ..write(obj.typeProtection)
+      ..writeByte(4)
+      ..write(obj.marque)
+      ..writeByte(5)
+      ..write(obj.courbe)
+      ..writeByte(6)
+      ..write(obj.pdcKA)
+      ..writeByte(7)
+      ..write(obj.icc3Max)
+      ..writeByte(8)
+      ..write(obj.calibre)
+      ..writeByte(9)
+      ..write(obj.sectionCable)
+      ..writeByte(10)
+      ..write(obj.ddr)
+      ..writeByte(11)
+      ..write(obj.nombreCables)
+      ..writeByte(12)
+      ..write(obj.sectionCableNeutre)
+      ..writeByte(13)
+      ..write(obj.conducteursPhase)
+      ..writeByte(14)
+      ..write(obj.conducteursNeutre)
+      ..writeByte(15)
+      ..write(obj.natureCable);
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CircuitTerminalEquipementAdapter &&
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }

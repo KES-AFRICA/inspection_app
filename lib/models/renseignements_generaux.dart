@@ -59,6 +59,9 @@ class RenseignementsGeneraux extends HiveObject {
   @HiveField(17)
   String? classementReglementaireCategorie;
 
+  @HiveField(18)
+  String? classementReglementaire;
+
   @HiveField(20)
   DateTime? createdAt;
 
@@ -80,6 +83,7 @@ class RenseignementsGeneraux extends HiveObject {
     required this.nomSite,
     String? formationHabilitationElectrique,
     this.activiteSurSite,
+    this.classementReglementaire,
     this.classementReglementaireType,
     this.classementReglementaireCategorie,
   }) : formationHabilitationElectrique = formationHabilitationElectrique ?? 'Inconnu',
@@ -107,6 +111,7 @@ class RenseignementsGeneraux extends HiveObject {
       accompagnateurs: [],  
       verificateurs: [], 
       activiteSurSite: null,
+      classementReglementaire: null,
       classementReglementaireType: null,
       classementReglementaireCategorie: null,
     );
@@ -130,8 +135,9 @@ class RenseignementsGeneraux extends HiveObject {
       'nomSite': nomSite,
       'formationHabilitationElectrique': habilitationElectriqueEffective,
       'activiteSurSite': activiteSurSite,
+      'classementReglementaire': classementReglementaire,
       'classementReglementaireType': classementReglementaireType,
       'classementReglementaireCategorie': classementReglementaireCategorie,
     };
   }
-}
+}

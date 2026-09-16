@@ -143,11 +143,15 @@ class Mission extends HiveObject {
   @HiveField(45, defaultValue: false)
   bool afficherTableauFoudre;
 
+  @HiveField(46)
+  String? classementReglementaire;
+
   Mission({
     required this.id,
     required this.nomClient,
     this.activiteClient,
     this.activiteSurSite,
+    this.classementReglementaire,
     this.classementReglementaireType,
     this.classementReglementaireCategorie,
     this.afficherTableauFoudre = false,
@@ -254,8 +258,9 @@ class Mission extends HiveObject {
           ? List<String>.from(json['perimetre_mission'])
           : null,
       activiteSurSite: json['activite_sur_site'],
-      classementReglementaireType: json['classement_reglementaire_type'],
-      classementReglementaireCategorie: json['classement_reglementaire_categorie'],
+      classementReglementaire: json['classement_reglementaire'] ?? json['classementReglementaire'],
+      classementReglementaireType: json['classement_reglementaire_type'] ?? json['classementReglementaireType'],
+      classementReglementaireCategorie: json['classement_reglementaire_categorie'] ?? json['classementReglementaireCategorie'],
       afficherTableauFoudre: json['afficher_tableau_foudre'] ?? false,
     );
   }
@@ -266,6 +271,7 @@ class Mission extends HiveObject {
       'nom_client': nomClient,
       'activite_client': activiteClient,
       'activite_sur_site': activiteSurSite,
+      'classement_reglementaire': classementReglementaire,
       'classement_reglementaire_type': classementReglementaireType,
       'classement_reglementaire_categorie': classementReglementaireCategorie,
       'afficher_tableau_foudre': afficherTableauFoudre,

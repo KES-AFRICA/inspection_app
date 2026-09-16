@@ -7452,6 +7452,10 @@ static Future<RenseignementsGeneraux> getOrCreateRenseignementsGeneraux(String m
         existing.activiteSurSite = mission.activiteSurSite;
         changed = true;
       }
+      if (existing.classementReglementaire == null && mission.classementReglementaire != null) {
+        existing.classementReglementaire = mission.classementReglementaire;
+        changed = true;
+      }
       if (existing.classementReglementaireType == null && mission.classementReglementaireType != null) {
         existing.classementReglementaireType = mission.classementReglementaireType;
         changed = true;
@@ -7483,6 +7487,7 @@ static Future<RenseignementsGeneraux> getOrCreateRenseignementsGeneraux(String m
       updatedAt: DateTime.now(),
       nomSite: mission?.nomSite ?? '',
       activiteSurSite: mission?.activiteSurSite,
+      classementReglementaire: mission?.classementReglementaire,
       classementReglementaireType: mission?.classementReglementaireType,
       classementReglementaireCategorie: mission?.classementReglementaireCategorie,
       compteRendu: [],
@@ -7520,6 +7525,10 @@ static Future<void> saveRenseignementsGeneraux(RenseignementsGeneraux data) asyn
     bool missionChanged = false;
     if (data.activiteSurSite != mission.activiteSurSite) {
       mission.activiteSurSite = data.activiteSurSite;
+      missionChanged = true;
+    }
+    if (data.classementReglementaire != mission.classementReglementaire) {
+      mission.classementReglementaire = data.classementReglementaire;
       missionChanged = true;
     }
     if (data.classementReglementaireType != mission.classementReglementaireType) {

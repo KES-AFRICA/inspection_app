@@ -17,6 +17,7 @@ class RenseignementsGenerauxEntity {
   final String nomSite;
   final String formationHabilitationElectrique;
   final String? activiteSurSite;
+  final String? classementReglementaire;
   final String? classementReglementaireType;
   final String? classementReglementaireCategorie;
 
@@ -37,6 +38,7 @@ class RenseignementsGenerauxEntity {
     required this.nomSite,
     this.formationHabilitationElectrique = 'Inconnu',
     this.activiteSurSite,
+    this.classementReglementaire,
     this.classementReglementaireType,
     this.classementReglementaireCategorie,
   });

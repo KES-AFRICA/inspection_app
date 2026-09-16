@@ -274,6 +274,8 @@ class WordReportService {
       if (mission.adresseClient != null) _dataRow(['Adresse', mission.adresseClient!]),
       if (mission.dgResponsable != null) _dataRow(['DG / Responsable', mission.dgResponsable!]),
       if (rg?.installation.isNotEmpty == true) _dataRow(['Installation', rg!.installation]),
+      if ((rg?.classementReglementaire ?? mission.classementReglementaire) != null)
+        _dataRow(['Classement réglementaire', rg?.classementReglementaire ?? mission.classementReglementaire!]),
       if ((rg?.classementReglementaireType ?? mission.classementReglementaireType) != null)
         _dataRow(['Classement réglementaire - Type', rg?.classementReglementaireType ?? mission.classementReglementaireType!]),
       if ((rg?.classementReglementaireCategorie ?? mission.classementReglementaireCategorie) != null)

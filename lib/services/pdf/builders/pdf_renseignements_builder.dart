@@ -4,6 +4,7 @@ import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/renseignements_generaux.dart';
 import 'package:inspec_app/services/pdf/pdf_page_tracker.dart';
 import 'package:inspec_app/services/pdf/pdf_report_styles.dart';
+import 'package:inspec_app/services/regulatory_classification_service.dart';
 
 /// Builder responsable de la section Renseignements Généraux (cadre d'intervention, client, vérificateurs)
 class PdfRenseignementsBuilder {
@@ -22,32 +23,31 @@ class PdfRenseignementsBuilder {
     pw.Font? fontRegular,
     pw.Widget Function({String? nomClient, String? nomSite, String? numeroRapport, String? titreRapport})? pageHeaderBuilder,
   }) {
-    final verificateursNoms = rg != null && rg.verificateurs.isNotEmpty
-        ? rg.verificateurs
-              .map((v) => '${v['prenom'] ?? ''} ${v['nom'] ?? ''}'.trim())
-              .where((s) => s.isNotEmpty)
-              .join(', ')
-        : (mission.verificateurs != null
-              ? mission.verificateurs!
-                    .map((v) => '${v['prenom'] ?? ''} ${v['nom'] ?? ''}'.trim())
-                    .where((s) => s.isNotEmpty)
-                    .join(', ')
-              : '');
 
-    final dateDebut = rg?.dateDebut ?? mission.dateIntervention;
-    final dateFin = rg?.dateFin;
+    final rawType = (rg?.classementReglementaireType?.isNotEmpty == true)
+        ? rg!.classementReglementaireType
+        : mission.classementReglementaireType;
 
-    String dateIntervTxt;
+    final rawCat = (rg?.classementReglementaireCategorie?.isNotEmpty == true)
+        ? rg!.classementReglementaireCategorie
+        : mission.classementReglementaireCategorie;
 
-    if (dateDebut != null &&
-        dateFin != null &&
-        !dateDebut.isAtSameMomentAs(dateFin)) {
-      dateIntervTxt = 'Du ${PdfReportStyles.formatDate(dateDebut)} au ${PdfReportStyles.formatDate(dateFin)}';
-    } else if (dateDebut != null) {
-      dateIntervTxt = PdfReportStyles.formatDate(dateDebut);
-    } else {
-      dateIntervTxt = '';
-    }
+    final explicitClassification = (rg?.classementReglementaire?.isNotEmpty == true)
+        ? rg!.classementReglementaire
+        : mission.classementReglementaire;
+
+    final resolvedClassification = explicitClassification ??
+        RegulatoryClassificationService.inferClassificationFromLegacy(
+          type: rawType,
+          category: rawCat,
+        );
+
+    final typeItem = RegulatoryClassificationService.getType(
+      resolvedClassification,
+      rawType,
+    );
+
+    final catItem = RegulatoryClassificationService.getCategory(rawCat);
 
     // Construire la liste des lignes du tableau
     final rows = <pw.TableRow>[
@@ -170,58 +170,70 @@ class PdfRenseignementsBuilder {
                 1: const pw.FlexColumnWidth(3),
               },
               children: [
+                PdfReportStyles.tableHeaderRow(['Rubrique', 'Informations'], fontBold: fontBold),
                 PdfReportStyles.tableDataRow([
-                  'Etablissement vérifié',
+                  'Établissement vérifié',
                   mission.nomClient,
-                ], alt: false),
+                ], alt: false, fontRegular: fontRegular),
                 PdfReportStyles.tableDataRow([
-                  'Installation vérifié',
+                  'Installation vérifiée',
                   rg?.installation.isNotEmpty == true
                       ? rg!.installation
                       : (mission.installation ??
                             'Toutes les installations électriques'),
-                ], alt: true),
+                ], alt: true, fontRegular: fontRegular),
                 PdfReportStyles.tableDataRow([
                   'Activité principale',
                   rg?.activite.isNotEmpty == true
                       ? rg!.activite
                       : (mission.activiteClient ?? '—'),
-                ], alt: false),
+                ], alt: false, fontRegular: fontRegular),
                 PdfReportStyles.tableDataRow([
                   'Adresse',
                   mission.adresseClient ?? '—',
-                ], alt: true),
+                ], alt: true, fontRegular: fontRegular),
                 PdfReportStyles.tableDataRow([
                   'Nom du site',
                   rg?.nomSite.isNotEmpty == true
                       ? rg!.nomSite
                       : (mission.nomSite ?? '—'),
-                ], alt: false),
+                ], alt: false, fontRegular: fontRegular),
                 PdfReportStyles.tableDataRow([
                   'Activité sur le site',
                   (rg?.activiteSurSite?.isNotEmpty == true)
                       ? rg!.activiteSurSite!
                       : (mission.activiteSurSite ?? '—'),
-                ], alt: true),
+                ], alt: true, fontRegular: fontRegular),
                 PdfReportStyles.tableDataRow([
                   'Registre de contrôle',
                   rg?.registreControle.isNotEmpty == true
                       ? rg!.registreControle
                       : 'Non présenté',
-                ], alt: false),
-                PdfReportStyles.tableDataRow(['Classement règlementaire', ''], alt: true),
+                ], alt: false, fontRegular: fontRegular),
                 PdfReportStyles.tableDataRow([
-                  '                                     Type',
-                  (rg?.classementReglementaireType?.isNotEmpty == true)
-                      ? rg!.classementReglementaireType!
-                      : (mission.classementReglementaireType ?? '—'),
-                ], alt: false),
-                PdfReportStyles.tableDataRow([
-                  '                                     Catégorie',
-                  (rg?.classementReglementaireCategorie?.isNotEmpty == true)
-                      ? rg!.classementReglementaireCategorie!
-                      : (mission.classementReglementaireCategorie ?? '—'),
-                ], alt: true),
+                  'Classement réglementaire',
+                  resolvedClassification ?? '—',
+                ], alt: true, fontRegular: fontRegular),
+                _buildTwoColumnInfoRow(
+                  label: '          Type',
+                  subTitle: typeItem?.displayTitle ?? (rawType ?? '—'),
+                  subDescription: typeItem?.description ?? '',
+                  alt: false,
+                  fontRegular: fontRegular,
+                  fontBold: fontBold,
+                ),
+                _buildTwoColumnInfoRow(
+                  label: '          Catégorie',
+                  subTitle: (resolvedClassification != null && !RegulatoryClassificationService.hasCategories(resolvedClassification))
+                      ? 'Sans objet (Non applicable)'
+                      : (catItem?.title ?? (rawCat ?? '—')),
+                  subDescription: (resolvedClassification != null && !RegulatoryClassificationService.hasCategories(resolvedClassification))
+                      ? ''
+                      : (catItem?.description ?? ''),
+                  alt: true,
+                  fontRegular: fontRegular,
+                  fontBold: fontBold,
+                ),
               ],
             ),
           ],
@@ -402,4 +414,77 @@ class PdfRenseignementsBuilder {
     );
   }
 
+  static pw.TableRow _buildTwoColumnInfoRow({
+    required String label,
+    required String subTitle,
+    required String subDescription,
+    required bool alt,
+    pw.Font? fontRegular,
+    pw.Font? fontBold,
+  }) {
+    final effectiveFontBold = fontBold ?? PdfReportStyles.fontBold;
+    final effectiveFontRegular = fontRegular ?? PdfReportStyles.fontRegular;
+
+    return pw.TableRow(
+      decoration: alt ? pw.BoxDecoration(color: PdfReportStyles.tableRowAlt) : null,
+      children: [
+        PdfReportStyles.cell(
+          label,
+          isHeader: false,
+          fontRegular: effectiveFontRegular,
+        ),
+        subDescription.isEmpty
+            ? PdfReportStyles.cell(
+                subTitle.isNotEmpty ? subTitle : '—',
+                isHeader: false,
+                fontRegular: effectiveFontRegular,
+              )
+            : pw.Container(
+                child: pw.Table(
+                  border: pw.TableBorder(
+                    verticalInside: pw.BorderSide(
+                      color: PdfReportStyles.borderColor,
+                      width: 0.4,
+                    ),
+                  ),
+                  columnWidths: {
+                    0: const pw.FlexColumnWidth(2.2),
+                    1: const pw.FlexColumnWidth(4.8),
+                  },
+                  children: [
+                    pw.TableRow(
+                      children: [
+                        pw.Container(
+                          padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                          alignment: pw.Alignment.centerLeft,
+                          child: pw.Text(
+                            subTitle,
+                            style: pw.TextStyle(
+                              font: effectiveFontBold,
+                              fontSize: PdfReportStyles.fsSmall,
+                              fontWeight: pw.FontWeight.bold,
+                              color: PdfReportStyles.darkGrey,
+                            ),
+                          ),
+                        ),
+                        pw.Container(
+                          padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                          alignment: pw.Alignment.centerLeft,
+                          child: pw.Text(
+                            subDescription,
+                            style: pw.TextStyle(
+                              font: effectiveFontRegular,
+                              fontSize: PdfReportStyles.fsSmall,
+                              color: PdfReportStyles.darkGrey,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+      ],
+    );
+  }
 }

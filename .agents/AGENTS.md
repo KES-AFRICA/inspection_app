@@ -225,6 +225,16 @@ Mission
 ### 9.4 Arrêt d'Urgence et Organes de Coupure
 - **Gestion conditionnelle** : Si le site ne dispose pas d'arrêt d'urgence, la saisie indique `Absent` et masque automatiquement les tests d'essais sans lever de fausse non-conformité de mesure.
 
+### 9.5 Classement Réglementaire et Hiérarchie des Établissements (Renseignements Principaux)
+- **4 Classements exclusifs normalisés** :
+  1. `Installations classées` : 1 seul type (`Usines, Ateliers, Dépôts, Chantiers`), catégorie non applicable (`Sans objet (Non applicable)`).
+  2. `IGH` (Immeubles de Grande Hauteur) : 8 types stricts (`GHA`, `GHO`, `GHR`, `GHS`, `GHU`, `GHW1`, `GHW2`, `GHZ`), catégorie non applicable (`Sans objet (Non applicable)`).
+  3. `ERP Établissements Généraux` : 14 types normalisés (`Type J` à `Type Y`), 5 catégories d'effectif (`Première catégorie` à `Cinquième catégorie`).
+  4. `ERP Établissements Spécialisés` : 8 types normalisés (`Type PA`, `Type CTS`, `Type SG`, `Type PS`, `Type GA`, `Type OA`, `EF`, `REF`), 5 catégories (`Première catégorie` à `Cinquième catégorie`).
+- **Hiérarchie dynamique en cascade** : `Classement réglementaire` -> filtre les options disponibles pour `Type` -> filtre les options disponibles pour `Catégorie`. Si le classement change, les sélections incompatibles sont réinitialisées.
+- **Inférence & Rétro-compatibilité historique** : Les missions antérieures créées sans classement parent déduisent automatiquement leur classement réglementaire via `RegulatoryClassificationService.inferClassificationFromLegacy`.
+- **Rendu PDF V3** : Le tableau « 1. Renseignements principaux » présente un en-tête `Rubrique` | `Informations`. Les lignes `Type` et `Catégorie` sont divisées par une bordure verticale fine (0.4pt) avec le titre à gauche (en gras) et la description détaillée officielle à droite.
+
 ---
 
 ## 10. Data & Persistence (Hive)

@@ -4,6 +4,7 @@ class MissionEntity {
   final String nomClient;
   final String? activiteClient;
   final String? activiteSurSite;
+  final String? classementReglementaire;
   final String? classementReglementaireType;
   final String? classementReglementaireCategorie;
   final String? adresseClient;
@@ -52,6 +53,7 @@ class MissionEntity {
     required this.nomClient,
     this.activiteClient,
     this.activiteSurSite,
+    this.classementReglementaire,
     this.classementReglementaireType,
     this.classementReglementaireCategorie,
     this.adresseClient,

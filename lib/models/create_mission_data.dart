@@ -5,6 +5,7 @@ class CreateMissionData {
   String nomClient;
   String? activiteClient;
   String? activiteSurSite;
+  String? classementReglementaire;
   String? classementReglementaireType;
   String? classementReglementaireCategorie;
   String? adresseClient;
@@ -38,6 +39,7 @@ class CreateMissionData {
     required this.nomClient,
     this.activiteClient,
     this.activiteSurSite,
+    this.classementReglementaire,
     this.classementReglementaireType,
     this.classementReglementaireCategorie,
     this.adresseClient,
@@ -72,6 +74,7 @@ class CreateMissionData {
       nomClient: nomClient,
       activiteClient: activiteClient,
       activiteSurSite: activiteSurSite,
+      classementReglementaire: classementReglementaire,
       classementReglementaireType: classementReglementaireType,
       classementReglementaireCategorie: classementReglementaireCategorie,
       adresseClient: adresseClient,

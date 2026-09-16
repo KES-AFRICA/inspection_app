@@ -12,6 +12,7 @@ import 'package:inspec_app/services/hive_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:inspec_app/features/mission/presentation/providers/renseignements_generaux_provider.dart';
 import 'package:inspec_app/widgets/app_bottom_sheet.dart';
+import 'package:inspec_app/services/regulatory_classification_service.dart';
 
 // Liste des vérificateurs prédéfinis
 const List<Map<String, String>> _verificateursPredefinis = [
@@ -56,16 +57,9 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
   List<String> _compteRenduDestinataires = [];
 
   // Classement réglementaire
+  String? _classementReglementaire;
   String? _classementReglementaireType;
   String? _classementReglementaireCategorie;
-
-  static const List<String> _classementTypesOptions = [
-    '—', 'A', 'B', 'C', 'D', 'E', 'J', 'L', 'M', 'N', 'O', 'P', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y'
-  ];
-
-  static const List<String> _classementCategoriesOptions = [
-    '—', '1ère catégorie', '2ème catégorie', '3ème catégorie', '4ème catégorie', '5ème catégorie'
-  ];
 
   // Listes
   List<Map<String, String>> _accompagnateurs = [];
@@ -252,8 +246,12 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
       activite: _activiteController.text,
       nomSite: _nomSiteController.text,
       activiteSurSite: _activiteSurSiteController.text,
+      classementReglementaire: _classementReglementaire,
+      updateClassementReglementaire: true,
       classementReglementaireType: _classementReglementaireType,
+      updateClassementReglementaireType: true,
       classementReglementaireCategorie: _classementReglementaireCategorie,
+      updateClassementReglementaireCategorie: true,
       dateDebut: _dateDebut,
       dateFin: _dateFin,
       dureeJours: _dureeJours,
@@ -1308,8 +1306,9 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
     await _saveData();
   }
 
-  void _showClassementTypePicker() {
+  void _showClassementReglementairePicker() {
     final isSmallScreen = MediaQuery.of(context).size.width < 360;
+    final options = ['—', ...RegulatoryClassificationService.classifications];
 
     showModalBottomSheet(
       context: context,
@@ -1319,16 +1318,24 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
       ),
       backgroundColor: Colors.transparent,
       builder: (context) => AppBottomSheet(
-        title: 'Classement réglementaire - Type',
-        children: _classementTypesOptions.map((type) {
-          final isSelected = (_classementReglementaireType ?? '—') == type;
+        title: 'Classement réglementaire',
+        children: options.map((cls) {
+          final isSelected = (_classementReglementaire ?? '—') == cls;
+          final isNone = cls == '—';
           return InkWell(
             onTap: () async {
+              final newCls = isNone ? null : cls;
               setState(() {
-                _classementReglementaireType = (type == '—') ? null : type;
+                _classementReglementaire = newCls;
+                if (!RegulatoryClassificationService.isTypeValid(_classementReglementaire, _classementReglementaireType)) {
+                  _classementReglementaireType = null;
+                }
+                if (!RegulatoryClassificationService.isCategoryValid(_classementReglementaire, _classementReglementaireCategorie)) {
+                  _classementReglementaireCategorie = null;
+                }
               });
               await _saveData();
-              Navigator.pop(context);
+              if (mounted) Navigator.pop(context);
             },
             child: Container(
               padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
@@ -1338,15 +1345,16 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
               ),
               child: Row(
                 children: [
-                  Text(
-                    type == '—' ? 'Aucun (—)' : 'Type $type',
-                    style: TextStyle(
-                      fontSize: isSmallScreen ? 14 : 16,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                      color: isSelected ? Colors.blue : Colors.black87,
+                  Expanded(
+                    child: Text(
+                      isNone ? 'Aucun classement (—)' : cls,
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 14 : 16,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        color: isSelected ? Colors.blue : Colors.black87,
+                      ),
                     ),
                   ),
-                  const Spacer(),
                   if (isSelected) const Icon(Icons.check_circle, color: Colors.blue),
                 ],
               ),
@@ -1357,8 +1365,144 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
     );
   }
 
-  void _showClassementCategoriePicker() {
+  void _showClassementTypePicker() {
+    if (_classementReglementaire == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Veuillez d\'abord sélectionner un classement réglementaire'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
     final isSmallScreen = MediaQuery.of(context).size.width < 360;
+    final availableTypes = RegulatoryClassificationService.getTypesForClassification(_classementReglementaire);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      backgroundColor: Colors.transparent,
+      builder: (context) => AppBottomSheet(
+        title: 'Classement réglementaire - Type',
+        children: [
+          InkWell(
+            onTap: () async {
+              setState(() {
+                _classementReglementaireType = null;
+              });
+              await _saveData();
+              if (mounted) Navigator.pop(context);
+            },
+            child: Container(
+              padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+              decoration: BoxDecoration(
+                color: _classementReglementaireType == null ? Colors.blue.withOpacity(0.05) : Colors.transparent,
+                border: _classementReglementaireType == null ? const Border(left: BorderSide(color: Colors.blue, width: 4)) : null,
+              ),
+              child: Row(
+                children: [
+                  Text(
+                    'Aucun type (—)',
+                    style: TextStyle(
+                      fontSize: isSmallScreen ? 14 : 16,
+                      fontWeight: _classementReglementaireType == null ? FontWeight.bold : FontWeight.normal,
+                      color: _classementReglementaireType == null ? Colors.blue : Colors.black87,
+                    ),
+                  ),
+                  const Spacer(),
+                  if (_classementReglementaireType == null) const Icon(Icons.check_circle, color: Colors.blue),
+                ],
+              ),
+            ),
+          ),
+          ...availableTypes.map((typeItem) {
+            final isSelected = RegulatoryClassificationService.isTypeMatching(
+              _classementReglementaire,
+              typeItem.code,
+              _classementReglementaireType,
+            );
+            return InkWell(
+              onTap: () async {
+                setState(() {
+                  _classementReglementaireType = typeItem.displayTitle;
+                });
+                await _saveData();
+                if (mounted) Navigator.pop(context);
+              },
+              child: Container(
+                padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                decoration: BoxDecoration(
+                  color: isSelected ? Colors.blue.withOpacity(0.05) : Colors.transparent,
+                  border: isSelected ? const Border(left: BorderSide(color: Colors.blue, width: 4)) : null,
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            typeItem.displayTitle,
+                            style: TextStyle(
+                              fontSize: isSmallScreen ? 14 : 16,
+                              fontWeight: FontWeight.bold,
+                              color: isSelected ? Colors.blue : Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            typeItem.description,
+                            style: TextStyle(
+                              fontSize: isSmallScreen ? 12 : 13,
+                              color: Colors.grey.shade700,
+                              height: 1.3,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (isSelected) ...[
+                      const SizedBox(width: 8),
+                      const Icon(Icons.check_circle, color: Colors.blue),
+                    ],
+                  ],
+                ),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  void _showClassementCategoriePicker() {
+    if (_classementReglementaire == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Veuillez d\'abord sélectionner un classement réglementaire'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    if (!RegulatoryClassificationService.hasCategories(_classementReglementaire)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Ce classement ne comporte pas de catégorie (Sans objet)'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    final isSmallScreen = MediaQuery.of(context).size.width < 360;
+    final availableCategories = RegulatoryClassificationService.getCategoriesForClassification(_classementReglementaire);
 
     showModalBottomSheet(
       context: context,
@@ -1369,39 +1513,93 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
       backgroundColor: Colors.transparent,
       builder: (context) => AppBottomSheet(
         title: 'Classement réglementaire - Catégorie',
-        children: _classementCategoriesOptions.map((cat) {
-          final isSelected = (_classementReglementaireCategorie ?? '—') == cat;
-          return InkWell(
+        children: [
+          InkWell(
             onTap: () async {
               setState(() {
-                _classementReglementaireCategorie = (cat == '—') ? null : cat;
+                _classementReglementaireCategorie = null;
               });
               await _saveData();
-              Navigator.pop(context);
+              if (mounted) Navigator.pop(context);
             },
             child: Container(
               padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
               decoration: BoxDecoration(
-                color: isSelected ? Colors.blue.withOpacity(0.05) : Colors.transparent,
-                border: isSelected ? const Border(left: BorderSide(color: Colors.blue, width: 4)) : null,
+                color: _classementReglementaireCategorie == null ? Colors.blue.withOpacity(0.05) : Colors.transparent,
+                border: _classementReglementaireCategorie == null ? const Border(left: BorderSide(color: Colors.blue, width: 4)) : null,
               ),
               child: Row(
                 children: [
                   Text(
-                    cat == '—' ? 'Aucune (—)' : cat,
+                    'Aucune catégorie (—)',
                     style: TextStyle(
                       fontSize: isSmallScreen ? 14 : 16,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                      color: isSelected ? Colors.blue : Colors.black87,
+                      fontWeight: _classementReglementaireCategorie == null ? FontWeight.bold : FontWeight.normal,
+                      color: _classementReglementaireCategorie == null ? Colors.blue : Colors.black87,
                     ),
                   ),
                   const Spacer(),
-                  if (isSelected) const Icon(Icons.check_circle, color: Colors.blue),
+                  if (_classementReglementaireCategorie == null) const Icon(Icons.check_circle, color: Colors.blue),
                 ],
               ),
             ),
-          );
-        }).toList(),
+          ),
+          ...availableCategories.map((catItem) {
+            final isSelected = RegulatoryClassificationService.isCategoryMatching(
+              catItem.code,
+              _classementReglementaireCategorie,
+            );
+            return InkWell(
+              onTap: () async {
+                setState(() {
+                  _classementReglementaireCategorie = catItem.title;
+                });
+                await _saveData();
+                if (mounted) Navigator.pop(context);
+              },
+              child: Container(
+                padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                decoration: BoxDecoration(
+                  color: isSelected ? Colors.blue.withOpacity(0.05) : Colors.transparent,
+                  border: isSelected ? const Border(left: BorderSide(color: Colors.blue, width: 4)) : null,
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            catItem.title,
+                            style: TextStyle(
+                              fontSize: isSmallScreen ? 14 : 16,
+                              fontWeight: FontWeight.bold,
+                              color: isSelected ? Colors.blue : Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            catItem.description,
+                            style: TextStyle(
+                              fontSize: isSmallScreen ? 12 : 13,
+                              color: Colors.grey.shade700,
+                              height: 1.3,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (isSelected) ...[
+                      const SizedBox(width: 8),
+                      const Icon(Icons.check_circle, color: Colors.blue),
+                    ],
+                  ],
+                ),
+              ),
+            );
+          }),
+        ],
       ),
     );
   }
@@ -1452,8 +1650,17 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
           _activiteController.text = data.activite;
           _nomSiteController.text = data.nomSite;
           _activiteSurSiteController.text = data.activiteSurSite ?? widget.mission.activiteSurSite ?? '';
+          _classementReglementaire = data.classementReglementaire ?? widget.mission.classementReglementaire;
           _classementReglementaireType = data.classementReglementaireType ?? widget.mission.classementReglementaireType;
           _classementReglementaireCategorie = data.classementReglementaireCategorie ?? widget.mission.classementReglementaireCategorie;
+
+          // Inférence historique si le classement parent n'est pas renseigné
+          if (_classementReglementaire == null) {
+            _classementReglementaire = RegulatoryClassificationService.inferClassificationFromLegacy(
+              type: _classementReglementaireType,
+              category: _classementReglementaireCategorie,
+            );
+          }
 
           _dateDebut = data.dateDebut;
           _dateFin = data.dateFin;
@@ -1619,13 +1826,27 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
 
                   SizedBox(height: isSmallScreen ? 12 : 16),
 
+                  // Classement réglementaire (Parent)
+                  _buildDisplayField(
+                    label: 'Classement réglementaire',
+                    value: _classementReglementaire,
+                    hint: 'Sélectionnez le classement (ex: ERP, IGH...)',
+                    icon: Icons.account_balance_outlined,
+                    onTap: _showClassementReglementairePicker,
+                    color: _classementReglementaire != null ? Colors.blue : null,
+                    isRequired: false,
+                    showError: false,
+                  ),
+
+                  SizedBox(height: isSmallScreen ? 12 : 16),
+
                   // Classement réglementaire : Type
                   _buildDisplayField(
                     label: 'Classement réglementaire - Type',
-                    value: _classementReglementaireType != null
-                        ? 'Type $_classementReglementaireType'
-                        : null,
-                    hint: 'Sélectionnez le type (ex: J, M, N, W...)',
+                    value: _classementReglementaireType,
+                    hint: _classementReglementaire == null
+                        ? 'Sélectionnez d\'abord un classement'
+                        : 'Sélectionnez le type',
                     icon: Icons.category_outlined,
                     onTap: _showClassementTypePicker,
                     color: _classementReglementaireType != null ? Colors.blue : null,
@@ -1638,11 +1859,28 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
                   // Classement réglementaire : Catégorie
                   _buildDisplayField(
                     label: 'Classement réglementaire - Catégorie',
-                    value: _classementReglementaireCategorie,
-                    hint: 'Sélectionnez la catégorie (ex: 1ère catégorie...)',
+                    value: (_classementReglementaire != null && !RegulatoryClassificationService.hasCategories(_classementReglementaire))
+                        ? 'Sans objet (Non applicable)'
+                        : _classementReglementaireCategorie,
+                    hint: _classementReglementaire == null
+                        ? 'Sélectionnez d\'abord un classement'
+                        : (!RegulatoryClassificationService.hasCategories(_classementReglementaire)
+                            ? 'Sans objet pour ce classement'
+                            : 'Sélectionnez la catégorie'),
                     icon: Icons.grade_outlined,
-                    onTap: _showClassementCategoriePicker,
-                    color: _classementReglementaireCategorie != null ? Colors.blue : null,
+                    onTap: (_classementReglementaire != null && !RegulatoryClassificationService.hasCategories(_classementReglementaire))
+                        ? () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Ce classement ne comporte pas de catégorie (Sans objet)'),
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          }
+                        : _showClassementCategoriePicker,
+                    color: (_classementReglementaire != null && !RegulatoryClassificationService.hasCategories(_classementReglementaire))
+                        ? Colors.grey.shade600
+                        : (_classementReglementaireCategorie != null ? Colors.blue : null),
                     isRequired: false,
                     showError: false,
                   ),

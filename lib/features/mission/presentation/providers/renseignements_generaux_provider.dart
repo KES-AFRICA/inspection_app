@@ -77,8 +77,12 @@ class RenseignementsGenerauxNotifier
     List<Map<String, String>>? verificateurs,
     String? formationHabilitationElectrique,
     String? activiteSurSite,
+    String? classementReglementaire,
+    bool updateClassementReglementaire = false,
     String? classementReglementaireType,
+    bool updateClassementReglementaireType = false,
     String? classementReglementaireCategorie,
+    bool updateClassementReglementaireCategorie = false,
   }) async {
     final currentData = state.value;
     if (currentData == null) return;
@@ -99,10 +103,13 @@ class RenseignementsGenerauxNotifier
       currentData.formationHabilitationElectrique = formationHabilitationElectrique;
     }
     if (activiteSurSite != null) currentData.activiteSurSite = activiteSurSite;
-    if (classementReglementaireType != null) {
+    if (updateClassementReglementaire || classementReglementaire != null) {
+      currentData.classementReglementaire = classementReglementaire == '—' ? null : classementReglementaire;
+    }
+    if (updateClassementReglementaireType || classementReglementaireType != null) {
       currentData.classementReglementaireType = classementReglementaireType == '—' ? null : classementReglementaireType;
     }
-    if (classementReglementaireCategorie != null) {
+    if (updateClassementReglementaireCategorie || classementReglementaireCategorie != null) {
       currentData.classementReglementaireCategorie = classementReglementaireCategorie == '—' ? null : classementReglementaireCategorie;
     }
     currentData.updatedAt = DateTime.now();
