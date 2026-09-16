@@ -9,6 +9,7 @@ import 'package:inspec_app/services/statistics/technical_enrichment_engine.dart'
 import 'package:inspec_app/services/pdf/pdf_page_tracker.dart';
 import 'package:inspec_app/services/pdf/pdf_report_styles.dart';
 import 'package:inspec_app/services/pdf/builders/pdf_statistics_charts.dart';
+import 'package:inspec_app/services/statistics/statistical_synthesis_engine.dart';
 
 /// Builder responsable de l'Analyse Statistique (indicateurs clés, diagramme Pareto, histogrammes, tableaux de synthèse).
 /// Restitution 100 % conforme au document de référence KES avec calculs dynamiques déterministes.
@@ -44,7 +45,6 @@ class PdfStatisticsBuilder {
 
     // Collecte unifiée via le résumé statistique Néo-Natif
     final summary = MissionStatisticsCollector.collectSummary(mission.id);
-    final cStats = summary.criticalityStats;
     final domainStats = summary.tensionDomainStats;
     final technical = summary.technical;
 
@@ -303,152 +303,34 @@ class PdfStatisticsBuilder {
     widgets.add(pw.SizedBox(height: 12));
 
     // ── 6. Synthèse de l'analyse statistique ──
-    final nonIdentSources = technical.sourceStats.values.fold<int>(0, (sum, s) => sum + s.nonIdentifiees);
-    final totEquipBt = technical.coupureTeteStats.values.fold<int>(0, (sum, s) => sum + s.totalEquipments);
-    final totAbsCoupure = technical.coupureTeteStats.values.fold<int>(0, (sum, s) => sum + s.absents);
-    final pctSansCoupure = totEquipBt > 0 ? (totAbsCoupure / totEquipBt * 100) : 51.6;
+    final synthesisResult = StatisticalSynthesisEngine.analyze(
+      summary: summary,
+      technical: technical,
+    );
 
-    // Calcul dynamique de la concentration de risque
-    final allCrossRows = <CategoryCrossAuditRow>[...technical.mtCategoriesCrossRows, ...technical.btCategoriesCrossRows]
-      ..sort((a, b) => b.ncCount.compareTo(a.ncCount));
-    final topCat1 = allCrossRows.isNotEmpty ? allCrossRows[0] : null;
-    final topCat2 = allCrossRows.length > 1 ? allCrossRows[1] : null;
-    final top2Pct = (topCat1 != null && topCat2 != null)
-        ? (topCat1.pctOfTotalNc + topCat2.pctOfTotalNc).toStringAsFixed(1).replaceAll('.', ',')
-        : '61,1';
-    final topCatNames = (topCat1 != null && topCat2 != null)
-        ? '${topCat1.categoryName} et ${topCat2.categoryName}'
-        : 'Armoires et Locaux techniques MT';
-
-    // Recherche des catégories aux taux de criticité les plus élevés
-    final sortedByCritRate = List<CategoryCrossAuditRow>.from(allCrossRows.where((r) => r.ncCount >= 5))
-      ..sort((a, b) => b.tauxCritique.compareTo(a.tauxCritique));
-    final highestCrit1 = sortedByCritRate.isNotEmpty ? sortedByCritRate[0] : null;
-    final highestCrit2 = sortedByCritRate.length > 1 ? sortedByCritRate[1] : null;
-    final critWatchText = (highestCrit1 != null && highestCrit2 != null)
-        ? '${highestCrit1.categoryName} et ${highestCrit2.categoryName} (taux de criticité les plus élevés, ${highestCrit1.tauxCritiqueStr} et ${highestCrit2.tauxCritiqueStr})'
-        : 'Coffrets et Locaux GE (taux de criticité les plus élevés, 29,1 % et 28,9 %)';
-
-    // Familles de risque prépondérantes dynamiques
-    final familyCounts = <String, int>{};
-    void addMap(Map<String, int> m) {
-      m.forEach((k, v) => familyCounts[k] = (familyCounts[k] ?? 0) + v);
-    }
-    addMap(technical.riskFamilyMatrix.htaDispositionsConstructives.counts);
-    addMap(technical.riskFamilyMatrix.htaExploitationMaintenance.counts);
-    addMap(technical.riskFamilyMatrix.btDispositionsConstructives.counts);
-    addMap(technical.riskFamilyMatrix.btExploitationMaintenance.counts);
-
-    final sortedFamilies = familyCounts.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-    final topRisk1 = sortedFamilies.isNotEmpty ? sortedFamilies[0] : null;
-    final topRisk2 = sortedFamilies.length > 1 ? sortedFamilies[1] : null;
-    final topRisk1Count = topRisk1?.value ?? 0;
-    final topRisk2Count = topRisk2?.value ?? 0;
-    final totalRisksCount = totalOccur > 0 ? totalOccur : summary.totalNC;
-    final topRisk1Pct = totalRisksCount > 0 && topRisk1Count > 0 ? (topRisk1Count / totalRisksCount * 100).toStringAsFixed(1).replaceAll('.', ',') : '61,5';
-    final topRisk2Pct = totalRisksCount > 0 && topRisk2Count > 0 ? (topRisk2Count / totalRisksCount * 100).toStringAsFixed(1).replaceAll('.', ',') : '25,6';
-    final topRisk1Name = topRisk1?.key ?? 'Erreur d\'exploitation/maintenance';
-    final topRisk2Name = topRisk2?.key ?? 'Dégradation des canalisations et matériels';
-
-    final pareto80K = summary.paretoResult.paretoCategoryCount > 0
-        ? summary.paretoResult.paretoCategoryCount
-        : 1;
-    final paretoCumPctStr = summary.paretoResult.paretoCumulativePercentage > 0
-        ? summary.paretoResult.paretoCumulativePercentage.toStringAsFixed(1).replaceAll('.', ',')
-        : '80,0';
-
-    // Puce Pareto 100% dynamique selon la réalité observée
-    final String paretoSyntheseBullet;
-    switch (summary.paretoResult.profile) {
-      case ParetoConcentrationProfile.noData:
-        paretoSyntheseBullet = 'Aucune non-conformité recensée pour l\'analyse de concentration des anomalies ;';
-        break;
-      case ParetoConcentrationProfile.singleDominant:
-        final firstTitle = summary.paretoResult.items.isNotEmpty ? summary.paretoResult.items.first.title : 'Défaut majeur';
-        paretoSyntheseBullet = 'Une concentration absolue sur une seule anomalie prépondérante (« $firstTitle ») qui regroupe à elle seule ${summary.paretoResult.paretoCumulativePercentage.toStringAsFixed(1).replaceAll('.', ',')} % des défaillances du site ;';
-        break;
-      case ParetoConcentrationProfile.highConcentration:
-        paretoSyntheseBullet = 'Une concentration marquée des anomalies selon la loi de Pareto : les $top10Count premières catégories concentrent $top10PctStr % des non-conformités, le seuil de 80 % étant atteint à partir de la ${pareto80K == 1 ? "1ère" : "$pareto80K"}${pareto80K > 1 ? "e" : ""} catégorie ($paretoCumPctStr % du total analysé) ;';
-        break;
-      case ParetoConcentrationProfile.moderateConcentration:
-        paretoSyntheseBullet = 'Une concentration modérée des anomalies : les $top10Count premières catégories concentrent $top10PctStr % des non-conformités, $pareto80K catégories étant nécessaires pour atteindre le seuil de 80 % ($paretoCumPctStr % du total analysé) ;';
-        break;
-      case ParetoConcentrationProfile.homogeneousOrDispersed:
-        final ratioPctStr = (summary.paretoResult.k80Ratio * 100).toStringAsFixed(1).replaceAll('.', ',');
-        paretoSyntheseBullet = 'Une distribution relativement homogène et dispersée des anomalies : contrairement à une loi de Pareto classique, $pareto80K catégories (soit $ratioPctStr % du référentiel) sont requises pour atteindre 80 % des défauts ($paretoCumPctStr %), sans concentration exclusive sur un nombre restreint de défaillances ;';
-        break;
-      case ParetoConcentrationProfile.thresholdNotReached:
-        paretoSyntheseBullet = 'Une forte dispersion des anomalies sans concentration dominante : le seuil de 80 % n\'est pas atteint sur la sélection observée (cumul maximal de $paretoCumPctStr %) ;';
-        break;
-    }
-
-    final syntheseBullets = [
-      'Une densité globale élevée (${summary.globalDensityStr} NC/équipement) et un déséquilibre total vers les criticités critique et majeure (${(cStats.pctCritique + cStats.pctMajeure).toStringAsFixed(1).replaceAll('.', ',')} % du total, aucune non-conformité mineure) ;',
-      'Une concentration confirmée du risque sur les $topCatNames ($top2Pct % du total), avec un point de vigilance qualitatif sur les $critWatchText ;',
-      'Une déduplication des familles de risque qui ramène le référentiel à 5 catégories homogènes, avec "$topRisk1Name" comme premier facteur ($topRisk1Pct %) devant "$topRisk2Name" ($topRisk2Pct %) ;',
-      'Un déficit généralisé de renseignement des caractéristiques techniques du parc BT : ${technical.globalIpIkAdequationRateStr} d\'indices IP/IK renseignés, $nonIdentSources sources d\'alimentation non identifiées, ${pctSansCoupure.toStringAsFixed(1).replaceAll('.', ',')} % d\'équipements sans disjoncteur de tête identifié - un chantier de fiabilisation des données à mener en parallèle du plan d\'actions correctives ;',
-      paretoSyntheseBullet,
-    ];
-
-    // Section 6 : bloc autonome avec son titre et ses puces
     widgets.add(
       PageTracker(
         key: 'stat_synthese',
         registry: trackedPages,
         offset: offset,
-        child: pw.Inseparable(
-          child: pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              PdfReportStyles.subTitle('6. Synthèse de l\'analyse statistique'),
-              pw.SizedBox(height: 6),
-              ...syntheseBullets.map(
-                (bullet) => pw.Padding(
-                  padding: const pw.EdgeInsets.only(left: 6, bottom: 4),
-                  child: pw.Row(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      pw.Container(
-                        width: 3.5,
-                        height: 3.5,
-                        margin: const pw.EdgeInsets.only(top: 4, right: 6),
-                        decoration: pw.BoxDecoration(
-                          color: PdfReportStyles.accentColor,
-                          shape: pw.BoxShape.circle,
-                        ),
-                      ),
-                      pw.Expanded(
-                        child: pw.Text(
-                          bullet,
-                          style: pw.TextStyle(font: fontRegular, fontSize: fsBody, color: PdfReportStyles.darkGrey, lineSpacing: 2.0),
-                          textAlign: pw.TextAlign.justify,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+        child: _buildDynamicStatisticalSynthesis(synthesisResult),
       ),
     );
     widgets.add(pw.SizedBox(height: 12));
 
-    // ── 7. Recommandation pour le renforcement des capacités des agents d’entretien ──
-    widgets.add(
-      PageTracker(
-        key: 'stat_formation',
-        registry: trackedPages,
-        offset: offset,
-        child: _buildTrainingRecommendationsSection(
-          7,
-          mission.nomClient,
-          summary,
-        ),
-      ),
-    );
+    // // ── 7. Recommandation pour le renforcement des capacités des agents d’entretien ──
+    // widgets.add(
+    //   PageTracker(
+    //     key: 'stat_formation',
+    //     registry: trackedPages,
+    //     offset: offset,
+    //     child: _buildTrainingRecommendationsSection(
+    //       7,
+    //       mission.nomClient,
+    //       summary,
+    //     ),
+    //   ),
+    // );
 
     return widgets;
   }
@@ -1143,4 +1025,84 @@ class PdfStatisticsBuilder {
       ],
     );
   }
+
+  static pw.Widget _buildDynamicStatisticalSynthesis(StatisticalSynthesisResult synthesis) {
+    final children = <pw.Widget>[];
+
+    // Titre de sous-section
+    final titleWidget = PdfReportStyles.subTitle('6. Synthèse de l\'analyse statistique');
+
+    final paragraphs = synthesis.paragraphs;
+    if (paragraphs.isEmpty) {
+      return pw.Inseparable(
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            titleWidget,
+            pw.SizedBox(height: 6),
+            _buildFormattedText('Donnée non disponible pour cette mission.'),
+          ],
+        ),
+      );
+    }
+
+    // Le titre et le premier paragraphe sont groupés dans un Inseparable pour éviter un titre orphelin
+    final firstParagraph = _buildFormattedText(paragraphs.first);
+    children.add(
+      pw.Inseparable(
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            titleWidget,
+            pw.SizedBox(height: 6),
+            firstParagraph,
+          ],
+        ),
+      ),
+    );
+
+    // Les paragraphes suivants s'enchaînent avec un espacement respirant
+    for (int i = 1; i < paragraphs.length; i++) {
+      children.add(pw.SizedBox(height: 6));
+      children.add(_buildFormattedText(paragraphs[i]));
+    }
+
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: children,
+    );
+  }
+
+  static pw.Widget _buildFormattedText(
+    String text, {
+    pw.TextStyle? defaultStyle,
+    pw.TextAlign textAlign = pw.TextAlign.justify,
+  }) {
+    final style = defaultStyle ??
+        pw.TextStyle(
+          font: fontRegular,
+          fontSize: fsBody,
+          color: PdfReportStyles.darkGrey,
+          lineSpacing: 2.5,
+        );
+    final boldStyle = style.copyWith(font: fontBold);
+
+    final parts = text.split('**');
+    if (parts.length == 1) {
+      return pw.Text(text, style: style, textAlign: textAlign);
+    }
+
+    final spans = <pw.TextSpan>[];
+    for (int i = 0; i < parts.length; i++) {
+      if (parts[i].isEmpty) continue;
+      final isBold = i % 2 == 1;
+      spans.add(pw.TextSpan(text: parts[i], style: isBold ? boldStyle : style));
+    }
+
+    return pw.RichText(
+      textAlign: textAlign,
+      text: pw.TextSpan(children: spans),
+    );
+  }
 }
+

@@ -6,6 +6,7 @@ import 'mission_domain_inventory_engine.dart';
 import 'technical_enrichment_engine.dart';
 import 'competency_needs_engine.dart';
 import 'global_assessment_engine.dart';
+import 'statistical_synthesis_engine.dart';
 import '../ai/executive_summary_snapshot.dart';
 
 class CriticalityStats {
@@ -216,6 +217,10 @@ class MissionStatisticsSummary {
   /// Analyse dynamique et certifiée de l'appréciation globale
   GlobalAssessmentResult getGlobalAssessment(ExecutiveSummarySnapshot snapshot) =>
       GlobalAssessmentEngine.analyze(summary: this, snapshot: snapshot);
+
+  /// Synthèse dynamique et transversale de l'analyse statistique (Section 6)
+  StatisticalSynthesisResult getStatisticalSynthesis() =>
+      StatisticalSynthesisEngine.analyze(summary: this, technical: technical);
 
   String get densestCategoryFormatted {
     if (domainInventory != null) {

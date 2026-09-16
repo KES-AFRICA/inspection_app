@@ -394,13 +394,13 @@ class PdfSommaireBuilder {
         level: 1,
       ),
     );
-    entries.add(
-      SommaireEntry(
-        titre: "7. Recommandation pour le renforcement des capacités des agents d’entretien",
-        key: 'stat_formation',
-        level: 1,
-      ),
-    );
+    // entries.add(
+    //   SommaireEntry(
+    //     titre: "7. Recommandation pour le renforcement des capacités des agents d’entretien",
+    //     key: 'stat_formation',
+    //     level: 1,
+    //   ),
+    // );
 
     // 7. Renseignements généraux
     entries.add(
