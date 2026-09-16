@@ -283,18 +283,36 @@ class GlobalAssessmentEngine {
     final isExploitationTop = top1.name.toLowerCase().contains('exploitation') ||
         top1.name.toLowerCase().contains('maintenance');
 
+    final fam1 = _formatFamilyWithArticle(top1.name);
+
     if (sorted.length >= 2) {
       final top2 = sorted[1];
       final top2Pct = top2.percentage.toStringAsFixed(1).replaceAll('.', ',');
+      final fam2 = _formatFamilyWithArticle(top2.name);
 
       if (isExploitationTop) {
-        return 'Les résultats montrent que les principales vulnérabilités ne sont pas uniquement liées à l’état physique des équipements, mais également à la **maîtrise des opérations d’exploitation et de maintenance**. Les ${top1.name.toLowerCase()} constituent la première famille de risques identifiée, avec **$top1Pct % des occurrences**, devant ${top2.name.toLowerCase()}, qui représente **$top2Pct %**.';
+        return 'Les résultats montrent que les principales vulnérabilités ne sont pas uniquement liées à l’état physique des équipements, mais également à la **maîtrise des opérations d’exploitation et de maintenance**. Ainsi, **$fam1** constituent la première famille de risques identifiée, avec **$top1Pct % des occurrences**, devant **$fam2**, qui représente **$top2Pct %**.';
       } else {
-        return 'L’analyse de criticité met en évidence une concentration des risques sur **${top1.name.toLowerCase()}**, représentant à elle seule **$top1Pct % des occurrences**, suivie par ${top2.name.toLowerCase()} avec **$top2Pct % des constats**.';
+        return 'L’analyse de criticité met en évidence une concentration des risques sur **$fam1**, représentant à elle seule **$top1Pct % des occurrences**, suivie par **$fam2** avec **$top2Pct % des constats**.';
       }
     } else {
-      return 'L’analyse des facteurs de risque démontre une prépondérance absolue de la famille **${top1.name.toLowerCase()}**, qui regroupe **$top1Pct % des défaillances recensées**.';
+      return 'L’analyse des facteurs de risque démontre une prépondérance absolue de la famille **${top1.name}**, qui regroupe **$top1Pct % des défaillances recensées**.';
     }
+  }
+
+  /// Formate une famille de risques avec son article naturel et son intitulé propre
+  static String _formatFamilyWithArticle(String name) {
+    final lower = name.trim().toLowerCase();
+    if (lower.contains('exploitation') || lower.contains('maintenance')) {
+      return 'les pratiques d’exploitation et de maintenance';
+    }
+    if (lower.contains('dégradation') || lower.contains('degradation')) {
+      return 'la dégradation des canalisations et matériels';
+    }
+    if (lower.contains('conformité') || lower.contains('conformite')) {
+      return 'la non-conformité de conception ou d’installation';
+    }
+    return 'la catégorie « ${name.trim()} »';
   }
 
   /// Cartographie des faiblesses techniques réelles (basée STRICTEMENT sur les constats de la mission)
