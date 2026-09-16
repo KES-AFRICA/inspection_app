@@ -631,18 +631,20 @@ class PdfExecutiveSummaryBuilder {
 
     // ── 12. Appréciation globale ──
     widgets.add(
-      pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          PageTracker(
-            key: 'resume_executif_1_12',
-            registry: trackedPages,
-            offset: offset,
-            child: _subSectionHeader('12. Appréciation globale'),
-          ),
-          pw.SizedBox(height: 6),
-          _buildAppreciationGlobaleText(statsSummary, technical),
-        ],
+      pw.Inseparable(
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            PageTracker(
+              key: 'resume_executif_1_12',
+              registry: trackedPages,
+              offset: offset,
+              child: _subSectionHeader('12. Appréciation globale'),
+            ),
+            pw.SizedBox(height: 6),
+            _buildAppreciationGlobaleText(statsSummary, technical),
+          ],
+        ),
       ),
     );
 

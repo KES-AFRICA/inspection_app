@@ -174,7 +174,7 @@ class DispositionsConstructivesRegistry {
     // --- II. CONDITIONS D'EXPLOITATION ET DE SÉCURITÉ LOCAL MOYENNE TENSION ---
     "Accès réservé au personnel habilité (habilitation électrique à jour)":
         DispositionMetadata(
-          referenceNormative: "Norme NF C 13-100 art 412",
+          referenceNormative: "NF C 13-100:2015 – art 412",
           familleRisque: "Sécurité / conformité réglementaire",
           criticite: "Majeure",
         ),
@@ -204,7 +204,7 @@ class DispositionsConstructivesRegistry {
     ),
     "Identification et condamnation des accès aux parties sous tension":
         DispositionMetadata(
-          referenceNormative: "Norme NF C 13-100 art 541",
+          referenceNormative: "NF C 13-100:2015 – art 541",
           familleRisque: "Électrisation / électrocution",
           criticite: "Critique",
         ),
@@ -287,7 +287,7 @@ class DispositionsConstructivesRegistry {
           criticite: "Majeure",
         ),
     "Etat et serrage apparent des connexions accessibles": DispositionMetadata(
-      referenceNormative: "Norme NF C 13-100 art 413",
+      referenceNormative: "NF C 13-100:2015 – art 413",
       familleRisque: "Sécurité / conformité réglementaire",
       criticite: "Majeure",
     ),
@@ -303,7 +303,7 @@ class DispositionsConstructivesRegistry {
       criticite: "Critique",
     ),
     "Jonctions inter-cellules": DispositionMetadata(
-      referenceNormative: "Norme NF C 13-200 art 542-544",
+      referenceNormative: "NF C 13-200:2009 – art 542 à art 544",
       familleRisque: "Sécurité / conformité réglementaire",
       criticite: "Majeure",
     ),
@@ -325,8 +325,7 @@ class DispositionsConstructivesRegistry {
       criticite: "Critique",
     ),
     "Respect des distances de sécurité": DispositionMetadata(
-      referenceNormative:
-          "Norme NF C 13-200 (règles de distances de sécurité MT)",
+      referenceNormative: "NF C 13-200:2009 – art 412.2",
       familleRisque: "Sécurité / conformité réglementaire",
       criticite: "Majeure",
     ),
@@ -365,7 +364,7 @@ class DispositionsConstructivesRegistry {
         ),
     "Etat des fusibles, disjoncteurs et relais de protection":
         DispositionMetadata(
-          referenceNormative: "Norme NF C 13-200 art 431-432",
+          referenceNormative: "NF C 13-200:2009 – art 431 et art 432",
           familleRisque: "Électrisation / électrocution / défaut d'isolement",
           criticite: "Critique",
         ),
@@ -402,8 +401,7 @@ class DispositionsConstructivesRegistry {
         ),
     "État et dimensionnement du bac de rétention pour transformateur à huile":
         DispositionMetadata(
-          referenceNormative:
-              "NF C 15-100-1:2024 – art 551 et prescriptions du fabricant",
+          referenceNormative: "NF C 15-100-1:2024 – art 551",
           familleRisque: "Incendie / brûlure / fuite de combustible",
           criticite: "Critique",
         ),
@@ -444,7 +442,7 @@ class DispositionsConstructivesRegistry {
       criticite: "Critique",
     ),
     "Essais diélectriques": DispositionMetadata(
-      referenceNormative: "Norme NF C 13-200 art 426.8",
+      referenceNormative: "NF C 13-200:2009 – art 426.8",
       familleRisque: "Électrisation / défaut d'isolement",
       criticite: "Majeure",
     ),
@@ -454,7 +452,7 @@ class DispositionsConstructivesRegistry {
       criticite: "Critique",
     ),
     "Distance entre transformateur": DispositionMetadata(
-      referenceNormative: "Norme NF C 13-100 art 432",
+      referenceNormative: "NF C 13-100:2015 – art 432",
       familleRisque: "Incendie",
       criticite: "Majeure",
     ),
@@ -2039,7 +2037,7 @@ class DispositionsConstructivesRegistry {
     "Calibre des disjoncteurs / fusibles adapté à la section des câbles et au courant de court-circuit présumé (Icc)":
         DispositionMetadata(
           referenceNormative:
-              "NF C 15-100-1:2024 – art 434 et art 533 (pouvoir de coupure à vérifier par rapport au courant de court-circuit présumé)",
+              "NF C 15-100-1:2024 – art 434 et art 533",
           familleRisque: "Incendie / échauffement / surcharge des conducteurs",
           criticite: "Critique",
         ),

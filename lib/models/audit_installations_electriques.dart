@@ -1595,7 +1595,8 @@ class ObservationLibre {
     bool auto = false,
   }) {
     pointVerificationKey = key;
-    referenceNormative = refNormative;
+    final cleaned = DispositionsConstructivesRegistry.normalizeNormativeReference(refNormative);
+    referenceNormative = (cleaned == '-' || cleaned?.isEmpty == true) ? null : cleaned;
     familleRisque = famille;
     criticite = (criticite != null && criticite!.trim().isNotEmpty) ? criticite : crit;
     isAutoLinked = auto;

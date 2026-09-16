@@ -13,6 +13,7 @@ import 'package:inspec_app/services/pdf/pdf_page_tracker.dart';
 import 'package:inspec_app/services/pdf/pdf_report_styles.dart';
 import 'package:inspec_app/services/pdf/builders/pdf_description_builder.dart';
 import 'package:inspec_app/services/ip_ik_evaluator_service.dart';
+import 'package:inspec_app/utils/normative_reference_cleaner.dart';
 
 /// Builder responsable de l'Audit des Installations Électriques (Moyenne Tension et Basse Tension)
 class PdfAuditInstallationsBuilder {
@@ -1527,9 +1528,9 @@ class PdfAuditInstallationsBuilder {
         el.elementControle,
         localType: localType,
       );
-      final refNorm = isNonConforme
-          ? (meta?.referenceNormative ?? el.referenceNormative ?? '')
-          : '';
+      final rawRef = meta?.referenceNormative ?? el.referenceNormative ?? '';
+      final cleanedRef = NormativeReferenceCleaner.clean(rawRef);
+      final refNorm = isNonConforme ? (cleanedRef == '-' ? '' : cleanedRef) : '';
       final familleRisque = isNonConforme
           ? (meta?.familleRisque ?? el.familleRisque ?? '')
           : '';
@@ -2070,9 +2071,8 @@ class PdfAuditInstallationsBuilder {
       }
 
       final isNonConforme = el.conforme == false && !el.estNA;
-      final refNorm = isNonConforme
-          ? (el.referenceNormativeEffective ?? '')
-          : '';
+      final cleanedRef = NormativeReferenceCleaner.clean(el.referenceNormativeEffective ?? '');
+      final refNorm = isNonConforme ? (cleanedRef == '-' ? '' : cleanedRef) : '';
       final familleRisque = isNonConforme
           ? (el.familleRisqueEffective ?? '')
           : '';
@@ -2669,9 +2669,8 @@ class PdfAuditInstallationsBuilder {
       }
 
       final isNonConforme = el.conforme == false && !el.estNA;
-      final refNorm = isNonConforme
-          ? (el.referenceNormativeEffective ?? '')
-          : '';
+      final cleanedRef = NormativeReferenceCleaner.clean(el.referenceNormativeEffective ?? '');
+      final refNorm = isNonConforme ? (cleanedRef == '-' ? '' : cleanedRef) : '';
       final familleRisque = isNonConforme
           ? (el.familleRisqueEffective ?? '')
           : '';
@@ -4065,9 +4064,9 @@ class PdfAuditInstallationsBuilder {
             pv.pointVerification,
             coffretType: coffretType,
           );
-          final refNorm = isNonConf
-              ? (meta?.referenceNormative ?? pv.referenceNormative ?? '')
-              : '';
+          final rawRef = meta?.referenceNormative ?? pv.referenceNormative ?? '';
+          final cleanedRef = NormativeReferenceCleaner.clean(rawRef);
+          final refNorm = isNonConf ? (cleanedRef == '-' ? '' : cleanedRef) : '';
           final familleRisque = isNonConf ? (meta?.familleRisque ?? '') : '';
           final criticite = isNonConf ? (meta?.criticite ?? '') : '';
 
@@ -4230,7 +4229,10 @@ class PdfAuditInstallationsBuilder {
               children: [
                 PdfReportStyles.cell('${e.key + 1}', isHeader: false),
                 obsCell(e.value),
-                PdfReportStyles.cell(e.value.referenceNormative ?? '-', isHeader: false),
+                PdfReportStyles.cell(
+                  NormativeReferenceCleaner.clean(e.value.referenceNormative ?? '-'),
+                  isHeader: false,
+                ),
               ],
             ),
           ),

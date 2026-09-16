@@ -24,6 +24,7 @@ import 'equipment_number_service.dart';
 import 'ip_ik_evaluator_service.dart';
 import 'persistence_queue.dart';
 import 'package:inspec_app/features/backup/data/services/mission_activity_tracker.dart';
+import '../utils/normative_reference_cleaner.dart';
 
 class HiveService {
   static const String _verificateurBox = 'verificateurs';
@@ -1621,6 +1622,17 @@ static Future<String?> getTransformateurLocalisation(String missionId, String sy
 static void _migrateAuditIfNeeded(AuditInstallationsElectriques audit) {
   bool changed = false;
 
+  void migrateObservationLibre(ObservationLibre obs) {
+    if (obs.referenceNormative != null && obs.referenceNormative!.isNotEmpty) {
+      final cleaned = NormativeReferenceCleaner.clean(obs.referenceNormative);
+      final finalVal = (cleaned == '-' || cleaned.isEmpty) ? null : cleaned;
+      if (finalVal != obs.referenceNormative) {
+        obs.referenceNormative = finalVal;
+        changed = true;
+      }
+    }
+  }
+
   void migrateElementControle(ElementControle el, {String? localType}) {
     final meta = DispositionsConstructivesRegistry.getMetadata(el.elementControle, localType: localType);
     if (meta != null) {
@@ -1637,9 +1649,13 @@ static void _migrateAuditIfNeeded(AuditInstallationsElectriques audit) {
         changed = true;
       }
     }
-    if (el.referenceNormative != null && el.referenceNormative!.contains('§')) {
-      el.referenceNormative = DispositionsConstructivesRegistry.normalizeNormativeReference(el.referenceNormative);
-      changed = true;
+    if (el.referenceNormative != null && el.referenceNormative!.isNotEmpty) {
+      final cleaned = NormativeReferenceCleaner.clean(el.referenceNormative);
+      final finalVal = (cleaned == '-' || cleaned.isEmpty) ? null : cleaned;
+      if (finalVal != el.referenceNormative) {
+        el.referenceNormative = finalVal;
+        changed = true;
+      }
     }
   }
 
@@ -1720,9 +1736,13 @@ static void _migrateAuditIfNeeded(AuditInstallationsElectriques audit) {
           changed = true;
         }
       }
-      if (pv.referenceNormative != null && pv.referenceNormative!.contains('§')) {
-        pv.referenceNormative = DispositionsConstructivesRegistry.normalizeNormativeReference(pv.referenceNormative);
-        changed = true;
+      if (pv.referenceNormative != null && pv.referenceNormative!.isNotEmpty) {
+        final cleaned = NormativeReferenceCleaner.clean(pv.referenceNormative);
+        final finalVal = (cleaned == '-' || cleaned.isEmpty) ? null : cleaned;
+        if (finalVal != pv.referenceNormative) {
+          pv.referenceNormative = finalVal;
+          changed = true;
+        }
       }
 
       for (var obs in pv.observations!) {
@@ -1847,17 +1867,29 @@ static void _migrateAuditIfNeeded(AuditInstallationsElectriques audit) {
     for (var el in local.conditionsExploitation) {
       migrateElementControle(el, localType: local.type);
     }
+    for (var obs in local.observationsLibres) {
+      migrateObservationLibre(obs);
+    }
     migrateLocalCellules(local);
     migrateLocalTransformateurs(local);
     for (var coffret in local.coffrets) {
       migrateCoffret(coffret, parentName: local.nom);
+      for (var obs in coffret.observationsLibres) {
+        migrateObservationLibre(obs);
+      }
     }
   }
 
   // Zones MT
   for (var zone in audit.moyenneTensionZones) {
+    for (var obs in zone.observationsLibres) {
+      migrateObservationLibre(obs);
+    }
     for (var coffret in zone.coffrets) {
       migrateCoffret(coffret, parentName: zone.nom);
+      for (var obs in coffret.observationsLibres) {
+        migrateObservationLibre(obs);
+      }
     }
     for (var local in zone.locaux) {
       for (var el in local.dispositionsConstructives) {
@@ -1866,18 +1898,30 @@ static void _migrateAuditIfNeeded(AuditInstallationsElectriques audit) {
       for (var el in local.conditionsExploitation) {
         migrateElementControle(el, localType: local.type);
       }
+      for (var obs in local.observationsLibres) {
+        migrateObservationLibre(obs);
+      }
       migrateLocalCellules(local);
       migrateLocalTransformateurs(local);
       for (var coffret in local.coffrets) {
         migrateCoffret(coffret, parentName: local.nom);
+        for (var obs in coffret.observationsLibres) {
+          migrateObservationLibre(obs);
+        }
       }
     }
   }
 
   // Zones BT
   for (var zone in audit.basseTensionZones) {
+    for (var obs in zone.observationsLibres) {
+      migrateObservationLibre(obs);
+    }
     for (var coffret in zone.coffretsDirects) {
       migrateCoffret(coffret, parentName: zone.nom);
+      for (var obs in coffret.observationsLibres) {
+        migrateObservationLibre(obs);
+      }
     }
     for (var local in zone.locaux) {
       if (local.dispositionsConstructives != null) {
@@ -1890,10 +1934,16 @@ static void _migrateAuditIfNeeded(AuditInstallationsElectriques audit) {
           migrateElementControle(el, localType: local.type);
         }
       }
+      for (var obs in local.observationsLibres) {
+        migrateObservationLibre(obs);
+      }
       migrateLocalCellules(local);
       migrateLocalTransformateurs(local);
       for (var coffret in local.coffrets) {
         migrateCoffret(coffret, parentName: local.nom);
+        for (var obs in coffret.observationsLibres) {
+          migrateObservationLibre(obs);
+        }
       }
     }
   }
