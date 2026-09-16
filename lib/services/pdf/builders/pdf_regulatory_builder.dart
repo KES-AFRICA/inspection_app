@@ -10,34 +10,67 @@ class PdfRegulatoryBuilder {
   static pw.Font fontBold = pw.Font.helveticaBold();
 
   static pw.Widget buildNormesTable({pw.Font? fontBold, pw.Font? fontRegular}) {
-    final normes = [
-      [
-        'Articles 6, 112, 113 – Arrêté 039/MTPS/IMT du 26 novembre 1984',
-        'Fixant les mesures générales d\'hygiène et de sécurité sur les lieux de travail',
-      ],
-      [
-        'Décret N° 20181969/PM du 15 mars 2018',
-        'Cahier de prescription technique applicable, fixant les règles de base de sécurité incendie dans les bâtiments',
-      ],
-      ['Arrêté conjoint 002164 du 21 juin 2012 MNIMIDT/MINEE', '—'],
-      ['Loi N° 896/PJL/AN du 15/11/2011', '—'],
-      ['NC 244 C 15 100', 'Installation électrique à basse tension'],
-      ['NF C 15 100', 'Installation électrique à basse tension'],
-      [
-        'Norme NF C 13 100',
-        'Poste de livraison établi à l\'intérieur d\'un bâtiment et alimenté par un réseau de distribution publique de deuxième catégorie',
-      ],
+    final fireNormes = [
+      'Articles 6, 112, 113 - Arrêté 039/MTPS/IMT du 26 novembre 1984 fixant les mesures générales d\'hygiène et de sécurité sur les lieux de travail',
+      'Cahier de prescription technique applicable au Décret N° 20181969/PM du 15 mars 2018, fixant les règles de base de sécurité incendie dans les bâtiments',
     ];
-    return pw.Table(
-      border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.4),
-      columnWidths: const {
-        0: pw.FlexColumnWidth(4.5),
-        1: pw.FlexColumnWidth(5.5),
-      },
+
+    final electricNormes = [
+      'Arrêté conjoint 002164 du 21 juin 2012 MNIMIDT/MINEE',
+      'Loi N° 896/PJL/AN du 15/11/2011',
+      'NC 244 C 15 100 - Installation électrique à basse tension',
+      'NF C 15 100 - Installation électrique à basse tension',
+      'Norme NF C 13 100 - Poste de livraison établi à l\'intérieur d\'un bâtiment et alimenté par un réseau de distribution publique de deuxième catégorie',
+    ];
+
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        PdfReportStyles.tableHeaderRow(['Référence', 'Objet']),
-        ...normes.asMap().entries.map(
-          (e) => PdfReportStyles.tableDataRow(e.value, alt: e.key.isOdd),
+        pw.Table(
+          border: pw.TableBorder.all(
+              color: PdfReportStyles.borderColor, width: 0.4),
+          columnWidths: const {
+            0: pw.FlexColumnWidth(1.0),
+          },
+          children: [
+            pw.TableRow(
+              decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
+              children: [
+                PdfReportStyles.cell(
+                  'Référentiel APSAD D18 (CNPP) — prévention des risques d\'incendie et d\'explosion',
+                  isHeader: true,
+                  centered: false,
+                  fontBold: fontBold,
+                ),
+              ],
+            ),
+            ...fireNormes.asMap().entries.map(
+              (e) => PdfReportStyles.tableDataRow(
+                [e.value],
+                alt: e.key.isOdd,
+                centered: false,
+                fontRegular: fontRegular,
+              ),
+            ),
+          ],
+        ),
+        pw.SizedBox(height: 6),
+        pw.Table(
+          border: pw.TableBorder.all(
+              color: PdfReportStyles.borderColor, width: 0.4),
+          columnWidths: const {
+            0: pw.FlexColumnWidth(1.0),
+          },
+          children: [
+            ...electricNormes.asMap().entries.map(
+              (e) => PdfReportStyles.tableDataRow(
+                [e.value],
+                alt: e.key.isOdd,
+                centered: false,
+                fontRegular: fontRegular,
+              ),
+            ),
+          ],
         ),
       ],
     );
