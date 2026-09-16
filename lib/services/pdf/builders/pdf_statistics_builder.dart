@@ -2,6 +2,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/services/statistics/mission_statistics_collector.dart';
+import 'package:inspec_app/services/statistics/mission_statistics.dart';
 import 'package:inspec_app/services/statistics/audit_finding.dart';
 import 'package:inspec_app/services/statistics/domain_entity_instance.dart';
 import 'package:inspec_app/services/statistics/technical_enrichment_engine.dart';
@@ -444,12 +445,7 @@ class PdfStatisticsBuilder {
         child: _buildTrainingRecommendationsSection(
           7,
           mission.nomClient,
-          topRisk1Name,
-          topRisk1Pct,
-          topRisk2Name,
-          topRisk2Pct,
-          totalOccur,
-          summary.paretoResult,
+          summary,
         ),
       ),
     );
@@ -1079,106 +1075,72 @@ class PdfStatisticsBuilder {
   static pw.Widget _buildTrainingRecommendationsSection(
     int sectionNum,
     String clientName,
-    String topRisk1Name,
-    String topRisk1Pct,
-    String topRisk2Name,
-    String topRisk2Pct,
-    int totalOccurrences, [
-    ParetoAnalysisResult? paretoResult,
-  ]) {
-    final topDefect1 = (paretoResult != null && paretoResult.items.isNotEmpty) ? paretoResult.items[0] : null;
-    final topDefect2 = (paretoResult != null && paretoResult.items.length > 1) ? paretoResult.items[1] : null;
-    final topDefect1Count = topDefect1?.count ?? 112;
-    final topDefect1Pct = totalOccurrences > 0 && topDefect1 != null
-        ? (topDefect1Count / totalOccurrences * 100).toStringAsFixed(1).replaceAll('.', ',')
-        : '22,6';
-    final topDefect2Count = topDefect2?.count ?? 107;
-    final topDefect2Pct = totalOccurrences > 0 && topDefect2 != null
-        ? (topDefect2Count / totalOccurrences * 100).toStringAsFixed(1).replaceAll('.', ',')
-        : '21,6';
-
-    final recoBullets = [
-      (
-        'Identification, repérage et documentation des circuits électriques',
-        'former les agents à la tenue à jour des schémas unifilaires, au repérage systématique des départs et au respect du code couleur des câbles, axe correspondant à lui seul à $topDefect1Count non-conformités ($topDefect1Pct % du total) ;',
-      ),
-      (
-        'Bonnes pratiques de câblage et de raccordement',
-        'renforcer les compétences sur le serrage et le contrôle périodique des connexions, la pose et la protection mécanique des canalisations, afin de réduire les risques d\'échauffement et de dégradation ($topDefect2Count non-conformités, $topDefect2Pct % du total) ;',
-      ),
-      (
-        'Utilisation et entretien des équipements de protection individuelle (EPI électriques) et du matériel de consignation',
-        'sensibiliser au contrôle périodique, à la traçabilité et à la disponibilité effective de ces équipements avant toute intervention ;',
-      ),
-      (
-        'Procédures de consignation, de déconsignation et de coupure d\'urgence',
-        'consolider la connaissance des procédures et la lisibilité des plans d\'intervention affichés dans les locaux techniques ;',
-      ),
-      (
-        'Documentation technique du parc électrique',
-        'former les équipes de maintenance à la saisie systématique des caractéristiques techniques des équipements (indice IP/IK, origine de la source d\'alimentation, présence de la protection de tête) à chaque intervention, afin de résorber le déficit de traçabilité mis en évidence au chapitre 3 ;',
-      ),
-      (
-        'Priorité particulière pour les zones Groupe Électrogène et Coffrets',
-        'ces deux catégories affichant les taux de criticité les plus élevés du site, un module de formation dédié aux risques spécifiques de ces installations (carburant, protections différentielles, continuité de service) est recommandé.',
-      ),
-    ];
-
+    MissionStatisticsSummary summary,
+  ) {
+    final comp = summary.competencyNeeds;
     final porteeText =
         'Portée de la recommandation : Cette recommandation vise le renforcement des compétences des agents d\'entretien internes à $clientName ; elle est complémentaire du plan d\'actions correctives à mener par des intervenants habilités pour la levée des non-conformités critiques et majeures identifiées au chapitre 1.';
 
-    return pw.Inseparable(
-      child: pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          PdfReportStyles.subTitle(
-            '$sectionNum. Recommandation pour le renforcement des capacités des agents d\'entretien',
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Inseparable(
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              PdfReportStyles.subTitle(
+                '$sectionNum. Recommandation pour le renforcement des capacités des agents d\'entretien',
+              ),
+              pw.SizedBox(height: 5),
+              PdfReportStyles.bodyText(comp.introNarrative),
+              pw.SizedBox(height: 6),
+            ],
           ),
-          pw.SizedBox(height: 5),
-          PdfReportStyles.bodyText(
-            'Les résultats de l\'analyse statistique, en particulier la prédominance de la famille "$topRisk1Name" ($topRisk1Pct % des occurrences) et le poids de la "$topRisk2Name" ($topRisk2Pct %), désignent des axes de formation prioritaires et ciblés pour les agents d\'entretien et de maintenance du site :',
-          ),
-          pw.SizedBox(height: 6),
-          ...recoBullets.map(
-            (b) => pw.Padding(
-              padding: const pw.EdgeInsets.only(left: 6, bottom: 4),
-              child: pw.Row(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                children: [
-                  pw.Container(
-                    width: 3.5,
-                    height: 3.5,
-                    margin: const pw.EdgeInsets.only(top: 4, right: 6),
-                    decoration: pw.BoxDecoration(
-                      color: PdfReportStyles.accentColor,
-                      shape: pw.BoxShape.circle,
-                    ),
-                  ),
-                  pw.Expanded(
-                    child: pw.RichText(
-                      text: pw.TextSpan(
-                        children: [
-                          pw.TextSpan(
-                            text: '${b.$1} : ',
-                            style: pw.TextStyle(font: fontBold, fontSize: fsBody, color: PdfReportStyles.darkGrey),
-                          ),
-                          pw.TextSpan(
-                            text: b.$2,
-                            style: pw.TextStyle(font: fontRegular, fontSize: fsBody, color: PdfReportStyles.darkGrey),
-                          ),
-                        ],
+        ),
+        if (comp.axes.isNotEmpty)
+          ...comp.axes.map(
+            (axis) => pw.Inseparable(
+              child: pw.Padding(
+                padding: const pw.EdgeInsets.only(left: 6, bottom: 4),
+                child: pw.Row(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Container(
+                      width: 3.5,
+                      height: 3.5,
+                      margin: const pw.EdgeInsets.only(top: 4, right: 6),
+                      decoration: pw.BoxDecoration(
+                        color: PdfReportStyles.accentColor,
+                        shape: pw.BoxShape.circle,
                       ),
-                      textAlign: pw.TextAlign.justify,
                     ),
-                  ),
-                ],
+                    pw.Expanded(
+                      child: pw.RichText(
+                        text: pw.TextSpan(
+                          children: [
+                            pw.TextSpan(
+                              text: '${axis.title} (${axis.occurrenceCount} constats, ${axis.percentageStr} %) : ',
+                              style: pw.TextStyle(font: fontBold, fontSize: fsBody, color: PdfReportStyles.darkGrey),
+                            ),
+                            pw.TextSpan(
+                              text: axis.fullNarrative,
+                              style: pw.TextStyle(font: fontRegular, fontSize: fsBody, color: PdfReportStyles.darkGrey),
+                            ),
+                          ],
+                        ),
+                        textAlign: pw.TextAlign.justify,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-          pw.SizedBox(height: 8),
-          _buildCalloutBox(porteeText),
-        ],
-      ),
+        pw.SizedBox(height: 8),
+        pw.Inseparable(
+          child: _buildCalloutBox(porteeText),
+        ),
+      ],
     );
   }
 }

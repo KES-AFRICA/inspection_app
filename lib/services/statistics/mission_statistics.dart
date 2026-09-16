@@ -4,6 +4,7 @@ import 'audit_finding.dart';
 import 'unified_observation.dart';
 import 'mission_domain_inventory_engine.dart';
 import 'technical_enrichment_engine.dart';
+import 'competency_needs_engine.dart';
 
 class CriticalityStats {
   final int critique;
@@ -206,6 +207,9 @@ class MissionStatisticsSummary {
     final dom = domainInventory ?? MissionDomainInventoryEngine.buildInventory(missionId);
     return TechnicalEnrichmentEngine.compute(missionId, dom, inventory);
   }
+
+  /// Analyse dynamique et certifiée des besoins en renforcement des compétences
+  CompetencyNeedsAnalysisResult get competencyNeeds => CompetencyNeedsEngine.analyzeFromSummary(this);
 
   String get densestCategoryFormatted {
     if (domainInventory != null) {

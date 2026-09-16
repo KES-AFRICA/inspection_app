@@ -396,14 +396,7 @@ class PdfExecutiveSummaryBuilder {
     widgets.add(pw.SizedBox(height: 10));
 
     // ── 10. Renforcement des compétences ──
-    final competencyItems = [
-      'Consignation et sécurité électriques MT/BT',
-      'Lecture et mise à jour des schémas',
-      'Protections et Sélectivité',
-      'Câbles, connexions et thermographie',
-      'Parafoudre, terre et surtensions',
-      'Groupes électrogènes / inverseurs',
-    ];
+    final compAnalysis = statsSummary.competencyNeeds;
 
     widgets.add(
       PageTracker(
@@ -414,24 +407,66 @@ class PdfExecutiveSummaryBuilder {
       ),
     );
     widgets.add(pw.SizedBox(height: 5));
-    for (final item in competencyItems) {
+    widgets.add(
+      pw.Text(
+        compAnalysis.introNarrative,
+        style: pw.TextStyle(
+          font: fontRegular,
+          fontSize: fsBody,
+          color: PdfReportStyles.darkGrey,
+          lineSpacing: 2.2,
+        ),
+        textAlign: pw.TextAlign.justify,
+      ),
+    );
+
+    if (compAnalysis.axes.isNotEmpty) {
+      widgets.add(pw.SizedBox(height: 6));
       widgets.add(
-        pw.Padding(
-          padding: const pw.EdgeInsets.only(left: 6, bottom: 3),
-          child: pw.Row(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Text('• ', style: pw.TextStyle(font: fontBold, fontSize: fsBody, color: PdfReportStyles.accentColor)),
-              pw.Expanded(
-                child: pw.Text(
-                  item,
-                  style: pw.TextStyle(font: fontRegular, fontSize: fsBody, color: PdfReportStyles.darkGrey),
-                ),
-              ),
-            ],
+        pw.Text(
+          'Le programme de renforcement des compétences devra prioritairement porter sur les axes suivants :',
+          style: pw.TextStyle(
+            font: fontBold,
+            fontSize: fsBody,
+            color: PdfReportStyles.headerColor,
           ),
         ),
       );
+      widgets.add(pw.SizedBox(height: 5));
+
+      for (final axis in compAnalysis.axes) {
+        widgets.add(
+          pw.Inseparable(
+            child: pw.Padding(
+              padding: const pw.EdgeInsets.only(left: 4, bottom: 6),
+              child: pw.RichText(
+                text: pw.TextSpan(
+                  children: [
+                    pw.TextSpan(
+                      text: '${axis.letter}   ${axis.title}\n',
+                      style: pw.TextStyle(
+                        font: fontBold,
+                        fontSize: fsBody,
+                        color: PdfReportStyles.headerColor,
+                      ),
+                    ),
+                    pw.TextSpan(
+                      text: axis.fullNarrative,
+                      style: pw.TextStyle(
+                        font: fontRegular,
+                        fontSize: fsBody,
+                        color: PdfReportStyles.darkGrey,
+                        lineSpacing: 2.0,
+                      ),
+                    ),
+                  ],
+                ),
+                textAlign: pw.TextAlign.justify,
+              ),
+            ),
+          ),
+        );
+      }
     }
     widgets.add(pw.SizedBox(height: 10));
 
