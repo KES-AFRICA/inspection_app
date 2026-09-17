@@ -4501,6 +4501,18 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
     });
   }
 
+  Future<void> flushAutoSave() async {
+    if (_autoSaveTimer != null && _autoSaveTimer!.isActive) {
+      _autoSaveTimer!.cancel();
+      _autoSaveTimer = null;
+      if (widget.isEdition && widget.coffret != null) {
+        await _autoSaveEdition();
+      } else {
+        await _saveDraft();
+      }
+    }
+  }
+
   CoffretArmoire _buildCurrentCoffret({String? forcedStatut}) {
     final toutesPhotos = [..._coffretPhotosExterne, ..._coffretPhotosInterne];
     final now = DateTime.now().toUtc();
@@ -4559,6 +4571,8 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         equipmentId: widget.coffret!.equipmentId,
         updatedCoffret: nouveauCoffret,
         oldNom: widget.coffret!.nom,
+        allowClearDepartures: true,
+        allowClearCircuits: true,
       );
       if (mounted) {
         _isAutoSavingNotifier.value = false;
@@ -5292,8 +5306,8 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
   }
 
   Future<void> _handleExit() async {
+    await flushAutoSave();
     if (widget.isEdition && widget.coffret != null) {
-      _autoSaveTimer?.cancel();
       if (_hasUnsavedChanges || _isAutoSavingNotifier.value) {
         await _autoSaveEdition();
       }
@@ -5332,6 +5346,8 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
           equipmentId: widget.coffret!.equipmentId,
           updatedCoffret: newCoffret,
           oldNom: widget.coffret!.nom,
+          allowClearDepartures: true,
+          allowClearCircuits: true,
         );
         if (ok) {
           if (kDebugMode) {
@@ -5389,8 +5405,8 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         target.verificationThermographie = newCoffret.verificationThermographie;
         target.presenceDefautThermo = newCoffret.presenceDefautThermo;
         target.indiceIpIk = newCoffret.indiceIpIk;
-        target.departures = newCoffret.departures ?? target.departures;
-        target.terminalCircuits = newCoffret.terminalCircuits ?? target.terminalCircuits;
+        target.departures = newCoffret.effectiveDepartures.isNotEmpty ? newCoffret.departures : (target.departures ?? []);
+        target.terminalCircuits = newCoffret.effectiveTerminalCircuits.isNotEmpty ? newCoffret.terminalCircuits : (target.terminalCircuits ?? []);
         target.sourceEquipementId = newCoffret.sourceEquipementId;
         target.sourceNomComplet = newCoffret.sourceNomComplet;
         target.sourceDepartId = newCoffret.sourceDepartId;
@@ -5423,7 +5439,8 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
     }
   }
 
-  void _handleNext() {
+  Future<void> _handleNext() async {
+    await flushAutoSave();
     final lastStepIndex = _selectedType == 'INVERSEUR' ? 4 : 5;
     if (_currentStep == 0) {
       if (!_nomValid) { _showError('Veuillez saisir le nom de l\'équipement'); return; }
@@ -5465,7 +5482,8 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
     }
   }
 
-  void _handlePrevious() {
+  Future<void> _handlePrevious() async {
+    await flushAutoSave();
     final lastStepIndex = _selectedType == 'INVERSEUR' ? 4 : 5;
     if (_currentStep == 3) {
       final alimState = _etapeAlimentationsKey?.currentState;

@@ -358,6 +358,192 @@ class ObservationLibreEntity {
   });
 }
 
+class DepartEquipementEntity {
+  final String id;
+  final String protectionTete;
+  final String identification;
+  final String typeProtection;
+  final String marque;
+  final String courbe;
+  final String pdcKA;
+  final String icc3Max;
+  final String calibre;
+  final String sectionCable;
+  final String ddr;
+  final String? nombreCables;
+  final String? sectionCableNeutre;
+  final int? conducteursPhase;
+  final int? conducteursNeutre;
+  final String? natureCable;
+
+  String get sectionCablePhase => sectionCable;
+  String get effectiveSectionCablePhase => sectionCablePhase;
+  String get effectiveSectionCableNeutre => (sectionCableNeutre != null && sectionCableNeutre!.trim().isNotEmpty) ? sectionCableNeutre! : sectionCable;
+
+  int? get effectiveConducteursPhase {
+    if (conducteursPhase != null && conducteursPhase! > 0) return conducteursPhase;
+    if (sectionCable.trim().isNotEmpty && sectionCable.trim() != '-') return 1;
+    return null;
+  }
+
+  int? get effectiveConducteursNeutre {
+    if (conducteursNeutre != null && conducteursNeutre! > 0) return conducteursNeutre;
+    final sec = effectiveSectionCableNeutre;
+    if (sec.trim().isNotEmpty && sec.trim() != '-') return 1;
+    return null;
+  }
+
+  const DepartEquipementEntity({
+    required this.id,
+    this.protectionTete = 'Présent',
+    this.identification = '',
+    this.typeProtection = '',
+    this.marque = '',
+    this.courbe = '',
+    this.pdcKA = '',
+    this.icc3Max = '',
+    this.calibre = '',
+    this.sectionCable = '',
+    this.ddr = '',
+    this.nombreCables,
+    this.sectionCableNeutre,
+    this.conducteursPhase,
+    this.conducteursNeutre,
+    this.natureCable,
+  });
+
+  DepartEquipementEntity copyWith({
+    String? id,
+    String? protectionTete,
+    String? identification,
+    String? typeProtection,
+    String? marque,
+    String? courbe,
+    String? pdcKA,
+    String? icc3Max,
+    String? calibre,
+    String? sectionCable,
+    String? ddr,
+    String? nombreCables,
+    String? sectionCableNeutre,
+    int? conducteursPhase,
+    int? conducteursNeutre,
+    String? natureCable,
+  }) {
+    return DepartEquipementEntity(
+      id: id ?? this.id,
+      protectionTete: protectionTete ?? this.protectionTete,
+      identification: identification ?? this.identification,
+      typeProtection: typeProtection ?? this.typeProtection,
+      marque: marque ?? this.marque,
+      courbe: courbe ?? this.courbe,
+      pdcKA: pdcKA ?? this.pdcKA,
+      icc3Max: icc3Max ?? this.icc3Max,
+      calibre: calibre ?? this.calibre,
+      sectionCable: sectionCable ?? this.sectionCable,
+      ddr: ddr ?? this.ddr,
+      nombreCables: nombreCables ?? this.nombreCables,
+      sectionCableNeutre: sectionCableNeutre ?? this.sectionCableNeutre,
+      conducteursPhase: conducteursPhase ?? this.conducteursPhase,
+      conducteursNeutre: conducteursNeutre ?? this.conducteursNeutre,
+      natureCable: natureCable ?? this.natureCable,
+    );
+  }
+}
+
+class CircuitTerminalEquipementEntity {
+  final String id;
+  final String protectionTete;
+  final String identification;
+  final String typeProtection;
+  final String marque;
+  final String courbe;
+  final String pdcKA;
+  final String icc3Max;
+  final String calibre;
+  final String sectionCable;
+  final String ddr;
+  final String? nombreCables;
+  final String? sectionCableNeutre;
+  final int? conducteursPhase;
+  final int? conducteursNeutre;
+  final String? natureCable;
+
+  String get sectionCablePhase => sectionCable;
+  String get effectiveSectionCablePhase => sectionCablePhase;
+  String get effectiveSectionCableNeutre => (sectionCableNeutre != null && sectionCableNeutre!.trim().isNotEmpty) ? sectionCableNeutre! : sectionCable;
+
+  int? get effectiveConducteursPhase {
+    if (conducteursPhase != null && conducteursPhase! > 0) return conducteursPhase;
+    if (sectionCable.trim().isNotEmpty && sectionCable.trim() != '-') return 1;
+    return null;
+  }
+
+  int? get effectiveConducteursNeutre {
+    if (conducteursNeutre != null && conducteursNeutre! > 0) return conducteursNeutre;
+    final sec = effectiveSectionCableNeutre;
+    if (sec.trim().isNotEmpty && sec.trim() != '-') return 1;
+    return null;
+  }
+
+  const CircuitTerminalEquipementEntity({
+    required this.id,
+    this.protectionTete = 'Oui',
+    this.identification = '',
+    this.typeProtection = '',
+    this.marque = '',
+    this.courbe = '',
+    this.pdcKA = '',
+    this.icc3Max = '',
+    this.calibre = '',
+    this.sectionCable = '',
+    this.ddr = '',
+    this.nombreCables,
+    this.sectionCableNeutre,
+    this.conducteursPhase,
+    this.conducteursNeutre,
+    this.natureCable,
+  });
+
+  CircuitTerminalEquipementEntity copyWith({
+    String? id,
+    String? protectionTete,
+    String? identification,
+    String? typeProtection,
+    String? marque,
+    String? courbe,
+    String? pdcKA,
+    String? icc3Max,
+    String? calibre,
+    String? sectionCable,
+    String? ddr,
+    String? nombreCables,
+    String? sectionCableNeutre,
+    int? conducteursPhase,
+    int? conducteursNeutre,
+    String? natureCable,
+  }) {
+    return CircuitTerminalEquipementEntity(
+      id: id ?? this.id,
+      protectionTete: protectionTete ?? this.protectionTete,
+      identification: identification ?? this.identification,
+      typeProtection: typeProtection ?? this.typeProtection,
+      marque: marque ?? this.marque,
+      courbe: courbe ?? this.courbe,
+      pdcKA: pdcKA ?? this.pdcKA,
+      icc3Max: icc3Max ?? this.icc3Max,
+      calibre: calibre ?? this.calibre,
+      sectionCable: sectionCable ?? this.sectionCable,
+      ddr: ddr ?? this.ddr,
+      nombreCables: nombreCables ?? this.nombreCables,
+      sectionCableNeutre: sectionCableNeutre ?? this.sectionCableNeutre,
+      conducteursPhase: conducteursPhase ?? this.conducteursPhase,
+      conducteursNeutre: conducteursNeutre ?? this.conducteursNeutre,
+      natureCable: natureCable ?? this.natureCable,
+    );
+  }
+}
+
 class CoffretArmoireEntity {
   final String? id;
   final DateTime? createdAt;
@@ -397,6 +583,11 @@ class CoffretArmoireEntity {
   final String? sourceEquipementId;
   final String? sourceNomComplet;
   final String? sourceDepartId;
+  final List<DepartEquipementEntity> departures;
+  final List<CircuitTerminalEquipementEntity> terminalCircuits;
+
+  List<DepartEquipementEntity> get effectiveDepartures => departures;
+  List<CircuitTerminalEquipementEntity> get effectiveTerminalCircuits => terminalCircuits;
 
   String get equipmentId {
     if (id != null && id!.trim().isNotEmpty) return id!;
@@ -464,7 +655,95 @@ class CoffretArmoireEntity {
     this.sourceEquipementId,
     this.sourceNomComplet,
     this.sourceDepartId,
+    this.departures = const [],
+    this.terminalCircuits = const [],
   });
+
+  CoffretArmoireEntity copyWith({
+    String? id,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    String? qrCode,
+    String? nom,
+    String? type,
+    String? description,
+    String? repere,
+    bool? zoneAtex,
+    String? domaineTension,
+    bool? identificationArmoire,
+    bool? signalisationDanger,
+    bool? presenceSchema,
+    bool? presenceParafoudre,
+    bool? verificationThermographie,
+    String? presenceDefautThermo,
+    bool? alimenteeParTransformateur,
+    String? transformateurId,
+    String? transformateurNomComplet,
+    bool? presenceCPI,
+    bool? departPrisAvecProtection,
+    bool? accessible,
+    List<AlimentationEntity>? alimentations,
+    AlimentationEntity? protectionTete,
+    List<PointVerificationEntity>? pointsVerification,
+    List<ObservationLibreEntity>? observationsLibres,
+    List<String>? photos,
+    String? numeroEquipement,
+    String? statut,
+    int? currentStep,
+    List<String>? photosExternes,
+    List<String>? photosInternes,
+    List<ObservationLibreEntity>? observationsParafoudre,
+    String? indiceIpIk,
+    String? indiceIpIkRepere,
+    String? sourceEquipementId,
+    String? sourceNomComplet,
+    String? sourceDepartId,
+    List<DepartEquipementEntity>? departures,
+    List<CircuitTerminalEquipementEntity>? terminalCircuits,
+  }) {
+    return CoffretArmoireEntity(
+      id: id ?? this.id,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      qrCode: qrCode ?? this.qrCode,
+      nom: nom ?? this.nom,
+      type: type ?? this.type,
+      description: description ?? this.description,
+      repere: repere ?? this.repere,
+      zoneAtex: zoneAtex ?? this.zoneAtex,
+      domaineTension: domaineTension ?? this.domaineTension,
+      identificationArmoire: identificationArmoire ?? this.identificationArmoire,
+      signalisationDanger: signalisationDanger ?? this.signalisationDanger,
+      presenceSchema: presenceSchema ?? this.presenceSchema,
+      presenceParafoudre: presenceParafoudre ?? this.presenceParafoudre,
+      verificationThermographie: verificationThermographie ?? this.verificationThermographie,
+      presenceDefautThermo: presenceDefautThermo ?? this.presenceDefautThermo,
+      alimenteeParTransformateur: alimenteeParTransformateur ?? this.alimenteeParTransformateur,
+      transformateurId: transformateurId ?? this.transformateurId,
+      transformateurNomComplet: transformateurNomComplet ?? this.transformateurNomComplet,
+      presenceCPI: presenceCPI ?? this.presenceCPI,
+      departPrisAvecProtection: departPrisAvecProtection ?? this.departPrisAvecProtection,
+      accessible: accessible ?? this.accessible,
+      alimentations: alimentations ?? this.alimentations,
+      protectionTete: protectionTete ?? this.protectionTete,
+      pointsVerification: pointsVerification ?? this.pointsVerification,
+      observationsLibres: observationsLibres ?? this.observationsLibres,
+      photos: photos ?? this.photos,
+      numeroEquipement: numeroEquipement ?? this.numeroEquipement,
+      statut: statut ?? this.statut,
+      currentStep: currentStep ?? this.currentStep,
+      photosExternes: photosExternes ?? this.photosExternes,
+      photosInternes: photosInternes ?? this.photosInternes,
+      observationsParafoudre: observationsParafoudre ?? this.observationsParafoudre,
+      indiceIpIk: indiceIpIk ?? this.indiceIpIk,
+      indiceIpIkRepere: indiceIpIkRepere ?? this.indiceIpIkRepere,
+      sourceEquipementId: sourceEquipementId ?? this.sourceEquipementId,
+      sourceNomComplet: sourceNomComplet ?? this.sourceNomComplet,
+      sourceDepartId: sourceDepartId ?? this.sourceDepartId,
+      departures: departures ?? this.departures,
+      terminalCircuits: terminalCircuits ?? this.terminalCircuits,
+    );
+  }
 }
 
 class MoyenneTensionLocalEntity {

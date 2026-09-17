@@ -2060,6 +2060,8 @@ static CoffretArmoire? findCoffretByQrCode(String missionId, String qrCode) {
     required String equipmentId,
     required CoffretArmoire updatedCoffret,
     String? oldNom,
+    bool allowClearDepartures = false,
+    bool allowClearCircuits = false,
   }) async {
     return PersistenceQueue.enqueue('audit_$missionId', () async {
       try {
@@ -2085,6 +2087,16 @@ static CoffretArmoire? findCoffretByQrCode(String missionId, String qrCode) {
             updatedCoffret.id = existing.id ?? equipmentId;
             updatedCoffret.createdAt = existing.createdAt ?? updatedCoffret.createdAt;
             updatedCoffret.updatedAt = DateTime.now().toUtc();
+
+            // RÈGLE ZERO DATA LOSS : Préserver les départs existants si l'instance entrante est vide et non autorisée à vider
+            if (updatedCoffret.effectiveDepartures.isEmpty && existing.effectiveDepartures.isNotEmpty && !allowClearDepartures) {
+              updatedCoffret.departures = List.from(existing.effectiveDepartures);
+            }
+            // RÈGLE ZERO DATA LOSS : Préserver les circuits existants si l'instance entrante est vide et non autorisée à vider
+            if (updatedCoffret.effectiveTerminalCircuits.isEmpty && existing.effectiveTerminalCircuits.isNotEmpty && !allowClearCircuits) {
+              updatedCoffret.terminalCircuits = List.from(existing.effectiveTerminalCircuits);
+            }
+
             list[index] = updatedCoffret;
             return true;
           }
@@ -2462,7 +2474,7 @@ static CoffretArmoire createNewCoffretWithQrCode({
 }
 
 static CoffretArmoire? getCoffretDraftByQrCode(String qrCode) {
-  if (qrCode.trim().isEmpty || qrCode.startsWith('TEMP_')) return null;
+  if (qrCode.trim().isEmpty) return null;
   try {
     final box = Hive.box(_coffretDraftsBox);
     final data = box.get(qrCode);
@@ -2785,7 +2797,7 @@ static Future<bool> addLocalToBasseTensionZone({
 }
 
   /// Dédupliquer intelligemment une liste de coffrets/équipements
-  /// en conservant l'instance la plus complète et à jour.
+  /// en conservant l'instance la plus complète et à jour, avec fusion protectrice sans perte.
   static List<CoffretArmoire> deduplicateCoffrets(List<CoffretArmoire> coffrets) {
     if (coffrets.length <= 1) return coffrets;
     
@@ -2820,17 +2832,91 @@ static Future<bool> addLocalToBasseTensionZone({
         final existingCompleteness = (existing.pointsVerification.length * 2) +
             existing.photos.length +
             (existing.departures?.length ?? 0) +
+            (existing.terminalCircuits?.length ?? 0) +
             (existing.statut == 'complet' ? 10 : 0);
         final newCompleteness = (coffret.pointsVerification.length * 2) +
             coffret.photos.length +
             (coffret.departures?.length ?? 0) +
+            (coffret.terminalCircuits?.length ?? 0) +
             (coffret.statut == 'complet' ? 10 : 0);
             
-        if (newCompleteness >= existingCompleteness) {
-          coffret.id ??= existing.id;
-          coffret.createdAt ??= existing.createdAt;
-          result[matchIdx] = coffret;
+        final base = (newCompleteness >= existingCompleteness) ? coffret : existing;
+        final donor = (newCompleteness >= existingCompleteness) ? existing : coffret;
+        
+        base.id ??= donor.id;
+        base.createdAt ??= donor.createdAt;
+
+        // FUSION PROTECTRICE DES DÉPARTS (Deep Merge sans perte)
+        final mergedDepartures = <DepartEquipement>[...base.effectiveDepartures];
+        for (final dep in donor.effectiveDepartures) {
+          final idx = mergedDepartures.indexWhere((d) =>
+              (d.id.isNotEmpty && d.id == dep.id) ||
+              (d.identification.trim().isNotEmpty && d.identification.trim().toLowerCase() == dep.identification.trim().toLowerCase()));
+          if (idx == -1) {
+            mergedDepartures.add(dep);
+          } else {
+            // Enrichir les champs vides du départ existant avec le donneur
+            final current = mergedDepartures[idx];
+            if (current.typeProtection.isEmpty && dep.typeProtection.isNotEmpty) current.typeProtection = dep.typeProtection;
+            if (current.calibre.isEmpty && dep.calibre.isNotEmpty) current.calibre = dep.calibre;
+            if (current.courbe.isEmpty && dep.courbe.isNotEmpty) current.courbe = dep.courbe;
+            if (current.ddr.isEmpty && dep.ddr.isNotEmpty) current.ddr = dep.ddr;
+            if (current.pdcKA.isEmpty && dep.pdcKA.isNotEmpty) current.pdcKA = dep.pdcKA;
+            if (current.sectionCable.isEmpty && dep.sectionCable.isNotEmpty) current.sectionCable = dep.sectionCable;
+            if (current.sectionCableNeutre == null && dep.sectionCableNeutre != null) current.sectionCableNeutre = dep.sectionCableNeutre;
+            if (current.conducteursPhase == null && dep.conducteursPhase != null) current.conducteursPhase = dep.conducteursPhase;
+            if (current.conducteursNeutre == null && dep.conducteursNeutre != null) current.conducteursNeutre = dep.conducteursNeutre;
+            if (current.natureCable == null && dep.natureCable != null) current.natureCable = dep.natureCable;
+          }
         }
+        base.departures = mergedDepartures;
+
+        // FUSION PROTECTRICE DES CIRCUITS TERMINAUX (Deep Merge sans perte)
+        final mergedCircuits = <CircuitTerminalEquipement>[...base.effectiveTerminalCircuits];
+        for (final ct in donor.effectiveTerminalCircuits) {
+          final idx = mergedCircuits.indexWhere((c) =>
+              (c.id.isNotEmpty && c.id == ct.id) ||
+              (c.identification.trim().isNotEmpty && c.identification.trim().toLowerCase() == ct.identification.trim().toLowerCase()));
+          if (idx == -1) {
+            mergedCircuits.add(ct);
+          } else {
+            // Enrichir les champs vides du circuit existant avec le donneur
+            final current = mergedCircuits[idx];
+            if (current.typeProtection.isEmpty && ct.typeProtection.isNotEmpty) current.typeProtection = ct.typeProtection;
+            if (current.calibre.isEmpty && ct.calibre.isNotEmpty) current.calibre = ct.calibre;
+            if (current.courbe.isEmpty && ct.courbe.isNotEmpty) current.courbe = ct.courbe;
+            if (current.ddr.isEmpty && ct.ddr.isNotEmpty) current.ddr = ct.ddr;
+            if (current.pdcKA.isEmpty && ct.pdcKA.isNotEmpty) current.pdcKA = ct.pdcKA;
+            if (current.sectionCable.isEmpty && ct.sectionCable.isNotEmpty) current.sectionCable = ct.sectionCable;
+            if (current.sectionCableNeutre == null && ct.sectionCableNeutre != null) current.sectionCableNeutre = ct.sectionCableNeutre;
+            if (current.conducteursPhase == null && ct.conducteursPhase != null) current.conducteursPhase = ct.conducteursPhase;
+            if (current.conducteursNeutre == null && ct.conducteursNeutre != null) current.conducteursNeutre = ct.conducteursNeutre;
+            if (current.natureCable == null && ct.natureCable != null) current.natureCable = ct.natureCable;
+          }
+        }
+        base.terminalCircuits = mergedCircuits;
+
+        // FUSION DES PHOTOS
+        final photoSet = <String>{...base.photos, ...donor.photos};
+        base.photos = photoSet.toList();
+        if (base.photosExternes.isEmpty && donor.photosExternes.isNotEmpty) {
+          base.photosExternes = List.from(donor.photosExternes);
+        }
+        if (base.photosInternes.isEmpty && donor.photosInternes.isNotEmpty) {
+          base.photosInternes = List.from(donor.photosInternes);
+        }
+
+        // FUSION DES OBSERVATIONS LIBRES
+        if (donor.observationsLibres.isNotEmpty) {
+          final existingTexts = base.observationsLibres.map((o) => o.texte.trim().toLowerCase()).toSet();
+          for (final obs in donor.observationsLibres) {
+            if (!existingTexts.contains(obs.texte.trim().toLowerCase())) {
+              base.observationsLibres.add(obs);
+            }
+          }
+        }
+
+        result[matchIdx] = base;
       }
     }
     

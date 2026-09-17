@@ -270,6 +270,92 @@ class AuditInstallationsMapper {
     );
   }
 
+  // DepartEquipement
+  static DepartEquipementEntity toDepartEntity(DepartEquipement model) {
+    return DepartEquipementEntity(
+      id: model.id,
+      protectionTete: model.protectionTete,
+      identification: model.identification,
+      typeProtection: model.typeProtection,
+      marque: model.marque,
+      courbe: model.courbe,
+      pdcKA: model.pdcKA,
+      icc3Max: model.icc3Max,
+      calibre: model.calibre,
+      sectionCable: model.sectionCable,
+      ddr: model.ddr,
+      nombreCables: model.nombreCables,
+      sectionCableNeutre: model.sectionCableNeutre,
+      conducteursPhase: model.conducteursPhase,
+      conducteursNeutre: model.conducteursNeutre,
+      natureCable: model.natureCable,
+    );
+  }
+
+  static DepartEquipement toDepartModel(DepartEquipementEntity entity) {
+    return DepartEquipement(
+      id: entity.id,
+      protectionTete: entity.protectionTete,
+      identification: entity.identification,
+      typeProtection: entity.typeProtection,
+      marque: entity.marque,
+      courbe: entity.courbe,
+      pdcKA: entity.pdcKA,
+      icc3Max: entity.icc3Max,
+      calibre: entity.calibre,
+      sectionCable: entity.sectionCable,
+      ddr: entity.ddr,
+      nombreCables: entity.nombreCables,
+      sectionCableNeutre: entity.sectionCableNeutre,
+      conducteursPhase: entity.conducteursPhase,
+      conducteursNeutre: entity.conducteursNeutre,
+      natureCable: entity.natureCable,
+    );
+  }
+
+  // CircuitTerminalEquipement
+  static CircuitTerminalEquipementEntity toCircuitEntity(CircuitTerminalEquipement model) {
+    return CircuitTerminalEquipementEntity(
+      id: model.id,
+      protectionTete: model.protectionTete,
+      identification: model.identification,
+      typeProtection: model.typeProtection,
+      marque: model.marque,
+      courbe: model.courbe,
+      pdcKA: model.pdcKA,
+      icc3Max: model.icc3Max,
+      calibre: model.calibre,
+      sectionCable: model.sectionCable,
+      ddr: model.ddr,
+      nombreCables: model.nombreCables,
+      sectionCableNeutre: model.sectionCableNeutre,
+      conducteursPhase: model.conducteursPhase,
+      conducteursNeutre: model.conducteursNeutre,
+      natureCable: model.natureCable,
+    );
+  }
+
+  static CircuitTerminalEquipement toCircuitModel(CircuitTerminalEquipementEntity entity) {
+    return CircuitTerminalEquipement(
+      id: entity.id,
+      protectionTete: entity.protectionTete,
+      identification: entity.identification,
+      typeProtection: entity.typeProtection,
+      marque: entity.marque,
+      courbe: entity.courbe,
+      pdcKA: entity.pdcKA,
+      icc3Max: entity.icc3Max,
+      calibre: entity.calibre,
+      sectionCable: entity.sectionCable,
+      ddr: entity.ddr,
+      nombreCables: entity.nombreCables,
+      sectionCableNeutre: entity.sectionCableNeutre,
+      conducteursPhase: entity.conducteursPhase,
+      conducteursNeutre: entity.conducteursNeutre,
+      natureCable: entity.natureCable,
+    );
+  }
+
   // CoffretArmoire
   static CoffretArmoireEntity toCoffretEntity(CoffretArmoire model) {
     return CoffretArmoireEntity(
@@ -311,6 +397,8 @@ class AuditInstallationsMapper {
       sourceEquipementId: model.sourceEquipementId,
       sourceNomComplet: model.sourceNomComplet,
       sourceDepartId: model.sourceDepartId,
+      departures: model.effectiveDepartures.map(toDepartEntity).toList(),
+      terminalCircuits: model.effectiveTerminalCircuits.map(toCircuitEntity).toList(),
     );
   }
 
@@ -354,6 +442,8 @@ class AuditInstallationsMapper {
       sourceEquipementId: entity.sourceEquipementId,
       sourceNomComplet: entity.sourceNomComplet,
       sourceDepartId: entity.sourceDepartId,
+      departures: entity.departures.map(toDepartModel).toList(),
+      terminalCircuits: entity.terminalCircuits.map(toCircuitModel).toList(),
     );
   }
 
