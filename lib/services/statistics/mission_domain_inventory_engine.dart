@@ -1,7 +1,6 @@
 // lib/services/statistics/mission_domain_inventory_engine.dart
 
 import '../../models/audit_installations_electriques.dart';
-import '../../models/mesures_essais.dart';
 import '../dispositions_constructives_registry.dart';
 import '../hive_service.dart';
 import 'audit_finding.dart';
@@ -861,7 +860,8 @@ class MissionDomainInventoryEngine {
     if (visitedBTLocaux.contains(localHash)) return;
     visitedBTLocaux.add(localHash);
 
-    final isGE = local.type == 'LOCAL_GROUPE_ELECTROGENE' || local.nom.toLowerCase().contains('groupe');
+    // Respect absolu du choix explicite de l'utilisateur : le nom ne doit jamais impacter le type du local.
+    final isGE = local.type == 'LOCAL_GROUPE_ELECTROGENE' || local.type == 'GROUPE_ELECTROGENE';
     final category = isGE ? DomainObjectType.localGE : DomainObjectType.localBT;
     final typeObjetName = isGE ? 'Groupe Électrogène' : 'Local BT';
 
@@ -1145,10 +1145,6 @@ class MissionDomainInventoryEngine {
 
     final category = EquipmentClassifier.classify(coffret);
     final coffretRepere = coffret.repere?.isNotEmpty == true ? coffret.repere : coffret.numeroEquipement;
-    // Utilisation du label normalisé canonique au lieu du type brut du modèle.
-    // C'est la correction du bug TGBT : le type brut pouvait être "TGBT", "Tableau urbain réduit (TUR)", etc.
-    // Le label normalisé est toujours déterministe : "TGBT", "Armoire", "Coffret", "Inverseur".
-    final typeEquipementStr = category.normalizedObjectType;
 
     final instance = DomainEntityInstance(
       instanceId: 'eq_$coffretHash',

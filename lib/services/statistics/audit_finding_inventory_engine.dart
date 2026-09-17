@@ -361,7 +361,7 @@ class AuditFindingInventoryEngine {
     if (visitedBTLocaux.contains(localHash)) return;
     visitedBTLocaux.add(localHash);
 
-    final isGE = local.type == 'LOCAL_GROUPE_ELECTROGENE' || local.nom.toLowerCase().contains('groupe');
+    final isGE = local.type == 'LOCAL_GROUPE_ELECTROGENE' || local.type == 'GROUPE_ELECTROGENE';
     final catKey = isGE ? 'local_ge' : 'local_bt';
     final typeObjetName = isGE ? 'Groupe Électrogène' : 'Local BT';
 

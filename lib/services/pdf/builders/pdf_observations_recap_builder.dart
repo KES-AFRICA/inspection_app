@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:inspec_app/models/audit_installations_electriques.dart';
@@ -806,7 +805,7 @@ class PdfObservationsRecapBuilder {
         final cellule = local.cellules[i];
         final label = 'Cellule ${i + 1} — ${cellule.fonction}';
         for (var el in cellule.elementsVerifies) {
-          if (el.conforme == false || el.estNA) {
+          if (el.conforme == false) {
             final obsStr = (el.observation != null && el.observation!.trim().isNotEmpty)
                 ? el.observation!.trim()
                 : ((el.elementControle.trim().isNotEmpty && !el.elementControle.trim().toLowerCase().startsWith('observation '))
@@ -818,9 +817,7 @@ class PdfObservationsRecapBuilder {
                 coffret: label,
                 observation: obsStr,
                 refNorm: el.referenceNormative ?? '',
-                priorite: el.conforme == false
-                    ? (el.priorite?.toString() ?? '')
-                    : 'NA',
+                priorite: el.priorite?.toString() ?? '',
               ),
             );
           }
@@ -831,7 +828,7 @@ class PdfObservationsRecapBuilder {
         final transfo = local.transformateurs[i];
         final label = 'Transformateur ${i + 1}';
         for (var el in transfo.elementsVerifies) {
-          if (el.conforme == false || el.estNA) {
+          if (el.conforme == false) {
             final obsStr = (el.observation != null && el.observation!.trim().isNotEmpty)
                 ? el.observation!.trim()
                 : ((el.elementControle.trim().isNotEmpty && !el.elementControle.trim().toLowerCase().startsWith('observation '))
@@ -843,9 +840,7 @@ class PdfObservationsRecapBuilder {
                 coffret: label,
                 observation: obsStr,
                 refNorm: el.referenceNormative ?? '',
-                priorite: el.conforme == false
-                    ? (el.priorite?.toString() ?? '')
-                    : 'NA',
+                priorite: el.priorite?.toString() ?? '',
               ),
             );
           }
@@ -889,6 +884,65 @@ class PdfObservationsRecapBuilder {
                 priorite: el.priorite?.toString() ?? '',
               ),
             );
+          }
+        }
+        for (var el in local.conditionsExploitation) {
+          if (el.conforme == false) {
+            list.add(
+              PdfObsRecap(
+                localisation: '${zone.nom} / ${local.nom}',
+                coffret: 'Conditions d\'exploitation',
+                observation: el.observation ?? el.elementControle,
+                refNorm: el.referenceNormative ?? '',
+                priorite: el.priorite?.toString() ?? '',
+              ),
+            );
+          }
+        }
+        // Cellules (MT)
+        for (var i = 0; i < local.cellules.length; i++) {
+          final cellule = local.cellules[i];
+          final label = 'Cellule ${i + 1} — ${cellule.fonction}';
+          for (var el in cellule.elementsVerifies) {
+            if (el.conforme == false) {
+              final obsStr = (el.observation != null && el.observation!.trim().isNotEmpty)
+                  ? el.observation!.trim()
+                  : ((el.elementControle.trim().isNotEmpty && !el.elementControle.trim().toLowerCase().startsWith('observation '))
+                      ? el.elementControle.trim()
+                      : '');
+              list.add(
+                PdfObsRecap(
+                  localisation: '${zone.nom} / ${local.nom}',
+                  coffret: label,
+                  observation: obsStr,
+                  refNorm: el.referenceNormative ?? '',
+                  priorite: el.priorite?.toString() ?? '',
+                ),
+              );
+            }
+          }
+        }
+        // Transformateurs (MT)
+        for (var i = 0; i < local.transformateurs.length; i++) {
+          final transfo = local.transformateurs[i];
+          final label = 'Transformateur ${i + 1}';
+          for (var el in transfo.elementsVerifies) {
+            if (el.conforme == false) {
+              final obsStr = (el.observation != null && el.observation!.trim().isNotEmpty)
+                  ? el.observation!.trim()
+                  : ((el.elementControle.trim().isNotEmpty && !el.elementControle.trim().toLowerCase().startsWith('observation '))
+                      ? el.elementControle.trim()
+                      : '');
+              list.add(
+                PdfObsRecap(
+                  localisation: '${zone.nom} / ${local.nom}',
+                  coffret: label,
+                  observation: obsStr,
+                  refNorm: el.referenceNormative ?? '',
+                  priorite: el.priorite?.toString() ?? '',
+                ),
+              );
+            }
           }
         }
         for (var coffret in local.coffrets) {
@@ -956,16 +1010,14 @@ class PdfObservationsRecapBuilder {
       for (var local in zone.locaux) {
         if (local.dispositionsConstructives != null) {
           for (var el in local.dispositionsConstructives!) {
-            if (el.conforme == false || el.estNA) {
+            if (el.conforme == false) {
               list.add(
                 PdfObsRecap(
                   localisation: '${zone.nom} / ${local.nom}',
                   coffret: 'Dispositions constructives',
                   observation: el.observation ?? el.elementControle,
                   refNorm: el.referenceNormative ?? '',
-                  priorite: el.conforme == false
-                      ? (el.priorite?.toString() ?? '')
-                      : 'NA',
+                  priorite: el.priorite?.toString() ?? '',
                 ),
               );
             }

@@ -991,21 +991,26 @@ class PdfExecutiveSummaryBuilder {
         ),
         buildRow(
           'Périmètre couvert',
-          'Local Technique Moyenne tension : ${technical.totalLocauxMt}\n'
-          'Local Technique GE : ${technical.totalLocauxGe}\n'
-          'Local technique Basse tension : ${technical.totalLocauxBt}\n'
-          'TGBT : ${technical.totalTgbt}\n'
-          'Armoires : ${technical.totalArmoires}\n'
-          'Coffrets : ${technical.totalCoffrets}\n'
-          'Classement des zones : ${technical.totalZonesClassees}\n'
-          'Essais : ${technical.essaisCoverage.totalEssais}\n'
-          '  Prise de terre : ${technical.essaisCoverage.prisesTerreCount}\n'
-          '  Test DDR : ${technical.essaisCoverage.testDdrCount}\n'
-          '  Mesure d’isolement : ${technical.essaisCoverage.mesureIsolementCount}\n'
-          '  Démarrage GE : ${technical.essaisCoverage.demarrageGeCount > 0 ? "Réalisé (${technical.essaisCoverage.demarrageGeCount})" : "Non réalisé"}\n'
-          '  Test arret d’urgence : ${technical.essaisCoverage.arretUrgenceCount > 0 ? "Réalisé (${technical.essaisCoverage.arretUrgenceCount})" : "Non réalisé"}\n'
-          '  Test CPI : ${technical.essaisCoverage.testCpiCount}\n'
-          '  Mise a la terre : ${technical.essaisCoverage.continuitePeCount}',
+          [
+            'Local Technique Moyenne tension : ${technical.totalLocauxMt}',
+            'Local Technique GE : ${technical.totalLocauxGe}',
+            'Local technique Basse tension : ${technical.totalLocauxBt}',
+            if (technical.totalCellules > 0) 'Cellules MT : ${technical.totalCellules}',
+            if (technical.totalTransformateurs > 0) 'Transformateurs MT/BT : ${technical.totalTransformateurs}',
+            if (technical.totalInverseurs > 0) 'Inverseur : ${technical.totalInverseurs}',
+            'TGBT : ${technical.totalTgbt}',
+            'Armoires : ${technical.totalArmoires}',
+            'Coffrets : ${technical.totalCoffrets}',
+            'Classement des zones : ${technical.totalZonesClassees}',
+            'Essais : ${technical.essaisCoverage.totalEssais}',
+            '  Prise de terre : ${technical.essaisCoverage.prisesTerreCount}',
+            '  Test DDR : ${technical.essaisCoverage.testDdrCount}',
+            '  Mesure d’isolement : ${technical.essaisCoverage.mesureIsolementCount}',
+            '  Démarrage GE : ${technical.essaisCoverage.demarrageGeCount > 0 ? "Réalisé (${technical.essaisCoverage.demarrageGeCount})" : "Non réalisé"}',
+            '  Test arret d’urgence : ${technical.essaisCoverage.arretUrgenceCount > 0 ? "Réalisé (${technical.essaisCoverage.arretUrgenceCount})" : "Non réalisé"}',
+            '  Test CPI : ${technical.essaisCoverage.testCpiCount}',
+            '  Mise a la terre : ${technical.essaisCoverage.continuitePeCount}',
+          ].join('\n'),
         ),
         buildRow(
           'Non-conformités par domaine de tension',

@@ -142,25 +142,41 @@ extension DomainObjectTypeExtension on DomainObjectType {
 class EquipmentClassifier {
   static DomainObjectType classify(CoffretArmoire coffret) {
     final typeStr = coffret.type.trim().toLowerCase();
+
+    // 1. Respect absolu du type explicite sélectionné par l'utilisateur (Source de vérité)
+    if (typeStr == 'inverseur' || typeStr == 'inv') {
+      return DomainObjectType.inverseur;
+    }
+    if (typeStr == 'tgbt') {
+      return DomainObjectType.tgbt;
+    }
+    if (typeStr == 'armoire' || typeStr == 'tur' || typeStr.contains('tableau urbain')) {
+      return DomainObjectType.armoire;
+    }
+    if (typeStr == 'coffret') {
+      return DomainObjectType.coffret;
+    }
+
+    // 2. Inférence de secours pour types non renseignés ou legacy ('Autre', vide, etc.)
     final nomStr = coffret.nom.trim().toLowerCase();
     final repereStr = (coffret.repere ?? '').trim().toLowerCase();
 
-    // 1. INVERSEUR (Source Normal/Secours)
+    // A. INVERSEUR (Source Normal/Secours)
     if (_matchesInverseur(typeStr, nomStr, repereStr)) {
       return DomainObjectType.inverseur;
     }
 
-    // 2. TGBT (Tableau Général Basse Tension)
+    // B. TGBT (Tableau Général Basse Tension)
     if (_matchesTGBT(typeStr, nomStr, repereStr)) {
       return DomainObjectType.tgbt;
     }
 
-    // 3. ARMOIRE / TUR (inclut les anciens types "Tableau urbain réduit (TUR)")
-    if (_matchesArmoire(typeStr, nomStr, repereStr)) {
+    // C. ARMOIRE / TUR (inclut les anciens types "Tableau urbain réduit (TUR)")
+    if (_matchesArmoire(typeStr, nomStr)) {
       return DomainObjectType.armoire;
     }
 
-    // 4. COFFRET (catégorie par défaut pour les coffrets de distribution)
+    // D. COFFRET (catégorie par défaut pour les coffrets de distribution)
     return DomainObjectType.coffret;
   }
 
@@ -191,16 +207,14 @@ class EquipmentClassifier {
         repereStr.contains('tgbt');
   }
 
-  static bool _matchesArmoire(String typeStr, String nomStr, String repereStr) {
+  static bool _matchesArmoire(String typeStr, String nomStr) {
     return typeStr == 'armoire' ||
         typeStr.contains('armoire') ||
         typeStr == 'tur' ||
         typeStr.contains('tur') ||          // Ancien format "Tableau urbain réduit (TUR)"
         typeStr.contains('tableau urbain') ||
         nomStr.contains('armoire') ||
-        nomStr.contains('tur') ||
-        repereStr.contains('armoire') ||
-        repereStr.contains('tur');
+        nomStr.contains('tur');
   }
 }
 

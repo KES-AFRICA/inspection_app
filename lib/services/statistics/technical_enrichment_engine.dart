@@ -1,4 +1,4 @@
-import 'package:meta/meta.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../models/audit_installations_electriques.dart';
 import '../../models/classement_locaux.dart';
@@ -490,10 +490,21 @@ class TechnicalEnrichmentResult {
   String get globalAdequationTeteRatio =>
       '$globalAdequationTeteConformes / $globalAdequationTeteEvalues';
 
+  int get totalCellules => mtCategoriesCrossRows
+      .where((r) => r.categoryName.toLowerCase().contains('cellule'))
+      .fold(0, (s, r) => s + r.equipementsCount);
+  int get totalTransformateurs => mtCategoriesCrossRows
+      .where((r) => r.categoryName.toLowerCase().contains('transformateur'))
+      .fold(0, (s, r) => s + r.equipementsCount);
+
   int get totalTgbt => coupureTeteStats[DomainObjectType.tgbt]?.totalEquipments ?? 0;
   int get totalArmoires => coupureTeteStats[DomainObjectType.armoire]?.totalEquipments ?? 0;
   int get totalCoffrets => coupureTeteStats[DomainObjectType.coffret]?.totalEquipments ?? 0;
   int get totalInverseurs => coupureTeteStats[DomainObjectType.inverseur]?.totalEquipments ?? 0;
+
+  int get totalEquipementsMT => totalCellules + totalTransformateurs;
+  int get totalEquipementsBT => totalTgbt + totalArmoires + totalCoffrets + totalInverseurs;
+  int get totalEquipementsElectriques => totalEquipementsMT + totalEquipementsBT;
 
   String get globalIpIkAdequationRateStr {
     final totalConformes = ipIkZoneItems.fold(0, (s, e) => s + e.conformes);
@@ -569,7 +580,7 @@ class TechnicalEnrichmentEngine {
           .whereType<CoffretArmoire>()
           .toList();
 
-      final total = coffrets.length;
+      final total = instances.length;
 
       // A. Coupure de tête
       int coupurePres = 0;
@@ -833,6 +844,19 @@ class TechnicalEnrichmentEngine {
       ),
     );
 
+    final mtCoffrets = domainInventory.instances
+        .where((i) => i.tensionDomain == TensionDomain.mt && (i.category == DomainObjectType.armoire || i.category == DomainObjectType.coffret))
+        .toList();
+    if (mtCoffrets.isNotEmpty) {
+      mtCatRows.add(
+        buildCategoryRow(
+          'Armoires / Coffrets MT',
+          mtCoffrets,
+          totalMissionNc,
+        ),
+      );
+    }
+
     final mtTotalEq = mtCatRows.fold(0, (s, r) => s + r.equipementsCount);
     final mtTotalCrit = mtCatRows.fold(0, (s, r) => s + r.critiquesCount);
     final mtTotalMaj = mtCatRows.fold(0, (s, r) => s + r.majeuresCount);
@@ -882,14 +906,20 @@ class TechnicalEnrichmentEngine {
     btCatRows.add(
       buildCategoryRow(
         'Armoires',
-        domainInventory.getInstancesByCategory(DomainObjectType.armoire),
+        domainInventory
+            .getInstancesByCategory(DomainObjectType.armoire)
+            .where((i) => i.tensionDomain == TensionDomain.bt)
+            .toList(),
         totalMissionNc,
       ),
     );
     btCatRows.add(
       buildCategoryRow(
         'Coffrets',
-        domainInventory.getInstancesByCategory(DomainObjectType.coffret),
+        domainInventory
+            .getInstancesByCategory(DomainObjectType.coffret)
+            .where((i) => i.tensionDomain == TensionDomain.bt)
+            .toList(),
         totalMissionNc,
       ),
     );
