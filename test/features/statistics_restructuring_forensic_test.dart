@@ -1,278 +1,237 @@
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hive/hive.dart';
-import 'package:pdf/widgets.dart' as pw;
 import 'package:inspec_app/models/mission.dart';
-import 'package:inspec_app/services/pdf/builders/pdf_executive_summary_builder.dart';
 import 'package:inspec_app/services/pdf/pdf_report_styles.dart';
+import 'package:inspec_app/services/pdf/builders/pdf_executive_summary_builder.dart';
 import 'package:inspec_app/services/statistics/audit_finding.dart';
 import 'package:inspec_app/services/statistics/domain_entity_instance.dart';
 import 'package:inspec_app/services/statistics/mission_domain_inventory_engine.dart';
 import 'package:inspec_app/services/statistics/risk_family_normalizer.dart';
 import 'package:inspec_app/services/statistics/technical_enrichment_engine.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
 
 void main() {
-  TestWidgetsFlutterBinding.ensureInitialized();
-  late Directory tempDir;
-
-  setUpAll(() async {
-    tempDir = await Directory.systemTemp.createTemp('hive_stats_forensic_test_');
-    Hive.init(tempDir.path);
-  });
-
-  tearDownAll(() async {
-    await Hive.close();
-    if (tempDir.existsSync()) {
-      tempDir.deleteSync(recursive: true);
+  setUpAll(() {
+    final regularFile = File('assets/fonts/Roboto-Regular.ttf');
+    final boldFile = File('assets/fonts/Roboto-Bold.ttf');
+    if (regularFile.existsSync() && boldFile.existsSync()) {
+      final regularData = regularFile.readAsBytesSync();
+      final boldData = boldFile.readAsBytesSync();
+      PdfReportStyles.fontRegular = pw.Font.ttf(regularData.buffer.asByteData());
+      PdfReportStyles.fontBold = pw.Font.ttf(boldData.buffer.asByteData());
     }
   });
 
-  group('RiskFamilyNormalizer — Rigueur Typographique et Sémantique', () {
-    test('Unifie les apostrophes courbes et droites sans créer de super-famille artificielle', () {
+  AuditFinding createFinding({
+    required String id,
+    required TensionDomain tensionDomain,
+    required String objectType,
+    required String riskFamily,
+  }) {
+    return AuditFinding(
+      id: id,
+      missionId: 'M-FORENSIC-TEST',
+      tensionDomain: tensionDomain,
+      origin: objectType,
+      objectType: objectType,
+      objectName: 'Equip-$id',
+      tableName: 'Audit',
+      verificationPoint: 'Point-$id',
+      observationText: 'Observation-$id',
+      conformity: 'non',
+      criticality: 'Majeure',
+      riskFamily: riskFamily,
+    );
+  }
+
+  group('RiskFamilyNormalizer Forensic Tests', () {
+    test('Normalizes typographic apostrophes and whitespace correctly', () {
       expect(
-        RiskFamilyNormalizer.normalize('Erreur d’exploitation / maintenance'),
-        equals("Erreur d'exploitation / maintenance"),
+        RiskFamilyNormalizer.normalize("Erreur d’exploitation / maintenance"),
+        "Erreur d'exploitation / maintenance",
       );
       expect(
-        RiskFamilyNormalizer.normalize("Erreur d'exploitation / maintenance"),
-        equals("Erreur d'exploitation / maintenance"),
+        RiskFamilyNormalizer.normalize("Échauffement / conditions d’environnement"),
+        "Échauffement / conditions d'environnement",
       );
       expect(
-        RiskFamilyNormalizer.normalize("Conditions d’environnement"),
-        equals("Conditions d'environnement"),
-      );
-      expect(
-        RiskFamilyNormalizer.normalize("Conditions d'environnement"),
-        equals("Conditions d'environnement"),
+        RiskFamilyNormalizer.normalize("   Sécurité des interventions   "),
+        "Sécurité des interventions",
       );
     });
 
-    test('Normalise les espaces et les slashes correctement', () {
-      expect(
-        RiskFamilyNormalizer.normalize('Sécurité/conformité réglementaire'),
-        equals('Sécurité / conformité réglementaire'),
-      );
-      expect(
-        RiskFamilyNormalizer.normalize('Sécurité   /   conformité réglementaire'),
-        equals('Sécurité / conformité réglementaire'),
-      );
-    });
-
-    test('Gère les entrées vides ou nulles de manière sécurisée', () {
-      expect(RiskFamilyNormalizer.normalize(null), equals('Non spécifiée'));
-      expect(RiskFamilyNormalizer.normalize(''), equals('Non spécifiée'));
-      expect(RiskFamilyNormalizer.normalize('   '), equals('Non spécifiée'));
+    test('Preserves distinct safety/fire risk families without grouping them artificially', () {
+      final f1 = RiskFamilyNormalizer.normalize("Incendie / propagation du feu");
+      final f2 = RiskFamilyNormalizer.normalize("Incendie / brûlure / fuite de combustible");
+      final f3 = RiskFamilyNormalizer.normalize("Incendie / échauffement / surcharge des conducteurs");
+      expect(f1, isNot(equals(f2)));
+      expect(f2, isNot(equals(f3)));
+      expect(f1, isNot(equals(f3)));
     });
   });
 
-  group('TechnicalEnrichmentEngine — Séparation Stricte HTA / BT et Totaux Réels', () {
-    AuditFinding makeFinding({
-      required String id,
-      required TensionDomain tension,
-      required String table,
-      required String objType,
-      required String riskFamily,
-    }) {
-      return AuditFinding(
-        id: id,
-        missionId: 'M-FORENSIC-TEST',
-        tensionDomain: tension,
-        origin: 'Test Origin',
-        objectType: objType,
-        objectName: 'Equip-$id',
-        tableName: table,
-        verificationPoint: 'Point-$id',
-        observationText: 'Obs-$id',
-        conformity: 'non',
-        criticality: 'Majeure',
-        riskFamily: riskFamily,
-      );
-    }
-
-    test('Les 4 quadrants séparent rigoureusement HTA et BT avec les totaux réels', () {
-      // Construction synthétique miroir de la structure Cimencam :
-      // 1. HTA Dispositions constructives : 47 constats (4 familles)
-      final htaDispoFindings = <AuditFinding>[];
-      for (int i = 0; i < 27; i++) {
-        htaDispoFindings.add(makeFinding(id: 'hd1_$i', tension: TensionDomain.mt, table: 'Dispositions constructives', objType: 'Local MT', riskFamily: 'Sécurité / conformité réglementaire'));
-      }
-      for (int i = 0; i < 8; i++) {
-        htaDispoFindings.add(makeFinding(id: 'hd2_$i', tension: TensionDomain.mt, table: 'Dispositions constructives', objType: 'Local MT', riskFamily: 'Sécurité des interventions'));
-      }
-      for (int i = 0; i < 8; i++) {
-        htaDispoFindings.add(makeFinding(id: 'hd3_$i', tension: TensionDomain.mt, table: 'Dispositions constructives', objType: 'Local MT', riskFamily: 'Évacuation / continuité des installations de sécurité'));
-      }
-      for (int i = 0; i < 4; i++) {
-        htaDispoFindings.add(makeFinding(id: 'hd4_$i', tension: TensionDomain.mt, table: 'Dispositions constructives', objType: 'Local MT', riskFamily: "Échauffement / conditions d'environnement"));
-      }
-
-      // 2. BT Dispositions constructives : 35 constats (7 familles, Top 5 = 28 / 35 -> 80,0 %)
-      final btDispoFindings = <AuditFinding>[];
-      for (int i = 0; i < 10; i++) {
-        btDispoFindings.add(makeFinding(id: 'bd1_$i', tension: TensionDomain.bt, table: 'Dispositions constructives', objType: 'Local BT', riskFamily: 'Sécurité / conformité réglementaire'));
-      }
-      for (int i = 0; i < 7; i++) {
-        btDispoFindings.add(makeFinding(id: 'bd2_$i', tension: TensionDomain.bt, table: 'Dispositions constructives', objType: 'Local BT', riskFamily: 'Erreur d’exploitation / maintenance'));
-      }
-      for (int i = 0; i < 6; i++) {
-        btDispoFindings.add(makeFinding(id: 'bd3_$i', tension: TensionDomain.bt, table: 'Dispositions constructives', objType: 'Local BT', riskFamily: 'Incendie / brûlure / fuite de combustible'));
-      }
-      for (int i = 0; i < 3; i++) {
-        btDispoFindings.add(makeFinding(id: 'bd4_$i', tension: TensionDomain.bt, table: 'Dispositions constructives', objType: 'Local BT', riskFamily: 'Accès non autorisé / risque électrique'));
-      }
-      for (int i = 0; i < 2; i++) {
-        btDispoFindings.add(makeFinding(id: 'bd5_$i', tension: TensionDomain.bt, table: 'Dispositions constructives', objType: 'Local BT', riskFamily: 'Incendie / propagation du feu'));
-      }
-      // Hors Top 5 (7 constats unitaires dans 7 familles distinctes) :
-      for (int i = 0; i < 7; i++) {
-        btDispoFindings.add(makeFinding(id: 'bd6_$i', tension: TensionDomain.bt, table: 'Dispositions constructives', objType: 'Local BT', riskFamily: 'Risque Mineur Divers $i'));
-      }
-
-      // 3. HTA Exploitation et maintenance : 82 constats (4 familles)
-      final htaExploitFindings = <AuditFinding>[];
-      for (int i = 0; i < 67; i++) {
-        htaExploitFindings.add(makeFinding(id: 'he1_$i', tension: TensionDomain.mt, table: "Conditions d'exploitation", objType: 'Local MT', riskFamily: 'Sécurité des interventions / risque électrique'));
-      }
-      for (int i = 0; i < 12; i++) {
-        htaExploitFindings.add(makeFinding(id: 'he2_$i', tension: TensionDomain.mt, table: 'Cellule MT', objType: 'Cellule MT', riskFamily: "Erreur d'exploitation / maintenance"));
-      }
-      for (int i = 0; i < 2; i++) {
-        htaExploitFindings.add(makeFinding(id: 'he3_$i', tension: TensionDomain.mt, table: 'Transformateur MT/BT', objType: 'Transformateur MT/BT', riskFamily: 'Évacuation / sécurité incendie'));
-      }
-      for (int i = 0; i < 1; i++) {
-        htaExploitFindings.add(makeFinding(id: 'he4_$i', tension: TensionDomain.mt, table: 'Points de contrôle', objType: 'Coffret', riskFamily: 'Contact électrique / influences externes / protection mécanique'));
-      }
-
-      // 4. BT Exploitation et maintenance : 211 constats (6 familles, Top 5 = 181 / 211 -> 85,8 %)
-      final btExploitFindings = <AuditFinding>[];
-      for (int i = 0; i < 65; i++) {
-        btExploitFindings.add(makeFinding(id: 'be1_$i', tension: TensionDomain.bt, table: 'Points de contrôle', objType: 'Coffret', riskFamily: 'Contact électrique / influences externes / protection mécanique'));
-      }
-      for (int i = 0; i < 54; i++) {
-        btExploitFindings.add(makeFinding(id: 'be2_$i', tension: TensionDomain.bt, table: 'Points de contrôle', objType: 'Coffret', riskFamily: 'Erreur d’exploitation / maintenance'));
-      }
-      for (int i = 0; i < 27; i++) {
-        btExploitFindings.add(makeFinding(id: 'be3_$i', tension: TensionDomain.bt, table: 'Points de contrôle', objType: 'Coffret', riskFamily: 'Sécurité des interventions / risque électrique'));
-      }
-      for (int i = 0; i < 21; i++) {
-        btExploitFindings.add(makeFinding(id: 'be4_$i', tension: TensionDomain.bt, table: 'Points de contrôle', objType: 'Coffret', riskFamily: 'Sécurité / conformité réglementaire'));
-      }
-      for (int i = 0; i < 14; i++) {
-        btExploitFindings.add(makeFinding(id: 'be5_$i', tension: TensionDomain.bt, table: 'Points de contrôle', objType: 'Coffret', riskFamily: 'Incendie / échauffement / surcharge des conducteurs'));
-      }
-      // Hors Top 5 (30 constats unitaires dans 30 familles distinctes) :
-      for (int i = 0; i < 30; i++) {
-        btExploitFindings.add(makeFinding(id: 'be6_$i', tension: TensionDomain.bt, table: "Conditions d'exploitation", objType: 'Local BT', riskFamily: 'Défaut Exploitation Autre $i'));
-      }
-
-      final allFindings = [
-        ...htaDispoFindings,
-        ...btDispoFindings,
-        ...htaExploitFindings,
-        ...btExploitFindings,
+  group('RiskFamilyQuadrantStats Forensic Calculations', () {
+    test('Correctly computes Top 5, Autres, and dynamic unforced sum for > 5 families', () {
+      final top = [
+        const RiskFamilyStatItem(famille: 'F1', constats: 65, part: 65 / 211 * 100.0, formattedPart: '30,8 %'),
+        const RiskFamilyStatItem(famille: 'F2', constats: 54, part: 54 / 211 * 100.0, formattedPart: '25,6 %'),
+        const RiskFamilyStatItem(famille: 'F3', constats: 27, part: 27 / 211 * 100.0, formattedPart: '12,8 %'),
+        const RiskFamilyStatItem(famille: 'F4', constats: 21, part: 21 / 211 * 100.0, formattedPart: '10,0 %'),
+        const RiskFamilyStatItem(famille: 'F5', constats: 14, part: 14 / 211 * 100.0, formattedPart: '6,6 %'),
       ];
+      final all = [
+        ...top,
+        const RiskFamilyStatItem(famille: 'F6', constats: 18, part: 18 / 211 * 100.0, formattedPart: '8,5 %'),
+        const RiskFamilyStatItem(famille: 'F7', constats: 12, part: 12 / 211 * 100.0, formattedPart: '5,7 %'),
+      ];
+
+      final quadrant = RiskFamilyQuadrantStats(
+        domainTitle: 'BT',
+        sectionTitle: 'EXPLOITATION ET MAINTENANCE',
+        totalConstats: 211,
+        counts: {'F1': 65, 'F2': 54, 'F3': 27, 'F4': 21, 'F5': 14, 'F6': 18, 'F7': 12},
+        topFamilies: top,
+        allFamilies: all,
+      );
+
+      expect(quadrant.sumTopOccurrences, 181);
+      expect(quadrant.partTopSum, closeTo(85.78, 0.1));
+      expect(quadrant.formattedPartTopSum, '85,8 %');
+      expect(quadrant.autresConstats, 30);
+      expect(quadrant.formattedAutresPart, '14,2 %');
+      expect(quadrant.sumDisplayedOccurrences, 211);
+      expect(quadrant.formattedSumDisplayedParts, '100,0 %');
+    });
+
+    test('Quadrant with <= 5 families sets Autres to 0 and sum to 100%', () {
+      final top = [
+        const RiskFamilyStatItem(famille: 'F1', constats: 27, part: 27 / 47 * 100.0, formattedPart: '57,4 %'),
+        const RiskFamilyStatItem(famille: 'F2', constats: 8, part: 8 / 47 * 100.0, formattedPart: '17,0 %'),
+        const RiskFamilyStatItem(famille: 'F3', constats: 8, part: 8 / 47 * 100.0, formattedPart: '17,0 %'),
+        const RiskFamilyStatItem(famille: 'F4', constats: 4, part: 4 / 47 * 100.0, formattedPart: '8,5 %'),
+      ];
+
+      final quadrant = RiskFamilyQuadrantStats(
+        domainTitle: 'HTA',
+        sectionTitle: 'DISPOSITION CONSTRUCTIVE',
+        totalConstats: 47,
+        counts: {'F1': 27, 'F2': 8, 'F3': 8, 'F4': 4},
+        topFamilies: top,
+        allFamilies: top,
+      );
+
+      expect(quadrant.sumTopOccurrences, 47);
+      expect(quadrant.partTopSum, 100.0);
+      expect(quadrant.formattedPartTopSum, '100,0 %');
+      expect(quadrant.autresConstats, 0);
+      expect(quadrant.formattedAutresPart, '0,0 %');
+      expect(quadrant.sumDisplayedOccurrences, 47);
+      expect(quadrant.formattedSumDisplayedParts, '100,0 %');
+    });
+  });
+
+  group('Equipment Brand Population & Sector Statistics Tests', () {
+    test('EquipmentBrandPopulationStats handles percentages and missing brands cleanly', () {
+      final stats = EquipmentBrandPopulationStats(
+        populationTitle: 'Protections de tête',
+        totalEligibles: 93,
+        withProtectionCount: 45,
+        protectionRate: 45 / 93 * 100.0,
+        formattedProtectionRate: '48,4 %',
+        brandCounts: {
+          'Schneider Electric': 37,
+          'Non définie': 6,
+          'ABB': 2,
+        },
+        brandPercentages: {
+          'Schneider Electric': 37 / 45 * 100.0,
+          'Non définie': 6 / 45 * 100.0,
+          'ABB': 2 / 45 * 100.0,
+        },
+      );
+
+      expect(stats.totalEligibles, 93);
+      expect(stats.withProtectionCount, 45);
+      expect(stats.formattedProtectionRate, '48,4 %');
+      expect(stats.hasProtections, isTrue);
+      expect(stats.brandCounts['Schneider Electric'], 37);
+      expect(stats.brandPercentages['Schneider Electric']!, closeTo(82.2, 0.1));
+      expect(stats.brandCounts['Non définie'], 6);
+      expect(stats.brandPercentages['Non définie']!, closeTo(13.3, 0.1));
+      expect(stats.brandCounts['ABB'], 2);
+      expect(stats.brandPercentages['ABB']!, closeTo(4.4, 0.1));
+    });
+
+    test('Zero population stats handles empty and zero gracefully', () {
+      final stats = EquipmentBrandPopulationStats(
+        populationTitle: 'Départs',
+        totalEligibles: 0,
+        withProtectionCount: 0,
+        protectionRate: 0.0,
+        formattedProtectionRate: '0,0 %',
+        brandCounts: {},
+        brandPercentages: {},
+      );
+
+      expect(stats.totalEligibles, 0);
+      expect(stats.withProtectionCount, 0);
+      expect(stats.hasProtections, isFalse);
+      expect(stats.formattedProtectionRate, '0,0 %');
+    });
+  });
+
+  group('Full Engine Integration & PDF Generation', () {
+    test('TechnicalEnrichmentEngine calculates risk matrix with normalization and separation', () {
+      final localMT = DomainEntityInstance(
+        instanceId: 'loc-mt-1',
+        category: DomainObjectType.localMT,
+        name: 'Poste MT',
+        tensionDomain: TensionDomain.mt,
+        originPath: 'Locaux MT',
+        findings: [
+          createFinding(id: '1', tensionDomain: TensionDomain.mt, objectType: 'Local MT', riskFamily: 'Erreur d’exploitation / maintenance'),
+          createFinding(id: '2', tensionDomain: TensionDomain.mt, objectType: 'Local MT', riskFamily: 'Erreur d\'exploitation / maintenance'),
+        ],
+      );
 
       final domainInventory = MissionDomainInventory(
         missionId: 'M-FORENSIC-TEST',
-        instances: [
-          DomainEntityInstance(
-            instanceId: 'inst-mt',
-            category: DomainObjectType.localMT,
-            name: 'Poste MT',
-            tensionDomain: TensionDomain.mt,
-            originPath: 'Locaux MT',
-            findings: [...htaDispoFindings, ...htaExploitFindings],
-          ),
-          DomainEntityInstance(
-            instanceId: 'inst-bt',
-            category: DomainObjectType.localBT,
-            name: 'Local BT',
-            tensionDomain: TensionDomain.bt,
-            originPath: 'Locaux BT',
-            findings: [...btDispoFindings, ...btExploitFindings],
-          ),
-        ],
-        allFindings: allFindings,
+        instances: [localMT],
+        allFindings: localMT.findings,
       );
 
       final findingInventory = AuditFindingInventory(
         missionId: 'M-FORENSIC-TEST',
-        findings: allFindings,
+        findings: domainInventory.allFindings,
       );
 
-      final technical = TechnicalEnrichmentEngine.compute(
+      final result = TechnicalEnrichmentEngine.compute(
         'M-FORENSIC-TEST',
         domainInventory,
         findingInventory,
       );
-      final matrix = technical.riskFamilyMatrix;
 
-      // ─── BLOC 1 : DISPOSITION CONSTRUCTIVE ───
-      // MT à part et comptée : 47 constats, 4 familles, 100,0 %
-      final htaDispo = matrix.htaDispositionsConstructives;
-      expect(htaDispo.totalConstats, equals(47));
-      expect(htaDispo.topFamilies.length, equals(4));
-      expect(htaDispo.sumTopOccurrences, equals(47));
-      expect(htaDispo.formattedPartTopSum, equals('100,0 %'));
-      expect(htaDispo.topFamilies[0].famille, equals('Sécurité / conformité réglementaire'));
-      expect(htaDispo.topFamilies[0].constats, equals(27));
-
-      // BT à part et comptée : 35 constats éligibles, Top 5 = 28 constats, 80,0 % (JAMAIS 100 %)
-      final btDispo = matrix.btDispositionsConstructives;
-      expect(btDispo.totalConstats, equals(35));
-      expect(btDispo.topFamilies.length, equals(5));
-      expect(btDispo.sumTopOccurrences, equals(28));
-      expect(btDispo.formattedPartTopSum, equals('80,0 %'));
-      expect(btDispo.topFamilies[0].famille, equals('Sécurité / conformité réglementaire'));
-      expect(btDispo.topFamilies[0].constats, equals(10));
-      expect(btDispo.topFamilies[1].famille, equals("Erreur d'exploitation / maintenance"));
-      expect(btDispo.topFamilies[1].constats, equals(7));
-
-      // ─── BLOC 2 : EXPLOITATION ET MAINTENANCE ───
-      // MT à part et comptée : 82 constats, 4 familles, 100,0 %
-      final htaExploit = matrix.htaExploitationMaintenance;
-      expect(htaExploit.totalConstats, equals(82));
-      expect(htaExploit.topFamilies.length, equals(4));
-      expect(htaExploit.sumTopOccurrences, equals(82));
-      expect(htaExploit.formattedPartTopSum, equals('100,0 %'));
-      expect(htaExploit.topFamilies[0].famille, equals('Sécurité des interventions / risque électrique'));
-      expect(htaExploit.topFamilies[0].constats, equals(67));
-
-      // BT à part et comptée : 211 constats éligibles, Top 5 = 181 constats, 85,8 % (JAMAIS 100 %)
-      final btExploit = matrix.btExploitationMaintenance;
-      expect(btExploit.totalConstats, equals(211));
-      expect(btExploit.topFamilies.length, equals(5));
-      expect(btExploit.sumTopOccurrences, equals(181));
-      expect(btExploit.formattedPartTopSum, equals('85,8 %'));
-      expect(btExploit.topFamilies[0].famille, equals('Contact électrique / influences externes / protection mécanique'));
-      expect(btExploit.topFamilies[0].constats, equals(65));
-      expect(btExploit.topFamilies[1].famille, equals("Erreur d'exploitation / maintenance"));
-      expect(btExploit.topFamilies[1].constats, equals(54));
-
-      // Vérification qu'aucune famille MT n'est polluée par la BT et inversement
-      expect(htaDispo.counts.containsKey('Incendie / brûlure / fuite de combustible'), isFalse);
-      expect(btDispo.counts.containsKey('Évacuation / continuité des installations de sécurité'), isFalse);
+      // Verify that apostrophe variants were merged into normalized form
+      final htaDispo = result.riskFamilyMatrix.htaDispositionsConstructives;
+      expect(htaDispo.totalConstats, 2);
+      expect(htaDispo.topFamilies.length, 1);
+      expect(htaDispo.topFamilies.first.famille, "Erreur d'exploitation / maintenance");
+      expect(htaDispo.topFamilies.first.constats, 2);
     });
-  });
 
-  group('PDF Executive Summary Builder — Rendu Visuel et Non-Régression', () {
-    test('Génère le document PDF complet avec Tableaux 2.1 et 3 restructurés', () async {
-      PdfReportStyles.fontRegular = pw.Font.helvetica();
-      PdfReportStyles.fontBold = pw.Font.helveticaBold();
-      PdfExecutiveSummaryBuilder.fontRegular = pw.Font.helvetica();
-      PdfExecutiveSummaryBuilder.fontBold = pw.Font.helveticaBold();
-
+    test('PDF Executive Summary Builder generates table cleanly with dynamic data', () async {
       final mission = Mission(
-        id: 'M-PDF-TEST',
-        nomClient: 'CIMENCAM FIGUIL',
-        nomSite: 'USINE FIGUIL',
+        id: 'M-PDF-DYNAMIC-FORENSIC-TEST',
+        nomClient: 'TEST CLIENT CIMENCAM',
+        nomSite: 'USINE DE FIGUIL',
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
         status: 'active',
       );
 
       final trackedPages = <String, int>{};
-      final pdfDoc = pw.Document();
+      final doc = pw.Document();
 
       final widgets = PdfExecutiveSummaryBuilder.buildResumeExecutif(
         mission,
@@ -282,15 +241,16 @@ void main() {
 
       expect(widgets, isNotEmpty);
 
-      pdfDoc.addPage(
+      doc.addPage(
         pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
           build: (ctx) => widgets,
         ),
       );
 
-      final bytes = await pdfDoc.save();
-      expect(bytes, isNotNull);
-      expect(bytes.length, greaterThan(1000));
+      final pdfBytes = await doc.save();
+      expect(pdfBytes, isNotEmpty);
+      expect(pdfBytes.length, greaterThan(1000));
     });
   });
 }

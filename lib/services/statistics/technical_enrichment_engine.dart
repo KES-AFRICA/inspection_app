@@ -312,6 +312,66 @@ class RiskFamilyQuadrantStats {
       totalConstats > 0 ? (sumTopOccurrences / totalConstats) * 100.0 : 0.0;
   String get formattedPartTopSum =>
       '${partTopSum.toStringAsFixed(1).replaceAll('.', ',')} %';
+
+  /// Nombre d'occurrences pour toutes les familles hors Top 5
+  int get autresConstats =>
+      allFamilies.length > 5
+          ? allFamilies.skip(5).fold(0, (s, i) => s + i.constats)
+          : 0;
+
+  /// Part relative des familles hors Top 5 par rapport au total du quadrant
+  double get autresPart =>
+      totalConstats > 0 ? (autresConstats / totalConstats) * 100.0 : 0.0;
+
+  String get formattedAutresPart =>
+      '${autresPart.toStringAsFixed(1).replaceAll('.', ',')} %';
+
+  /// Somme réelle des occurrences affichées (Top 5 + Autres)
+  int get sumDisplayedOccurrences => sumTopOccurrences + autresConstats;
+
+  /// Somme réelle des pourcentages affichés (Top 5 + Autres), sans forcer 100%
+  double get sumDisplayedParts {
+    final topParts = topFamilies.fold(0.0, (s, i) => s + i.part);
+    return topParts + autresPart;
+  }
+
+  String get formattedSumDisplayedParts {
+    if (totalConstats == 0) return '0,0 %';
+    return '${sumDisplayedParts.toStringAsFixed(1).replaceAll('.', ',')} %';
+  }
+}
+
+/// Statistiques d'appareillage et diversification de marque pour une population donnée
+/// (Protections de tête, Départs, Circuits).
+class EquipmentBrandPopulationStats {
+  final String populationTitle;
+  final int totalEligibles; // X
+  final int withProtectionCount; // Y
+  final double protectionRate; // Z
+  final String formattedProtectionRate;
+  final Map<String, int> brandCounts; // Décroissant
+  final Map<String, double> brandPercentages; // Calculé sur Y
+
+  const EquipmentBrandPopulationStats({
+    required this.populationTitle,
+    required this.totalEligibles,
+    required this.withProtectionCount,
+    required this.protectionRate,
+    required this.formattedProtectionRate,
+    required this.brandCounts,
+    required this.brandPercentages,
+  });
+
+  const EquipmentBrandPopulationStats.empty({this.populationTitle = ''})
+      : totalEligibles = 0,
+        withProtectionCount = 0,
+        protectionRate = 0.0,
+        formattedProtectionRate = '0,0 %',
+        brandCounts = const {},
+        brandPercentages = const {};
+
+  bool get hasEligibles => totalEligibles > 0;
+  bool get hasProtections => withProtectionCount > 0;
 }
 
 /// Matrice à 4 quadrants croisant Domaine de tension x Nature de contrôle avec les familles de risques réelles.
@@ -448,6 +508,10 @@ class TechnicalEnrichmentResult {
   final int totalCircuitsAudit;
   final int totalCircuitsAvecProtection;
 
+  final EquipmentBrandPopulationStats protectionsTeteBrandStats;
+  final EquipmentBrandPopulationStats departsBrandStats;
+  final EquipmentBrandPopulationStats circuitsBrandStats;
+
   const TechnicalEnrichmentResult({
     required this.missionId,
     required this.essaisCoverage,
@@ -482,6 +546,9 @@ class TechnicalEnrichmentResult {
     this.totalDepartsAvecProtection = 0,
     this.totalCircuitsAudit = 0,
     this.totalCircuitsAvecProtection = 0,
+    this.protectionsTeteBrandStats = const EquipmentBrandPopulationStats.empty(populationTitle: 'Protections de tête'),
+    this.departsBrandStats = const EquipmentBrandPopulationStats.empty(populationTitle: 'Départs'),
+    this.circuitsBrandStats = const EquipmentBrandPopulationStats.empty(populationTitle: 'Circuits'),
   });
 
   int get globalCoupureTetePresents =>
@@ -1104,6 +1171,177 @@ class TechnicalEnrichmentEngine {
       densite: btTotalEq > 0 ? (btTotalNc / btTotalEq) : 0.0,
     );
 
+    // 10. Populations d'appareillages et diversification de marque
+    final allCoffrets = [
+      DomainObjectType.tgbt,
+      DomainObjectType.armoire,
+      DomainObjectType.coffret,
+      DomainObjectType.inverseur,
+    ]
+        .expand((cat) => domainInventory.getInstancesByCategory(cat))
+        .map((i) => i.rawModelRef)
+        .whereType<CoffretArmoire>()
+        .toList();
+
+    // A. Protections de tête (bloc de saisie protectionTete des coffrets/armoires)
+    final eligibleTete =
+        allCoffrets.where((c) => c.protectionTete != null).toList();
+    final totalEligiblesTete = eligibleTete.length;
+    final withProtectionTete = eligibleTete.where((c) {
+      final t = c.protectionTete!.typeProtection.trim().toLowerCase();
+      return t.isNotEmpty &&
+          t != 'aucun' &&
+          t != 'sans' &&
+          t != '-' &&
+          t != 'non';
+    }).toList();
+    final withProtectionCountTete = withProtectionTete.length;
+    final protectionRateTete = totalEligiblesTete > 0
+        ? (withProtectionCountTete / totalEligiblesTete) * 100.0
+        : 0.0;
+    final formattedProtectionRateTete =
+        '${protectionRateTete.toStringAsFixed(1).replaceAll('.', ',')} %';
+
+    final brandCountsTete = <String, int>{};
+    for (final c in withProtectionTete) {
+      final rawM = c.protectionTete!.marqueDisjoncteur?.trim();
+      final brand = _normalizeBrandExplicit(rawM);
+      brandCountsTete[brand] = (brandCountsTete[brand] ?? 0) + 1;
+    }
+    final sortedBrandsTete = brandCountsTete.entries.toList()
+      ..sort((a, b) {
+        final cmp = b.value.compareTo(a.value);
+        if (cmp != 0) return cmp;
+        return a.key.compareTo(b.key);
+      });
+    final sortedBrandCountsTete = {
+      for (final e in sortedBrandsTete) e.key: e.value,
+    };
+    final brandPercentagesTete = <String, double>{};
+    for (final e in sortedBrandsTete) {
+      brandPercentagesTete[e.key] = withProtectionCountTete > 0
+          ? (e.value / withProtectionCountTete) * 100.0
+          : 0.0;
+    }
+
+    final protectionsTeteBrandStats = EquipmentBrandPopulationStats(
+      populationTitle: 'Protections de tête',
+      totalEligibles: totalEligiblesTete,
+      withProtectionCount: withProtectionCountTete,
+      protectionRate: protectionRateTete,
+      formattedProtectionRate: formattedProtectionRateTete,
+      brandCounts: sortedBrandCountsTete,
+      brandPercentages: brandPercentagesTete,
+    );
+
+    // B. Départs
+    final allDepartures = <DepartEquipement>[];
+    for (final c in allCoffrets) {
+      if (c.departures != null) {
+        allDepartures.addAll(c.departures!);
+      }
+    }
+    final totalEligiblesDep = allDepartures.length;
+    final withProtectionDep = allDepartures.where((d) {
+      final t = d.typeProtection.trim().toLowerCase();
+      return t.isNotEmpty &&
+          t != 'aucun' &&
+          t != 'sans' &&
+          t != '-' &&
+          t != 'non';
+    }).toList();
+    final withProtectionCountDep = withProtectionDep.length;
+    final protectionRateDep = totalEligiblesDep > 0
+        ? (withProtectionCountDep / totalEligiblesDep) * 100.0
+        : 0.0;
+    final formattedProtectionRateDep =
+        '${protectionRateDep.toStringAsFixed(1).replaceAll('.', ',')} %';
+
+    final brandCountsDep = <String, int>{};
+    for (final d in withProtectionDep) {
+      final brand = _normalizeBrandExplicit(d.marque);
+      brandCountsDep[brand] = (brandCountsDep[brand] ?? 0) + 1;
+    }
+    final sortedBrandsDep = brandCountsDep.entries.toList()
+      ..sort((a, b) {
+        final cmp = b.value.compareTo(a.value);
+        if (cmp != 0) return cmp;
+        return a.key.compareTo(b.key);
+      });
+    final sortedBrandCountsDep = {
+      for (final e in sortedBrandsDep) e.key: e.value,
+    };
+    final brandPercentagesDep = <String, double>{};
+    for (final e in sortedBrandsDep) {
+      brandPercentagesDep[e.key] = withProtectionCountDep > 0
+          ? (e.value / withProtectionCountDep) * 100.0
+          : 0.0;
+    }
+
+    final departsBrandStats = EquipmentBrandPopulationStats(
+      populationTitle: 'Départs',
+      totalEligibles: totalEligiblesDep,
+      withProtectionCount: withProtectionCountDep,
+      protectionRate: protectionRateDep,
+      formattedProtectionRate: formattedProtectionRateDep,
+      brandCounts: sortedBrandCountsDep,
+      brandPercentages: brandPercentagesDep,
+    );
+
+    // C. Circuits terminaux
+    final allCircuits = <CircuitTerminalEquipement>[];
+    for (final c in allCoffrets) {
+      if (c.terminalCircuits != null) {
+        allCircuits.addAll(c.terminalCircuits!);
+      }
+    }
+    final totalEligiblesCirc = allCircuits.length;
+    final withProtectionCirc = allCircuits.where((ct) {
+      final t = ct.typeProtection.trim().toLowerCase();
+      return t.isNotEmpty &&
+          t != 'aucun' &&
+          t != 'sans' &&
+          t != '-' &&
+          t != 'non';
+    }).toList();
+    final withProtectionCountCirc = withProtectionCirc.length;
+    final protectionRateCirc = totalEligiblesCirc > 0
+        ? (withProtectionCountCirc / totalEligiblesCirc) * 100.0
+        : 0.0;
+    final formattedProtectionRateCirc =
+        '${protectionRateCirc.toStringAsFixed(1).replaceAll('.', ',')} %';
+
+    final brandCountsCirc = <String, int>{};
+    for (final ct in withProtectionCirc) {
+      final brand = _normalizeBrandExplicit(ct.marque);
+      brandCountsCirc[brand] = (brandCountsCirc[brand] ?? 0) + 1;
+    }
+    final sortedBrandsCirc = brandCountsCirc.entries.toList()
+      ..sort((a, b) {
+        final cmp = b.value.compareTo(a.value);
+        if (cmp != 0) return cmp;
+        return a.key.compareTo(b.key);
+      });
+    final sortedBrandCountsCirc = {
+      for (final e in sortedBrandsCirc) e.key: e.value,
+    };
+    final brandPercentagesCirc = <String, double>{};
+    for (final e in sortedBrandsCirc) {
+      brandPercentagesCirc[e.key] = withProtectionCountCirc > 0
+          ? (e.value / withProtectionCountCirc) * 100.0
+          : 0.0;
+    }
+
+    final circuitsBrandStats = EquipmentBrandPopulationStats(
+      populationTitle: 'Circuits',
+      totalEligibles: totalEligiblesCirc,
+      withProtectionCount: withProtectionCountCirc,
+      protectionRate: protectionRateCirc,
+      formattedProtectionRate: formattedProtectionRateCirc,
+      brandCounts: sortedBrandCountsCirc,
+      brandPercentages: brandPercentagesCirc,
+    );
+
     return TechnicalEnrichmentResult(
       missionId: missionId,
       essaisCoverage: essaisCoverage,
@@ -1138,6 +1376,9 @@ class TechnicalEnrichmentEngine {
       totalDepartsAvecProtection: totalDepartsAvecProtAll,
       totalCircuitsAudit: totalCircuitsAuditAll,
       totalCircuitsAvecProtection: totalCircuitsAvecProtAll,
+      protectionsTeteBrandStats: protectionsTeteBrandStats,
+      departsBrandStats: departsBrandStats,
+      circuitsBrandStats: circuitsBrandStats,
     );
   }
 
@@ -1357,6 +1598,31 @@ class TechnicalEnrichmentEngine {
     if (s.contains('SIEMENS')) return 'Siemens';
     if (s.contains('EATON')) return 'Eaton';
     return raw.trim();
+  }
+
+  static String _normalizeBrandExplicit(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return 'Non définie';
+    final s = raw.trim();
+    final sUpper = s.toUpperCase();
+    if (s == '-' ||
+        sUpper == 'AUCUN' ||
+        sUpper == 'AUCUNE' ||
+        sUpper == 'SANS' ||
+        sUpper.contains('NON RENSEIGN') ||
+        sUpper.contains('INCONNU')) {
+      return 'Non définie';
+    }
+    if (sUpper.contains('SCHNEIDER') ||
+        sUpper.contains('MERLIN') ||
+        sUpper.contains('TELEMECANIQUE')) {
+      return 'Schneider Electric';
+    }
+    if (sUpper.contains('ABB')) return 'ABB';
+    if (sUpper.contains('LEGRAND')) return 'Legrand';
+    if (sUpper.contains('HAGER')) return 'Hager';
+    if (sUpper.contains('SIEMENS')) return 'Siemens';
+    if (sUpper.contains('EATON')) return 'Eaton';
+    return s;
   }
 
   static String? _normalizeCourbe(String? raw) {

@@ -812,17 +812,6 @@ class PdfExecutiveSummaryBuilder {
         ? '${densestBt.categoryName} : ${densestBt.densiteStr} NC/équipement (${densestBt.tauxCritiqueStr} de criticité)'
         : 'Aucune installation BT';
 
-    // Marques en tête
-    final sortedBrands = technical.globalMarquesDeTete.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-    final brandsText = sortedBrands.isNotEmpty
-        ? sortedBrands.take(3).map((e) {
-            final pct = technical.globalCoupureTeteTotal > 0
-                ? (e.value / technical.globalCoupureTeteTotal * 100).toStringAsFixed(1).replaceAll('.', ',')
-                : '0,0';
-            return '- ${e.key} : ${e.value} , soit $pct %';
-          }).join('\n')
-        : '- Donnée non renseignée sur le terrain';
 
     // Câbles départs et terminaux
     String formatCableSectionList(Map<String, int> sections, int total) {
@@ -910,6 +899,48 @@ class PdfExecutiveSummaryBuilder {
           style: pw.TextStyle(font: fontRegular, color: PdfReportStyles.darkGrey),
         );
 
+    List<pw.InlineSpan> buildDiversificationMarqueSpans(
+      EquipmentBrandPopulationStats tete,
+      EquipmentBrandPopulationStats departs,
+      EquipmentBrandPopulationStats circuits,
+    ) {
+      final spans = <pw.InlineSpan>[];
+
+      void appendPopulation(
+        EquipmentBrandPopulationStats stats,
+        String appareillageLabel, {
+        bool isLast = false,
+      }) {
+        spans.add(bSpan('${stats.populationTitle} : '));
+        spans.add(nSpan('${stats.totalEligibles}\n'));
+
+        spans.add(bSpan('  - $appareillageLabel : '));
+        spans.add(nSpan(
+            '${stats.withProtectionCount} / ${stats.totalEligibles}, soit ${stats.formattedProtectionRate}\n'));
+
+        spans.add(bSpan('  - Marques principales :\n'));
+        if (stats.brandCounts.isEmpty || !stats.hasProtections) {
+          spans.add(nSpan('      Aucun appareillage renseigné\n'));
+        } else {
+          for (final entry in stats.brandCounts.entries) {
+            final pct = stats.brandPercentages[entry.key] ?? 0.0;
+            final pctStr = '${pct.toStringAsFixed(1).replaceAll('.', ',')} %';
+            spans.add(
+                nSpan('      ${entry.key} : ${entry.value}, soit $pctStr\n'));
+          }
+        }
+        if (!isLast) {
+          spans.add(nSpan('\n'));
+        }
+      }
+
+      appendPopulation(tete, 'Appareillage de tête');
+      appendPopulation(departs, 'Appareillage de départ');
+      appendPopulation(circuits, 'Appareillage de circuit', isLast: true);
+
+      return spans;
+    }
+
     final htaDispo = technical.riskFamilyMatrix.totalHtaDispo;
     final htaExploit = technical.riskFamilyMatrix.totalHtaExploit;
     final htaDispoPct = htaTot > 0 ? (htaDispo / htaTot * 100).toStringAsFixed(1).replaceAll('.', ',') : '0,0';
@@ -965,16 +996,6 @@ class PdfExecutiveSummaryBuilder {
         : (technical.totalLocauxMt + technical.totalLocauxBt + technical.totalLocauxGe);
     final totLocauxClasses = technical.totalLocauxClassesCount > 0 ? technical.totalLocauxClassesCount : 18;
     final locauxPct = totLocaux > 0 ? (totLocauxClasses / totLocaux * 100).toStringAsFixed(1).replaceAll('.', ',') : '0,0';
-
-    final teteWithProt = technical.globalCoupureTetePresents;
-    final teteTotal = technical.globalCoupureTeteTotal;
-    final tetePct = technical.globalCoupureTetePct.toStringAsFixed(1).replaceAll('.', ',');
-
-    final depWithProt = technical.totalDepartsAvecProtection;
-    final depTotal = technical.totalDepartsAudit;
-
-    final termWithProt = technical.totalCircuitsAvecProtection;
-    final termTotal = technical.totalCircuitsAudit;
 
     return pw.Table(
       border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.5),
@@ -1066,7 +1087,7 @@ class PdfExecutiveSummaryBuilder {
           'Catégorie la plus dense',
           [
             bSpan('HTA : '), nSpan('$densestMtStr\n'),
-            bSpan('BT : '), nSpan('$densestBtStr'),
+            bSpan('BT : '), nSpan(densestBtStr),
           ],
         ),
         buildRichRow(
@@ -1075,7 +1096,7 @@ class PdfExecutiveSummaryBuilder {
             bSpan('Inverseur : '), nSpan('${formatCoupure(DomainObjectType.inverseur)}\n'),
             bSpan('TGBT : '), nSpan('${formatCoupure(DomainObjectType.tgbt)}\n'),
             bSpan('Armoire : '), nSpan('${formatCoupure(DomainObjectType.armoire)}\n'),
-            bSpan('Coffret : '), nSpan('${formatCoupure(DomainObjectType.coffret)}'),
+            bSpan('Coffret : '), nSpan(formatCoupure(DomainObjectType.coffret)),
           ],
         ),
         buildRichRow(
@@ -1084,7 +1105,7 @@ class PdfExecutiveSummaryBuilder {
             bSpan('Inverseur : '), nSpan('${formatSource(DomainObjectType.inverseur)}\n'),
             bSpan('TGBT : '), nSpan('${formatSource(DomainObjectType.tgbt)}\n'),
             bSpan('Armoire : '), nSpan('${formatSource(DomainObjectType.armoire)}\n'),
-            bSpan('Coffret : '), nSpan('${formatSource(DomainObjectType.coffret)}'),
+            bSpan('Coffret : '), nSpan(formatSource(DomainObjectType.coffret)),
           ],
         ),
         buildRichRow(
@@ -1093,7 +1114,7 @@ class PdfExecutiveSummaryBuilder {
             bSpan('Inverseur : '), nSpan('${formatAdequation(DomainObjectType.inverseur)}\n'),
             bSpan('TGBT : '), nSpan('${formatAdequation(DomainObjectType.tgbt)}\n'),
             bSpan('Armoire : '), nSpan('${formatAdequation(DomainObjectType.armoire)}\n'),
-            bSpan('Coffret : '), nSpan('${formatAdequation(DomainObjectType.coffret)}'),
+            bSpan('Coffret : '), nSpan(formatAdequation(DomainObjectType.coffret)),
           ],
         ),
         buildRichRow(
@@ -1102,7 +1123,7 @@ class PdfExecutiveSummaryBuilder {
             bSpan('Inverseur : '), nSpan('${formatParafoudre(DomainObjectType.inverseur)}\n'),
             bSpan('TGBT : '), nSpan('${formatParafoudre(DomainObjectType.tgbt)}\n'),
             bSpan('Armoire : '), nSpan('${formatParafoudre(DomainObjectType.armoire)}\n'),
-            bSpan('Coffret : '), nSpan('${formatParafoudre(DomainObjectType.coffret)}'),
+            bSpan('Coffret : '), nSpan(formatParafoudre(DomainObjectType.coffret)),
           ],
         ),
         buildRichRow(
@@ -1112,18 +1133,16 @@ class PdfExecutiveSummaryBuilder {
             bSpan('  - Zones classées : '), nSpan('$totZonesClassees / $totZones, soit $zonesPct %\n'),
             bSpan('Nombre total de locaux : '), nSpan('$totLocaux\n'),
             bSpan('  - Locaux classés : '), nSpan('$totLocauxClasses / $totLocaux, soit $locauxPct %\n'),
-            bSpan('Adéquation globale IP/IK : '), nSpan('${technical.globalIpIkAdequationRateStr}'),
+            bSpan('Adéquation globale IP/IK : '), nSpan(technical.globalIpIkAdequationRateStr),
           ],
         ),
         buildRichRow(
           'Diversification de marque des appareillages de protection',
-          [
-            bSpan('Protections de tête : '), nSpan('$teteWithProt / $teteTotal avec protection ($tetePct %)\n'),
-            bSpan('Départs : '), nSpan('$depWithProt / $depTotal avec protection\n'),
-            bSpan('Circuits terminaux : '), nSpan('$termWithProt / $termTotal avec protection\n'),
-            bSpan('Marques principales :\n'),
-            nSpan(brandsText),
-          ],
+          buildDiversificationMarqueSpans(
+            technical.protectionsTeteBrandStats,
+            technical.departsBrandStats,
+            technical.circuitsBrandStats,
+          ),
         ),
         buildRichRow(
           'Proportion nature des câbles par section, départs et circuits terminaux',
@@ -1317,7 +1336,7 @@ class PdfExecutiveSummaryBuilder {
       String title,
       PdfColor bgColor,
       PdfColor textColor, {
-      bool isMainBloc = false,
+      bool isMainDomain = false,
     }) {
       return pw.Table(
         border: pw.TableBorder(
@@ -1332,16 +1351,17 @@ class PdfExecutiveSummaryBuilder {
             decoration: pw.BoxDecoration(color: bgColor),
             children: [
               pw.Container(
-                padding: pw.EdgeInsets.symmetric(vertical: isMainBloc ? 5 : 3.5, horizontal: 6),
-                alignment: isMainBloc ? pw.Alignment.center : pw.Alignment.centerLeft,
+                padding: pw.EdgeInsets.symmetric(
+                    vertical: isMainDomain ? 4.5 : 3.5, horizontal: 6),
+                alignment: pw.Alignment.center,
                 child: pw.Text(
                   title,
                   style: pw.TextStyle(
                     font: fontBold,
-                    fontSize: isMainBloc ? 8.5 : 7.5,
+                    fontSize: isMainDomain ? 8.5 : 7.5,
                     color: textColor,
                   ),
-                  textAlign: isMainBloc ? pw.TextAlign.center : pw.TextAlign.left,
+                  textAlign: pw.TextAlign.center,
                 ),
               ),
             ],
@@ -1356,14 +1376,15 @@ class PdfExecutiveSummaryBuilder {
         left: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
         right: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
         bottom: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
-        verticalInside: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
+        verticalInside:
+            pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
       ),
       columnWidths: riskColWidths,
       children: [
         pw.TableRow(
           decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
           children: [
-            _buildTableHeaderCell('Facteurs de risque prépondérants'),
+            _buildTableHeaderCell('Famille de risque'),
             _buildTableHeaderCell('Constats'),
             _buildTableHeaderCell('Part'),
           ],
@@ -1377,7 +1398,9 @@ class PdfExecutiveSummaryBuilder {
         rows.add(
           pw.TableRow(
             children: [
-              _buildTableCell('Aucun facteur de risque identifié', align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
+              _buildTableCell('Aucun facteur de risque identifié',
+                  align: pw.TextAlign.left,
+                  alignment: pw.Alignment.centerLeft),
               _buildTableCell('0'),
               _buildTableCell('0,0 %'),
             ],
@@ -1388,7 +1411,9 @@ class PdfExecutiveSummaryBuilder {
           rows.add(
             pw.TableRow(
               children: [
-                _buildTableCell(item.famille, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
+                _buildTableCell(item.famille,
+                    align: pw.TextAlign.left,
+                    alignment: pw.Alignment.centerLeft),
                 _buildTableCell('${item.constats}'),
                 _buildTableCell(item.formattedPart),
               ],
@@ -1396,13 +1421,30 @@ class PdfExecutiveSummaryBuilder {
           );
         }
       }
+
+      // Ligne Autres : toujours présente comme requis en MT comme en BT
+      rows.add(
+        pw.TableRow(
+          children: [
+            _buildTableCell('Autres',
+                align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
+            _buildTableCell('${quadrant.autresConstats}'),
+            _buildTableCell(quadrant.formattedAutresPart),
+          ],
+        ),
+      );
+
+      // Ligne TOTAL : somme réelle calculée (non forcée)
       rows.add(
         pw.TableRow(
           decoration: pw.BoxDecoration(color: PdfReportStyles.tableRowAlt),
           children: [
-            _buildTableCell('TOTAL', isBold: true, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
-            _buildTableCell('${quadrant.sumTopOccurrences}', isBold: true),
-            _buildTableCell(quadrant.formattedPartTopSum, isBold: true),
+            _buildTableCell('TOTAL',
+                isBold: true,
+                align: pw.TextAlign.left,
+                alignment: pw.Alignment.centerLeft),
+            _buildTableCell('${quadrant.sumDisplayedOccurrences}', isBold: true),
+            _buildTableCell(quadrant.formattedSumDisplayedParts, isBold: true),
           ],
         ),
       );
@@ -1412,8 +1454,10 @@ class PdfExecutiveSummaryBuilder {
           left: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
           right: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
           bottom: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
-          horizontalInside: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
-          verticalInside: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
+          horizontalInside:
+              pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
+          verticalInside:
+              pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
         ),
         columnWidths: riskColWidths,
         children: rows,
@@ -1422,48 +1466,26 @@ class PdfExecutiveSummaryBuilder {
 
     return pw.Column(
       children: [
-        // ─── BLOC 1 : DISPOSITION CONSTRUCTIVE ─────────────────────
-        buildRiskBannerTable(
-          'BLOC 1 : DISPOSITION CONSTRUCTIVE',
-          PdfReportStyles.accentColor,
-          PdfColors.white,
-          isMainBloc: true,
-        ),
         riskHeaderTable,
-        buildRiskBannerTable(
-          'HTA — Dispositions constructives',
-          PdfReportStyles.lightBlue,
-          PdfReportStyles.headerColor,
-        ),
+
+        // ─── HTA ──────────────────────────────────────────────────
+        buildRiskBannerTable('HTA', PdfReportStyles.accentColor, PdfColors.white,
+            isMainDomain: true),
+        buildRiskBannerTable('DISPOSITION CONSTRUCTIVE',
+            PdfReportStyles.lightBlue, PdfReportStyles.headerColor),
         buildRiskDataTable(matrix.htaDispositionsConstructives),
-        buildRiskBannerTable(
-          'BT — Dispositions constructives',
-          PdfReportStyles.lightBlue,
-          PdfReportStyles.headerColor,
-        ),
-        buildRiskDataTable(matrix.btDispositionsConstructives),
-
-        pw.SizedBox(height: 10),
-
-        // ─── BLOC 2 : EXPLOITATION ET MAINTENANCE ──────────────────
-        buildRiskBannerTable(
-          'BLOC 2 : EXPLOITATION ET MAINTENANCE',
-          PdfReportStyles.accentColor,
-          PdfColors.white,
-          isMainBloc: true,
-        ),
-        riskHeaderTable,
-        buildRiskBannerTable(
-          'HTA — Exploitation et maintenance',
-          PdfReportStyles.lightBlue,
-          PdfReportStyles.headerColor,
-        ),
+        buildRiskBannerTable('EXPLOITATION ET MAINTENANCE',
+            PdfReportStyles.lightBlue, PdfReportStyles.headerColor),
         buildRiskDataTable(matrix.htaExploitationMaintenance),
-        buildRiskBannerTable(
-          'BT — Exploitation et maintenance',
-          PdfReportStyles.lightBlue,
-          PdfReportStyles.headerColor,
-        ),
+
+        // ─── BT ───────────────────────────────────────────────────
+        buildRiskBannerTable('BT', PdfReportStyles.accentColor, PdfColors.white,
+            isMainDomain: true),
+        buildRiskBannerTable('DISPOSITION CONSTRUCTIVE',
+            PdfReportStyles.lightBlue, PdfReportStyles.headerColor),
+        buildRiskDataTable(matrix.btDispositionsConstructives),
+        buildRiskBannerTable('EXPLOITATION ET MAINTENANCE',
+            PdfReportStyles.lightBlue, PdfReportStyles.headerColor),
         buildRiskDataTable(matrix.btExploitationMaintenance),
       ],
     );
@@ -2061,5 +2083,19 @@ class PdfExecutiveSummaryBuilder {
   @visibleForTesting
   static pw.Widget buildCategoryCrossTableForTesting(List<CategoryCrossAuditRow> rows, CategoryCrossAuditRow totalRow, String domainLabel) {
     return _buildCategoryCrossTable(rows, totalRow, domainLabel);
+  }
+
+  @visibleForTesting
+  static pw.Widget build12IndicateursTableForTesting(
+    MissionStatisticsSummary summary,
+    ExecutiveSummarySnapshot snapshot,
+    TechnicalEnrichmentResult technical,
+  ) {
+    return _build12IndicateursTable(summary, snapshot, technical);
+  }
+
+  @visibleForTesting
+  static pw.Widget buildRiskFamilyMatrixTableForTesting(RiskFamilyCrossMatrix matrix) {
+    return _buildEnrichedRiskFamilyMatrixTable(matrix);
   }
 }
