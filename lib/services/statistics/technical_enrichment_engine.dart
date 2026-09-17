@@ -10,6 +10,7 @@ import 'audit_finding.dart';
 import 'canonical_defect_category_registry.dart';
 import 'domain_entity_instance.dart';
 import 'mission_domain_inventory_engine.dart';
+import 'risk_family_normalizer.dart';
 
 /// Indicateur de sécurité pour les organes de coupure de tête par catégorie de tableau BT.
 class CoupureTeteStats {
@@ -210,9 +211,11 @@ class IpIkZoneItem {
     this.pointsNonConformes = 0,
   });
 
-  int get evaluables => pointsVerifies > 0 ? pointsVerifies : (conformes + nonConformes);
-  double get complianceRate =>
-      evaluables > 0 ? ((evaluables - pointsNonConformes) / evaluables) * 100.0 : 0.0;
+  int get evaluables =>
+      pointsVerifies > 0 ? pointsVerifies : (conformes + nonConformes);
+  double get complianceRate => evaluables > 0
+      ? ((evaluables - pointsNonConformes) / evaluables) * 100.0
+      : 0.0;
 
   double get nonComplianceRate =>
       pointsVerifies > 0 ? (pointsNonConformes / pointsVerifies) * 100.0 : 0.0;
@@ -303,6 +306,12 @@ class RiskFamilyQuadrantStats {
   int get total => totalConstats;
   List<RiskFamilyStatItem> get items => topFamilies;
   int? operator [](String family) => counts[family];
+
+  int get sumTopOccurrences => topFamilies.fold(0, (s, i) => s + i.constats);
+  double get partTopSum =>
+      totalConstats > 0 ? (sumTopOccurrences / totalConstats) * 100.0 : 0.0;
+  String get formattedPartTopSum =>
+      '${partTopSum.toStringAsFixed(1).replaceAll('.', ',')} %';
 }
 
 /// Matrice à 4 quadrants croisant Domaine de tension x Nature de contrôle avec les familles de risques réelles.
@@ -320,10 +329,15 @@ class RiskFamilyCrossMatrix {
   });
 
   const RiskFamilyCrossMatrix.empty()
-      : htaDispositionsConstructives = const RiskFamilyQuadrantStats.empty(),
-        htaExploitationMaintenance = const RiskFamilyQuadrantStats.empty(),
-        btDispositionsConstructives = const RiskFamilyQuadrantStats.empty(),
-        btExploitationMaintenance = const RiskFamilyQuadrantStats.empty();
+    : htaDispositionsConstructives = const RiskFamilyQuadrantStats.empty(),
+      htaExploitationMaintenance = const RiskFamilyQuadrantStats.empty(),
+      btDispositionsConstructives = const RiskFamilyQuadrantStats.empty(),
+      btExploitationMaintenance = const RiskFamilyQuadrantStats.empty();
+
+  RiskFamilyQuadrantStats get dispoHta => htaDispositionsConstructives;
+  RiskFamilyQuadrantStats get dispoBt => btDispositionsConstructives;
+  RiskFamilyQuadrantStats get exploitHta => htaExploitationMaintenance;
+  RiskFamilyQuadrantStats get exploitBt => btExploitationMaintenance;
 
   int get totalHtaDispo => htaDispositionsConstructives.totalConstats;
   int get totalHtaExploit => htaExploitationMaintenance.totalConstats;
@@ -359,10 +373,12 @@ class LocauxFindingsStats {
   });
 
   int get total => dispoConstructives + conditionsExploitation;
-  String get dispoConstructivesPctStr =>
-      total > 0 ? '${(dispoConstructives / total * 100).toStringAsFixed(1).replaceAll('.', ',')} %' : '0,0 %';
-  String get conditionsExploitationPctStr =>
-      total > 0 ? '${(conditionsExploitation / total * 100).toStringAsFixed(1).replaceAll('.', ',')} %' : '0,0 %';
+  String get dispoConstructivesPctStr => total > 0
+      ? '${(dispoConstructives / total * 100).toStringAsFixed(1).replaceAll('.', ',')} %'
+      : '0,0 %';
+  String get conditionsExploitationPctStr => total > 0
+      ? '${(conditionsExploitation / total * 100).toStringAsFixed(1).replaceAll('.', ',')} %'
+      : '0,0 %';
 }
 
 /// Ligne de synthèse d'une catégorie d'équipements pour les tableaux de conformité croisée.
@@ -387,8 +403,11 @@ class CategoryCrossAuditRow {
     required this.densite,
   });
 
-  String get pctOfTotalNcStr => '${pctOfTotalNc.toStringAsFixed(1).replaceAll('.', ',')} %';
-  String get tauxCritiqueStr => ncCount > 0 ? '${tauxCritique.toStringAsFixed(1).replaceAll('.', ',')} %' : '0,0 %';
+  String get pctOfTotalNcStr =>
+      '${pctOfTotalNc.toStringAsFixed(1).replaceAll('.', ',')} %';
+  String get tauxCritiqueStr => ncCount > 0
+      ? '${tauxCritique.toStringAsFixed(1).replaceAll('.', ',')} %'
+      : '0,0 %';
   String get densiteStr => densite.toStringAsFixed(1).replaceAll('.', ',');
 }
 
@@ -420,6 +439,15 @@ class TechnicalEnrichmentResult {
   final CategoryCrossAuditRow mtTotalCrossRow;
   final CategoryCrossAuditRow btTotalCrossRow;
 
+  final int totalZonesAudit;
+  final int totalZonesClasseesCount;
+  final int totalLocauxAudit;
+  final int totalLocauxClassesCount;
+  final int totalDepartsAudit;
+  final int totalDepartsAvecProtection;
+  final int totalCircuitsAudit;
+  final int totalCircuitsAvecProtection;
+
   const TechnicalEnrichmentResult({
     required this.missionId,
     required this.essaisCoverage,
@@ -446,6 +474,14 @@ class TechnicalEnrichmentResult {
     required this.btCategoriesCrossRows,
     required this.mtTotalCrossRow,
     required this.btTotalCrossRow,
+    this.totalZonesAudit = 0,
+    this.totalZonesClasseesCount = 0,
+    this.totalLocauxAudit = 0,
+    this.totalLocauxClassesCount = 0,
+    this.totalDepartsAudit = 0,
+    this.totalDepartsAvecProtection = 0,
+    this.totalCircuitsAudit = 0,
+    this.totalCircuitsAvecProtection = 0,
   });
 
   int get globalCoupureTetePresents =>
@@ -497,14 +533,20 @@ class TechnicalEnrichmentResult {
       .where((r) => r.categoryName.toLowerCase().contains('transformateur'))
       .fold(0, (s, r) => s + r.equipementsCount);
 
-  int get totalTgbt => coupureTeteStats[DomainObjectType.tgbt]?.totalEquipments ?? 0;
-  int get totalArmoires => coupureTeteStats[DomainObjectType.armoire]?.totalEquipments ?? 0;
-  int get totalCoffrets => coupureTeteStats[DomainObjectType.coffret]?.totalEquipments ?? 0;
-  int get totalInverseurs => coupureTeteStats[DomainObjectType.inverseur]?.totalEquipments ?? 0;
+  int get totalTgbt =>
+      coupureTeteStats[DomainObjectType.tgbt]?.totalEquipments ?? 0;
+  int get totalArmoires =>
+      coupureTeteStats[DomainObjectType.armoire]?.totalEquipments ?? 0;
+  int get totalCoffrets =>
+      coupureTeteStats[DomainObjectType.coffret]?.totalEquipments ?? 0;
+  int get totalInverseurs =>
+      coupureTeteStats[DomainObjectType.inverseur]?.totalEquipments ?? 0;
 
   int get totalEquipementsMT => totalCellules + totalTransformateurs;
-  int get totalEquipementsBT => totalTgbt + totalArmoires + totalCoffrets + totalInverseurs;
-  int get totalEquipementsElectriques => totalEquipementsMT + totalEquipementsBT;
+  int get totalEquipementsBT =>
+      totalTgbt + totalArmoires + totalCoffrets + totalInverseurs;
+  int get totalEquipementsElectriques =>
+      totalEquipementsMT + totalEquipementsBT;
 
   String get globalIpIkAdequationRateStr {
     final totalConformes = ipIkZoneItems.fold(0, (s, e) => s + e.conformes);
@@ -572,6 +614,11 @@ class TechnicalEnrichmentEngine {
     final marquesRows = <MarquesMatrixRow>[];
     final courbesRows = <CourbesMatrixRow>[];
     final cablesRows = <CablesMatrixRow>[];
+
+    int totalDepartsAuditAll = 0;
+    int totalDepartsAvecProtAll = 0;
+    int totalCircuitsAuditAll = 0;
+    int totalCircuitsAvecProtAll = 0;
 
     for (final cat in btCategories) {
       final instances = domainInventory.getInstancesByCategory(cat);
@@ -656,8 +703,43 @@ class TechnicalEnrichmentEngine {
       }
 
       final totalTete = total;
-      final totalDeparts = coffrets.fold<int>(0, (s, c) => s + (c.departures?.length ?? 0));
-      final totalTerminaux = coffrets.fold<int>(0, (s, c) => s + (c.terminalCircuits?.length ?? 0));
+      final totalDeparts = coffrets.fold<int>(
+        0,
+        (s, c) => s + (c.departures?.length ?? 0),
+      );
+      final totalTerminaux = coffrets.fold<int>(
+        0,
+        (s, c) => s + (c.terminalCircuits?.length ?? 0),
+      );
+
+      int departsAvecProt = 0;
+      for (final c in coffrets) {
+        if (c.departures != null) {
+          for (final dep in c.departures!) {
+            final t = dep.typeProtection.trim().toLowerCase();
+            if (t.isNotEmpty && t != 'aucun' && t != 'sans' && t != '-' && t != 'non') {
+              departsAvecProt++;
+            }
+          }
+        }
+      }
+
+      int circuitsAvecProt = 0;
+      for (final c in coffrets) {
+        if (c.terminalCircuits != null) {
+          for (final ct in c.terminalCircuits!) {
+            final t = ct.typeProtection.trim().toLowerCase();
+            if (t.isNotEmpty && t != 'aucun' && t != 'sans' && t != '-' && t != 'non') {
+              circuitsAvecProt++;
+            }
+          }
+        }
+      }
+
+      totalDepartsAuditAll += totalDeparts;
+      totalDepartsAvecProtAll += departsAvecProt;
+      totalCircuitsAuditAll += totalTerminaux;
+      totalCircuitsAvecProtAll += circuitsAvecProt;
 
       marquesRows.add(
         MarquesMatrixRow(
@@ -733,13 +815,74 @@ class TechnicalEnrichmentEngine {
 
     // 4. Adéquation Classement des zones vs Indice IP/IK des équipements
     final ipIkZones = _computeIpIkZones(missionId, domainInventory);
-    int totalZonesCount = 0;
+
+    // Calcul strict et indépendant des populations de Zones et de Locaux
+    int totalZonesAudit = 0;
+    int totalZonesClasseesCount = 0;
+    int totalLocauxAudit = 0;
+    int totalLocauxClassesCount = 0;
+
     try {
-      totalZonesCount =
-          HiveService.getClassementsZonesByMissionId(missionId).length +
-          HiveService.getEmplacementsByMissionId(missionId).length;
+      final audit = HiveService.getAuditInstallationsByMissionId(missionId);
+      final zonesClassees = HiveService.getClassementsZonesByMissionId(missionId);
+      final emplacements = HiveService.getEmplacementsByMissionId(missionId);
+
+      // 1. Population des zones (MT + BT)
+      final allAuditZoneNames = <String>[];
+      final allAuditZoneClassementIds = <String?>[];
+      if (audit != null) {
+        for (final z in audit.moyenneTensionZones) {
+          allAuditZoneNames.add(z.nom);
+          allAuditZoneClassementIds.add(z.classementZoneId);
+        }
+        for (final z in audit.basseTensionZones) {
+          allAuditZoneNames.add(z.nom);
+          allAuditZoneClassementIds.add(z.classementZoneId);
+        }
+      }
+
+      if (allAuditZoneNames.isNotEmpty) {
+        totalZonesAudit = allAuditZoneNames.length;
+        int count = 0;
+        for (int i = 0; i < allAuditZoneNames.length; i++) {
+          final cId = allAuditZoneClassementIds[i];
+          if (cId != null && cId.trim().isNotEmpty) {
+            count++;
+            continue;
+          }
+          final zNom = allAuditZoneNames[i].trim().toLowerCase();
+          if (zonesClassees.any((cz) => cz.nomZone.trim().toLowerCase() == zNom)) {
+            count++;
+          }
+        }
+        totalZonesClasseesCount = count;
+      } else {
+        final parentZones = domainInventory.instances
+            .map((i) => i.parentZone?.trim())
+            .where((z) => z != null && z.isNotEmpty)
+            .toSet();
+        totalZonesAudit = parentZones.length;
+        totalZonesClasseesCount = parentZones.where((pz) {
+          return zonesClassees.any((cz) => cz.nomZone.trim().toLowerCase() == pz!.toLowerCase());
+        }).length;
+      }
+
+      // 2. Population des locaux (MT + BT + GE)
+      final localInstances = [
+        ...domainInventory.getInstancesByCategory(DomainObjectType.localMT),
+        ...domainInventory.getInstancesByCategory(DomainObjectType.localBT),
+        ...domainInventory.getInstancesByCategory(DomainObjectType.localGE),
+      ];
+      totalLocauxAudit = localInstances.length;
+      totalLocauxClassesCount = localInstances.where((l) {
+        final lNom = l.name.trim().toLowerCase();
+        return emplacements.any((e) => e.localisation.trim().toLowerCase() == lNom);
+      }).length;
     } catch (_) {
-      totalZonesCount = 0;
+      totalZonesAudit = 0;
+      totalZonesClasseesCount = 0;
+      totalLocauxAudit = 0;
+      totalLocauxClassesCount = 0;
     }
 
     // 5. Matrice 4 quadrants des Familles de risques
@@ -758,7 +901,9 @@ class TechnicalEnrichmentEngine {
     // 7. Décompte des constats sur les locaux (Dispositions constructives vs Conditions d'exploitation)
     int mtLocauxDispo = 0;
     int mtLocauxExploit = 0;
-    for (final inst in domainInventory.getInstancesByCategory(DomainObjectType.localMT)) {
+    for (final inst in domainInventory.getInstancesByCategory(
+      DomainObjectType.localMT,
+    )) {
       for (final f in inst.pertinentFindings) {
         if (_isDispositionConstructiveFinding(f)) {
           mtLocauxDispo++;
@@ -804,9 +949,15 @@ class TechnicalEnrichmentEngine {
       final eqCount = instances.length;
       final findings = instances.expand((i) => i.pertinentFindings).toList();
       final ncCount = findings.length;
-      final critCount = findings.where((f) => f.criticality.toLowerCase().contains('critique')).length;
-      final majCount = findings.where((f) => f.criticality.toLowerCase().contains('majeur')).length;
-      final pctOfTotal = totalNcDenominator > 0 ? (ncCount / totalNcDenominator) * 100.0 : 0.0;
+      final critCount = findings
+          .where((f) => f.criticality.toLowerCase().contains('critique'))
+          .length;
+      final majCount = findings
+          .where((f) => f.criticality.toLowerCase().contains('majeur'))
+          .length;
+      final pctOfTotal = totalNcDenominator > 0
+          ? (ncCount / totalNcDenominator) * 100.0
+          : 0.0;
       final tauxCrit = ncCount > 0 ? (critCount / ncCount) * 100.0 : 0.0;
       final densite = eqCount > 0 ? (ncCount / eqCount) : 0.0;
 
@@ -839,21 +990,24 @@ class TechnicalEnrichmentEngine {
     mtCatRows.add(
       buildCategoryRow(
         'Transformateurs',
-        domainInventory.getInstancesByCategory(DomainObjectType.transformateurMTBT),
+        domainInventory.getInstancesByCategory(
+          DomainObjectType.transformateurMTBT,
+        ),
         totalMissionNc,
       ),
     );
 
     final mtCoffrets = domainInventory.instances
-        .where((i) => i.tensionDomain == TensionDomain.mt && (i.category == DomainObjectType.armoire || i.category == DomainObjectType.coffret))
+        .where(
+          (i) =>
+              i.tensionDomain == TensionDomain.mt &&
+              (i.category == DomainObjectType.armoire ||
+                  i.category == DomainObjectType.coffret),
+        )
         .toList();
     if (mtCoffrets.isNotEmpty) {
       mtCatRows.add(
-        buildCategoryRow(
-          'Armoires / Coffrets MT',
-          mtCoffrets,
-          totalMissionNc,
-        ),
+        buildCategoryRow('Armoires / Coffrets MT', mtCoffrets, totalMissionNc),
       );
     }
 
@@ -867,7 +1021,9 @@ class TechnicalEnrichmentEngine {
       ncCount: mtTotalNc,
       critiquesCount: mtTotalCrit,
       majeuresCount: mtTotalMaj,
-      pctOfTotalNc: totalMissionNc > 0 ? (mtTotalNc / totalMissionNc) * 100.0 : 0.0,
+      pctOfTotalNc: totalMissionNc > 0
+          ? (mtTotalNc / totalMissionNc) * 100.0
+          : 0.0,
       tauxCritique: mtTotalNc > 0 ? (mtTotalCrit / mtTotalNc) * 100.0 : 0.0,
       densite: mtTotalEq > 0 ? (mtTotalNc / mtTotalEq) : 0.0,
     );
@@ -941,7 +1097,9 @@ class TechnicalEnrichmentEngine {
       ncCount: btTotalNc,
       critiquesCount: btTotalCrit,
       majeuresCount: btTotalMaj,
-      pctOfTotalNc: totalMissionNc > 0 ? (btTotalNc / totalMissionNc) * 100.0 : 0.0,
+      pctOfTotalNc: totalMissionNc > 0
+          ? (btTotalNc / totalMissionNc) * 100.0
+          : 0.0,
       tauxCritique: btTotalNc > 0 ? (btTotalCrit / btTotalNc) * 100.0 : 0.0,
       densite: btTotalEq > 0 ? (btTotalNc / btTotalEq) : 0.0,
     );
@@ -962,7 +1120,7 @@ class TechnicalEnrichmentEngine {
       riskFamilyMatrix: riskMatrix,
       top5Hta: top5Hta,
       top5Bt: top5Bt,
-      totalZonesClassees: totalZonesCount,
+      totalZonesClassees: totalZonesClasseesCount,
       totalLocauxMt: locauxMt,
       totalLocauxBt: locauxBt,
       totalLocauxGe: locauxGe,
@@ -972,6 +1130,14 @@ class TechnicalEnrichmentEngine {
       btCategoriesCrossRows: btCatRows,
       mtTotalCrossRow: mtTotalCrossRow,
       btTotalCrossRow: btTotalCrossRow,
+      totalZonesAudit: totalZonesAudit,
+      totalZonesClasseesCount: totalZonesClasseesCount,
+      totalLocauxAudit: totalLocauxAudit,
+      totalLocauxClassesCount: totalLocauxClassesCount,
+      totalDepartsAudit: totalDepartsAuditAll,
+      totalDepartsAvecProtection: totalDepartsAvecProtAll,
+      totalCircuitsAudit: totalCircuitsAuditAll,
+      totalCircuitsAvecProtection: totalCircuitsAvecProtAll,
     );
   }
 
@@ -1107,8 +1273,9 @@ class TechnicalEnrichmentEngine {
     DomainObjectType cat,
     List<CoffretArmoire> coffrets,
   ) {
-    final deps =
-        coffrets.expand((c) => c.departures ?? <DepartEquipement>[]).toList();
+    final deps = coffrets
+        .expand((c) => c.departures ?? <DepartEquipement>[])
+        .toList();
     int total = deps.length;
     int evaluables = 0;
     int conformes = 0;
@@ -1272,8 +1439,7 @@ class TechnicalEnrichmentEngine {
   static List<IpIkZoneItem> computeIpIkZones(
     String missionId,
     MissionDomainInventory domainInventory,
-  ) =>
-      _computeIpIkZones(missionId, domainInventory);
+  ) => _computeIpIkZones(missionId, domainInventory);
 
   static List<IpIkZoneItem> _computeIpIkZones(
     String missionId,
@@ -1345,11 +1511,13 @@ class TechnicalEnrichmentEngine {
         if (raw is CoffretArmoire) {
           final ipVal = raw.indiceIpIk?.trim();
           final repVal = raw.indiceIpIkRepere?.trim();
-          final hasIp = ipVal != null &&
+          final hasIp =
+              ipVal != null &&
               ipVal.isNotEmpty &&
               ipVal != '-' &&
               ipVal.toLowerCase() != 'absent';
-          final hasRep = repVal != null &&
+          final hasRep =
+              repVal != null &&
               repVal.isNotEmpty &&
               repVal != '-' &&
               repVal.toLowerCase() != 'absent';
@@ -1385,12 +1553,16 @@ class TechnicalEnrichmentEngine {
 
       // Si l'emplacement est de type 'zone' et correspond déjà à une zone classifiée,
       // on évite le doublon pour ne pas polluer l'agrégation.
-      if (emp.isZone && zones.any((z) => z.nomZone.trim().toLowerCase() == empName.toLowerCase())) {
+      if (emp.isZone &&
+          zones.any(
+            (z) => z.nomZone.trim().toLowerCase() == empName.toLowerCase(),
+          )) {
         continue;
       }
 
       // Clé unique pour éviter les doublons accidentels d'emplacements
-      final empKey = '${emp.typeEmplacement}_${emp.zone?.trim().toLowerCase() ?? ""}_${empName.toLowerCase()}';
+      final empKey =
+          '${emp.typeEmplacement}_${emp.zone?.trim().toLowerCase() ?? ""}_${empName.toLowerCase()}';
       if (processedLocalKeys.contains(empKey)) continue;
       processedLocalKeys.add(empKey);
 
@@ -1401,8 +1573,12 @@ class TechnicalEnrichmentEngine {
         }
         // Si l'emplacement a une zone parente spécifiée et que l'instance a une parentZone,
         // vérifier la concordance de zone pour éviter toute attribution croisée homonyme.
-        if (emp.zone != null && emp.zone!.trim().isNotEmpty && i.parentZone != null && i.parentZone!.trim().isNotEmpty) {
-          return i.parentZone!.trim().toLowerCase() == emp.zone!.trim().toLowerCase();
+        if (emp.zone != null &&
+            emp.zone!.trim().isNotEmpty &&
+            i.parentZone != null &&
+            i.parentZone!.trim().isNotEmpty) {
+          return i.parentZone!.trim().toLowerCase() ==
+              emp.zone!.trim().toLowerCase();
         }
         return true;
       }).toList();
@@ -1423,11 +1599,13 @@ class TechnicalEnrichmentEngine {
         if (raw is CoffretArmoire) {
           final ipVal = raw.indiceIpIk?.trim();
           final repVal = raw.indiceIpIkRepere?.trim();
-          final hasIp = ipVal != null &&
+          final hasIp =
+              ipVal != null &&
               ipVal.isNotEmpty &&
               ipVal != '-' &&
               ipVal.toLowerCase() != 'absent';
-          final hasRep = repVal != null &&
+          final hasRep =
+              repVal != null &&
               repVal.isNotEmpty &&
               repVal != '-' &&
               repVal.toLowerCase() != 'absent';
@@ -1437,7 +1615,8 @@ class TechnicalEnrichmentEngine {
         }
       }
 
-      final label = (emp.zone != null && emp.zone!.trim().isNotEmpty && !emp.isZone)
+      final label =
+          (emp.zone != null && emp.zone!.trim().isNotEmpty && !emp.isZone)
           ? '$empName (${emp.zone!.trim()})'
           : empName;
 
@@ -1481,10 +1660,16 @@ class TechnicalEnrichmentEngine {
     for (final f in findings) {
       final rawFamily = f.riskFamily?.trim();
       final family = (rawFamily != null && rawFamily.isNotEmpty)
-          ? rawFamily
-          : (DispositionsConstructivesRegistry.getMetadata(f.verificationPoint)?.familleRisque ??
-             DispositionsConstructivesRegistry.getCoffretMetadata(f.verificationPoint)?.familleRisque ??
-             'Non spécifiée');
+          ? RiskFamilyNormalizer.normalize(rawFamily)
+          : RiskFamilyNormalizer.normalize(
+              DispositionsConstructivesRegistry.getMetadata(
+                    f.verificationPoint,
+                  )?.familleRisque ??
+                  DispositionsConstructivesRegistry.getCoffretMetadata(
+                    f.verificationPoint,
+                  )?.familleRisque ??
+                  'Non spécifiée',
+            );
       counts[family] = (counts[family] ?? 0) + 1;
     }
 
@@ -1521,98 +1706,75 @@ class TechnicalEnrichmentEngine {
   static RiskFamilyCrossMatrix _computeRiskFamilyMatrix(
     MissionDomainInventory domainInventory,
   ) {
-    // 1. HTA — DISPOSITION CONSTRUCTIVE : Locaux MT / HTA
-    var htaLocauxFindings = domainInventory
-        .getInstancesByCategory(DomainObjectType.localMT)
-        .expand((i) => i.pertinentFindings)
+    // 1. HTA — DISPOSITION CONSTRUCTIVE : Dispositions constructives MT
+    final htaDispoFindings = domainInventory.pertinentFindings
+        .where(
+          (f) =>
+              f.tensionDomain == TensionDomain.mt &&
+              _isDispositionConstructiveFinding(f),
+        )
         .toList();
 
-    // 2. HTA — EXPLOITATION ET MAINTENANCE : Cellules MT + Transformateurs MT/BT
-    var htaEquipFindings = [
-      ...domainInventory.getInstancesByCategory(DomainObjectType.celluleMT),
-      ...domainInventory.getInstancesByCategory(DomainObjectType.transformateurMTBT),
-    ].expand((i) => i.pertinentFindings).toList();
-
-    // 3. BT — DISPOSITION CONSTRUCTIVE : Locaux BT + Locaux GE
-    var btLocauxFindings = [
-      ...domainInventory.getInstancesByCategory(DomainObjectType.localBT),
-      ...domainInventory.getInstancesByCategory(DomainObjectType.localGE),
-    ].expand((i) => i.pertinentFindings).toList();
-
-    // 4. BT — EXPLOITATION ET MAINTENANCE : TGBT + Armoires + Coffrets + Inverseurs
-    var btEquipFindings = [
-      ...domainInventory.getInstancesByCategory(DomainObjectType.tgbt),
-      ...domainInventory.getInstancesByCategory(DomainObjectType.armoire),
-      ...domainInventory.getInstancesByCategory(DomainObjectType.coffret),
-      ...domainInventory.getInstancesByCategory(DomainObjectType.inverseur),
-    ].expand((i) => i.pertinentFindings).toList();
-
-    if (htaLocauxFindings.isEmpty &&
-        htaEquipFindings.isEmpty &&
-        btLocauxFindings.isEmpty &&
-        btEquipFindings.isEmpty &&
-        domainInventory.pertinentFindings.isNotEmpty) {
-      htaLocauxFindings = domainInventory.pertinentFindings
-          .where((f) =>
+    // 2. HTA — EXPLOITATION ET MAINTENANCE : Cellules MT + Transformateurs MT/BT + Conditions exploitation MT + Coffrets MT
+    final htaExploitFindings = domainInventory.pertinentFindings
+        .where(
+          (f) =>
               f.tensionDomain == TensionDomain.mt &&
-              _isDispositionConstructiveFinding(f))
-          .toList();
-      htaEquipFindings = domainInventory.pertinentFindings
-          .where((f) =>
-              f.tensionDomain == TensionDomain.mt &&
-              !_isDispositionConstructiveFinding(f))
-          .toList();
-      btLocauxFindings = domainInventory.pertinentFindings
-          .where((f) =>
+              !_isDispositionConstructiveFinding(f),
+        )
+        .toList();
+
+    // 3. BT — DISPOSITION CONSTRUCTIVE : Dispositions constructives BT
+    final btDispoFindings = domainInventory.pertinentFindings
+        .where(
+          (f) =>
               f.tensionDomain == TensionDomain.bt &&
-              _isDispositionConstructiveFinding(f))
-          .toList();
-      btEquipFindings = domainInventory.pertinentFindings
-          .where((f) =>
+              _isDispositionConstructiveFinding(f),
+        )
+        .toList();
+
+    // 4. BT — EXPLOITATION ET MAINTENANCE : TGBT + Armoires + Coffrets + Inverseurs + Conditions exploitation BT
+    final btExploitFindings = domainInventory.pertinentFindings
+        .where(
+          (f) =>
               f.tensionDomain == TensionDomain.bt &&
-              !_isDispositionConstructiveFinding(f))
-          .toList();
-    }
+              !_isDispositionConstructiveFinding(f),
+        )
+        .toList();
 
     return RiskFamilyCrossMatrix(
       htaDispositionsConstructives: _computeQuadrantStats(
         domainTitle: 'HTA',
         sectionTitle: 'DISPOSITION CONSTRUCTIVE',
-        findings: htaLocauxFindings,
+        findings: htaDispoFindings,
       ),
       htaExploitationMaintenance: _computeQuadrantStats(
         domainTitle: 'HTA',
         sectionTitle: 'EXPLOITATION ET MAINTENANCE',
-        findings: htaEquipFindings,
+        findings: htaExploitFindings,
       ),
       btDispositionsConstructives: _computeQuadrantStats(
         domainTitle: 'BT',
         sectionTitle: 'DISPOSITION CONSTRUCTIVE',
-        findings: btLocauxFindings,
+        findings: btDispoFindings,
       ),
       btExploitationMaintenance: _computeQuadrantStats(
         domainTitle: 'BT',
         sectionTitle: 'EXPLOITATION ET MAINTENANCE',
-        findings: btEquipFindings,
+        findings: btExploitFindings,
       ),
     );
   }
 
   static bool _isDispositionConstructiveFinding(AuditFinding f) {
     final tbl = f.tableName.toLowerCase();
-    final point = f.verificationPoint.toLowerCase();
     if (tbl.contains('disposition') || tbl.contains('constructive')) {
       return true;
     }
-    if (f.objectType.toLowerCase().contains('local') &&
-        !tbl.contains('exploitation')) {
-      return true;
+    if (tbl.contains('exploitation')) {
+      return false;
     }
-    if (point.contains('accès') ||
-        point.contains('porte') ||
-        point.contains('ventilation') ||
-        point.contains('éclairage de sécurité') ||
-        point.contains('extincteur')) {
+    if (f.objectType.toLowerCase().contains('local')) {
       return true;
     }
     return false;

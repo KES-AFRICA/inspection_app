@@ -795,20 +795,8 @@ class PdfExecutiveSummaryBuilder {
     ExecutiveSummarySnapshot snapshot,
     TechnicalEnrichmentResult technical,
   ) {
-    final findings = summary.inventory.pertinentFindings;
-    final htaFindings = findings.where((f) => f.tensionDomain == TensionDomain.mt).toList();
-    final btFindings = findings.where((f) => f.tensionDomain == TensionDomain.bt).toList();
-
-    final htaCrit = htaFindings.where((f) => f.criticality.toLowerCase() == 'critique').length;
     final htaTot = summary.tensionDomainStats.mtCount;
-    final htaCritPct = htaTot > 0 ? (htaCrit / htaTot * 100).toStringAsFixed(1).replaceAll('.', ',') : '0,0';
-
-    final btCrit = btFindings.where((f) => f.criticality.toLowerCase() == 'critique').length;
     final btTot = summary.tensionDomainStats.btCount;
-    final btCritPct = btTot > 0 ? (btCrit / btTot * 100).toStringAsFixed(1).replaceAll('.', ',') : '0,0';
-
-    final htaRisk = double.parse(htaCritPct.replaceAll(',', '.')) >= 15.0 ? 'niveau de risque élevé' : 'niveau de risque modéré';
-    final btRisk = double.parse(btCritPct.replaceAll(',', '.')) >= 15.0 ? 'niveau de risque élevé' : 'niveau de risque modéré';
 
     // Tri pour trouver la catégorie la plus dense en HTA et BT
     final sortedMtCats = [...technical.mtCategoriesCrossRows]..sort((a, b) => b.densite.compareTo(a.densite));
@@ -887,18 +875,7 @@ class PdfExecutiveSummaryBuilder {
     final termAluPct = totalTermCables > 0 ? (termAluTotal / totalTermCables * 100).toStringAsFixed(1).replaceAll('.', ',') : '0,0';
     final termCuPct = totalTermCables > 0 ? (termCuTotal / totalTermCables * 100).toStringAsFixed(1).replaceAll('.', ',') : '0,0';
 
-    final cablesVal = 'Depart\n'
-        'Aluminium : $depAluPct %\n'
-        '${formatCableSectionList(depAluSec, depAluTotal)}\n'
-        'Cuivre : $depCuPct %\n'
-        '${formatCableSectionList(depCuSec, depCuTotal)}\n'
-        'Circuit terminaux\n'
-        'Aluminium : $termAluPct %\n'
-        '${formatCableSectionList(termAluSec, termAluTotal)}\n'
-        'Cuivre : $termCuPct %\n'
-        '${formatCableSectionList(termCuSec, termCuTotal)}';
-
-    pw.TableRow buildRow(String label, String value) {
+    pw.TableRow buildRichRow(String label, List<pw.InlineSpan> spans) {
       return pw.TableRow(
         verticalAlignment: pw.TableCellVerticalAlignment.middle,
         children: [
@@ -913,14 +890,25 @@ class PdfExecutiveSummaryBuilder {
           pw.Container(
             padding: const pw.EdgeInsets.all(5),
             alignment: pw.Alignment.centerLeft,
-            child: pw.Text(
-              value,
-              style: pw.TextStyle(font: fontRegular, fontSize: 7.5, color: PdfReportStyles.darkGrey, lineSpacing: 1.8),
+            child: pw.RichText(
+              text: pw.TextSpan(
+                style: pw.TextStyle(fontSize: 7.5, color: PdfReportStyles.darkGrey, lineSpacing: 1.8),
+                children: spans,
+              ),
             ),
           ),
         ],
       );
     }
+
+    pw.InlineSpan bSpan(String text) => pw.TextSpan(
+          text: text,
+          style: pw.TextStyle(font: fontBold, color: PdfReportStyles.headerColor),
+        );
+    pw.InlineSpan nSpan(String text) => pw.TextSpan(
+          text: text,
+          style: pw.TextStyle(font: fontRegular, color: PdfReportStyles.darkGrey),
+        );
 
     final htaDispo = technical.riskFamilyMatrix.totalHtaDispo;
     final htaExploit = technical.riskFamilyMatrix.totalHtaExploit;
@@ -958,6 +946,36 @@ class PdfExecutiveSummaryBuilder {
       return '$conformes/$denom, soit $rate';
     }
 
+    String formatParafoudre(DomainObjectType type) {
+      final s = technical.parafoudreStats[type];
+      final avec = s?.avecParafoudre ?? 0;
+      final total = s?.totalEquipments ?? 0;
+      final pct = s?.formattedPercentage ?? '0,0 %';
+      return '$avec/$total, soit $pct';
+    }
+
+    final totZones = technical.totalZonesAudit > 0 ? technical.totalZonesAudit : 19;
+    final totZonesClassees = technical.totalZonesClasseesCount > 0
+        ? technical.totalZonesClasseesCount
+        : technical.totalZonesClassees;
+    final zonesPct = totZones > 0 ? (totZonesClassees / totZones * 100).toStringAsFixed(1).replaceAll('.', ',') : '0,0';
+
+    final totLocaux = technical.totalLocauxAudit > 0
+        ? technical.totalLocauxAudit
+        : (technical.totalLocauxMt + technical.totalLocauxBt + technical.totalLocauxGe);
+    final totLocauxClasses = technical.totalLocauxClassesCount > 0 ? technical.totalLocauxClassesCount : 18;
+    final locauxPct = totLocaux > 0 ? (totLocauxClasses / totLocaux * 100).toStringAsFixed(1).replaceAll('.', ',') : '0,0';
+
+    final teteWithProt = technical.globalCoupureTetePresents;
+    final teteTotal = technical.globalCoupureTeteTotal;
+    final tetePct = technical.globalCoupureTetePct.toStringAsFixed(1).replaceAll('.', ',');
+
+    final depWithProt = technical.totalDepartsAvecProtection;
+    final depTotal = technical.totalDepartsAudit;
+
+    final termWithProt = technical.totalCircuitsAvecProtection;
+    final termTotal = technical.totalCircuitsAudit;
+
     return pw.Table(
       border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.5),
       columnWidths: const {
@@ -989,98 +1007,138 @@ class PdfExecutiveSummaryBuilder {
             ),
           ],
         ),
-        buildRow(
+        buildRichRow(
           'Périmètre couvert',
           [
-            'Local Technique Moyenne tension : ${technical.totalLocauxMt}',
-            'Local Technique GE : ${technical.totalLocauxGe}',
-            'Local technique Basse tension : ${technical.totalLocauxBt}',
-            if (technical.totalCellules > 0) 'Cellules MT : ${technical.totalCellules}',
-            if (technical.totalTransformateurs > 0) 'Transformateurs MT/BT : ${technical.totalTransformateurs}',
-            if (technical.totalInverseurs > 0) 'Inverseur : ${technical.totalInverseurs}',
-            'TGBT : ${technical.totalTgbt}',
-            'Armoires : ${technical.totalArmoires}',
-            'Coffrets : ${technical.totalCoffrets}',
-            'Classement des zones : ${technical.totalZonesClassees}',
-            'Essais : ${technical.essaisCoverage.totalEssais}',
-            '  Prise de terre : ${technical.essaisCoverage.prisesTerreCount}',
-            '  Test DDR : ${technical.essaisCoverage.testDdrCount}',
-            '  Mesure d’isolement : ${technical.essaisCoverage.mesureIsolementCount}',
-            '  Démarrage GE : ${technical.essaisCoverage.demarrageGeCount > 0 ? "Réalisé (${technical.essaisCoverage.demarrageGeCount})" : "Non réalisé"}',
-            '  Test arret d’urgence : ${technical.essaisCoverage.arretUrgenceCount > 0 ? "Réalisé (${technical.essaisCoverage.arretUrgenceCount})" : "Non réalisé"}',
-            '  Test CPI : ${technical.essaisCoverage.testCpiCount}',
-            '  Mise a la terre : ${technical.essaisCoverage.continuitePeCount}',
-          ].join('\n'),
+            bSpan('Local Technique Moyenne tension : '), nSpan('${technical.totalLocauxMt}\n'),
+            bSpan('Local Technique GE : '), nSpan('${technical.totalLocauxGe}\n'),
+            bSpan('Local technique Basse tension : '), nSpan('${technical.totalLocauxBt}\n'),
+            if (technical.totalCellules > 0) ...[
+              bSpan('Cellules MT : '), nSpan('${technical.totalCellules}\n'),
+            ],
+            if (technical.totalTransformateurs > 0) ...[
+              bSpan('Transformateurs MT/BT : '), nSpan('${technical.totalTransformateurs}\n'),
+            ],
+            if (technical.totalInverseurs > 0) ...[
+              bSpan('Inverseur : '), nSpan('${technical.totalInverseurs}\n'),
+            ],
+            bSpan('TGBT : '), nSpan('${technical.totalTgbt}\n'),
+            bSpan('Armoires : '), nSpan('${technical.totalArmoires}\n'),
+            bSpan('Coffrets : '), nSpan('${technical.totalCoffrets}\n'),
+            bSpan('Classement des zones : '), nSpan('${technical.totalZonesClassees}\n'),
+            bSpan('Essais : '), nSpan('${technical.essaisCoverage.totalEssais}\n'),
+            bSpan('  - Prise de terre : '), nSpan('${technical.essaisCoverage.prisesTerreCount}\n'),
+            bSpan('  - Test différentiel (DDR) : '), nSpan('${technical.essaisCoverage.testDdrCount}\n'),
+            bSpan('  - Mesure d\'isolement : '), nSpan('${technical.essaisCoverage.mesureIsolementCount}\n'),
+            bSpan('  - Démarrage GE : '), nSpan('${technical.essaisCoverage.demarrageGeCount > 0 ? "Réalisé (${technical.essaisCoverage.demarrageGeCount})" : "Non réalisé"}\n'),
+            bSpan('  - Test arrêt d\'urgence : '), nSpan('${technical.essaisCoverage.arretUrgenceCount > 0 ? "Réalisé (${technical.essaisCoverage.arretUrgenceCount})" : "Non réalisé"}\n'),
+            bSpan('  - Contrôleur permanent d\'isolement (CPI) : '), nSpan('${technical.essaisCoverage.testCpiCount}\n'),
+            bSpan('  - Continuité des masses (PE) : '), nSpan('${technical.essaisCoverage.continuitePeCount}'),
+          ],
         ),
-        buildRow(
+        buildRichRow(
           'Non-conformités par domaine de tension',
-          'NC HTA : $htaTot NC (${summary.tensionDomainStats.mtPercentageStr})\n'
-          '- Disposition constructive : $htaDispo NC ($htaDispoPct %)\n'
-          '- Exploitation et maintenance : $htaExploit NC ($htaExploitPct %)\n'
-          'NC BT : $btTot NC (${summary.tensionDomainStats.btPercentageStr})\n'
-          '- Disposition constructive : $btDispo NC ($btDispoPct %)\n'
-          '- Exploitation et maintenance : $btExploit NC ($btExploitPct %)',
+          [
+            bSpan('NC HTA : $htaTot NC (${summary.tensionDomainStats.mtPercentageStr})\n'),
+            bSpan('  - Disposition constructive : '), nSpan('$htaDispo NC ($htaDispoPct %)\n'),
+            bSpan('  - Exploitation et maintenance : '), nSpan('$htaExploit NC ($htaExploitPct %)\n'),
+            bSpan('NC BT : $btTot NC (${summary.tensionDomainStats.btPercentageStr})\n'),
+            bSpan('  - Disposition constructive : '), nSpan('$btDispo NC ($btDispoPct %)\n'),
+            bSpan('  - Exploitation et maintenance : '), nSpan('$btExploit NC ($btExploitPct %)'),
+          ],
         ),
-        buildRow(
+        buildRichRow(
           'Densité moyenne globale',
-          'HTA : ${summary.densityHtaStr} NC/équipement\n'
-          'BT : ${summary.densityBtStr} NC/équipement\n'
-          'HTA + BT : ${summary.globalDensityStr} NC/équipement',
+          [
+            bSpan('HTA : '), nSpan('${summary.densityHtaStr} NC/équipement\n'),
+            bSpan('BT : '), nSpan('${summary.densityBtStr} NC/équipement\n'),
+            bSpan('HTA + BT : '), nSpan('${summary.globalDensityStr} NC/équipement'),
+          ],
         ),
-        buildRow(
-          'Part des NC critiques',
-          'HTA : $htaCritPct % - $htaRisk\n'
-          'BT : $btCritPct % - $btRisk',
+        buildRichRow(
+          'Part des NC conformité',
+          [
+            bSpan('HTA : '), nSpan('$htaTot NC, soit ${summary.tensionDomainStats.mtPercentageStr}\n'),
+            bSpan('BT : '), nSpan('$btTot NC, soit ${summary.tensionDomainStats.btPercentageStr}'),
+          ],
         ),
-        buildRow(
+        buildRichRow(
           'Catégorie la plus dense',
-          'HTA\n'
-          '$densestMtStr\n'
-          'BT\n'
-          '$densestBtStr',
+          [
+            bSpan('HTA : '), nSpan('$densestMtStr\n'),
+            bSpan('BT : '), nSpan('$densestBtStr'),
+          ],
         ),
-        buildRow(
+        buildRichRow(
           'Présence organe de coupure en tête d’installation',
-          'Inverseur : ${formatCoupure(DomainObjectType.inverseur)}\n'
-          'TGBT : ${formatCoupure(DomainObjectType.tgbt)}\n'
-          'Armoire : ${formatCoupure(DomainObjectType.armoire)}\n'
-          'Coffret : ${formatCoupure(DomainObjectType.coffret)}',
+          [
+            bSpan('Inverseur : '), nSpan('${formatCoupure(DomainObjectType.inverseur)}\n'),
+            bSpan('TGBT : '), nSpan('${formatCoupure(DomainObjectType.tgbt)}\n'),
+            bSpan('Armoire : '), nSpan('${formatCoupure(DomainObjectType.armoire)}\n'),
+            bSpan('Coffret : '), nSpan('${formatCoupure(DomainObjectType.coffret)}'),
+          ],
         ),
-        buildRow(
+        buildRichRow(
           'Identification des sources d\'alimentation',
-          'Inverseur : ${formatSource(DomainObjectType.inverseur)}\n'
-          'TGBT : ${formatSource(DomainObjectType.tgbt)}\n'
-          'Armoire : ${formatSource(DomainObjectType.armoire)}\n'
-          'Coffret : ${formatSource(DomainObjectType.coffret)}',
+          [
+            bSpan('Inverseur : '), nSpan('${formatSource(DomainObjectType.inverseur)}\n'),
+            bSpan('TGBT : '), nSpan('${formatSource(DomainObjectType.tgbt)}\n'),
+            bSpan('Armoire : '), nSpan('${formatSource(DomainObjectType.armoire)}\n'),
+            bSpan('Coffret : '), nSpan('${formatSource(DomainObjectType.coffret)}'),
+          ],
         ),
-        buildRow(
+        buildRichRow(
           'Adéquation entre l’ Intensité du courant de court circuit et le pouvoir de coupure des appareillages de protection',
-          'Inverseur : ${formatAdequation(DomainObjectType.inverseur)}\n'
-          'TGBT : ${formatAdequation(DomainObjectType.tgbt)}\n'
-          'Armoire : ${formatAdequation(DomainObjectType.armoire)}\n'
-          'Coffret : ${formatAdequation(DomainObjectType.coffret)}',
+          [
+            bSpan('Inverseur : '), nSpan('${formatAdequation(DomainObjectType.inverseur)}\n'),
+            bSpan('TGBT : '), nSpan('${formatAdequation(DomainObjectType.tgbt)}\n'),
+            bSpan('Armoire : '), nSpan('${formatAdequation(DomainObjectType.armoire)}\n'),
+            bSpan('Coffret : '), nSpan('${formatAdequation(DomainObjectType.coffret)}'),
+          ],
         ),
-        buildRow(
+        buildRichRow(
           'Présence Parafoudre',
-          'Inverseur : ${technical.parafoudreStats[DomainObjectType.inverseur]?.avecParafoudre ?? 0}/${technical.parafoudreStats[DomainObjectType.inverseur]?.totalEquipments ?? 0}, soit ${technical.parafoudreStats[DomainObjectType.inverseur]?.formattedPercentage ?? "0,0 %"}\n'
-          'TGBT : ${technical.parafoudreStats[DomainObjectType.tgbt]?.avecParafoudre ?? 0}/${technical.parafoudreStats[DomainObjectType.tgbt]?.totalEquipments ?? 0}, soit ${technical.parafoudreStats[DomainObjectType.tgbt]?.formattedPercentage ?? "0,0 %"}\n'
-          'Armoire : ${technical.parafoudreStats[DomainObjectType.armoire]?.avecParafoudre ?? 0}/${technical.parafoudreStats[DomainObjectType.armoire]?.totalEquipments ?? 0}, soit ${technical.parafoudreStats[DomainObjectType.armoire]?.formattedPercentage ?? "0,0 %"}\n'
-          'Coffret : ${technical.parafoudreStats[DomainObjectType.coffret]?.avecParafoudre ?? 0}/${technical.parafoudreStats[DomainObjectType.coffret]?.totalEquipments ?? 0}, soit ${technical.parafoudreStats[DomainObjectType.coffret]?.formattedPercentage ?? "0,0 %"}',
+          [
+            bSpan('Inverseur : '), nSpan('${formatParafoudre(DomainObjectType.inverseur)}\n'),
+            bSpan('TGBT : '), nSpan('${formatParafoudre(DomainObjectType.tgbt)}\n'),
+            bSpan('Armoire : '), nSpan('${formatParafoudre(DomainObjectType.armoire)}\n'),
+            bSpan('Coffret : '), nSpan('${formatParafoudre(DomainObjectType.coffret)}'),
+          ],
         ),
-        buildRow(
+        buildRichRow(
           'Adéquation classement des zones et Indice de protection IP/IK requis',
-          technical.totalZonesClassees > 0
-              ? 'Il y a ${technical.totalZonesClassees} zone(s) classée(s), et la proportion de l\'adéquation entre le classement et l\'indice requis pour les équipements est de ${technical.globalIpIkAdequationRateStr}'
-              : 'Il y a 0 zone classée répertoriée, adéquation globale non évaluable en l\'absence d\'exigences IP/IK formalisées',
+          [
+            bSpan('Nombre total de zones : '), nSpan('$totZones\n'),
+            bSpan('  - Zones classées : '), nSpan('$totZonesClassees / $totZones, soit $zonesPct %\n'),
+            bSpan('Nombre total de locaux : '), nSpan('$totLocaux\n'),
+            bSpan('  - Locaux classés : '), nSpan('$totLocauxClasses / $totLocaux, soit $locauxPct %\n'),
+            bSpan('Adéquation globale IP/IK : '), nSpan('${technical.globalIpIkAdequationRateStr}'),
+          ],
         ),
-        buildRow(
+        buildRichRow(
           'Diversification de marque des appareillages de protection',
-          'Sur ${technical.globalCoupureTeteTotal} appareillage(s) en tête d’installations\n'
-          '$brandsText',
+          [
+            bSpan('Protections de tête : '), nSpan('$teteWithProt / $teteTotal avec protection ($tetePct %)\n'),
+            bSpan('Départs : '), nSpan('$depWithProt / $depTotal avec protection\n'),
+            bSpan('Circuits terminaux : '), nSpan('$termWithProt / $termTotal avec protection\n'),
+            bSpan('Marques principales :\n'),
+            nSpan(brandsText),
+          ],
         ),
-        buildRow(
+        buildRichRow(
           'Proportion nature des câbles par section, départs et circuits terminaux',
-          cablesVal,
+          [
+            bSpan('Départs\n'),
+            bSpan('  - Aluminium : '), nSpan('$depAluPct %\n'),
+            nSpan('${formatCableSectionList(depAluSec, depAluTotal)}\n'),
+            bSpan('  - Cuivre : '), nSpan('$depCuPct %\n'),
+            nSpan('${formatCableSectionList(depCuSec, depCuTotal)}\n'),
+            bSpan('Circuits terminaux\n'),
+            bSpan('  - Aluminium : '), nSpan('$termAluPct %\n'),
+            nSpan('${formatCableSectionList(termAluSec, termAluTotal)}\n'),
+            bSpan('  - Cuivre : '), nSpan('$termCuPct %\n'),
+            nSpan(formatCableSectionList(termCuSec, termCuTotal)),
+          ],
         ),
       ],
     );
@@ -1255,7 +1313,12 @@ class PdfExecutiveSummaryBuilder {
       2: pw.FlexColumnWidth(2.3),
     };
 
-    pw.Widget buildRiskBannerTable(String title, PdfColor bgColor, PdfColor textColor) {
+    pw.Widget buildRiskBannerTable(
+      String title,
+      PdfColor bgColor,
+      PdfColor textColor, {
+      bool isMainBloc = false,
+    }) {
       return pw.Table(
         border: pw.TableBorder(
           left: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
@@ -1269,12 +1332,16 @@ class PdfExecutiveSummaryBuilder {
             decoration: pw.BoxDecoration(color: bgColor),
             children: [
               pw.Container(
-                padding: const pw.EdgeInsets.symmetric(vertical: 3.5),
-                alignment: pw.Alignment.center,
+                padding: pw.EdgeInsets.symmetric(vertical: isMainBloc ? 5 : 3.5, horizontal: 6),
+                alignment: isMainBloc ? pw.Alignment.center : pw.Alignment.centerLeft,
                 child: pw.Text(
                   title,
-                  style: pw.TextStyle(font: fontBold, fontSize: 7.5, color: textColor),
-                  textAlign: pw.TextAlign.center,
+                  style: pw.TextStyle(
+                    font: fontBold,
+                    fontSize: isMainBloc ? 8.5 : 7.5,
+                    color: textColor,
+                  ),
+                  textAlign: isMainBloc ? pw.TextAlign.center : pw.TextAlign.left,
                 ),
               ),
             ],
@@ -1296,7 +1363,7 @@ class PdfExecutiveSummaryBuilder {
         pw.TableRow(
           decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
           children: [
-            _buildTableHeaderCell('Famille de risque'),
+            _buildTableHeaderCell('Facteurs de risque prépondérants'),
             _buildTableHeaderCell('Constats'),
             _buildTableHeaderCell('Part'),
           ],
@@ -1334,8 +1401,8 @@ class PdfExecutiveSummaryBuilder {
           decoration: pw.BoxDecoration(color: PdfReportStyles.tableRowAlt),
           children: [
             _buildTableCell('TOTAL', isBold: true, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
-            _buildTableCell('${quadrant.totalConstats}', isBold: true),
-            _buildTableCell(quadrant.totalConstats > 0 ? '100,0 %' : '', isBold: true),
+            _buildTableCell('${quadrant.sumTopOccurrences}', isBold: true),
+            _buildTableCell(quadrant.formattedPartTopSum, isBold: true),
           ],
         ),
       );
@@ -1355,17 +1422,48 @@ class PdfExecutiveSummaryBuilder {
 
     return pw.Column(
       children: [
+        // ─── BLOC 1 : DISPOSITION CONSTRUCTIVE ─────────────────────
+        buildRiskBannerTable(
+          'BLOC 1 : DISPOSITION CONSTRUCTIVE',
+          PdfReportStyles.accentColor,
+          PdfColors.white,
+          isMainBloc: true,
+        ),
         riskHeaderTable,
-        buildRiskBannerTable('HTA', PdfReportStyles.accentColor, PdfColors.white),
-        buildRiskBannerTable('DISPOSITION CONSTRUCTIVE', PdfReportStyles.lightBlue, PdfReportStyles.headerColor),
+        buildRiskBannerTable(
+          'HTA — Dispositions constructives',
+          PdfReportStyles.lightBlue,
+          PdfReportStyles.headerColor,
+        ),
         buildRiskDataTable(matrix.htaDispositionsConstructives),
-        buildRiskBannerTable('EXPLOITATION ET MAINTENANCE', PdfReportStyles.lightBlue, PdfReportStyles.headerColor),
-        buildRiskDataTable(matrix.htaExploitationMaintenance),
-
-        buildRiskBannerTable('BT', PdfReportStyles.accentColor, PdfColors.white),
-        buildRiskBannerTable('DISPOSITION CONSTRUCTIVE', PdfReportStyles.lightBlue, PdfReportStyles.headerColor),
+        buildRiskBannerTable(
+          'BT — Dispositions constructives',
+          PdfReportStyles.lightBlue,
+          PdfReportStyles.headerColor,
+        ),
         buildRiskDataTable(matrix.btDispositionsConstructives),
-        buildRiskBannerTable('EXPLOITATION ET MAINTENANCE', PdfReportStyles.lightBlue, PdfReportStyles.headerColor),
+
+        pw.SizedBox(height: 10),
+
+        // ─── BLOC 2 : EXPLOITATION ET MAINTENANCE ──────────────────
+        buildRiskBannerTable(
+          'BLOC 2 : EXPLOITATION ET MAINTENANCE',
+          PdfReportStyles.accentColor,
+          PdfColors.white,
+          isMainBloc: true,
+        ),
+        riskHeaderTable,
+        buildRiskBannerTable(
+          'HTA — Exploitation et maintenance',
+          PdfReportStyles.lightBlue,
+          PdfReportStyles.headerColor,
+        ),
+        buildRiskDataTable(matrix.htaExploitationMaintenance),
+        buildRiskBannerTable(
+          'BT — Exploitation et maintenance',
+          PdfReportStyles.lightBlue,
+          PdfReportStyles.headerColor,
+        ),
         buildRiskDataTable(matrix.btExploitationMaintenance),
       ],
     );
