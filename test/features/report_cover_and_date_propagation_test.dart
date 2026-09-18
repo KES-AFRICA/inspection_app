@@ -194,10 +194,7 @@ void main() {
       );
 
       final doc = pw.Document();
-      final pageTheme = pw.PageTheme(
-        pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-      );
+      final pageTheme = PdfReportService.buildCoverPageTheme();
 
       doc.addPage(
         pw.Page(
@@ -248,6 +245,50 @@ void main() {
 
       doc.addPage(page);
       expect(doc.document.pdfPageList.pages, isNotEmpty);
+    });
+
+    test('Génération de couverture avec données industrielles complexes et longues (Camrail) sans débordement', () async {
+      final complexMission = Mission(
+        id: 'M_COMPLEX_CAMRAIL',
+        nomClient: 'CAMRAIL - DIRECTION DES INSTALLATIONS FIXES ET DES TELECOMS',
+        nomSite: 'GARE CENTRALE DE BESSENGUE - POSTE MT/BT ET ATELIERS TRACTION',
+        natureMission: 'VERIFICATION PERIODIQUE REGLEMENTAIRE DES INSTALLATIONS ELECTRIQUES',
+        recepteurRapport: 'M. Le Responsable Sécurité et Maintenance des Installations',
+        lieuIntervention: 'Zone Ferroviaire de Bessengué, Douala, Cameroun',
+        dateRapport: fixedDateRapport,
+        dateIntervention: fixedDateIntervention,
+        status: 'en_cours',
+        createdAt: now,
+        updatedAt: now,
+      );
+
+      final complexRg = RenseignementsGeneraux(
+        missionId: 'M_COMPLEX_CAMRAIL',
+        etablissement: 'CAMRAIL Bessengué',
+        installation: 'Poste MT/BT',
+        activite: 'Transport Ferroviaire',
+        nomSite: 'GARE CENTRALE DE BESSENGUE - POSTE MT/BT ET ATELIERS TRACTION',
+        recepteurRapport: 'M. Le Responsable Sécurité et Maintenance des Installations',
+        lieuIntervention: 'Zone Ferroviaire de Bessengué, Douala, Cameroun',
+        updatedAt: now,
+      );
+
+      final doc = pw.Document();
+      doc.addPage(
+        pw.Page(
+          pageTheme: PdfReportService.buildCoverPageTheme(),
+          build: (ctx) => PdfCoverBuilder.buildCoverPage(
+            complexMission,
+            complexRg,
+            ctx,
+            numeroRapport: 'KES/IP/VE/2026/001',
+          ),
+        ),
+      );
+
+      final bytes = await doc.save();
+      expect(bytes, isNotEmpty);
+      expect(bytes.length, greaterThan(1000));
     });
   });
 

@@ -208,7 +208,7 @@ class PdfCoverBuilder {
           ],
         ),
 
-        pw.SizedBox(height: 55),
+        pw.SizedBox(height: 35),
 
         // ── Titre principal : RAPPORT (Centré, en Bleu KES officiel) ──
         pw.Center(
@@ -223,7 +223,7 @@ class PdfCoverBuilder {
           ),
         ),
 
-        pw.SizedBox(height: 30),
+        pw.SizedBox(height: 18),
 
         // ── Nature de la mission (Centrée, en Bleu KES officiel) ──
         pw.Center(
@@ -232,12 +232,36 @@ class PdfCoverBuilder {
             child: pw.Text(
               subTitleOverride ??
                   (() {
-                    final nature = (mission.natureMission ?? rg?.verificationType ?? 'Vérification Périodique réglementaire').trim().toUpperCase();
-                    final displayNature = (nature.startsWith('VERIFICATION') || nature.startsWith('VÉRIFICATION'))
-                        ? nature
-                        : 'VERIFICATION $nature';
-                    return '$displayNature\n\nDES INSTALLATIONS ELECTRIQUES';
+                    String nature = (mission.natureMission ?? rg?.verificationType ?? 'Vérification Périodique Réglementaire').trim();
+                    if (nature.isEmpty) nature = 'Vérification Périodique Réglementaire';
+                    String natureUpper = nature.toUpperCase();
+                    if (!natureUpper.startsWith('VÉRIFICATION') && !natureUpper.startsWith('VERIFICATION')) {
+                      natureUpper = 'VÉRIFICATION $natureUpper';
+                    }
+                    natureUpper = natureUpper
+                        .replaceAll(RegExp(r'\s+DES\s+INSTALLATIONS\s+ELECTRIQUES', caseSensitive: false), '')
+                        .replaceAll(RegExp(r'\s+DES\s+INSTALLATIONS\s+ÉLECTRIQUES', caseSensitive: false), '')
+                        .trim();
+                    return '$natureUpper\nDES INSTALLATIONS ELECTRIQUES';
                   })(),
+              style: pw.TextStyle(
+                font: fontBold,
+                fontSize: 16,
+                color: PdfReportStyles.headerColor,
+              ),
+              textAlign: pw.TextAlign.center,
+            ),
+          ),
+        ),
+
+        pw.SizedBox(height: 22),
+
+        // ── Nom du site (Centré, grand corps, en Bleu KES officiel, sans "Site :") ──
+        pw.Center(
+          child: pw.ConstrainedBox(
+            constraints: const pw.BoxConstraints(maxWidth: 480),
+            child: pw.Text(
+              siteAffichage,
               style: pw.TextStyle(
                 font: fontBold,
                 fontSize: 17,
@@ -248,46 +272,30 @@ class PdfCoverBuilder {
           ),
         ),
 
-        pw.SizedBox(height: 35),
-
-        // ── Nom du site (Centré, grand corps, en Bleu KES officiel, sans "Site :") ──
-        pw.Center(
-          child: pw.ConstrainedBox(
-            constraints: const pw.BoxConstraints(maxWidth: 480),
-            child: pw.Text(
-              siteAffichage,
-              style: pw.TextStyle(
-                font: fontBold,
-                fontSize: 18,
-                color: PdfReportStyles.headerColor,
-              ),
-              textAlign: pw.TextAlign.center,
-            ),
-          ),
-        ),
-
         pw.Spacer(),
 
-        // ── Bloc inférieur : Tableau 5 colonnes & QR Code ──
+        // ── Bloc inférieur : Tableau 5 colonnes (416pt) & QR Code (80pt) ──
         pw.Row(
           crossAxisAlignment: pw.CrossAxisAlignment.center,
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
             // Tableau 5 colonnes d'identification de la mission
-            pw.Expanded(
+            pw.SizedBox(
+              width: 416,
               child: pw.Table(
                 border: pw.TableBorder.all(color: PdfColors.black, width: 0.8),
                 defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
                 columnWidths: const {
-                  0: pw.FlexColumnWidth(2.3),
-                  1: pw.FlexColumnWidth(2.1),
-                  2: pw.FlexColumnWidth(1.6),
-                  3: pw.FlexColumnWidth(1.8),
-                  4: pw.FlexColumnWidth(1.6),
+                  0: pw.FixedColumnWidth(100),
+                  1: pw.FixedColumnWidth(90),
+                  2: pw.FixedColumnWidth(65),
+                  3: pw.FixedColumnWidth(75),
+                  4: pw.FixedColumnWidth(86),
                 },
                 children: [
                   // Ligne d'en-tête (en Bleu KES officiel)
                   pw.TableRow(
-                    decoration: const pw.BoxDecoration(color: PdfColors.white),
+                    decoration: pw.BoxDecoration(color: PdfReportStyles.headerColor),
                     children: [
                       _buildCoverTableHeaderCell('Nature de la mission'),
                       _buildCoverTableHeaderCell('N° du rapport'),
@@ -301,7 +309,13 @@ class PdfCoverBuilder {
                     decoration: const pw.BoxDecoration(color: PdfColors.white),
                     children: [
                       _buildCoverTableDataCell(
-                        mission.natureMission ?? rg?.verificationType ?? 'Vérification Périodique réglementaire',
+                        (() {
+                          final n = (mission.natureMission ?? rg?.verificationType ?? 'Vérification Périodique Réglementaire').trim();
+                          if (n.toUpperCase().contains('PERIODIQUE') || n.toUpperCase().contains('PÉRIODIQUE')) {
+                            return 'Vérification Périodique Réglementaire';
+                          }
+                          return n;
+                        })(),
                       ),
                       _buildCoverTableDataCell(
                         numRapport,
@@ -320,11 +334,10 @@ class PdfCoverBuilder {
                 ],
               ),
             ),
-            pw.SizedBox(width: 12),
             // Encadré QR Code KES
             pw.Container(
-              width: 82,
-              height: 82,
+              width: 80,
+              height: 80,
               decoration: pw.BoxDecoration(
                 border: pw.Border.all(color: PdfColors.black, width: 0.8),
                 color: PdfColors.white,
@@ -334,8 +347,8 @@ class PdfCoverBuilder {
               child: clientQrMemoryImg != null
                   ? pw.Image(
                       clientQrMemoryImg,
-                      width: 72,
-                      height: 72,
+                      width: 70,
+                      height: 70,
                       fit: pw.BoxFit.contain,
                     )
                   : pw.Column(
@@ -369,14 +382,14 @@ class PdfCoverBuilder {
 
   static pw.Widget _buildCoverTableHeaderCell(String text) {
     return pw.Container(
-      padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+      padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 6),
       alignment: pw.Alignment.center,
       child: pw.Text(
         text,
         style: pw.TextStyle(
           font: fontBold,
-          fontSize: 8.5,
-          color: PdfReportStyles.headerColor,
+          fontSize: 8,
+          color: PdfColors.white,
         ),
         textAlign: pw.TextAlign.center,
       ),
@@ -385,13 +398,13 @@ class PdfCoverBuilder {
 
   static pw.Widget _buildCoverTableDataCell(String text) {
     return pw.Container(
-      padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+      padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 7),
       alignment: pw.Alignment.center,
       child: pw.Text(
         text,
         style: pw.TextStyle(
           font: fontRegular,
-          fontSize: 8.5,
+          fontSize: 8,
           color: PdfColors.black,
         ),
         textAlign: pw.TextAlign.center,
