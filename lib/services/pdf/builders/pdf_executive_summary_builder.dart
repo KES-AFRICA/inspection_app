@@ -130,42 +130,46 @@ class PdfExecutiveSummaryBuilder {
     widgets.add(pw.SizedBox(height: 8));
 
     // 2.2. Criticité
+    widgets.add(pw.NewPage(freeSpace: 160));
     widgets.add(
-      PageTracker(
-        key: 'resume_executif_1_2_2',
-        registry: trackedPages,
-        offset: offset,
-        child: pw.Text(
-          '2.2. Criticité',
-          style: pw.TextStyle(font: fontBold, fontSize: fsH3, color: PdfReportStyles.headerColor),
-        ),
-      ),
-    );
-    widgets.add(pw.SizedBox(height: 4));
-    widgets.add(
-      pw.Text(
-        'Les vérifications ont permis de recenser ${statsSummary.totalNC} non-conformités sur l\'ensemble du périmètre, soit une densité moyenne de :',
-        style: pw.TextStyle(font: fontRegular, fontSize: fsBody, color: PdfReportStyles.darkGrey, lineSpacing: 2.0),
-      ),
-    );
-    widgets.add(pw.SizedBox(height: 3));
-    widgets.add(
-      pw.Padding(
-        padding: const pw.EdgeInsets.only(left: 8),
+      pw.Inseparable(
         child: pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
-            pw.Text('-  ${statsSummary.densityHtaStr} non-conformités par équipement HTA:', style: pw.TextStyle(font: fontRegular, fontSize: fsBody, color: PdfReportStyles.darkGrey)),
-            pw.SizedBox(height: 1.5),
-            pw.Text('-  ${statsSummary.densityBtStr} non-conformités par équipement BT:', style: pw.TextStyle(font: fontRegular, fontSize: fsBody, color: PdfReportStyles.darkGrey)),
-            pw.SizedBox(height: 1.5),
-            pw.Text('-  ${statsSummary.globalDensityStr} non-conformités par équipement HTA+BT:', style: pw.TextStyle(font: fontRegular, fontSize: fsBody, color: PdfReportStyles.darkGrey)),
+            PageTracker(
+              key: 'resume_executif_1_2_2',
+              registry: trackedPages,
+              offset: offset,
+              child: pw.Text(
+                '2.2. Criticité',
+                style: pw.TextStyle(font: fontBold, fontSize: fsH3, color: PdfReportStyles.headerColor),
+              ),
+            ),
+            pw.SizedBox(height: 4),
+            pw.Text(
+              'Les vérifications ont permis de recenser ${statsSummary.totalNC} non-conformités sur l\'ensemble du périmètre, soit une densité moyenne de :',
+              style: pw.TextStyle(font: fontRegular, fontSize: fsBody, color: PdfReportStyles.darkGrey, lineSpacing: 2.0),
+            ),
+            pw.SizedBox(height: 3),
+            pw.Padding(
+              padding: const pw.EdgeInsets.only(left: 8),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text('-  ${statsSummary.densityHtaStr} non-conformités par équipement HTA:', style: pw.TextStyle(font: fontRegular, fontSize: fsBody, color: PdfReportStyles.darkGrey)),
+                  pw.SizedBox(height: 1.5),
+                  pw.Text('-  ${statsSummary.densityBtStr} non-conformités par équipement BT:', style: pw.TextStyle(font: fontRegular, fontSize: fsBody, color: PdfReportStyles.darkGrey)),
+                  pw.SizedBox(height: 1.5),
+                  pw.Text('-  ${statsSummary.globalDensityStr} non-conformités par équipement HTA+BT:', style: pw.TextStyle(font: fontRegular, fontSize: fsBody, color: PdfReportStyles.darkGrey)),
+                ],
+              ),
+            ),
+            pw.SizedBox(height: 5),
+            _buildEnrichedDomainCriticalityTable(statsSummary, totalEquipments: snapshot.equipmentCount),
           ],
         ),
       ),
     );
-    widgets.add(pw.SizedBox(height: 5));
-    widgets.add(_buildEnrichedDomainCriticalityTable(statsSummary, totalEquipments: snapshot.equipmentCount));
     widgets.add(pw.SizedBox(height: 5));
     widgets.add(
       pw.Text(
@@ -384,16 +388,25 @@ class PdfExecutiveSummaryBuilder {
     widgets.add(pw.SizedBox(height: 10));
 
     // ── 9. Adéquation classement des zones, et indices des équipements ──
-    widgets.add(
-      PageTracker(
-        key: 'resume_executif_1_9',
-        registry: trackedPages,
-        offset: offset,
-        child: _subSectionHeader('9. Adéquation classement des zones, et indices des équipements'),
-      ),
+    final (ipIkHeaderRow, ipIkDataRows) = _buildIpIkRows(technical);
+    final ipIkHeaderWidget = PageTracker(
+      key: 'resume_executif_1_9',
+      registry: trackedPages,
+      offset: offset,
+      child: _subSectionHeader('9. Adéquation classement des zones, et indices des équipements'),
     );
-    widgets.add(pw.SizedBox(height: 4));
-    widgets.add(_buildIpIkTable(technical));
+    final ipIkBlocks = PdfReportStyles.buildHeaderWithTableList(
+      headerWidget: ipIkHeaderWidget,
+      headerRow: ipIkHeaderRow,
+      dataRows: ipIkDataRows,
+      columnWidths: const {
+        0: pw.FlexColumnWidth(3.2),
+        1: pw.FlexColumnWidth(6.8),
+      },
+      minFreeSpace: 220,
+      minRowsWithHeader: ipIkDataRows.length <= 2 ? ipIkDataRows.length : 2,
+    );
+    widgets.addAll(ipIkBlocks);
     widgets.add(pw.SizedBox(height: 10));
 
     // ── 10. Renforcement des compétences ──
@@ -625,6 +638,8 @@ class PdfExecutiveSummaryBuilder {
         1: pw.FlexColumnWidth(2.7),
         2: pw.FlexColumnWidth(5.5),
       },
+      minFreeSpace: 220,
+      minRowsWithHeader: recoRows.length,
     );
 
     widgets.addAll(recoBlocks);
@@ -799,10 +814,18 @@ class PdfExecutiveSummaryBuilder {
     final btTot = summary.tensionDomainStats.btCount;
 
     // Tri pour trouver la catégorie la plus dense en HTA et BT
-    final sortedMtCats = [...technical.mtCategoriesCrossRows]..sort((a, b) => b.densite.compareTo(a.densite));
+    const htaAllowed = {'Locaux techniques', 'Locaux techniques MT', 'Cellules', 'Cellules MT', 'Transformateurs', 'Transformateurs MT/BT'};
+    final sortedMtCats = technical.mtCategoriesCrossRows
+        .where((r) => htaAllowed.contains(r.categoryName) && r.equipementsCount > 0)
+        .toList()
+      ..sort((a, b) => b.densite.compareTo(a.densite));
     final densestMt = sortedMtCats.isNotEmpty ? sortedMtCats.first : null;
 
-    final sortedBtCats = [...technical.btCategoriesCrossRows]..sort((a, b) => b.densite.compareTo(a.densite));
+    const btAllowed = {'TGBT', 'Armoires', 'Coffrets', 'Inverseur', 'Inverseurs'};
+    final sortedBtCats = technical.btCategoriesCrossRows
+        .where((r) => btAllowed.contains(r.categoryName) && r.equipementsCount > 0)
+        .toList()
+      ..sort((a, b) => b.densite.compareTo(a.densite));
     final densestBt = sortedBtCats.isNotEmpty ? sortedBtCats.first : null;
 
     final densestMtStr = densestMt != null
@@ -985,7 +1008,7 @@ class PdfExecutiveSummaryBuilder {
       return '$avec/$total, soit $pct';
     }
 
-    final totZones = technical.totalZonesAudit > 0 ? technical.totalZonesAudit : 19;
+    final totZones = technical.totalZonesAudit;
     final totZonesClassees = technical.totalZonesClasseesCount > 0
         ? technical.totalZonesClasseesCount
         : technical.totalZonesClassees;
@@ -994,7 +1017,7 @@ class PdfExecutiveSummaryBuilder {
     final totLocaux = technical.totalLocauxAudit > 0
         ? technical.totalLocauxAudit
         : (technical.totalLocauxMt + technical.totalLocauxBt + technical.totalLocauxGe);
-    final totLocauxClasses = technical.totalLocauxClassesCount > 0 ? technical.totalLocauxClassesCount : 18;
+    final totLocauxClasses = technical.totalLocauxClassesCount;
     final locauxPct = totLocaux > 0 ? (totLocauxClasses / totLocaux * 100).toStringAsFixed(1).replaceAll('.', ',') : '0,0';
 
     return pw.Table(
@@ -1971,7 +1994,7 @@ class PdfExecutiveSummaryBuilder {
     );
   }
 
-  static pw.Widget _buildIpIkTable(TechnicalEnrichmentResult technical) {
+  static (pw.TableRow, List<pw.TableRow>) _buildIpIkRows(TechnicalEnrichmentResult technical) {
     pw.Widget buildRichStatsCell(IpIkZoneItem item) {
       final total = item.totalEquipements;
       final equipLabel = item.formattedEquipmentCount;
@@ -2171,6 +2194,43 @@ class PdfExecutiveSummaryBuilder {
       );
     }
 
+    final headerRow = pw.TableRow(
+      decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
+      children: [
+        _buildTableHeaderCell('Classement'),
+        _buildTableHeaderCell('Taux de conformité adéquation des équipements'),
+      ],
+    );
+
+    final dataRows = <pw.TableRow>[];
+    if (technical.ipIkZoneItems.isEmpty) {
+      dataRows.add(
+        pw.TableRow(
+          children: [
+            _buildTableCell('Ambiance générale site (sans zone classée spécifique)', isBold: true, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
+            _buildTableCell('Donnée non renseignée sur le terrain', align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
+          ],
+        ),
+      );
+    } else {
+      for (final item in technical.ipIkZoneItems) {
+        dataRows.add(
+          pw.TableRow(
+            verticalAlignment: pw.TableCellVerticalAlignment.middle,
+            children: [
+              _buildTableCell(item.zoneNom, isBold: true, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
+              buildRichStatsCell(item),
+            ],
+          ),
+        );
+      }
+    }
+
+    return (headerRow, dataRows);
+  }
+
+  static pw.Widget _buildIpIkTable(TechnicalEnrichmentResult technical) {
+    final (headerRow, dataRows) = _buildIpIkRows(technical);
     return pw.Table(
       border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.5),
       columnWidths: const {
@@ -2178,29 +2238,8 @@ class PdfExecutiveSummaryBuilder {
         1: pw.FlexColumnWidth(6.8),
       },
       children: [
-        pw.TableRow(
-          decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
-          children: [
-            _buildTableHeaderCell('Classement'),
-            _buildTableHeaderCell('Taux de conformité adéquation des équipements'),
-          ],
-        ),
-        if (technical.ipIkZoneItems.isEmpty)
-          pw.TableRow(
-            children: [
-              _buildTableCell('Ambiance générale site (sans zone classée spécifique)', isBold: true, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
-              _buildTableCell('Donnée non renseignée sur le terrain', align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
-            ],
-          )
-        else
-          for (final item in technical.ipIkZoneItems)
-            pw.TableRow(
-              verticalAlignment: pw.TableCellVerticalAlignment.middle,
-              children: [
-                _buildTableCell(item.zoneNom, isBold: true, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
-                buildRichStatsCell(item),
-              ],
-            ),
+        headerRow,
+        ...dataRows,
       ],
     );
   }

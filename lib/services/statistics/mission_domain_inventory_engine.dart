@@ -832,7 +832,7 @@ class MissionDomainInventoryEngine {
         originNom: originNom,
         parentZone: parentZone,
         parentLocal: local.nom,
-        defaultTensionDomain: TensionDomain.mt,
+        defaultTensionDomain: TensionDomain.bt,
         instances: instances,
         addFinding: addFinding,
         visitedCoffrets: visitedCoffrets,

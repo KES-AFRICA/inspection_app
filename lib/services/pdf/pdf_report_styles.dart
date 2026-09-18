@@ -628,6 +628,7 @@ class PdfReportStyles {
         pw.TableCellVerticalAlignment.middle,
     pw.TableBorder? border,
     double minFreeSpace = 115,
+    int minRowsWithHeader = 1,
   }) {
     if (dataRows.isEmpty) {
       return [
@@ -640,6 +641,10 @@ class PdfReportStyles {
     final tableBorder =
         border ?? pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.5);
 
+    final initialCount = dataRows.length <= minRowsWithHeader
+        ? dataRows.length
+        : minRowsWithHeader;
+
     final block1Children = <pw.Widget>[
       headerWidget,
       if (introWidget != null) ...[pw.SizedBox(height: 4), introWidget],
@@ -648,11 +653,11 @@ class PdfReportStyles {
         defaultVerticalAlignment: defaultVerticalAlignment,
         border: tableBorder,
         columnWidths: columnWidths,
-        children: [headerRow, dataRows.first],
+        children: [headerRow, ...dataRows.take(initialCount)],
       ),
     ];
 
-    if (dataRows.length == 1) {
+    if (dataRows.length <= initialCount) {
       return [
         pw.NewPage(freeSpace: minFreeSpace),
         pw.Column(
@@ -666,7 +671,7 @@ class PdfReportStyles {
       defaultVerticalAlignment: defaultVerticalAlignment,
       border: tableBorder,
       columnWidths: columnWidths,
-      children: dataRows.sublist(1),
+      children: dataRows.sublist(initialCount),
     );
 
     return [

@@ -680,14 +680,26 @@ class TechnicalEnrichmentResult {
   int get totalEquipementsElectriques =>
       totalEquipementsMT + totalEquipementsBT;
 
+  /// Adéquation globale IP/IK = (% zones classées + % locaux classés) / 2
+  double get globalIpIkAdequationRate {
+    final zonesPct = totalZonesAudit > 0
+        ? (totalZonesClasseesCount / totalZonesAudit) * 100.0
+        : 0.0;
+    final totalLocaux = totalLocauxAudit > 0
+        ? totalLocauxAudit
+        : (totalLocauxMt + totalLocauxBt + totalLocauxGe);
+    final locauxPct = totalLocaux > 0
+        ? (totalLocauxClassesCount / totalLocaux) * 100.0
+        : 0.0;
+    return (zonesPct + locauxPct) / 2.0;
+  }
+
   String get globalIpIkAdequationRateStr {
-    final totalConformes = ipIkZoneItems.fold(0, (s, e) => s + e.conformes);
-    final totalEvaluables = ipIkZoneItems.fold(0, (s, e) => s + e.evaluables);
-    if (totalEvaluables > 0) {
-      final pct = (totalConformes / totalEvaluables) * 100.0;
-      return '${pct.toStringAsFixed(1).replaceAll('.', ',')} %';
+    final rate = globalIpIkAdequationRate;
+    if (rate.truncateToDouble() == rate) {
+      return '${rate.toInt()} %';
     }
-    return '0,0 % (Déficit de données terrain : 100 % non renseignés)';
+    return '${rate.toStringAsFixed(1).replaceAll('.', ',')} %';
   }
 
   Map<String, int> get globalMarquesDeTete {
