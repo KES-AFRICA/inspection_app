@@ -83,7 +83,7 @@ void main() {
 
     test('TechnicalEnrichmentEngine calculates correct equipment totals and cross rows matching 496 findings', () {
       // 156 MT findings distributed:
-      // 127 local MT, 23 cellules MT, 4 transformateurs MT, 2 armoire MT
+      // 127 local MT (47 dispo + 80 exploit), 23 cellules MT, 4 transformateurs MT, 2 armoire MT
       final mtLocFindings = List.generate(127, (i) => AuditFinding(
         id: 'mt_loc_$i',
         missionId: 'cimencam',
@@ -91,7 +91,7 @@ void main() {
         origin: 'Poste MT',
         objectType: 'Local MT',
         objectName: 'Poste MT 1',
-        tableName: 'Table MT',
+        tableName: i < 47 ? 'Dispositions constructives' : "Conditions d'exploitation",
         verificationPoint: 'Point $i',
         observationText: 'Defaut $i',
         conformity: 'non',
@@ -141,7 +141,7 @@ void main() {
       ));
 
       // 340 BT findings distributed:
-      // 30 local GE, 52 local BT, 5 inverseur, 174 armoire BT, 79 coffret BT
+      // 30 local GE (6 dispo + 24 exploit), 52 local BT (29 dispo + 23 exploit), 5 inverseur, 174 armoire BT, 79 coffret BT
       final btGeFindings = List.generate(30, (i) => AuditFinding(
         id: 'bt_ge_$i',
         missionId: 'cimencam',
@@ -149,7 +149,7 @@ void main() {
         origin: 'Zone BT',
         objectType: 'Groupe Électrogène',
         objectName: 'Local GE',
-        tableName: 'Table BT',
+        tableName: i < 6 ? 'Dispositions constructives' : "Conditions d'exploitation",
         verificationPoint: 'Point $i',
         observationText: 'Defaut $i',
         conformity: 'non',
@@ -163,7 +163,7 @@ void main() {
         origin: 'Zone BT',
         objectType: 'Local BT',
         objectName: 'Local BT',
-        tableName: 'Table BT',
+        tableName: i < 29 ? 'Dispositions constructives' : "Conditions d'exploitation",
         verificationPoint: 'Point $i',
         observationText: 'Defaut $i',
         conformity: 'non',
@@ -324,13 +324,26 @@ void main() {
       expect(result.totalEquipementsBT, equals(74 + 19 + 1)); // 94 BT specific
       expect(result.totalEquipementsElectriques, equals(38 + 94)); // 132
 
-      // Verify cross rows
+      // Verify local findings split
+      expect(result.locauxMtFindings.dispoConstructives, equals(47));
+      expect(result.locauxMtFindings.conditionsExploitation, equals(80));
+      expect(result.locauxBtFindings.dispoConstructives, equals(35));
+      expect(result.locauxBtFindings.conditionsExploitation, equals(47));
+
+      // Verify cross rows (Exploitation et maintenance)
       final mtRowsNcSum = result.mtCategoriesCrossRows.fold<int>(0, (s, r) => s + r.ncCount);
       final btRowsNcSum = result.btCategoriesCrossRows.fold<int>(0, (s, r) => s + r.ncCount);
 
-      expect(mtRowsNcSum, equals(156));
-      expect(btRowsNcSum, equals(340));
-      expect(mtRowsNcSum + btRowsNcSum, equals(496));
+      expect(mtRowsNcSum, equals(109));
+      expect(btRowsNcSum, equals(305));
+
+      // Reconciliation to total domain findings
+      final totalMt = result.locauxMtFindings.dispoConstructives + mtRowsNcSum;
+      final totalBt = result.locauxBtFindings.dispoConstructives + btRowsNcSum;
+
+      expect(totalMt, equals(156));
+      expect(totalBt, equals(340));
+      expect(totalMt + totalBt, equals(496));
     });
   });
 }

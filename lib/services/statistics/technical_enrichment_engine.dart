@@ -9,6 +9,7 @@ import '../hive_service.dart';
 import 'audit_finding.dart';
 import 'canonical_defect_category_registry.dart';
 import 'domain_entity_instance.dart';
+import 'ip_ik_evaluator.dart';
 import 'mission_domain_inventory_engine.dart';
 import 'risk_family_normalizer.dart';
 
@@ -187,40 +188,82 @@ class CablesMatrixRow {
 /// Ligne de conformité IP/IK par zone ou emplacement classé.
 class IpIkZoneItem {
   final String zoneNom;
+  final String? parentZoneNom;
+  final bool isLocal;
   final String? ipRequis;
   final String? ikRequis;
   final int totalEquipements;
+
+  // Nouvelle structure selon la hiérarchie du tableau 9
+  final int adequatCount;
+  final int presentDifferentCount;
+  final int absentCount;
+  final int nonEvaluableCount;
+
+  // Rétrocompatibilité
   final int conformes;
   final int nonConformes;
   final int nonRenseignes;
   final int indicesPresents;
-
   final int pointsVerifies;
   final int pointsNonConformes;
 
   const IpIkZoneItem({
     required this.zoneNom,
+    this.parentZoneNom,
+    this.isLocal = false,
     this.ipRequis,
     this.ikRequis,
     required this.totalEquipements,
-    required this.conformes,
-    required this.nonConformes,
-    required this.nonRenseignes,
+    this.adequatCount = 0,
+    this.presentDifferentCount = 0,
+    this.absentCount = 0,
+    this.nonEvaluableCount = 0,
+    int? conformes,
+    int? nonConformes,
+    int? nonRenseignes,
     this.indicesPresents = 0,
     this.pointsVerifies = 0,
     this.pointsNonConformes = 0,
-  });
+  })  : conformes = conformes ?? adequatCount,
+        nonConformes = nonConformes ?? (presentDifferentCount + absentCount),
+        nonRenseignes = nonRenseignes ?? absentCount;
+
+  double get adequatPct =>
+      totalEquipements > 0 ? (adequatCount / totalEquipements) * 100.0 : 0.0;
+  double get presentDifferentPct =>
+      totalEquipements > 0 ? (presentDifferentCount / totalEquipements) * 100.0 : 0.0;
+  double get absentPct =>
+      totalEquipements > 0 ? (absentCount / totalEquipements) * 100.0 : 0.0;
+  double get nonEvaluablePct =>
+      totalEquipements > 0 ? (nonEvaluableCount / totalEquipements) * 100.0 : 0.0;
+
+  String get formattedAdequatPct =>
+      '${adequatPct.toStringAsFixed(1).replaceAll('.', ',')} %';
+  String get formattedPresentDifferentPct =>
+      '${presentDifferentPct.toStringAsFixed(1).replaceAll('.', ',')} %';
+  String get formattedAbsentPct =>
+      '${absentPct.toStringAsFixed(1).replaceAll('.', ',')} %';
+  String get formattedNonEvaluablePct =>
+      '${nonEvaluablePct.toStringAsFixed(1).replaceAll('.', ',')} %';
 
   int get evaluables =>
-      pointsVerifies > 0 ? pointsVerifies : (conformes + nonConformes);
+      pointsVerifies > 0 ? pointsVerifies : (totalEquipements - nonEvaluableCount);
   double get complianceRate => evaluables > 0
-      ? ((evaluables - pointsNonConformes) / evaluables) * 100.0
+      ? ((pointsVerifies > 0 ? (evaluables - pointsNonConformes) : adequatCount) /
+              evaluables) *
+          100.0
       : 0.0;
 
-  double get nonComplianceRate =>
-      pointsVerifies > 0 ? (pointsNonConformes / pointsVerifies) * 100.0 : 0.0;
+  double get nonComplianceRate => evaluables > 0
+      ? ((pointsVerifies > 0
+                  ? pointsNonConformes
+                  : (presentDifferentCount + absentCount)) /
+              evaluables) *
+          100.0
+      : 0.0;
 
-  String get formattedNonComplianceRate => pointsVerifies > 0
+  String get formattedNonComplianceRate => evaluables > 0
       ? '${nonComplianceRate.toStringAsFixed(1).replaceAll('.', ',')} %'
       : 'Non évaluable';
 
@@ -398,6 +441,14 @@ class RiskFamilyCrossMatrix {
   RiskFamilyQuadrantStats get dispoBt => btDispositionsConstructives;
   RiskFamilyQuadrantStats get exploitHta => htaExploitationMaintenance;
   RiskFamilyQuadrantStats get exploitBt => btExploitationMaintenance;
+
+  ({RiskFamilyQuadrantStats hta, RiskFamilyQuadrantStats bt})
+  get dispositionsConstructives =>
+      (hta: htaDispositionsConstructives, bt: btDispositionsConstructives);
+
+  ({RiskFamilyQuadrantStats hta, RiskFamilyQuadrantStats bt})
+  get exploitationMaintenance =>
+      (hta: htaExploitationMaintenance, bt: btExploitationMaintenance);
 
   int get totalHtaDispo => htaDispositionsConstructives.totalConstats;
   int get totalHtaExploit => htaExploitationMaintenance.totalConstats;
@@ -1011,10 +1062,12 @@ class TechnicalEnrichmentEngine {
     CategoryCrossAuditRow buildCategoryRow(
       String name,
       List<DomainEntityInstance> instances,
-      int totalNcDenominator,
-    ) {
+      int totalNcDenominator, {
+      List<AuditFinding>? customFindings,
+    }) {
       final eqCount = instances.length;
-      final findings = instances.expand((i) => i.pertinentFindings).toList();
+      final findings =
+          customFindings ?? instances.expand((i) => i.pertinentFindings).toList();
       final ncCount = findings.length;
       final critCount = findings
           .where((f) => f.criticality.toLowerCase().contains('critique'))
@@ -1040,11 +1093,18 @@ class TechnicalEnrichmentEngine {
       );
     }
 
+    final mtLocauxExploitFindings = domainInventory
+        .getInstancesByCategory(DomainObjectType.localMT)
+        .expand((i) => i.pertinentFindings)
+        .where((f) => !_isDispositionConstructiveFinding(f))
+        .toList();
+
     mtCatRows.add(
       buildCategoryRow(
         'Locaux techniques',
         domainInventory.getInstancesByCategory(DomainObjectType.localMT),
         totalMissionNc,
+        customFindings: mtLocauxExploitFindings,
       ),
     );
     mtCatRows.add(
@@ -1083,7 +1143,7 @@ class TechnicalEnrichmentEngine {
     final mtTotalMaj = mtCatRows.fold(0, (s, r) => s + r.majeuresCount);
     final mtTotalNc = mtCatRows.fold(0, (s, r) => s + r.ncCount);
     final mtTotalCrossRow = CategoryCrossAuditRow(
-      categoryName: 'TOTAL MOYENNE TENSION',
+      categoryName: 'TOTAL EXPLOITATION ET MAINTENANCE MT',
       equipementsCount: mtTotalEq,
       ncCount: mtTotalNc,
       critiquesCount: mtTotalCrit,
@@ -1098,11 +1158,23 @@ class TechnicalEnrichmentEngine {
     // 9. Lignes de conformité croisée par catégorie pour Basse Tension
     final btCatRows = <CategoryCrossAuditRow>[];
 
+    final btLocauxGeExploitFindings = domainInventory
+        .getInstancesByCategory(DomainObjectType.localGE)
+        .expand((i) => i.pertinentFindings)
+        .where((f) => !_isDispositionConstructiveFinding(f))
+        .toList();
+    final btLocauxBtExploitFindings = domainInventory
+        .getInstancesByCategory(DomainObjectType.localBT)
+        .expand((i) => i.pertinentFindings)
+        .where((f) => !_isDispositionConstructiveFinding(f))
+        .toList();
+
     btCatRows.add(
       buildCategoryRow(
         'Locaux techniques GE',
         domainInventory.getInstancesByCategory(DomainObjectType.localGE),
         totalMissionNc,
+        customFindings: btLocauxGeExploitFindings,
       ),
     );
     btCatRows.add(
@@ -1110,6 +1182,7 @@ class TechnicalEnrichmentEngine {
         'Locaux techniques BT',
         domainInventory.getInstancesByCategory(DomainObjectType.localBT),
         totalMissionNc,
+        customFindings: btLocauxBtExploitFindings,
       ),
     );
     btCatRows.add(
@@ -1159,7 +1232,7 @@ class TechnicalEnrichmentEngine {
     final btTotalMaj = btCatRows.fold(0, (s, r) => s + r.majeuresCount);
     final btTotalNc = btCatRows.fold(0, (s, r) => s + r.ncCount);
     final btTotalCrossRow = CategoryCrossAuditRow(
-      categoryName: 'TOTAL BASSE TENSION',
+      categoryName: 'TOTAL EXPLOITATION ET MAINTENANCE BT',
       equipementsCount: btTotalEq,
       ncCount: btTotalNc,
       critiquesCount: btTotalCrit,
@@ -1730,11 +1803,7 @@ class TechnicalEnrichmentEngine {
       DomainObjectType.inverseur,
     };
 
-    // ─── Filtre brouillons & éléments non finalisés ─────────────────
-    // On ne retient que les équipements finalisés (pas les brouillons / incomplets).
-    // Pour CoffretArmoire : on exclut explicitement 'incomplet' et 'brouillon'.
-    // Les enregistrements sans statut ou 'complet' sont conservés (rétrocompatibilité).
-    // Les cellules MT et transformateurs persistés dans l'audit sont retenus.
+    // Filtre brouillons & éléments non finalisés
     final allEquipmentInstances = domainInventory.instances.where((i) {
       if (!equipmentCategories.contains(i.category)) return false;
       final raw = i.rawModelRef;
@@ -1747,160 +1816,168 @@ class TechnicalEnrichmentEngine {
       return true;
     }).toList();
 
+    // Regroupement hiérarchique strict des équipements par repère d'affectation
+    // Structure : Local si présent, sinon Zone directe.
+    // Garantit l'absence totale de doublons et le respect de la population réelle.
+    final groupedEquipments = <String, List<DomainEntityInstance>>{};
+    final locationMeta =
+        <String, ({bool isLocal, String? localName, String? zoneName, String label})>{};
+
+    for (final inst in allEquipmentInstances) {
+      final pLocal = inst.parentLocal?.trim();
+      final pZone = inst.parentZone?.trim();
+
+      final String key;
+      if (pLocal != null && pLocal.isNotEmpty) {
+        key = 'LOCAL:${pZone?.toLowerCase() ?? ""}:${pLocal.toLowerCase()}';
+        locationMeta.putIfAbsent(
+          key,
+          () => (
+            isLocal: true,
+            localName: pLocal,
+            zoneName: pZone,
+            label: (pZone != null && pZone.isNotEmpty) ? '$pLocal ($pZone)' : pLocal,
+          ),
+        );
+      } else {
+        final zName =
+            (pZone != null && pZone.isNotEmpty) ? pZone : 'Zone non spécifiée';
+        key = 'ZONE:${zName.toLowerCase()}';
+        locationMeta.putIfAbsent(
+          key,
+          () => (
+            isLocal: false,
+            localName: null,
+            zoneName: pZone,
+            label: zName,
+          ),
+        );
+      }
+      groupedEquipments.putIfAbsent(key, () => []).add(inst);
+    }
+
     final result = <IpIkZoneItem>[];
 
-    // ─── 1. Zones classifiées ──────────────────────────────────────
-    // Hiérarchie stricte : Mission -> Zone -> Local -> Équipement.
-    // Tous les équipements rattachés à une zone (qu'ils soient enregistrés
-    // directement dans la zone, ou dans un local situé au sein de cette zone)
-    // appartiennent indirectement à la zone et doivent être comptabilisés dans son total.
-    for (final z in zones) {
-      final zoneName = z.nomZone.trim();
-      final equipInZone = allEquipmentInstances.where((i) {
-        final pZone = i.parentZone?.trim();
-        return pZone != null && pZone.toLowerCase() == zoneName.toLowerCase();
-      }).toList();
+    for (final entry in groupedEquipments.entries) {
+      final key = entry.key;
+      final equipList = entry.value;
+      final meta = locationMeta[key]!;
 
-      int totalPoints = 0;
-      int nonConformesPoints = 0;
-      int indPresents = 0;
+      String? reqIp;
+      String? reqIk;
 
-      for (final inst in equipInZone) {
-        final comp = inst.compliantCheckpoints;
-        final nonComp = inst.findings.isNotEmpty
-            ? inst.findings.length
-            : inst.nonCompliantCheckpoints;
-        totalPoints += (comp + nonComp);
-        nonConformesPoints += nonComp;
+      if (meta.isLocal) {
+        // 1. Recherche dans les classements de locaux
+        ClassementEmplacement? matchedEmp;
+        for (final emp in emplacements) {
+          if (emp.localisation.trim().toLowerCase() ==
+              meta.localName!.toLowerCase()) {
+            if (emp.zone != null &&
+                emp.zone!.trim().isNotEmpty &&
+                meta.zoneName != null &&
+                meta.zoneName!.trim().isNotEmpty) {
+              if (emp.zone!.trim().toLowerCase() ==
+                  meta.zoneName!.toLowerCase()) {
+                matchedEmp = emp;
+                break;
+              }
+            } else {
+              matchedEmp = emp;
+            }
+          }
+        }
 
+        if (matchedEmp != null) {
+          reqIp = matchedEmp.ipEffective ?? matchedEmp.ip;
+          reqIk = matchedEmp.ikEffective ?? matchedEmp.ik;
+        }
+
+        // Fallback sur la zone parente si l'indice du local n'est pas renseigné
+        if ((reqIp == null || reqIp.isEmpty) && meta.zoneName != null) {
+          for (final z in zones) {
+            if (z.nomZone.trim().toLowerCase() ==
+                meta.zoneName!.toLowerCase()) {
+              reqIp = z.ip;
+              reqIk = z.ik;
+              break;
+            }
+          }
+        }
+      } else {
+        // 2. Recherche dans les classements de zones
+        if (meta.zoneName != null) {
+          for (final z in zones) {
+            if (z.nomZone.trim().toLowerCase() ==
+                meta.zoneName!.toLowerCase()) {
+              reqIp = z.ip;
+              reqIk = z.ik;
+              break;
+            }
+          }
+        }
+      }
+
+      int adequatCount = 0;
+      int presentDifferentCount = 0;
+      int absentCount = 0;
+      int nonEvaluableCount = 0;
+
+      for (final inst in equipList) {
+        String? obsIpIk;
         final raw = inst.rawModelRef;
         if (raw is CoffretArmoire) {
           final ipVal = raw.indiceIpIk?.trim();
           final repVal = raw.indiceIpIkRepere?.trim();
-          final hasIp =
-              ipVal != null &&
-              ipVal.isNotEmpty &&
-              ipVal != '-' &&
-              ipVal.toLowerCase() != 'absent';
-          final hasRep =
-              repVal != null &&
-              repVal.isNotEmpty &&
-              repVal != '-' &&
-              repVal.toLowerCase() != 'absent';
-          if (hasIp || hasRep) {
-            indPresents++;
-          }
+          obsIpIk = (ipVal != null &&
+                  ipVal.isNotEmpty &&
+                  ipVal != '-' &&
+                  ipVal.toLowerCase() != 'absent')
+              ? ipVal
+              : repVal;
+        }
+
+        final status = IpIkEvaluator.evaluate(
+          reqIp: reqIp,
+          reqIk: reqIk,
+          obsRaw: obsIpIk,
+        );
+
+        switch (status) {
+          case IpIkAdequationStatus.adequat:
+            adequatCount++;
+            break;
+          case IpIkAdequationStatus.presentDifferent:
+            presentDifferentCount++;
+            break;
+          case IpIkAdequationStatus.absent:
+            absentCount++;
+            break;
+          case IpIkAdequationStatus.nonEvaluable:
+            nonEvaluableCount++;
+            break;
         }
       }
 
       result.add(
         IpIkZoneItem(
-          zoneNom: zoneName,
-          ipRequis: z.ip,
-          ikRequis: z.ik,
-          totalEquipements: equipInZone.length,
-          conformes: totalPoints > 0 ? (totalPoints - nonConformesPoints) : 0,
-          nonConformes: nonConformesPoints,
-          nonRenseignes: 0,
-          indicesPresents: indPresents,
-          pointsVerifies: totalPoints,
-          pointsNonConformes: nonConformesPoints,
+          zoneNom: meta.label,
+          parentZoneNom: meta.zoneName,
+          isLocal: meta.isLocal,
+          ipRequis: reqIp,
+          ikRequis: reqIk,
+          totalEquipements: equipList.length,
+          adequatCount: adequatCount,
+          presentDifferentCount: presentDifferentCount,
+          absentCount: absentCount,
+          nonEvaluableCount: nonEvaluableCount,
+          indicesPresents: adequatCount + presentDifferentCount,
         ),
       );
     }
 
-    // ─── 2. Locaux / emplacements classifiés ────────────────────────
-    // Un équipement appartient au local dans lequel il est enregistré.
-    // Un local classifié évalue précisément les équipements rattachés à ce local.
-    final processedLocalKeys = <String>{};
-    for (final emp in emplacements) {
-      final empName = emp.localisation.trim();
-      if (empName.isEmpty) continue;
-
-      // Si l'emplacement est de type 'zone' et correspond déjà à une zone classifiée,
-      // on évite le doublon pour ne pas polluer l'agrégation.
-      if (emp.isZone &&
-          zones.any(
-            (z) => z.nomZone.trim().toLowerCase() == empName.toLowerCase(),
-          )) {
-        continue;
-      }
-
-      // Clé unique pour éviter les doublons accidentels d'emplacements
-      final empKey =
-          '${emp.typeEmplacement}_${emp.zone?.trim().toLowerCase() ?? ""}_${empName.toLowerCase()}';
-      if (processedLocalKeys.contains(empKey)) continue;
-      processedLocalKeys.add(empKey);
-
-      final equipInEmp = allEquipmentInstances.where((i) {
-        final pLocal = i.parentLocal?.trim();
-        if (pLocal == null || pLocal.toLowerCase() != empName.toLowerCase()) {
-          return false;
-        }
-        // Si l'emplacement a une zone parente spécifiée et que l'instance a une parentZone,
-        // vérifier la concordance de zone pour éviter toute attribution croisée homonyme.
-        if (emp.zone != null &&
-            emp.zone!.trim().isNotEmpty &&
-            i.parentZone != null &&
-            i.parentZone!.trim().isNotEmpty) {
-          return i.parentZone!.trim().toLowerCase() ==
-              emp.zone!.trim().toLowerCase();
-        }
-        return true;
-      }).toList();
-
-      int totalPoints = 0;
-      int nonConformesPoints = 0;
-      int indPresents = 0;
-
-      for (final inst in equipInEmp) {
-        final comp = inst.compliantCheckpoints;
-        final nonComp = inst.findings.isNotEmpty
-            ? inst.findings.length
-            : inst.nonCompliantCheckpoints;
-        totalPoints += (comp + nonComp);
-        nonConformesPoints += nonComp;
-
-        final raw = inst.rawModelRef;
-        if (raw is CoffretArmoire) {
-          final ipVal = raw.indiceIpIk?.trim();
-          final repVal = raw.indiceIpIkRepere?.trim();
-          final hasIp =
-              ipVal != null &&
-              ipVal.isNotEmpty &&
-              ipVal != '-' &&
-              ipVal.toLowerCase() != 'absent';
-          final hasRep =
-              repVal != null &&
-              repVal.isNotEmpty &&
-              repVal != '-' &&
-              repVal.toLowerCase() != 'absent';
-          if (hasIp || hasRep) {
-            indPresents++;
-          }
-        }
-      }
-
-      final label =
-          (emp.zone != null && emp.zone!.trim().isNotEmpty && !emp.isZone)
-          ? '$empName (${emp.zone!.trim()})'
-          : empName;
-
-      result.add(
-        IpIkZoneItem(
-          zoneNom: label,
-          ipRequis: emp.ipEffective ?? emp.ip,
-          ikRequis: emp.ikEffective ?? emp.ik,
-          totalEquipements: equipInEmp.length,
-          conformes: totalPoints > 0 ? (totalPoints - nonConformesPoints) : 0,
-          nonConformes: nonConformesPoints,
-          nonRenseignes: 0,
-          indicesPresents: indPresents,
-          pointsVerifies: totalPoints,
-          pointsNonConformes: nonConformesPoints,
-        ),
-      );
-    }
+    result.sort(
+      (a, b) => a.zoneNom.toLowerCase().compareTo(b.zoneNom.toLowerCase()),
+    );
 
     return result;
   }
