@@ -123,79 +123,67 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
   Widget _buildReportDateCard() {
     final dateStr = _dateRapport != null
         ? '${_dateRapport!.day.toString().padLeft(2, '0')}/${_dateRapport!.month.toString().padLeft(2, '0')}/${_dateRapport!.year}'
-        : 'Sélectionner une date';
+        : '${DateTime.now().day.toString().padLeft(2, '0')}/${DateTime.now().month.toString().padLeft(2, '0')}/${DateTime.now().year}';
 
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Colors.grey.shade200, width: 1.2),
       ),
+      color: Colors.white,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Row(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: AppTheme.primaryBlue.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(
-                Icons.event_note,
-                color: AppTheme.primaryBlue,
-                size: 24,
+            const Text(
+              'Date du rapport',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
               ),
             ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Date du rapport',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Date officielle inscrite sur le rapport',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            const SizedBox(height: 12),
             InkWell(
               onTap: _selectDateRapport,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(12),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppTheme.primaryBlue.withOpacity(0.4)),
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade300),
                 ),
                 child: Row(
-                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      dateStr,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryBlue.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.calendar_today_rounded,
+                        size: 18,
                         color: AppTheme.primaryBlue,
                       ),
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        dateStr,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
                     const Icon(
-                      Icons.edit_calendar,
-                      size: 16,
+                      Icons.edit_calendar_rounded,
+                      size: 18,
                       color: AppTheme.primaryBlue,
                     ),
                   ],
@@ -1086,7 +1074,11 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
             ],
           ),
           const SizedBox(height: 16),
-          _buildSummaryRow('Client', widget.mission.nomClient),
+          _buildSummaryRow('Client', widget.mission.nomClient.toUpperCase()),
+          if (widget.mission.nomSite != null && widget.mission.nomSite!.isNotEmpty)
+            _buildSummaryRow('Site', widget.mission.nomSite!.toUpperCase()),
+          if (widget.mission.recepteurRapport != null && widget.mission.recepteurRapport!.isNotEmpty)
+            _buildSummaryRow('Récepteur du rapport', widget.mission.recepteurRapport!.toUpperCase()),
           if (widget.mission.activiteClient != null)
             _buildSummaryRow('Activité', widget.mission.activiteClient!),
           if (widget.mission.adresseClient != null)

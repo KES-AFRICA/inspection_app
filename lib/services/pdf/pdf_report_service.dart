@@ -282,7 +282,7 @@ class PdfReportService {
   //  THEMES DE PAGE (Couverture et Interieures)
   // ──────────────────────────────────────────────────────────────
 
-  /// Thème couverture (footer firstPage - Aucun filigrane sur la première page)
+  /// Thème couverture (footer firstPage - Filigrane KES avec opacité plus soutenue)
   static pw.PageTheme _buildCoverPageTheme() {
     return pw.PageTheme(
       pageFormat: PdfPageFormat.a4,
@@ -293,7 +293,7 @@ class PdfReportService {
         right: kRightMargin,
         bottom: kBottomMargin + 40,
       ),
-      buildBackground: (ctx) => pw.SizedBox(),
+      buildBackground: (ctx) => _buildCoverWatermarkBackground(),
       buildForeground: (ctx) =>
           _buildFooterAbsolute(isFirstPage: true, ctx: ctx),
     );
@@ -333,6 +333,17 @@ class PdfReportService {
       child: pw.Opacity(
         opacity: 0.15,
         child: pw.Image(_watermarkImage!, width: 400, height: 400),
+      ),
+    );
+  }
+
+  // Filigrane spécifique page de garde (opacité 0.30 - plus visible sans masquer le texte)
+  static pw.Widget _buildCoverWatermarkBackground() {
+    if (_watermarkImage == null) return pw.SizedBox();
+    return pw.Center(
+      child: pw.Opacity(
+        opacity: 0.30,
+        child: pw.Image(_watermarkImage!, width: 420, height: 420),
       ),
     );
   }

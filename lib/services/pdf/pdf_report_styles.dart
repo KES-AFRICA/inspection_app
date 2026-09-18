@@ -135,7 +135,11 @@ class PdfReportStyles {
   //  THEMES DE PAGE
   // ──────────────────────────────────────────────────────────────
 
-  static pw.PageTheme buildCoverPageTheme(pw.Font fontRegular, pw.Font fontBold) {
+  static pw.PageTheme buildCoverPageTheme(
+    pw.Font fontRegular,
+    pw.Font fontBold, {
+    pw.MemoryImage? watermarkImage,
+  }) {
     return pw.PageTheme(
       pageFormat: PdfPageFormat.a4,
       theme: pw.ThemeData.withFont(base: fontRegular, bold: fontBold),
@@ -145,7 +149,8 @@ class PdfReportStyles {
         right: kRightMargin,
         bottom: kBottomMargin + 40,
       ),
-      buildBackground: (ctx) => pw.SizedBox(),
+      buildBackground: (ctx) =>
+          watermarkImage != null ? buildWatermarkBackground(watermarkImage, opacity: 0.30) : pw.SizedBox(),
       buildForeground: (ctx) => buildFooterAbsolute(
         isFirstPage: true,
         ctx: ctx,
@@ -186,11 +191,11 @@ class PdfReportStyles {
     );
   }
 
-  static pw.Widget buildWatermarkBackground(pw.MemoryImage? watermarkImage) {
+  static pw.Widget buildWatermarkBackground(pw.MemoryImage? watermarkImage, {double opacity = 0.15}) {
     if (watermarkImage == null) return pw.SizedBox();
     return pw.Center(
       child: pw.Opacity(
-        opacity: 0.15,
+        opacity: opacity,
         child: pw.Image(watermarkImage, width: 400, height: 400),
       ),
     );

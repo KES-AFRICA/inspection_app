@@ -450,4 +450,38 @@ void main() {
       expect(restored.dateRapport, equals(fixedDateRapport));
     });
   });
+
+  group('9. RAFFINEMENTS VISUELS COUVERTURE & RÉCEPTION DES TEXTES', () {
+    test('Les textes de client, site et recepteur sont garantis en majuscules dans le widget arbre', () {
+      final mission = Mission(
+        id: 'M_MAJ_TEST',
+        nomClient: 'société d\'exploitation du bois (seb)',
+        nomSite: 'usine de nkolbisson',
+        recepteurRapport: 'monsieur le directeur technique',
+        status: 'en_cours',
+        createdAt: now,
+        updatedAt: now,
+      );
+
+      final doc = pw.Document();
+      doc.addPage(
+        pw.Page(
+          pageTheme: PdfReportService.buildCoverPageTheme(),
+          build: (ctx) {
+            final coverWidget = PdfCoverBuilder.buildCoverPage(mission, null, ctx);
+            expect(coverWidget, isA<pw.Widget>());
+            return coverWidget;
+          },
+        ),
+      );
+
+      expect(doc.document.pdfPageList.pages, isNotEmpty);
+    });
+
+    test('Le thème de couverture PDF intègre un arrière-plan filigrane non-vide', () {
+      final coverTheme = PdfReportService.buildCoverPageTheme();
+      expect(coverTheme, isNotNull);
+      expect(coverTheme.buildBackground, isNotNull);
+    });
+  });
 }

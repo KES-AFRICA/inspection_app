@@ -129,15 +129,15 @@ class WordReportService {
     _sectionTitle(doc, 'KES INSPECTIONS AND PROJECTS', center: true, level: 2);
     doc.addParagraph(Paragraph.text(''));
 
-    final nomSite = rg?.nomSite.isNotEmpty == true ? rg!.nomSite : (mission.nomSite ?? '');
-    final recepteur = (mission.recepteurRapport ?? rg?.recepteurRapport ?? '').trim();
+    final nomSite = (rg?.nomSite.isNotEmpty == true ? rg!.nomSite : (mission.nomSite ?? '')).trim().toUpperCase();
+    final recepteur = (mission.recepteurRapport ?? rg?.recepteurRapport ?? '').trim().toUpperCase();
     final lieu = (mission.lieuIntervention ?? rg?.lieuIntervention ?? nomSite).trim();
     final effectiveDate = mission.dateRapport ?? DateTime.now();
 
     final rows = <TableRow>[
       _headerRow(['Informations', '']),
-      _dataRow(['Client', mission.nomClient]),
-      if (recepteur.isNotEmpty) _dataRow(['À l\'attention de M.', recepteur]),
+      _dataRow(['Client', mission.nomClient.toUpperCase()]),
+      if (recepteur.isNotEmpty) _dataRow(['À l\'attention de Mme/M.', recepteur]),
       if (nomSite.isNotEmpty) _dataRow(['Site', nomSite]),
       if (lieu.isNotEmpty) _dataRow(['Lieu d\'intervention', lieu]),
       if (mission.adresseClient != null) _dataRow(['Adresse', mission.adresseClient!]),

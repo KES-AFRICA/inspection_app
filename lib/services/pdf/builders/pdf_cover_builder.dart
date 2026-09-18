@@ -122,10 +122,14 @@ class PdfCoverBuilder {
     }
 
     final nomClientStr = mission.nomClient.trim().toUpperCase();
-    final recepteurStr = (mission.recepteurRapport ?? rg?.recepteurRapport ?? '').trim();
+    final recepteurStr = (mission.recepteurRapport ?? rg?.recepteurRapport ?? '').trim().toUpperCase();
     final nomSiteStr = (mission.nomSite ?? rg?.nomSite ?? '').trim().toUpperCase();
     final siteAffichage = nomSiteStr.isNotEmpty ? nomSiteStr : nomClientStr;
     final lieuInterventionStr = (mission.lieuIntervention ?? rg?.lieuIntervention ?? (nomSiteStr.isNotEmpty ? nomSiteStr : '')).trim();
+
+    const double coverHeaderRowHeight = 24.0;
+    const double coverDataRowHeight = 46.0;
+    const double coverTableAndQrHeight = coverHeaderRowHeight + coverDataRowHeight; // 70.0 pt
 
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -161,7 +165,7 @@ class PdfCoverBuilder {
                     'CLIENT',
                     style: pw.TextStyle(
                       font: fontBold,
-                      fontSize: 11,
+                      fontSize: 12,
                       color: PdfColors.black,
                     ),
                     textAlign: pw.TextAlign.center,
@@ -181,7 +185,7 @@ class PdfCoverBuilder {
                   ),
                   pw.SizedBox(height: 16),
                   pw.Text(
-                    "A l'attention de M",
+                    "A l'attention de Mme/M.",
                     style: pw.TextStyle(
                       font: fontBold,
                       fontSize: 10.5,
@@ -193,7 +197,7 @@ class PdfCoverBuilder {
                   pw.ConstrainedBox(
                     constraints: const pw.BoxConstraints(maxWidth: 190),
                     child: pw.Text(
-                      recepteurStr.isNotEmpty ? recepteurStr : 'xxxxxxxxxxxxxxx',
+                      recepteurStr.isNotEmpty ? recepteurStr : 'XXXXXXXXXXXXXXX',
                       style: pw.TextStyle(
                         font: fontBold,
                         fontSize: 10.5,
@@ -208,16 +212,16 @@ class PdfCoverBuilder {
           ],
         ),
 
-        pw.SizedBox(height: 35),
+        pw.SizedBox(height: 50),
 
-        // ── Titre principal : RAPPORT (Centré, en Bleu KES officiel) ──
+        // ── Titre principal : RAPPORT (Centré, en Bleu KES accentColor) ──
         pw.Center(
           child: pw.Text(
             'RAPPORT',
             style: pw.TextStyle(
               font: fontBold,
               fontSize: 24,
-              color: PdfReportStyles.headerColor,
+              color: PdfReportStyles.accentColor,
             ),
             textAlign: pw.TextAlign.center,
           ),
@@ -225,7 +229,7 @@ class PdfCoverBuilder {
 
         pw.SizedBox(height: 18),
 
-        // ── Nature de la mission (Centrée, en Bleu KES officiel) ──
+        // ── Nature de la mission (Centrée, en Bleu KES accentColor) ──
         pw.Center(
           child: pw.ConstrainedBox(
             constraints: const pw.BoxConstraints(maxWidth: 500),
@@ -247,7 +251,7 @@ class PdfCoverBuilder {
               style: pw.TextStyle(
                 font: fontBold,
                 fontSize: 16,
-                color: PdfReportStyles.headerColor,
+                color: PdfReportStyles.accentColor,
               ),
               textAlign: pw.TextAlign.center,
             ),
@@ -256,7 +260,7 @@ class PdfCoverBuilder {
 
         pw.SizedBox(height: 22),
 
-        // ── Nom du site (Centré, grand corps, en Bleu KES officiel, sans "Site :") ──
+        // ── Nom du site (Centré, grand corps, en Bleu KES accentColor, sans "Site :") ──
         pw.Center(
           child: pw.ConstrainedBox(
             constraints: const pw.BoxConstraints(maxWidth: 480),
@@ -265,7 +269,7 @@ class PdfCoverBuilder {
               style: pw.TextStyle(
                 font: fontBold,
                 fontSize: 17,
-                color: PdfReportStyles.headerColor,
+                color: PdfReportStyles.accentColor,
               ),
               textAlign: pw.TextAlign.center,
             ),
@@ -274,7 +278,7 @@ class PdfCoverBuilder {
 
         pw.Spacer(),
 
-        // ── Bloc inférieur : Tableau 5 colonnes (416pt) & QR Code (80pt) ──
+        // ── Bloc inférieur : Tableau 5 colonnes & QR Code (même hauteur exacte de 70pt) ──
         pw.Row(
           crossAxisAlignment: pw.CrossAxisAlignment.center,
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -297,11 +301,11 @@ class PdfCoverBuilder {
                   pw.TableRow(
                     decoration: pw.BoxDecoration(color: PdfReportStyles.headerColor),
                     children: [
-                      _buildCoverTableHeaderCell('Nature de la mission'),
-                      _buildCoverTableHeaderCell('N° du rapport'),
-                      _buildCoverTableHeaderCell('Date du rapport'),
-                      _buildCoverTableHeaderCell('Date d\'intervention'),
-                      _buildCoverTableHeaderCell('Lieu d\'intervention'),
+                      _buildCoverTableHeaderCell('Nature de la mission', height: coverHeaderRowHeight),
+                      _buildCoverTableHeaderCell('N° du rapport', height: coverHeaderRowHeight),
+                      _buildCoverTableHeaderCell('Date du rapport', height: coverHeaderRowHeight),
+                      _buildCoverTableHeaderCell('Date d\'intervention', height: coverHeaderRowHeight),
+                      _buildCoverTableHeaderCell('Lieu d\'intervention', height: coverHeaderRowHeight),
                     ],
                   ),
                   // Ligne des valeurs
@@ -316,28 +320,33 @@ class PdfCoverBuilder {
                           }
                           return n;
                         })(),
+                        height: coverDataRowHeight,
                       ),
                       _buildCoverTableDataCell(
                         numRapport,
+                        height: coverDataRowHeight,
                       ),
                       _buildCoverTableDataCell(
                         PdfReportStyles.formatDate(mission.dateRapport ?? DateTime.now()),
+                        height: coverDataRowHeight,
                       ),
                       _buildCoverTableDataCell(
-                        dateIntervention.isNotEmpty ? dateIntervention : '—',
+                        dateIntervention.isNotEmpty ? dateIntervention : '-',
+                        height: coverDataRowHeight,
                       ),
                       _buildCoverTableDataCell(
-                        lieuInterventionStr.isNotEmpty ? lieuInterventionStr : '—',
+                        lieuInterventionStr.isNotEmpty ? lieuInterventionStr : '-',
+                        height: coverDataRowHeight,
                       ),
                     ],
                   ),
                 ],
               ),
             ),
-            // Encadré QR Code KES
+            // Encadré QR Code KES carré de hauteur strictement identique au tableau (70x70)
             pw.Container(
-              width: 80,
-              height: 80,
+              width: coverTableAndQrHeight,
+              height: coverTableAndQrHeight,
               decoration: pw.BoxDecoration(
                 border: pw.Border.all(color: PdfColors.black, width: 0.8),
                 color: PdfColors.white,
@@ -347,8 +356,8 @@ class PdfCoverBuilder {
               child: clientQrMemoryImg != null
                   ? pw.Image(
                       clientQrMemoryImg,
-                      width: 70,
-                      height: 70,
+                      width: 58,
+                      height: 58,
                       fit: pw.BoxFit.contain,
                     )
                   : pw.Column(
@@ -380,9 +389,10 @@ class PdfCoverBuilder {
     );
   }
 
-  static pw.Widget _buildCoverTableHeaderCell(String text) {
+  static pw.Widget _buildCoverTableHeaderCell(String text, {double height = 24.0}) {
     return pw.Container(
-      padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 6),
+      height: height,
+      padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 2),
       alignment: pw.Alignment.center,
       child: pw.Text(
         text,
@@ -396,9 +406,10 @@ class PdfCoverBuilder {
     );
   }
 
-  static pw.Widget _buildCoverTableDataCell(String text) {
+  static pw.Widget _buildCoverTableDataCell(String text, {double height = 46.0}) {
     return pw.Container(
-      padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 7),
+      height: height,
+      padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 2),
       alignment: pw.Alignment.center,
       child: pw.Text(
         text,
