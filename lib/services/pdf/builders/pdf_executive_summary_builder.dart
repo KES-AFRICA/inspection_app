@@ -311,7 +311,7 @@ class PdfExecutiveSummaryBuilder {
     widgets.add(pw.NewPage(freeSpace: 120));
     widgets.add(
       pw.Text(
-        'D. Non conformités majeures',
+        'C. Non conformités majeures',
         style: pw.TextStyle(font: fontBold, fontSize: 7.5, color: PdfReportStyles.darkGrey),
       ),
     );
