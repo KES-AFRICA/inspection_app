@@ -157,6 +157,7 @@ class PdfCoverBuilder {
               ),
             pw.Container(
               alignment: pw.Alignment.topRight,
+              margin: const pw.EdgeInsets.only(top: 80),
               child: pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.center,
                 mainAxisSize: pw.MainAxisSize.min,
@@ -166,7 +167,7 @@ class PdfCoverBuilder {
                     style: pw.TextStyle(
                       font: fontBold,
                       fontSize: 12,
-                      color: PdfColors.black,
+                      color: PdfReportStyles.accentColor,
                     ),
                     textAlign: pw.TextAlign.center,
                   ),
@@ -189,7 +190,7 @@ class PdfCoverBuilder {
                     style: pw.TextStyle(
                       font: fontBold,
                       fontSize: 10.5,
-                      color: PdfColors.black,
+                      color: PdfReportStyles.accentColor,
                     ),
                     textAlign: pw.TextAlign.center,
                   ),
@@ -212,7 +213,7 @@ class PdfCoverBuilder {
           ],
         ),
 
-        pw.SizedBox(height: 50),
+        pw.Spacer(flex: 1),
 
         // ── Titre principal : RAPPORT (Centré, en Bleu KES accentColor) ──
         pw.Center(
@@ -276,7 +277,7 @@ class PdfCoverBuilder {
           ),
         ),
 
-        pw.Spacer(),
+        pw.Spacer(flex: 1),
 
         // ── Bloc inférieur : Tableau 5 colonnes & QR Code (même hauteur exacte de 70pt) ──
         pw.Row(
@@ -297,9 +298,9 @@ class PdfCoverBuilder {
                   4: pw.FixedColumnWidth(86),
                 },
                 children: [
-                  // Ligne d'en-tête (en Bleu KES officiel)
+                  // Ligne d'en-tête (PAS de couleur de fond, texte en accentColor)
                   pw.TableRow(
-                    decoration: pw.BoxDecoration(color: PdfReportStyles.headerColor),
+                    decoration: const pw.BoxDecoration(color: PdfColors.white),
                     children: [
                       _buildCoverTableHeaderCell('Nature de la mission', height: coverHeaderRowHeight),
                       _buildCoverTableHeaderCell('N° du rapport', height: coverHeaderRowHeight),
@@ -368,7 +369,7 @@ class PdfCoverBuilder {
                           style: pw.TextStyle(
                             font: fontBold,
                             fontSize: 7.5,
-                            color: PdfColors.grey700,
+                            color: PdfReportStyles.accentColor,
                           ),
                         ),
                         pw.SizedBox(height: 2),
@@ -377,7 +378,7 @@ class PdfCoverBuilder {
                           style: pw.TextStyle(
                             font: fontRegular,
                             fontSize: 6,
-                            color: PdfColors.grey500,
+                            color: PdfReportStyles.accentColor,
                           ),
                         ),
                       ],
@@ -385,6 +386,7 @@ class PdfCoverBuilder {
             ),
           ],
         ),
+        pw.SizedBox(height: 25),
       ],
     );
   }
@@ -399,7 +401,7 @@ class PdfCoverBuilder {
         style: pw.TextStyle(
           font: fontBold,
           fontSize: 8,
-          color: PdfColors.white,
+          color: PdfReportStyles.accentColor,
         ),
         textAlign: pw.TextAlign.center,
       ),
@@ -416,7 +418,7 @@ class PdfCoverBuilder {
         style: pw.TextStyle(
           font: fontRegular,
           fontSize: 8,
-          color: PdfColors.black,
+          color: PdfReportStyles.accentColor,
         ),
         textAlign: pw.TextAlign.center,
       ),
