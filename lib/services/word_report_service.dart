@@ -97,7 +97,7 @@ class WordReportService {
       }
 
       // 13. Page de signature
-      _addSignaturePage(doc, renseignements, currentUser?.fullName);
+      _addSignaturePage(doc, renseignements, currentUser?.fullName, dateRapport: mission.dateRapport);
 
       // 14. Annexes photos
       if (allPhotos.isNotEmpty) {
@@ -106,8 +106,9 @@ class WordReportService {
 
       final bytes = DocxGenerator().generate(doc);
       final dir = await getTemporaryDirectory();
+      final dateFichier = _formatDate(mission.dateRapport ?? DateTime.now());
       final fileName =
-          'Rapport_${mission.nomClient}_${_formatDate(DateTime.now())}.docx'
+          'Rapport_${mission.nomClient}_$dateFichier.docx'
               .replaceAll(RegExp(r'[<>:\"/\\|?*]'), '_')
               .replaceAll(' ', '_');
       final file = File('${dir.path}/$fileName');
@@ -129,13 +130,20 @@ class WordReportService {
     doc.addParagraph(Paragraph.text(''));
 
     final nomSite = rg?.nomSite.isNotEmpty == true ? rg!.nomSite : (mission.nomSite ?? '');
+    final recepteur = (mission.recepteurRapport ?? rg?.recepteurRapport ?? '').trim();
+    final lieu = (mission.lieuIntervention ?? rg?.lieuIntervention ?? nomSite).trim();
+    final effectiveDate = mission.dateRapport ?? DateTime.now();
+
     final rows = <TableRow>[
       _headerRow(['Informations', '']),
       _dataRow(['Client', mission.nomClient]),
+      if (recepteur.isNotEmpty) _dataRow(['À l\'attention de M.', recepteur]),
       if (nomSite.isNotEmpty) _dataRow(['Site', nomSite]),
+      if (lieu.isNotEmpty) _dataRow(['Lieu d\'intervention', lieu]),
       if (mission.adresseClient != null) _dataRow(['Adresse', mission.adresseClient!]),
       _dataRow(['Date d\'intervention', _formatDate(mission.dateIntervention ?? DateTime.now())]),
-      _dataRow(['Rapport généré le', _formatDate(DateTime.now())]),
+      _dataRow(['Date du rapport', _formatDate(effectiveDate)]),
+      _dataRow(['N° du rapport', 'KES/IP/VE/${effectiveDate.year}/001']),
       if (mission.natureMission != null) _dataRow(['Nature de la mission', mission.natureMission!]),
       if (mission.periodicite != null) _dataRow(['Périodicité', mission.periodicite!]),
     ];
@@ -1226,10 +1234,10 @@ class WordReportService {
   // ═══════════════════════════════════════════════════════════════
   //  13. PAGE DE SIGNATURE
   // ═══════════════════════════════════════════════════════════════
-  static void _addSignaturePage(Document doc, RenseignementsGeneraux? rg, String? nomInspecteur) {
+  static void _addSignaturePage(Document doc, RenseignementsGeneraux? rg, String? nomInspecteur, {DateTime? dateRapport}) {
     _sectionTitle(doc, 'SIGNATURE ET APPROBATION', level: 1, pageBreak: true);
 
-    doc.addParagraph(Paragraph.text('Fait à Douala le ${_formatDate(DateTime.now())}'));
+    doc.addParagraph(Paragraph.text('Fait à Douala le ${_formatDate(dateRapport ?? DateTime.now())}'));
     doc.addParagraph(Paragraph.text(''));
 
     final rows = <TableRow>[

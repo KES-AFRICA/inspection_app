@@ -83,6 +83,9 @@ class RenseignementsGenerauxNotifier
     bool updateClassementReglementaireType = false,
     String? classementReglementaireCategorie,
     bool updateClassementReglementaireCategorie = false,
+    String? recepteurRapport,
+    String? lieuIntervention,
+    DateTime? dateRapport,
   }) async {
     final currentData = state.value;
     if (currentData == null) return;
@@ -112,6 +115,9 @@ class RenseignementsGenerauxNotifier
     if (updateClassementReglementaireCategorie || classementReglementaireCategorie != null) {
       currentData.classementReglementaireCategorie = classementReglementaireCategorie == '—' ? null : classementReglementaireCategorie;
     }
+    if (recepteurRapport != null) currentData.recepteurRapport = recepteurRapport;
+    if (lieuIntervention != null) currentData.lieuIntervention = lieuIntervention;
+    if (dateRapport != null) currentData.dateRapport = dateRapport;
     currentData.updatedAt = DateTime.now();
 
     // Notifier le changement d'état

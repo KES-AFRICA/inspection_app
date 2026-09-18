@@ -28,6 +28,9 @@ class RenseignementsGenerauxMapper {
       classementReglementaire: model.classementReglementaire,
       classementReglementaireType: model.classementReglementaireType,
       classementReglementaireCategorie: model.classementReglementaireCategorie,
+      recepteurRapport: model.recepteurRapport,
+      lieuIntervention: model.lieuIntervention,
+      dateRapport: model.dateRapport,
     );
   }
 
@@ -56,6 +59,9 @@ class RenseignementsGenerauxMapper {
       classementReglementaire: entity.classementReglementaire,
       classementReglementaireType: entity.classementReglementaireType,
       classementReglementaireCategorie: entity.classementReglementaireCategorie,
+      recepteurRapport: entity.recepteurRapport,
+      lieuIntervention: entity.lieuIntervention,
+      dateRapport: entity.dateRapport,
     );
   }
 }

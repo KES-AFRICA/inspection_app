@@ -47,6 +47,8 @@ class MissionEntity {
   final String? installation;
   final List<String>? perimetreMission;
   final bool afficherTableauFoudre;
+  final String? recepteurRapport;
+  final String? lieuIntervention;
 
   const MissionEntity({
     required this.id,
@@ -96,6 +98,8 @@ class MissionEntity {
     this.installation,
     this.perimetreMission,
     this.afficherTableauFoudre = false,
+    this.recepteurRapport,
+    this.lieuIntervention,
   });
 
   bool get isEnAttente => status.toLowerCase() == 'en_attente';

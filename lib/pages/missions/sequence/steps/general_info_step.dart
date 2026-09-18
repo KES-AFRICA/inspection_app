@@ -44,6 +44,8 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
   late TextEditingController _activiteController;
   late TextEditingController _nomSiteController;
   late TextEditingController _activiteSurSiteController;
+  late TextEditingController _recepteurRapportController;
+  late TextEditingController _lieuInterventionController;
 
   // Données
   DateTime? _dateDebut;
@@ -71,6 +73,8 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
   final FocusNode _activiteFocus = FocusNode();
   final FocusNode _nomSiteFocus = FocusNode();
   final FocusNode _activiteSurSiteFocus = FocusNode();
+  final FocusNode _recepteurRapportFocus = FocusNode();
+  final FocusNode _lieuInterventionFocus = FocusNode();
 
   // Flags de validation
   bool _hasAttemptedValidation = false;
@@ -81,6 +85,8 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
   bool _activiteTouched = false;
   bool _nomSiteTouched = false;
   bool _activiteSurSiteTouched = false;
+  bool _recepteurRapportTouched = false;
+  bool _lieuInterventionTouched = false;
 
   // Options pour les dropdowns stylisés
   final List<Map<String, dynamic>> _verificationOptions = [
@@ -222,6 +228,16 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
         setState(() => _activiteSurSiteTouched = true);
       }
     });
+    _recepteurRapportFocus.addListener(() {
+      if (!_recepteurRapportFocus.hasFocus) {
+        setState(() => _recepteurRapportTouched = true);
+      }
+    });
+    _lieuInterventionFocus.addListener(() {
+      if (!_lieuInterventionFocus.hasFocus) {
+        setState(() => _lieuInterventionTouched = true);
+      }
+    });
   }
 
   void _initControllers() {
@@ -230,6 +246,8 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
     _activiteController = TextEditingController();
     _nomSiteController = TextEditingController();
     _activiteSurSiteController = TextEditingController();
+    _recepteurRapportController = TextEditingController();
+    _lieuInterventionController = TextEditingController();
   }
 
   void _notifyValidation() {
@@ -246,6 +264,8 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
       activite: _activiteController.text,
       nomSite: _nomSiteController.text,
       activiteSurSite: _activiteSurSiteController.text,
+      recepteurRapport: _recepteurRapportController.text,
+      lieuIntervention: _lieuInterventionController.text,
       classementReglementaire: _classementReglementaire,
       updateClassementReglementaire: true,
       classementReglementaireType: _classementReglementaireType,
@@ -1611,11 +1631,15 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
     _activiteController.dispose();
     _nomSiteController.dispose();
     _activiteSurSiteController.dispose();
+    _recepteurRapportController.dispose();
+    _lieuInterventionController.dispose();
     _etablissementFocus.dispose();
     _installationFocus.dispose();
     _activiteFocus.dispose();
     _nomSiteFocus.dispose();
     _activiteSurSiteFocus.dispose();
+    _recepteurRapportFocus.dispose();
+    _lieuInterventionFocus.dispose();
     super.dispose();
   }
 
@@ -1650,6 +1674,8 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
           _activiteController.text = data.activite;
           _nomSiteController.text = data.nomSite;
           _activiteSurSiteController.text = data.activiteSurSite ?? widget.mission.activiteSurSite ?? '';
+          _recepteurRapportController.text = data.recepteurRapport ?? widget.mission.recepteurRapport ?? '';
+          _lieuInterventionController.text = data.lieuIntervention ?? widget.mission.lieuIntervention ?? '';
           _classementReglementaire = data.classementReglementaire ?? widget.mission.classementReglementaire;
           _classementReglementaireType = data.classementReglementaireType ?? widget.mission.classementReglementaireType;
           _classementReglementaireCategorie = data.classementReglementaireCategorie ?? widget.mission.classementReglementaireCategorie;
@@ -1681,6 +1707,8 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
           if (_activiteController.text.isNotEmpty) _activiteTouched = true;
           if (_nomSiteController.text.isNotEmpty) _nomSiteTouched = true;
           if (_activiteSurSiteController.text.isNotEmpty) _activiteSurSiteTouched = true;
+          if (_recepteurRapportController.text.isNotEmpty) _recepteurRapportTouched = true;
+          if (_lieuInterventionController.text.isNotEmpty) _lieuInterventionTouched = true;
 
           _isFirstLoad = false;
         }
@@ -1765,6 +1793,19 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
 
                   SizedBox(height: isSmallScreen ? 12 : 16),
 
+                  // Récepteur du rapport
+                  _buildTextField(
+                    controller: _recepteurRapportController,
+                    label: 'Récepteur du rapport',
+                    icon: Icons.person_outline,
+                    hint: 'Ex: M. le Directeur Général, M. Dupont...',
+                    focusNode: _recepteurRapportFocus,
+                    isRequired: false,
+                    showError: false,
+                  ),
+
+                  SizedBox(height: isSmallScreen ? 12 : 16),
+
                   // Installation vérifiée
                   _buildTextField(
                     controller: _installationController,
@@ -1820,6 +1861,19 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
                     icon: Icons.storefront_outlined,
                     hint: 'Ex: Production, Stockage, Bureaux...',
                     focusNode: _activiteSurSiteFocus,
+                    isRequired: false,
+                    showError: false,
+                  ),
+
+                  SizedBox(height: isSmallScreen ? 12 : 16),
+
+                  // Lieu d'intervention (immédiatement après Activité sur le site)
+                  _buildTextField(
+                    controller: _lieuInterventionController,
+                    label: 'Lieu d\'intervention',
+                    icon: Icons.place_outlined,
+                    hint: 'Ex: Figuil, Douala, Yaoundé...',
+                    focusNode: _lieuInterventionFocus,
                     isRequired: false,
                     showError: false,
                   ),
@@ -2504,7 +2558,7 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
                   SizedBox(height: isSmallScreen ? 1 : 2),
                   Text(
                     date != null
-                        ? DateFormat('dd/MM/yyyy').format(date!)
+                        ? DateFormat('dd/MM/yyyy').format(date)
                         : 'Non définie',
                     style: TextStyle(
                       fontSize: isSmallScreen ? 13 : 14,

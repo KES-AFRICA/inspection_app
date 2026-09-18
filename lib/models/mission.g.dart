@@ -65,13 +65,15 @@ class MissionAdapter extends TypeAdapter<Mission> {
       installation: fields[39] as String?,
       perimetreMission: (fields[40] as List?)?.cast<String>(),
       qrCodeClient: fields[41] as String?,
+      recepteurRapport: fields[47] as String?,
+      lieuIntervention: fields[48] as String?,
     )..renseignementsGenerauxId = fields[34] as String?;
   }
 
   @override
   void write(BinaryWriter writer, Mission obj) {
     writer
-      ..writeByte(47)
+      ..writeByte(49)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -165,7 +167,11 @@ class MissionAdapter extends TypeAdapter<Mission> {
       ..writeByte(45)
       ..write(obj.afficherTableauFoudre)
       ..writeByte(46)
-      ..write(obj.classementReglementaire);
+      ..write(obj.classementReglementaire)
+      ..writeByte(47)
+      ..write(obj.recepteurRapport)
+      ..writeByte(48)
+      ..write(obj.lieuIntervention);
   }
 
   @override

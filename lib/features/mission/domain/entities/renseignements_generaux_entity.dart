@@ -20,6 +20,9 @@ class RenseignementsGenerauxEntity {
   final String? classementReglementaire;
   final String? classementReglementaireType;
   final String? classementReglementaireCategorie;
+  final String? recepteurRapport;
+  final String? lieuIntervention;
+  final DateTime? dateRapport;
 
   const RenseignementsGenerauxEntity({
     required this.missionId,
@@ -41,5 +44,8 @@ class RenseignementsGenerauxEntity {
     this.classementReglementaire,
     this.classementReglementaireType,
     this.classementReglementaireCategorie,
+    this.recepteurRapport,
+    this.lieuIntervention,
+    this.dateRapport,
   });
 }

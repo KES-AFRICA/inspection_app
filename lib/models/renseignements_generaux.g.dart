@@ -42,13 +42,16 @@ class RenseignementsGenerauxAdapter
       classementReglementaire: fields[18] as String?,
       classementReglementaireType: fields[16] as String?,
       classementReglementaireCategorie: fields[17] as String?,
+      recepteurRapport: fields[21] as String?,
+      lieuIntervention: fields[22] as String?,
+      dateRapport: fields[23] as DateTime?,
     );
   }
 
   @override
   void write(BinaryWriter writer, RenseignementsGeneraux obj) {
     writer
-      ..writeByte(20)
+      ..writeByte(23)
       ..writeByte(0)
       ..write(obj.missionId)
       ..writeByte(1)
@@ -88,7 +91,13 @@ class RenseignementsGenerauxAdapter
       ..writeByte(18)
       ..write(obj.classementReglementaire)
       ..writeByte(20)
-      ..write(obj.createdAt);
+      ..write(obj.createdAt)
+      ..writeByte(21)
+      ..write(obj.recepteurRapport)
+      ..writeByte(22)
+      ..write(obj.lieuIntervention)
+      ..writeByte(23)
+      ..write(obj.dateRapport);
   }
 
   @override

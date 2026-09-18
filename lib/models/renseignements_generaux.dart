@@ -65,6 +65,15 @@ class RenseignementsGeneraux extends HiveObject {
   @HiveField(20)
   DateTime? createdAt;
 
+  @HiveField(21)
+  String? recepteurRapport;
+
+  @HiveField(22)
+  String? lieuIntervention;
+
+  @HiveField(23)
+  DateTime? dateRapport;
+
   RenseignementsGeneraux({
     required this.missionId,
     required this.etablissement,
@@ -86,6 +95,9 @@ class RenseignementsGeneraux extends HiveObject {
     this.classementReglementaire,
     this.classementReglementaireType,
     this.classementReglementaireCategorie,
+    this.recepteurRapport,
+    this.lieuIntervention,
+    this.dateRapport,
   }) : formationHabilitationElectrique = formationHabilitationElectrique ?? 'Inconnu',
        compteRendu = compteRendu ?? [],  
        accompagnateurs = accompagnateurs ?? [],  
@@ -114,6 +126,9 @@ class RenseignementsGeneraux extends HiveObject {
       classementReglementaire: null,
       classementReglementaireType: null,
       classementReglementaireCategorie: null,
+      recepteurRapport: null,
+      lieuIntervention: null,
+      dateRapport: null,
     );
   }
 
@@ -138,6 +153,9 @@ class RenseignementsGeneraux extends HiveObject {
       'classementReglementaire': classementReglementaire,
       'classementReglementaireType': classementReglementaireType,
       'classementReglementaireCategorie': classementReglementaireCategorie,
+      'recepteurRapport': recepteurRapport,
+      'lieuIntervention': lieuIntervention,
+      'dateRapport': dateRapport?.toIso8601String(),
     };
   }
 }

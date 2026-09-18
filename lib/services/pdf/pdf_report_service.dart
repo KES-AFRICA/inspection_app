@@ -1,3 +1,4 @@
+import 'package:inspec_app/services/pdf/builders/pdf_cover_builder.dart';
 import 'package:inspec_app/services/pdf/builders/pdf_photos_schemas_builder.dart';
 export 'package:inspec_app/services/pdf/builders/pdf_photos_schemas_builder.dart';
 import 'package:inspec_app/services/pdf/pdf_photo_context.dart';
@@ -35,7 +36,6 @@ import 'package:share_plus/share_plus.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:inspec_app/services/pdf/pdf_chunk_merger.dart';
-import 'builders/pdf_cover_builder.dart';
 import 'builders/pdf_sommaire_builder.dart';
 import 'builders/pdf_regulatory_builder.dart';
 import 'builders/pdf_executive_summary_builder.dart';
@@ -107,8 +107,8 @@ class PdfReportService {
   static pw.MemoryImage? _imgAccesDroite2;
   static bool _imagesLoaded = false;
 
-  static late final pw.Font _fontRegular;
-  static late final pw.Font _fontBold;
+  static pw.Font _fontRegular = pw.Font.helvetica();
+  static pw.Font _fontBold = pw.Font.helveticaBold();
   static bool _fontsLoaded = false;
   /// Charge toutes les images necessaires avec compression adaptative des assets statiques
   static Future<void> _loadImages() async {
@@ -385,19 +385,25 @@ class PdfReportService {
 
   // ──────────────────────────────────────────────────────────────
   //  EN-TETE DE PAGE (format multi-lignes droite)
-  // ──────────────────────────────────────────────────────────────
+  static DateTime? _currentReportDate;
+
+  static void setCurrentReportDate(DateTime? date) {
+    _currentReportDate = date;
+  }
 
   static pw.Widget _buildPageHeaderWidget({
     String? nomClient,
     String? nomSite,
     String? numeroRapport,
     String? titreRapport,
+    DateTime? dateRapport,
   }) {
-    final dateGeneration = _formatDate(DateTime.now());
+    final effectiveDate = dateRapport ?? _currentReportDate ?? DateTime.now();
+    final dateGeneration = _formatDate(effectiveDate);
     final titre =
         titreRapport ??
         'VERIFICATION PERIODIQUE REGLEMENTAIRE DES INSTALLATIONS ELECTRIQUES';
-    final rapportNum = numeroRapport ?? 'KES/IP/VE/${DateTime.now().year}/001';
+    final rapportNum = numeroRapport ?? 'KES/IP/VE/${effectiveDate.year}/001';
 
     return pw.Container(
       margin: const pw.EdgeInsets.only(bottom: 8),
@@ -499,11 +505,13 @@ class PdfReportService {
     RenseignementsGeneraux? rg,
     pw.Context ctx, {
     String? subTitleOverride,
+    String? numeroRapport,
   }) => PdfCoverBuilder.buildCoverPage(
     mission,
     rg,
     ctx,
     subTitleOverride: subTitleOverride,
+    numeroRapport: numeroRapport,
   );
 
 
@@ -2591,7 +2599,12 @@ class PdfReportService {
     preflightP1_1.addPage(
       pw.Page(
         pageTheme: _buildCoverPageTheme(),
-        build: (ctx) => _buildCoverPage(mission, renseignements, ctx),
+        build: (ctx) => _buildCoverPage(
+          mission,
+          renseignements,
+          ctx,
+          numeroRapport: numeroRapportDoc,
+        ),
       ),
     );
     preflightP1_1.addPage(
@@ -3405,7 +3418,12 @@ class PdfReportService {
       pdfP1_1.addPage(
         pw.Page(
           pageTheme: _buildCoverPageTheme(),
-          build: (ctx) => _buildCoverPage(mission, renseignements, ctx),
+          build: (ctx) => _buildCoverPage(
+            mission,
+            renseignements,
+            ctx,
+            numeroRapport: numeroRapportDoc,
+          ),
         ),
       );
       pdfP1_1.addPage(
@@ -3476,7 +3494,7 @@ class PdfReportService {
         ? nomSite.trim().replaceAll(RegExp(r'[<>:"/\\|?*]'), '_')
         : '';
     final sitePart = sanitizedSite.isNotEmpty ? '_$sanitizedSite' : '';
-    return 'Rapport_Verif_elec_${sanitizedClient}${sitePart}_${year}_$ts.pdf';
+    return 'Rapport_Verif_elec_$sanitizedClient${sitePart}_${year}_$ts.pdf';
   }
 
   static Future<File?> generateMissionReport(
@@ -3518,10 +3536,11 @@ class PdfReportService {
       final nomSiteHeader = renseignements?.nomSite.isNotEmpty == true
           ? renseignements!.nomSite
           : (mission.nomSite ?? '');
-      const String numeroRapportDoc = 'KES/IP/VE/2025/001';
-
       final systemTempDir = await getTemporaryDirectory();
       final generationDate = DateTime.now();
+      final effectiveReportDate = mission.dateRapport ?? generationDate;
+      _currentReportDate = effectiveReportDate;
+      final String numeroRapportDoc = 'KES/IP/VE/${effectiveReportDate.year}/001';
       final sessionTimestamp = cancellationToken?.generationId ?? generationDate.millisecondsSinceEpoch.toString();
       sessionDir = Directory(
         '${systemTempDir.path}/pdf_session_${missionId}_$sessionTimestamp',
@@ -3597,7 +3616,7 @@ class PdfReportService {
       final fileName = buildElectricalReportFileName(
         mission.nomClient,
         nomSite: mission.nomSite,
-        date: generationDate,
+        date: effectiveReportDate,
         timestamp: DateTime.now().millisecondsSinceEpoch,
       );
       final outputFile = File('${systemTempDir.path}/$fileName');
@@ -3689,7 +3708,14 @@ class PdfReportService {
     RenseignementsGeneraux? rg,
     pw.Context ctx, {
     String? subTitleOverride,
-  }) => _buildCoverPage(mission, rg, ctx, subTitleOverride: subTitleOverride);
+    String? numeroRapport,
+  }) => _buildCoverPage(
+    mission,
+    rg,
+    ctx,
+    subTitleOverride: subTitleOverride,
+    numeroRapport: numeroRapport,
+  );
   static pw.Widget buildPageHeaderWidget({
     String? nomClient,
     String? nomSite,

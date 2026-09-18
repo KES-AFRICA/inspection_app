@@ -334,6 +334,18 @@ class HiveService {
         existing.nomSite = mission.nomSite!;
         changed = true;
       }
+      if (mission.lieuIntervention != null && mission.lieuIntervention != existing.lieuIntervention) {
+        existing.lieuIntervention = mission.lieuIntervention;
+        changed = true;
+      }
+      if (mission.recepteurRapport != null && mission.recepteurRapport != existing.recepteurRapport) {
+        existing.recepteurRapport = mission.recepteurRapport;
+        changed = true;
+      }
+      if (mission.dateRapport != null && mission.dateRapport != existing.dateRapport) {
+        existing.dateRapport = mission.dateRapport;
+        changed = true;
+      }
       if (changed) {
         existing.updatedAt = DateTime.now();
         await existing.save();
@@ -7550,6 +7562,18 @@ static Future<RenseignementsGeneraux> getOrCreateRenseignementsGeneraux(String m
         existing.classementReglementaireCategorie = mission.classementReglementaireCategorie;
         changed = true;
       }
+      if (existing.lieuIntervention == null && mission.lieuIntervention != null) {
+        existing.lieuIntervention = mission.lieuIntervention;
+        changed = true;
+      }
+      if (existing.recepteurRapport == null && mission.recepteurRapport != null) {
+        existing.recepteurRapport = mission.recepteurRapport;
+        changed = true;
+      }
+      if (existing.dateRapport == null && mission.dateRapport != null) {
+        existing.dateRapport = mission.dateRapport;
+        changed = true;
+      }
       if (changed) {
         await existing.save();
       }
@@ -7576,6 +7600,9 @@ static Future<RenseignementsGeneraux> getOrCreateRenseignementsGeneraux(String m
       classementReglementaire: mission?.classementReglementaire,
       classementReglementaireType: mission?.classementReglementaireType,
       classementReglementaireCategorie: mission?.classementReglementaireCategorie,
+      recepteurRapport: mission?.recepteurRapport,
+      lieuIntervention: mission?.lieuIntervention,
+      dateRapport: mission?.dateRapport,
       compteRendu: [],
       accompagnateurs: [],
       verificateurs: [],
@@ -7623,6 +7650,18 @@ static Future<void> saveRenseignementsGeneraux(RenseignementsGeneraux data) asyn
     }
     if (data.classementReglementaireCategorie != mission.classementReglementaireCategorie) {
       mission.classementReglementaireCategorie = data.classementReglementaireCategorie;
+      missionChanged = true;
+    }
+    if (data.lieuIntervention != null && data.lieuIntervention != mission.lieuIntervention) {
+      mission.lieuIntervention = data.lieuIntervention;
+      missionChanged = true;
+    }
+    if (data.recepteurRapport != null && data.recepteurRapport != mission.recepteurRapport) {
+      mission.recepteurRapport = data.recepteurRapport;
+      missionChanged = true;
+    }
+    if (data.dateRapport != null && data.dateRapport != mission.dateRapport) {
+      mission.dateRapport = data.dateRapport;
       missionChanged = true;
     }
     if (missionChanged) {

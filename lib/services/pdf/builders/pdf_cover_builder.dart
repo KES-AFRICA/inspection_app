@@ -51,8 +51,9 @@ class PdfCoverBuilder {
             final file = File(resolvedPath);
             if (await file.exists()) {
               final bytes = await file.readAsBytes();
-              if (bytes.isNotEmpty)
+              if (bytes.isNotEmpty) {
                 cachedClientLogoImg = pw.MemoryImage(bytes);
+              }
             }
           }
         } catch (_) {}
@@ -86,6 +87,7 @@ class PdfCoverBuilder {
     RenseignementsGeneraux? rg,
     pw.Context ctx, {
     String? subTitleOverride,
+    String? numeroRapport,
   }) {
     final dateDebut = rg?.dateDebut ?? mission.dateIntervention;
     final dateFin = rg?.dateFin;
@@ -101,20 +103,8 @@ class PdfCoverBuilder {
       dateIntervention = '';
     }
 
-    pw.MemoryImage? clientLogoMemoryImg = cachedClientLogoImg;
-    if (clientLogoMemoryImg == null &&
-        mission.logoClient != null &&
-        mission.logoClient!.isNotEmpty) {
-      final logoFile = File(mission.logoClient!);
-      if (logoFile.existsSync()) {
-        try {
-          final logoBytes = logoFile.readAsBytesSync();
-          clientLogoMemoryImg = pw.MemoryImage(logoBytes);
-        } catch (e) {
-          if (kDebugMode) print('Erreur chargement logo client PDF: $e');
-        }
-      }
-    }
+    final numRapport = numeroRapport ??
+        'KES/IP/VE/${(mission.dateRapport ?? DateTime.now()).year}/001';
 
     pw.MemoryImage? clientQrMemoryImg = cachedClientQrImg;
     if (clientQrMemoryImg == null &&
@@ -131,9 +121,16 @@ class PdfCoverBuilder {
       }
     }
 
+    final nomClientStr = mission.nomClient.trim().toUpperCase();
+    final recepteurStr = (mission.recepteurRapport ?? rg?.recepteurRapport ?? '').trim();
+    final nomSiteStr = (mission.nomSite ?? rg?.nomSite ?? '').trim().toUpperCase();
+    final siteAffichage = nomSiteStr.isNotEmpty ? nomSiteStr : nomClientStr;
+    final lieuInterventionStr = (mission.lieuIntervention ?? rg?.lieuIntervention ?? (nomSiteStr.isNotEmpty ? nomSiteStr : '')).trim();
+
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
+        // ── En-tête supérieur : Logo KES (gauche) & Bloc Client (droite) ──
         pw.Row(
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -151,230 +148,256 @@ class PdfCoverBuilder {
                 style: pw.TextStyle(
                   font: fontBold,
                   color: PdfReportStyles.headerColor,
-                  fontSize: 10,
+                  fontSize: 11,
                 ),
               ),
             pw.Container(
-              padding: const pw.EdgeInsets.symmetric(vertical: 12),
+              alignment: pw.Alignment.topRight,
               child: pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.center,
+                mainAxisSize: pw.MainAxisSize.min,
                 children: [
-                  if (clientLogoMemoryImg != null)
-                    pw.Container(
-                      width: 85,
-                      height: 85,
-                      alignment: pw.Alignment.center,
-                      child: pw.Image(
-                        clientLogoMemoryImg,
-                        width: 85,
-                        height: 85,
-                        fit: pw.BoxFit.contain,
-                      ),
-                    )
-                  else
-                    pw.Container(
-                      width: 85,
-                      height: 85,
-                      decoration: pw.BoxDecoration(
-                        border: pw.Border.all(
-                          color: PdfColors.grey400,
-                          width: 1,
-                        ),
-                        color: PdfColors.grey200,
-                      ),
-                      child: pw.Center(
-                        child: pw.Column(
-                          mainAxisAlignment: pw.MainAxisAlignment.center,
-                          children: [
-                            pw.Text(
-                              'LOGO CLIENT',
-                              style: pw.TextStyle(
-                                font: fontBold,
-                                fontSize: 8,
-                                color: PdfColors.grey600,
-                              ),
-                            ),
-                            pw.SizedBox(height: 3),
-                            pw.Text(
-                              '(a coller ici)',
-                              style: pw.TextStyle(
-                                font: fontRegular,
-                                fontSize: 7,
-                                color: PdfColors.grey500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  pw.SizedBox(height: 10),
                   pw.Text(
-                    "A l'attention de Monsieur le\nDirecteur General",
+                    'CLIENT',
                     style: pw.TextStyle(
-                      font: fontRegular,
+                      font: fontBold,
                       fontSize: 11,
                       color: PdfColors.black,
                     ),
                     textAlign: pw.TextAlign.center,
+                  ),
+                  pw.SizedBox(height: 3),
+                  pw.ConstrainedBox(
+                    constraints: const pw.BoxConstraints(maxWidth: 190),
+                    child: pw.Text(
+                      nomClientStr,
+                      style: pw.TextStyle(
+                        font: fontBold,
+                        fontSize: 12,
+                        color: PdfColors.black,
+                      ),
+                      textAlign: pw.TextAlign.center,
+                    ),
+                  ),
+                  pw.SizedBox(height: 16),
+                  pw.Text(
+                    "A l'attention de M",
+                    style: pw.TextStyle(
+                      font: fontBold,
+                      fontSize: 10.5,
+                      color: PdfColors.black,
+                    ),
+                    textAlign: pw.TextAlign.center,
+                  ),
+                  pw.SizedBox(height: 3),
+                  pw.ConstrainedBox(
+                    constraints: const pw.BoxConstraints(maxWidth: 190),
+                    child: pw.Text(
+                      recepteurStr.isNotEmpty ? recepteurStr : 'xxxxxxxxxxxxxxx',
+                      style: pw.TextStyle(
+                        font: fontBold,
+                        fontSize: 10.5,
+                        color: PdfColors.black,
+                      ),
+                      textAlign: pw.TextAlign.center,
+                    ),
                   ),
                 ],
               ),
             ),
           ],
         ),
+
         pw.SizedBox(height: 55),
-        pw.Container(
-          width: double.infinity,
-          padding: const pw.EdgeInsets.symmetric(vertical: 14, horizontal: 14),
-          decoration: pw.BoxDecoration(
-            color: PdfReportStyles.accentColor,
-            borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
-          ),
+
+        // ── Titre principal : RAPPORT (Centré, en Bleu KES officiel) ──
+        pw.Center(
           child: pw.Text(
             'RAPPORT',
             style: pw.TextStyle(
               font: fontBold,
-              fontSize: 18,
-              fontWeight: pw.FontWeight.bold,
-              color: PdfColors.white,
-            ),
-            textAlign: pw.TextAlign.center,
-          ),
-        ),
-        pw.SizedBox(height: 35),
-        pw.Container(
-          width: double.infinity,
-          padding: const pw.EdgeInsets.symmetric(horizontal: 45),
-          child: pw.Text(
-            subTitleOverride ??
-                (() {
-                  final nature = (mission.natureMission ?? '').toUpperCase();
-                  final prefix =
-                      (nature.startsWith('VERIFICATION') ||
-                          nature.startsWith('VÉRIFICATION'))
-                      ? nature
-                      : 'VERIFICATION $nature';
-                  return '$prefix\nDES INSTALLATIONS ELECTRIQUES';
-                })(),
-            style: pw.TextStyle(
-              font: fontBold,
-              fontSize: 15,
+              fontSize: 24,
               color: PdfReportStyles.headerColor,
             ),
             textAlign: pw.TextAlign.center,
           ),
         ),
-        pw.SizedBox(height: 45),
-        pw.Container(
-          width: double.infinity,
-          child: pw.Column(
-            children: [
-              pw.Text(
-                mission.nomClient.toUpperCase(),
-                style: pw.TextStyle(
-                  font: fontBold,
-                  fontSize: 16,
-                  color: PdfReportStyles.headerColor,
-                ),
-                textAlign: pw.TextAlign.center,
+
+        pw.SizedBox(height: 30),
+
+        // ── Nature de la mission (Centrée, en Bleu KES officiel) ──
+        pw.Center(
+          child: pw.ConstrainedBox(
+            constraints: const pw.BoxConstraints(maxWidth: 500),
+            child: pw.Text(
+              subTitleOverride ??
+                  (() {
+                    final nature = (mission.natureMission ?? rg?.verificationType ?? 'Vérification Périodique réglementaire').trim().toUpperCase();
+                    final displayNature = (nature.startsWith('VERIFICATION') || nature.startsWith('VÉRIFICATION'))
+                        ? nature
+                        : 'VERIFICATION $nature';
+                    return '$displayNature\n\nDES INSTALLATIONS ELECTRIQUES';
+                  })(),
+              style: pw.TextStyle(
+                font: fontBold,
+                fontSize: 17,
+                color: PdfReportStyles.headerColor,
               ),
-              if (mission.nomSite != null &&
-                  mission.nomSite!.isNotEmpty &&
-                  mission.nomSite!.toUpperCase() !=
-                      mission.nomClient.toUpperCase()) ...[
-                pw.SizedBox(height: 6),
-                pw.Text(
-                  mission.nomSite!.toUpperCase(),
-                  style: pw.TextStyle(
-                    font: fontBold,
-                    fontSize: 15,
-                    color: PdfReportStyles.headerColor,
-                  ),
-                  textAlign: pw.TextAlign.center,
-                ),
-              ],
-            ],
+              textAlign: pw.TextAlign.center,
+            ),
           ),
         ),
-        pw.SizedBox(height: 205),
+
+        pw.SizedBox(height: 35),
+
+        // ── Nom du site (Centré, grand corps, en Bleu KES officiel, sans "Site :") ──
+        pw.Center(
+          child: pw.ConstrainedBox(
+            constraints: const pw.BoxConstraints(maxWidth: 480),
+            child: pw.Text(
+              siteAffichage,
+              style: pw.TextStyle(
+                font: fontBold,
+                fontSize: 18,
+                color: PdfReportStyles.headerColor,
+              ),
+              textAlign: pw.TextAlign.center,
+            ),
+          ),
+        ),
+
+        pw.Spacer(),
+
+        // ── Bloc inférieur : Tableau 5 colonnes & QR Code ──
         pw.Row(
-          crossAxisAlignment: pw.CrossAxisAlignment.end,
-          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: pw.CrossAxisAlignment.center,
           children: [
+            // Tableau 5 colonnes d'identification de la mission
             pw.Expanded(
-              child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
+              child: pw.Table(
+                border: pw.TableBorder.all(color: PdfColors.black, width: 0.8),
+                defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
+                columnWidths: const {
+                  0: pw.FlexColumnWidth(2.3),
+                  1: pw.FlexColumnWidth(2.1),
+                  2: pw.FlexColumnWidth(1.6),
+                  3: pw.FlexColumnWidth(1.8),
+                  4: pw.FlexColumnWidth(1.6),
+                },
                 children: [
-                  if (dateIntervention.isNotEmpty)
-                    coverInfoRow('Date d\'intervention', dateIntervention),
-                  coverInfoRow(
-                    'Date du rapport',
-                    PdfReportStyles.formatDate(mission.dateRapport ?? DateTime.now()),
+                  // Ligne d'en-tête (en Bleu KES officiel)
+                  pw.TableRow(
+                    decoration: const pw.BoxDecoration(color: PdfColors.white),
+                    children: [
+                      _buildCoverTableHeaderCell('Nature de la mission'),
+                      _buildCoverTableHeaderCell('N° du rapport'),
+                      _buildCoverTableHeaderCell('Date du rapport'),
+                      _buildCoverTableHeaderCell('Date d\'intervention'),
+                      _buildCoverTableHeaderCell('Lieu d\'intervention'),
+                    ],
                   ),
-                  if (mission.natureMission != null)
-                    coverInfoRow(
-                      'Nature de la mission',
-                      mission.natureMission!,
-                    ),
-                  coverInfoRow(
-                    'Rapport N',
-                    'KES/IP/VE/${DateTime.now().year}/001',
+                  // Ligne des valeurs
+                  pw.TableRow(
+                    decoration: const pw.BoxDecoration(color: PdfColors.white),
+                    children: [
+                      _buildCoverTableDataCell(
+                        mission.natureMission ?? rg?.verificationType ?? 'Vérification Périodique réglementaire',
+                      ),
+                      _buildCoverTableDataCell(
+                        numRapport,
+                      ),
+                      _buildCoverTableDataCell(
+                        PdfReportStyles.formatDate(mission.dateRapport ?? DateTime.now()),
+                      ),
+                      _buildCoverTableDataCell(
+                        dateIntervention.isNotEmpty ? dateIntervention : '—',
+                      ),
+                      _buildCoverTableDataCell(
+                        lieuInterventionStr.isNotEmpty ? lieuInterventionStr : '—',
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-            pw.SizedBox(width: 15),
-            if (clientQrMemoryImg != null)
-              pw.Container(
-                width: 80,
-                height: 80,
-                alignment: pw.Alignment.center,
-                child: pw.Image(
-                  clientQrMemoryImg,
-                  width: 80,
-                  height: 80,
-                  fit: pw.BoxFit.contain,
-                ),
-              )
-            else
-              pw.Container(
-                width: 80,
-                height: 80,
-                decoration: pw.BoxDecoration(
-                  border: pw.Border.all(color: PdfColors.grey400, width: 1),
-                  color: PdfColors.grey200,
-                ),
-                child: pw.Center(
-                  child: pw.Column(
-                    mainAxisAlignment: pw.MainAxisAlignment.center,
-                    children: [
-                      pw.Text(
-                        'QR CODE',
-                        style: pw.TextStyle(
-                          font: fontBold,
-                          fontSize: 8,
-                          color: PdfColors.grey600,
-                        ),
-                      ),
-                      pw.SizedBox(height: 3),
-                      pw.Text(
-                        '(a coller ici)',
-                        style: pw.TextStyle(
-                          font: fontRegular,
-                          fontSize: 7,
-                          color: PdfColors.grey500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+            pw.SizedBox(width: 12),
+            // Encadré QR Code KES
+            pw.Container(
+              width: 82,
+              height: 82,
+              decoration: pw.BoxDecoration(
+                border: pw.Border.all(color: PdfColors.black, width: 0.8),
+                color: PdfColors.white,
               ),
+              padding: const pw.EdgeInsets.all(5),
+              alignment: pw.Alignment.center,
+              child: clientQrMemoryImg != null
+                  ? pw.Image(
+                      clientQrMemoryImg,
+                      width: 72,
+                      height: 72,
+                      fit: pw.BoxFit.contain,
+                    )
+                  : pw.Column(
+                      mainAxisAlignment: pw.MainAxisAlignment.center,
+                      children: [
+                        pw.Text(
+                          'QR CODE',
+                          style: pw.TextStyle(
+                            font: fontBold,
+                            fontSize: 7.5,
+                            color: PdfColors.grey700,
+                          ),
+                        ),
+                        pw.SizedBox(height: 2),
+                        pw.Text(
+                          'KES Verification',
+                          style: pw.TextStyle(
+                            font: fontRegular,
+                            fontSize: 6,
+                            color: PdfColors.grey500,
+                          ),
+                        ),
+                      ],
+                    ),
+            ),
           ],
         ),
       ],
     );
   }
 
+  static pw.Widget _buildCoverTableHeaderCell(String text) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+      alignment: pw.Alignment.center,
+      child: pw.Text(
+        text,
+        style: pw.TextStyle(
+          font: fontBold,
+          fontSize: 8.5,
+          color: PdfReportStyles.headerColor,
+        ),
+        textAlign: pw.TextAlign.center,
+      ),
+    );
+  }
+
+  static pw.Widget _buildCoverTableDataCell(String text) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+      alignment: pw.Alignment.center,
+      child: pw.Text(
+        text,
+        style: pw.TextStyle(
+          font: fontRegular,
+          fontSize: 8.5,
+          color: PdfColors.black,
+        ),
+        textAlign: pw.TextAlign.center,
+      ),
+    );
+  }
 
   static pw.Widget coverInfoRow(String label, String value) {
     return pw.Padding(
@@ -454,7 +477,7 @@ class PdfCoverBuilder {
       }
     }
 
-    final dateGen = reportGenerationDate ?? DateTime.now();
+    final dateGen = mission?.dateRapport ?? reportGenerationDate ?? DateTime.now();
     final dateGenStr = PdfReportStyles.formatDate(dateGen);
 
     final dateDebut = rg?.dateDebut ?? mission?.dateIntervention;

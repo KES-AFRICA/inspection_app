@@ -52,6 +52,8 @@ class MissionMapper {
       installation: model.installation,
       perimetreMission: model.perimetreMission,
       afficherTableauFoudre: model.afficherTableauFoudre,
+      recepteurRapport: model.recepteurRapport,
+      lieuIntervention: model.lieuIntervention,
     );
   }
   static Mission toModel(MissionEntity entity) {
@@ -104,6 +106,8 @@ class MissionMapper {
           ? List<String>.from(entity.perimetreMission!)
           : null,
       afficherTableauFoudre: entity.afficherTableauFoudre,
+      recepteurRapport: entity.recepteurRapport,
+      lieuIntervention: entity.lieuIntervention,
     );
     
     // renseignementsGenerauxId n'est pas présent dans le constructeur de Mission

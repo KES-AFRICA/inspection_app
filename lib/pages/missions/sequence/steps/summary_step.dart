@@ -15,6 +15,7 @@ import 'package:inspec_app/services/sequence_progress_service.dart';
 import 'package:inspec_app/services/pdf/pdf_report_service.dart';
 import 'package:inspec_app/services/word_report_service.dart';
 import 'package:inspec_app/services/excel/excel_report_service.dart';
+import 'package:inspec_app/services/hive_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:printing/printing.dart';
@@ -52,14 +53,159 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
   bool _showPdfPreview = false;
   bool _showWordPreview = false;
   bool _showExcelPreview = false;
+  DateTime? _dateRapport;
 
   @override
   void initState() {
     super.initState();
+    _initDateRapport();
     _loadProgress();
     widget.onDataChanged({'summary_active': true});
     _loadLastReports();
     _markCurrentStepCompleted();
+  }
+
+  void _initDateRapport() {
+    final mission = widget.mission;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    // Règle métier KES :
+    // Par défaut, la date du rapport est la date du jour de génération.
+    // Si l'inspecteur a modifié la date aujourd'hui, on la conserve.
+    // Si l'application est rouverte un autre jour, elle se recale par défaut sur aujourd'hui.
+    final lastUpdated = mission.updatedAt;
+    final isUpdatedToday = lastUpdated.year == today.year &&
+        lastUpdated.month == today.month &&
+        lastUpdated.day == today.day;
+
+    if (mission.dateRapport != null && isUpdatedToday) {
+      _dateRapport = mission.dateRapport;
+    } else {
+      _dateRapport = today;
+      mission.dateRapport = today;
+      HiveService.saveMission(mission);
+    }
+  }
+
+  Future<void> _selectDateRapport() async {
+    final now = DateTime.now();
+    final initialDate = _dateRapport ?? now;
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2035),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: AppTheme.primaryBlue,
+              onPrimary: Colors.white,
+              onSurface: Colors.black,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() {
+        _dateRapport = picked;
+      });
+      widget.mission.dateRapport = picked;
+      widget.mission.updatedAt = DateTime.now();
+      await HiveService.saveMission(widget.mission);
+    }
+  }
+
+  Widget _buildReportDateCard() {
+    final dateStr = _dateRapport != null
+        ? '${_dateRapport!.day.toString().padLeft(2, '0')}/${_dateRapport!.month.toString().padLeft(2, '0')}/${_dateRapport!.year}'
+        : 'Sélectionner une date';
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey.shade300),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryBlue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.event_note,
+                color: AppTheme.primaryBlue,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Date du rapport',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Date officielle inscrite sur le rapport',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            InkWell(
+              onTap: _selectDateRapport,
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppTheme.primaryBlue.withOpacity(0.4)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      dateStr,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.primaryBlue,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    const Icon(
+                      Icons.edit_calendar,
+                      size: 16,
+                      color: AppTheme.primaryBlue,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _markCurrentStepCompleted() async {
@@ -1207,6 +1353,10 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
                     // Étapes complétées
                     _buildStepsCompletionCard(),
                     const SizedBox(height: 24),
+
+                    // Date du rapport (champ officiel modifiable)
+                    _buildReportDateCard(),
+                    const SizedBox(height: 16),
 
                     // Bouton Générer/Régénérer
                     _buildGenerateButton(),

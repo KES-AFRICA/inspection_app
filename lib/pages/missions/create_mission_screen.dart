@@ -30,6 +30,8 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
   final _adresseClientCtrl = TextEditingController();
   final _nomSiteCtrl = TextEditingController();
   final _installationCtrl = TextEditingController();
+  final _recepteurRapportCtrl = TextEditingController();
+  final _lieuInterventionCtrl = TextEditingController();
   
   // Sélection pour Nature de vérification
   String? _natureMission;
@@ -88,6 +90,8 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
       _adresseClientCtrl.text = m.adresseClient ?? '';
       _nomSiteCtrl.text = m.nomSite ?? '';
       _installationCtrl.text = m.installation ?? '';
+      _recepteurRapportCtrl.text = m.recepteurRapport ?? '';
+      _lieuInterventionCtrl.text = m.lieuIntervention ?? '';
       _natureMission = m.natureMission;
       if (m.perimetreMission != null) {
         _selectedPerimetres = normalizePerimetreList(m.perimetreMission!);
@@ -137,6 +141,8 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
     _adresseClientCtrl.dispose();
     _nomSiteCtrl.dispose();
     _installationCtrl.dispose();
+    _recepteurRapportCtrl.dispose();
+    _lieuInterventionCtrl.dispose();
     super.dispose();
   }
 
@@ -194,6 +200,8 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
         nomSite: _nomSiteCtrl.text.trim(),
         installation: _installationCtrl.text.trim(),
         natureMission: _natureMission,
+        recepteurRapport: _recepteurRapportCtrl.text.trim().isEmpty ? null : _recepteurRapportCtrl.text.trim(),
+        lieuIntervention: _lieuInterventionCtrl.text.trim().isEmpty ? null : _lieuInterventionCtrl.text.trim(),
         perimetreMission: _selectedPerimetres.isEmpty ? null : List<String>.from(_selectedPerimetres),
         createdAt: isEditing ? widget.missionToEdit!.createdAt : DateTime.now(),
         updatedAt: DateTime.now(),
@@ -1204,6 +1212,15 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
                   isRequired: true,
                 ),
                 SizedBox(height: isSmallScreen ? 14 : 16),
+
+                // Récepteur du rapport
+                _buildTextField(
+                  controller: _recepteurRapportCtrl,
+                  label: 'Récepteur du rapport',
+                  icon: Icons.person_outline,
+                  hint: 'Ex: M. le Directeur Général, M. Dupont...',
+                ),
+                SizedBox(height: isSmallScreen ? 14 : 16),
                 
                 // Activité du client
                 _buildTextField(
@@ -1220,6 +1237,15 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
                   label: 'Activité sur le site',
                   icon: Icons.storefront_outlined,
                   hint: 'Ex: Atelier, Gare, Dépôt, Siège...',
+                ),
+                SizedBox(height: isSmallScreen ? 14 : 16),
+
+                // Lieu d'intervention (immédiatement après Activité sur le site)
+                _buildTextField(
+                  controller: _lieuInterventionCtrl,
+                  label: 'Lieu d\'intervention',
+                  icon: Icons.place_outlined,
+                  hint: 'Ex: Figuil, Douala, Yaoundé...',
                 ),
                 SizedBox(height: isSmallScreen ? 14 : 16),
 

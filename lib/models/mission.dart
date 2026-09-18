@@ -146,6 +146,12 @@ class Mission extends HiveObject {
   @HiveField(46)
   String? classementReglementaire;
 
+  @HiveField(47)
+  String? recepteurRapport;
+
+  @HiveField(48)
+  String? lieuIntervention;
+
   Mission({
     required this.id,
     required this.nomClient,
@@ -193,6 +199,8 @@ class Mission extends HiveObject {
     this.installation,
     this.perimetreMission,
     this.qrCodeClient,
+    this.recepteurRapport,
+    this.lieuIntervention,
   }) : autresDocuments = autresDocuments ?? [];
 
   factory Mission.fromJson(Map<String, dynamic> json) {
@@ -262,6 +270,8 @@ class Mission extends HiveObject {
       classementReglementaireType: json['classement_reglementaire_type'] ?? json['classementReglementaireType'],
       classementReglementaireCategorie: json['classement_reglementaire_categorie'] ?? json['classementReglementaireCategorie'],
       afficherTableauFoudre: json['afficher_tableau_foudre'] ?? false,
+      recepteurRapport: json['recepteur_rapport'] ?? json['recepteurRapport'],
+      lieuIntervention: json['lieu_intervention'] ?? json['lieuIntervention'],
     );
   }
 
@@ -313,6 +323,8 @@ class Mission extends HiveObject {
       'autres_documents': autresDocuments,
       'installation': installation,
       'perimetre_mission': perimetreMission,
+      'recepteur_rapport': recepteurRapport,
+      'lieu_intervention': lieuIntervention,
     };
   }
 
