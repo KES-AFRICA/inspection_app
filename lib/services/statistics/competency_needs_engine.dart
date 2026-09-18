@@ -96,7 +96,7 @@ class CompetencyNeed {
     return parts.join(' — ');
   }
 
-  /// Texte narratif complet prêt pour le rendu documentaire
+  /// Texte narratif complet prêt pour le rendu documentaire (synthétique, orienté compétences)
   String get fullNarrative {
     final buffer = StringBuffer();
     buffer.write(recommendedSkills.trim());
@@ -111,17 +111,6 @@ class CompetencyNeed {
       buffer.write('. ');
     } else {
       buffer.write(' ');
-    }
-
-    if (topEquipmentTypes.isNotEmpty || topLocations.isNotEmpty) {
-      final locParts = <String>[];
-      if (topEquipmentTypes.isNotEmpty) {
-        locParts.add('sur les ${topEquipmentTypes.take(2).join(" et ")}');
-      }
-      if (topLocations.isNotEmpty) {
-        locParts.add('au sein de : ${topLocations.take(2).join(", ")}');
-      }
-      buffer.write('Ces constats ont été observés principalement ${locParts.join(" ")}. ');
     }
 
     buffer.write(operationalObjective.trim());

@@ -775,23 +775,13 @@ class PdfStatisticsBuilder {
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          pw.Row(
-            children: [
-              pw.Container(
-                width: 3,
-                height: 12,
-                color: PdfReportStyles.headerColor,
-                margin: const pw.EdgeInsets.only(right: 6),
-              ),
-              pw.Text(
-                'Lecture et enseignements du diagramme de Pareto (loi des 80/20)',
-                style: pw.TextStyle(
-                  font: fontBold,
-                  fontSize: fsH3,
-                  color: PdfReportStyles.headerColor,
-                ),
-              ),
-            ],
+          pw.Text(
+            'Lecture et enseignements du diagramme de Pareto (loi des 80/20)',
+            style: pw.TextStyle(
+              font: fontBold,
+              fontSize: fsH3,
+              color: PdfReportStyles.headerColor,
+            ),
           ),
           pw.SizedBox(height: 6),
           pw.RichText(

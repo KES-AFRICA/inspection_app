@@ -326,6 +326,62 @@ void main() {
       }
       expect(sumOccurrences, equals(2));
     });
+
+    test('Scénario G : Synthèse épurée sans informations de localisation détaillées (Règle Sous-section 10)', () {
+      final findings = <AuditFinding>[
+        AuditFinding(
+          id: 'g1',
+          missionId: 'M-SYNTH',
+          tensionDomain: TensionDomain.mt,
+          origin: 'Zone MT "Zone PETCOKE" / Local "Local transformateur 1600 KVA"',
+          objectType: 'Cellule MT',
+          objectName: 'Cellule Arrivée HTA 01',
+          tableName: 'Cellule audit',
+          verificationPoint: 'Interverrouillage et mise à la terre MT',
+          observationText: 'Séquence mécanique bloquée',
+          conformity: 'non',
+          criticality: 'Critique',
+        ),
+        AuditFinding(
+          id: 'g2',
+          missionId: 'M-SYNTH',
+          tensionDomain: TensionDomain.bt,
+          origin: 'Zone BT "Zone locaux transformateurs VRM. RAW MILL" / Local "Local électrique VRM Raw Mill"',
+          objectType: 'Local MT',
+          objectName: 'Local Électrique',
+          tableName: 'Points de vérification',
+          verificationPoint: 'DGPT2 et diélectrique',
+          observationText: 'Fuite diélectrique',
+          conformity: 'non',
+          criticality: 'Majeure',
+        ),
+      ];
+
+      final result = CompetencyNeedsEngine.analyze(
+        missionId: 'M-SYNTH',
+        findings: findings,
+        totalNC: 2,
+      );
+
+      expect(result.axes.isNotEmpty, isTrue);
+      for (final axis in result.axes) {
+        final narrative = axis.fullNarrative;
+
+        // 1. Structure attendue : compétence, besoin factuel/chiffré, finalité opérationnelle
+        expect(narrative, contains(axis.recommendedSkills.trim()));
+        expect(narrative, contains(axis.rationale.trim()));
+        expect(narrative, contains(axis.operationalObjective.trim()));
+
+        // 2. Suppression stricte de toutes informations de localisation ou descriptions d'installations
+        expect(narrative.contains('Ces constats ont été observés principalement'), isFalse);
+        expect(narrative.contains('Zone PETCOKE'), isFalse);
+        expect(narrative.contains('VRM. RAW MILL'), isFalse);
+        expect(narrative.contains('VRM Raw Mill'), isFalse);
+        expect(narrative.contains('Local transformateur 1600 KVA'), isFalse);
+        expect(narrative.contains('au sein de :'), isFalse);
+        expect(narrative.contains('sur les Local MT et Cellule MT'), isFalse);
+      }
+    });
   });
 
   group('Intégration Documentaire PDF — Section 10 Résumé Exécutif & Section 7 Stats', () {
@@ -386,7 +442,7 @@ void main() {
 
       final bytes = await doc.save();
       expect(bytes.isNotEmpty, isTrue);
-      expect(trackedPages.containsKey('stat_formation'), isTrue);
+      expect(trackedPages.containsKey('stat_synthese'), isTrue);
     });
   });
 }
