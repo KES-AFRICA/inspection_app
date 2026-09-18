@@ -821,7 +821,19 @@ class PdfExecutiveSummaryBuilder {
       ..sort((a, b) => b.densite.compareTo(a.densite));
     final densestMt = sortedMtCats.isNotEmpty ? sortedMtCats.first : null;
 
-    const btAllowed = {'TGBT', 'Armoires', 'Coffrets', 'Inverseur', 'Inverseurs'};
+    const btAllowed = {
+      'Locaux techniques BT',
+      'Locaux techniques GE',
+      'Local technique BT',
+      'Local technique GE',
+      'Locaux BT',
+      'Locaux GE',
+      'Inverseur',
+      'Inverseurs',
+      'TGBT',
+      'Armoires',
+      'Coffrets',
+    };
     final sortedBtCats = technical.btCategoriesCrossRows
         .where((r) => btAllowed.contains(r.categoryName) && r.equipementsCount > 0)
         .toList()

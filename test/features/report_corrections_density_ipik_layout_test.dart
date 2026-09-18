@@ -301,6 +301,26 @@ void main() {
 
       final btRows = [
         const CategoryCrossAuditRow(
+          categoryName: 'Locaux techniques GE',
+          equipementsCount: 1,
+          ncCount: 4,
+          critiquesCount: 1,
+          majeuresCount: 3,
+          pctOfTotalNc: 10.0,
+          tauxCritique: 25.0,
+          densite: 4.0,
+        ),
+        const CategoryCrossAuditRow(
+          categoryName: 'Locaux techniques BT',
+          equipementsCount: 1,
+          ncCount: 8,
+          critiquesCount: 2,
+          majeuresCount: 6,
+          pctOfTotalNc: 20.0,
+          tauxCritique: 25.0,
+          densite: 8.0, // Catégorie BT la plus dense (locaux techniques BT autorisés !)
+        ),
+        const CategoryCrossAuditRow(
           categoryName: 'TGBT',
           equipementsCount: 1,
           ncCount: 3,
@@ -318,7 +338,7 @@ void main() {
           majeuresCount: 8,
           pctOfTotalNc: 50.0,
           tauxCritique: 33.3,
-          densite: 6.0, // Catégorie BT la plus dense
+          densite: 6.0,
         ),
         const CategoryCrossAuditRow(
           categoryName: 'Prises de terre mesurées',
