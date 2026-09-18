@@ -247,6 +247,48 @@ void main() {
       expect(doc.document.pdfPageList.pages, isNotEmpty);
     });
 
+    test('Tableau inférieur de couverture unifié avec QR Code intégré sans Row disjointe', () {
+      final mission = Mission(
+        id: 'M_PDF_COVER_UNIFIED_TABLE',
+        nomClient: 'CIMENCAM',
+        nomSite: 'Usine de Figuil',
+        natureMission: 'CONTRÔLE RÉGLEMENTAIRE ÉLECTRIQUE',
+        recepteurRapport: 'M. Marc DUPONT',
+        lieuIntervention: 'Figuil',
+        dateRapport: fixedDateRapport,
+        dateIntervention: fixedDateIntervention,
+        status: 'en_cours',
+        createdAt: now,
+        updatedAt: now,
+      );
+
+      final doc = pw.Document();
+      final page = pw.Page(
+        build: (ctx) {
+          final column = PdfCoverBuilder.buildCoverPage(
+            mission,
+            null,
+            ctx,
+            numeroRapport: 'KES/IP/VE/2026/099',
+          ) as pw.Column;
+
+          // Le bloc du bas (avant le dernier SizedBox de 25pt) est une Table unifiée
+          final bottomTableCandidate = column.children[column.children.length - 2];
+          expect(bottomTableCandidate, isA<pw.Table>());
+          final bottomTable = bottomTableCandidate as pw.Table;
+          expect(bottomTable.border, isNotNull);
+          // 2 colonnes : largeur 440 (détails mission) et largeur 70 (QR code)
+          expect(bottomTable.columnWidths?[0], isA<pw.FixedColumnWidth>());
+          expect(bottomTable.columnWidths?[1], isA<pw.FixedColumnWidth>());
+
+          return column;
+        },
+      );
+
+      doc.addPage(page);
+      expect(doc.document.pdfPageList.pages, isNotEmpty);
+    });
+
     test('Génération de couverture avec données industrielles complexes et longues (Camrail) sans débordement', () async {
       final complexMission = Mission(
         id: 'M_COMPLEX_CAMRAIL',

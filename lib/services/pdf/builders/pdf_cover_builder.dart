@@ -285,115 +285,112 @@ class PdfCoverBuilder {
 
         pw.Spacer(flex: 1),
 
-        // ── Bloc inférieur : Tableau 5 colonnes & QR Code (fusionnés, même hauteur exacte de 70pt) ──
-        pw.Row(
-          crossAxisAlignment: pw.CrossAxisAlignment.center,
+        // ── Bloc inférieur : Tableau unifié intégrant les 5 colonnes et le QR Code (hauteur exacte 70pt) ──
+        pw.Table(
+          border: pw.TableBorder.all(color: PdfColors.black, width: 0.8),
+          defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
+          columnWidths: const {
+            0: pw.FixedColumnWidth(440),
+            1: pw.FixedColumnWidth(70),
+          },
           children: [
-            // Tableau 5 colonnes d'identification de la mission
-            pw.SizedBox(
-              width: 440,
-              child: pw.Table(
-                border: pw.TableBorder.all(color: PdfColors.black, width: 0.8),
-                defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
-                columnWidths: const {
-                  0: pw.FixedColumnWidth(106),
-                  1: pw.FixedColumnWidth(94),
-                  2: pw.FixedColumnWidth(70),
-                  3: pw.FixedColumnWidth(80),
-                  4: pw.FixedColumnWidth(90),
-                },
-                children: [
-                  // Ligne d'en-tête (PAS de couleur de fond, texte en accentColor)
-                  pw.TableRow(
-                    decoration: const pw.BoxDecoration(color: PdfColors.white),
-                    children: [
-                      _buildCoverTableHeaderCell('Nature de la mission', height: coverHeaderRowHeight),
-                      _buildCoverTableHeaderCell('N° du rapport', height: coverHeaderRowHeight),
-                      _buildCoverTableHeaderCell('Date du rapport', height: coverHeaderRowHeight),
-                      _buildCoverTableHeaderCell('Date d\'intervention', height: coverHeaderRowHeight),
-                      _buildCoverTableHeaderCell('Lieu d\'intervention', height: coverHeaderRowHeight),
-                    ],
+            pw.TableRow(
+              children: [
+                // Colonne 0 : Tableau interne des 5 colonnes d'identification de la mission
+                pw.Table(
+                  border: const pw.TableBorder(
+                    verticalInside: pw.BorderSide(color: PdfColors.black, width: 0.8),
+                    horizontalInside: pw.BorderSide(color: PdfColors.black, width: 0.8),
                   ),
-                  // Ligne des valeurs
-                  pw.TableRow(
-                    decoration: const pw.BoxDecoration(color: PdfColors.white),
-                    children: [
-                      _buildCoverTableDataCell(
-                        (() {
-                          final n = (mission.natureMission ?? rg?.verificationType ?? 'Vérification Périodique Réglementaire').trim();
-                          if (n.toUpperCase().contains('PERIODIQUE') || n.toUpperCase().contains('PÉRIODIQUE')) {
-                            return 'Vérification Périodique Réglementaire';
-                          }
-                          return n;
-                        })(),
-                        height: coverDataRowHeight,
-                      ),
-                      _buildCoverTableDataCell(
-                        numRapport,
-                        height: coverDataRowHeight,
-                      ),
-                      _buildCoverTableDataCell(
-                        PdfReportStyles.formatDate(mission.dateRapport ?? DateTime.now()),
-                        height: coverDataRowHeight,
-                      ),
-                      _buildCoverTableDataCell(
-                        dateIntervention.isNotEmpty ? dateIntervention : '-',
-                        height: coverDataRowHeight,
-                        fontSize: hasDateRange ? 7.0 : 8.0,
-                      ),
-                      _buildCoverTableDataCell(
-                        lieuInterventionStr.isNotEmpty ? lieuInterventionStr : '-',
-                        height: coverDataRowHeight,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            // Encadré QR Code KES carré de hauteur strictement identique au tableau (70x70)
-            // Se touche directement avec le tableau : pas de bordure gauche pour unifier avec la bordure droite du tableau
-            pw.Container(
-              width: coverTableAndQrHeight,
-              height: coverTableAndQrHeight,
-              decoration: const pw.BoxDecoration(
-                border: pw.Border(
-                  top: pw.BorderSide(color: PdfColors.black, width: 0.8),
-                  right: pw.BorderSide(color: PdfColors.black, width: 0.8),
-                  bottom: pw.BorderSide(color: PdfColors.black, width: 0.8),
-                ),
-                color: PdfColors.white,
-              ),
-              padding: const pw.EdgeInsets.all(5),
-              alignment: pw.Alignment.center,
-              child: clientQrMemoryImg != null
-                  ? pw.Image(
-                      clientQrMemoryImg,
-                      width: 58,
-                      height: 58,
-                      fit: pw.BoxFit.contain,
-                    )
-                  : pw.Column(
-                      mainAxisAlignment: pw.MainAxisAlignment.center,
+                  defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
+                  columnWidths: const {
+                    0: pw.FixedColumnWidth(106),
+                    1: pw.FixedColumnWidth(94),
+                    2: pw.FixedColumnWidth(70),
+                    3: pw.FixedColumnWidth(80),
+                    4: pw.FixedColumnWidth(90),
+                  },
+                  children: [
+                    // Ligne d'en-tête (PAS de couleur de fond, texte en accentColor)
+                    pw.TableRow(
                       children: [
-                        pw.Text(
-                          'QR CODE',
-                          style: pw.TextStyle(
-                            font: fontBold,
-                            fontSize: 7.5,
-                            color: PdfReportStyles.accentColor,
-                          ),
+                        _buildCoverTableHeaderCell('Nature de la mission', height: coverHeaderRowHeight),
+                        _buildCoverTableHeaderCell('N° du rapport', height: coverHeaderRowHeight),
+                        _buildCoverTableHeaderCell('Date du rapport', height: coverHeaderRowHeight),
+                        _buildCoverTableHeaderCell('Date d\'intervention', height: coverHeaderRowHeight),
+                        _buildCoverTableHeaderCell('Lieu d\'intervention', height: coverHeaderRowHeight),
+                      ],
+                    ),
+                    // Ligne des valeurs
+                    pw.TableRow(
+                      children: [
+                        _buildCoverTableDataCell(
+                          (() {
+                            final n = (mission.natureMission ?? rg?.verificationType ?? 'Vérification Périodique Réglementaire').trim();
+                            if (n.toUpperCase().contains('PERIODIQUE') || n.toUpperCase().contains('PÉRIODIQUE')) {
+                              return 'Vérification Périodique Réglementaire';
+                            }
+                            return n;
+                          })(),
+                          height: coverDataRowHeight,
                         ),
-                        pw.SizedBox(height: 2),
-                        pw.Text(
-                          'KES Verification',
-                          style: pw.TextStyle(
-                            font: fontRegular,
-                            fontSize: 6,
-                            color: PdfReportStyles.accentColor,
-                          ),
+                        _buildCoverTableDataCell(
+                          numRapport,
+                          height: coverDataRowHeight,
+                        ),
+                        _buildCoverTableDataCell(
+                          PdfReportStyles.formatDate(mission.dateRapport ?? DateTime.now()),
+                          height: coverDataRowHeight,
+                        ),
+                        _buildCoverTableDataCell(
+                          dateIntervention.isNotEmpty ? dateIntervention : '-',
+                          height: coverDataRowHeight,
+                          fontSize: hasDateRange ? 7.0 : 8.0,
+                        ),
+                        _buildCoverTableDataCell(
+                          lieuInterventionStr.isNotEmpty ? lieuInterventionStr : '-',
+                          height: coverDataRowHeight,
                         ),
                       ],
                     ),
+                  ],
+                ),
+                // Colonne 1 : Encadré QR Code KES carré (70x70) intégré nativement dans le tableau
+                pw.Container(
+                  height: coverTableAndQrHeight,
+                  padding: const pw.EdgeInsets.all(5),
+                  alignment: pw.Alignment.center,
+                  child: clientQrMemoryImg != null
+                      ? pw.Image(
+                          clientQrMemoryImg,
+                          width: 58,
+                          height: 58,
+                          fit: pw.BoxFit.contain,
+                        )
+                      : pw.Column(
+                          mainAxisAlignment: pw.MainAxisAlignment.center,
+                          children: [
+                            pw.Text(
+                              'QR CODE',
+                              style: pw.TextStyle(
+                                font: fontBold,
+                                fontSize: 7.5,
+                                color: PdfReportStyles.accentColor,
+                              ),
+                            ),
+                            pw.SizedBox(height: 2),
+                            pw.Text(
+                              'KES Verification',
+                              style: pw.TextStyle(
+                                font: fontRegular,
+                                fontSize: 6,
+                                color: PdfReportStyles.accentColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
+              ],
             ),
           ],
         ),

@@ -1746,9 +1746,9 @@
     "semantic_hash": ""
   },
   "lib/services/pdf/builders/pdf_cover_builder.dart": {
-    "mtime": 1789737553.8485196,
-    "seen": 1789740342.4595902,
-    "ast_hash": "b30e59e64ab9b3ef03b304a701bc8ae4",
+    "mtime": 1789742093.5355673,
+    "seen": 1789742264.2274194,
+    "ast_hash": "03488d0b68ebb31394438e36856ba10e",
     "semantic_hash": ""
   },
   "lib/services/pdf/builders/pdf_description_builder.dart": {
@@ -3744,9 +3744,9 @@
     "semantic_hash": ""
   },
   "test/features/report_cover_and_date_propagation_test.dart": {
-    "mtime": 1789737078.1637714,
-    "seen": 1789740342.4598467,
-    "ast_hash": "e77b5011dab1c87ac545fee0ffb466dc",
+    "mtime": 1789742182.4699337,
+    "seen": 1789742264.2280066,
+    "ast_hash": "f46bf1b0e7318299636150f28671c1a8",
     "semantic_hash": ""
   }
 }
