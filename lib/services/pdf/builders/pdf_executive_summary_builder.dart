@@ -1975,63 +1975,181 @@ class PdfExecutiveSummaryBuilder {
     pw.Widget buildRichStatsCell(IpIkZoneItem item) {
       final total = item.totalEquipements;
       if (total == 0) {
-        return _buildTableCell('0 équipement (non évaluable)', align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft);
+        return _buildTableCell(
+          '0 équipement (non évaluable)',
+          align: pw.TextAlign.left,
+          alignment: pw.Alignment.centerLeft,
+        );
       }
-      final indPct = (item.indicesPresents / total * 100.0).toStringAsFixed(1).replaceAll('.', ',');
 
-      final String rateStr;
-      final String detailStr;
-      if (item.pointsVerifies > 0) {
-        final pct = item.nonComplianceRate.toStringAsFixed(1).replaceAll('.', ',');
-        rateStr = '$pct %';
-        detailStr = '(${item.pointsNonConformes} NC / ${item.pointsVerifies} point${item.pointsVerifies > 1 ? "s" : ""} vérifié${item.pointsVerifies > 1 ? "s" : ""})';
+      final isEvaluable = item.isEvaluable;
+
+      // Règle stricte de coloration du Taux de non-conformité :
+      // 0 % à 50 % → rouge
+      // strictement supérieur à 50 % et inférieur à 100 % → orange
+      // 100 % → vert
+      final PdfColor rateColor;
+      if (!isEvaluable) {
+        rateColor = PdfReportStyles.darkGrey;
       } else {
-        rateStr = 'Non évaluable';
-        detailStr = '(0 point vérifié)';
+        final rate = item.nonComplianceRate;
+        if (rate <= 50.0) {
+          rateColor = PdfColor.fromHex('#B71C1C'); // rouge
+        } else if (rate < 100.0) {
+          rateColor = PdfColor.fromHex('#E65100'); // orange
+        } else {
+          rateColor = PdfColor.fromHex('#2E7D32'); // vert
+        }
       }
 
-      final hasNc = item.pointsNonConformes > 0;
+      final String rateDisplay;
+      if (isEvaluable) {
+        rateDisplay = item.formattedNonComplianceRate;
+      } else if (item.totalEquipements > 0 &&
+          item.nonEvaluableCount == item.totalEquipements) {
+        rateDisplay = 'Non évaluable (Indice requis non défini)';
+      } else {
+        rateDisplay = 'Non évaluable';
+      }
 
       return pw.Container(
         alignment: pw.Alignment.centerLeft,
-        padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3.5),
+        padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
         child: pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           mainAxisSize: pw.MainAxisSize.min,
           children: [
+            // 1. Nombre total d'équipements
+            pw.Text(
+              '$total équipement${total > 1 ? "s" : ""}',
+              style: pw.TextStyle(
+                font: fontBold,
+                fontSize: fsSmall,
+                color: PdfReportStyles.headerColor,
+              ),
+            ),
+            pw.SizedBox(height: 2),
+
+            // 2. Taux de non-conformité
             pw.RichText(
               text: pw.TextSpan(
-                style: pw.TextStyle(font: fontRegular, fontSize: fsSmall, color: PdfReportStyles.darkGrey),
+                style: pw.TextStyle(
+                  font: fontRegular,
+                  fontSize: fsSmall,
+                  color: PdfReportStyles.darkGrey,
+                ),
                 children: [
                   pw.TextSpan(
-                    text: '$total équipement${total > 1 ? "s" : ""}',
-                    style: pw.TextStyle(font: fontBold, color: PdfReportStyles.headerColor),
-                  ),
-                  const pw.TextSpan(text: ' , '),
-                  pw.TextSpan(
                     text: 'Taux de non-conformité : ',
-                    style: pw.TextStyle(font: fontBold, color: PdfReportStyles.headerColor),
-                  ),
-                  pw.TextSpan(
-                    text: rateStr,
                     style: pw.TextStyle(
                       font: fontBold,
-                      color: hasNc ? PdfColor.fromHex('#B71C1C') : PdfReportStyles.conformeColor,
+                      color: PdfReportStyles.headerColor,
                     ),
                   ),
                   pw.TextSpan(
-                    text: ' $detailStr',
+                    text: rateDisplay,
+                    style: pw.TextStyle(
+                      font: fontBold,
+                      color: rateColor,
+                    ),
                   ),
                 ],
               ),
             ),
-            pw.SizedBox(height: 1.5),
-            pw.RichText(
-              text: pw.TextSpan(
-                style: pw.TextStyle(font: fontRegular, fontSize: fsSmall, color: PdfReportStyles.darkGrey),
+            pw.SizedBox(height: 3),
+
+            // 3. Adéquation
+            pw.Text(
+              'Adéquation',
+              style: pw.TextStyle(
+                font: fontBold,
+                fontSize: fsSmall,
+                color: PdfReportStyles.headerColor,
+              ),
+            ),
+            pw.Padding(
+              padding: const pw.EdgeInsets.only(left: 4, top: 1),
+              child: pw.RichText(
+                text: pw.TextSpan(
+                  style: pw.TextStyle(
+                    font: fontRegular,
+                    fontSize: fsSmall,
+                    color: PdfReportStyles.darkGrey,
+                  ),
+                  children: [
+                    pw.TextSpan(
+                      text: '• Indice présent : ',
+                      style: pw.TextStyle(
+                        font: fontBold,
+                        color: PdfReportStyles.headerColor,
+                      ),
+                    ),
+                    pw.TextSpan(
+                      text: '${item.adequatCount} / $total, soit ${item.formattedAdequatPct}',
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            pw.SizedBox(height: 3),
+
+            // 4. Inadéquation
+            pw.Text(
+              'Inadéquation',
+              style: pw.TextStyle(
+                font: fontBold,
+                fontSize: fsSmall,
+                color: PdfReportStyles.headerColor,
+              ),
+            ),
+            pw.Padding(
+              padding: const pw.EdgeInsets.only(left: 4, top: 1),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                mainAxisSize: pw.MainAxisSize.min,
                 children: [
-                  pw.TextSpan(
-                    text: 'Indice présent : ${item.indicesPresents} / $total — $indPct %',
+                  pw.RichText(
+                    text: pw.TextSpan(
+                      style: pw.TextStyle(
+                        font: fontRegular,
+                        fontSize: fsSmall,
+                        color: PdfReportStyles.darkGrey,
+                      ),
+                      children: [
+                        pw.TextSpan(
+                          text: '• Présent et différent : ',
+                          style: pw.TextStyle(
+                            font: fontBold,
+                            color: PdfReportStyles.headerColor,
+                          ),
+                        ),
+                        pw.TextSpan(
+                          text: '${item.presentDifferentCount} / $total, soit ${item.formattedPresentDifferentPct}',
+                        ),
+                      ],
+                    ),
+                  ),
+                  pw.SizedBox(height: 1.5),
+                  pw.RichText(
+                    text: pw.TextSpan(
+                      style: pw.TextStyle(
+                        font: fontRegular,
+                        fontSize: fsSmall,
+                        color: PdfReportStyles.darkGrey,
+                      ),
+                      children: [
+                        pw.TextSpan(
+                          text: '• Absent : ',
+                          style: pw.TextStyle(
+                            font: fontBold,
+                            color: PdfReportStyles.headerColor,
+                          ),
+                        ),
+                        pw.TextSpan(
+                          text: '${item.absentCount} / $total, soit ${item.formattedAbsentPct}',
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -2097,5 +2215,10 @@ class PdfExecutiveSummaryBuilder {
   @visibleForTesting
   static pw.Widget buildRiskFamilyMatrixTableForTesting(RiskFamilyCrossMatrix matrix) {
     return _buildEnrichedRiskFamilyMatrixTable(matrix);
+  }
+
+  @visibleForTesting
+  static pw.Widget buildIpIkTableForTesting(TechnicalEnrichmentResult technical) {
+    return _buildIpIkTable(technical);
   }
 }

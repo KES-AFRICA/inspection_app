@@ -3,7 +3,6 @@ import 'package:inspec_app/models/audit_installations_electriques.dart';
 import 'package:inspec_app/services/statistics/audit_finding.dart';
 import 'package:inspec_app/services/statistics/domain_entity_instance.dart';
 import 'package:inspec_app/services/statistics/mission_domain_inventory_engine.dart';
-import 'package:inspec_app/services/statistics/technical_enrichment_engine.dart';
 
 void main() {
   group('1. Hiérarchie & Rattachement Section 9 (Zone -> Local -> Équipement)', () {

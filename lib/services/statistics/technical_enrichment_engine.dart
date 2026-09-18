@@ -185,7 +185,7 @@ class CablesMatrixRow {
   });
 }
 
-/// Ligne de conformité IP/IK par zone ou emplacement classé.
+/// Ligne de conformité IP/IK par zone ou emplacement classé (Section 9).
 class IpIkZoneItem {
   final String zoneNom;
   final String? parentZoneNom;
@@ -194,7 +194,7 @@ class IpIkZoneItem {
   final String? ikRequis;
   final int totalEquipements;
 
-  // Nouvelle structure selon la hiérarchie du tableau 9
+  // 3 Catégories canoniques de la Section 9
   final int adequatCount;
   final int presentDifferentCount;
   final int absentCount;
@@ -222,12 +222,22 @@ class IpIkZoneItem {
     int? conformes,
     int? nonConformes,
     int? nonRenseignes,
-    this.indicesPresents = 0,
+    int? indicesPresents,
     this.pointsVerifies = 0,
     this.pointsNonConformes = 0,
   })  : conformes = conformes ?? adequatCount,
         nonConformes = nonConformes ?? (presentDifferentCount + absentCount),
-        nonRenseignes = nonRenseignes ?? absentCount;
+        nonRenseignes = nonRenseignes ?? absentCount,
+        indicesPresents = indicesPresents ?? (adequatCount + presentDifferentCount);
+
+  /// Indique si ce repère est évaluable (au moins 1 équipement et indice requis défini)
+  bool get isEvaluable =>
+      totalEquipements > 0 &&
+      nonEvaluableCount == 0 &&
+      ((ipRequis != null && ipRequis!.trim().isNotEmpty) ||
+          (ikRequis != null && ikRequis!.trim().isNotEmpty));
+
+  int get nonConformesCount => presentDifferentCount + absentCount;
 
   double get adequatPct =>
       totalEquipements > 0 ? (adequatCount / totalEquipements) * 100.0 : 0.0;
@@ -238,38 +248,33 @@ class IpIkZoneItem {
   double get nonEvaluablePct =>
       totalEquipements > 0 ? (nonEvaluableCount / totalEquipements) * 100.0 : 0.0;
 
-  String get formattedAdequatPct =>
-      '${adequatPct.toStringAsFixed(1).replaceAll('.', ',')} %';
-  String get formattedPresentDifferentPct =>
-      '${presentDifferentPct.toStringAsFixed(1).replaceAll('.', ',')} %';
-  String get formattedAbsentPct =>
-      '${absentPct.toStringAsFixed(1).replaceAll('.', ',')} %';
-  String get formattedNonEvaluablePct =>
-      '${nonEvaluablePct.toStringAsFixed(1).replaceAll('.', ',')} %';
+  double get nonComplianceRate =>
+      isEvaluable ? (nonConformesCount / totalEquipements) * 100.0 : 0.0;
+
+  double get complianceRate =>
+      isEvaluable ? (adequatCount / totalEquipements) * 100.0 : 0.0;
+
+  static String formatPercent(double val) {
+    if (val == val.roundToDouble()) {
+      return '${val.toInt()} %';
+    }
+    return '${val.toStringAsFixed(1).replaceAll('.', ',')} %';
+  }
+
+  String get formattedNonComplianceRate =>
+      isEvaluable ? formatPercent(nonComplianceRate) : 'Non évaluable';
+
+  String get formattedAdequatPct => formatPercent(adequatPct);
+  String get formattedPresentDifferentPct => formatPercent(presentDifferentPct);
+  String get formattedAbsentPct => formatPercent(absentPct);
+  String get formattedNonEvaluablePct => formatPercent(nonEvaluablePct);
+
+  String get formattedRate => isEvaluable
+      ? formatPercent(complianceRate)
+      : (totalEquipements == 0 ? 'Aucun équipement' : 'Non évaluable');
 
   int get evaluables =>
       pointsVerifies > 0 ? pointsVerifies : (totalEquipements - nonEvaluableCount);
-  double get complianceRate => evaluables > 0
-      ? ((pointsVerifies > 0 ? (evaluables - pointsNonConformes) : adequatCount) /
-              evaluables) *
-          100.0
-      : 0.0;
-
-  double get nonComplianceRate => evaluables > 0
-      ? ((pointsVerifies > 0
-                  ? pointsNonConformes
-                  : (presentDifferentCount + absentCount)) /
-              evaluables) *
-          100.0
-      : 0.0;
-
-  String get formattedNonComplianceRate => evaluables > 0
-      ? '${nonComplianceRate.toStringAsFixed(1).replaceAll('.', ',')} %'
-      : 'Non évaluable';
-
-  String get formattedRate => evaluables > 0
-      ? '${complianceRate.toStringAsFixed(1).replaceAll('.', ',')} %'
-      : (nonRenseignes > 0 ? 'Non renseigné' : 'Aucun équipement');
 }
 
 /// Décompte unitaire exhaustif des essais et mesures métrologiques.
@@ -1803,18 +1808,22 @@ class TechnicalEnrichmentEngine {
       DomainObjectType.inverseur,
     };
 
-    // Filtre brouillons & éléments non finalisés
-    final allEquipmentInstances = domainInventory.instances.where((i) {
-      if (!equipmentCategories.contains(i.category)) return false;
+    // Filtre brouillons & éléments non finalisés et dédoublonnage strict par instanceId
+    final seenInstanceIds = <String>{};
+    final allEquipmentInstances = <DomainEntityInstance>[];
+    for (final i in domainInventory.instances) {
+      if (!equipmentCategories.contains(i.category)) continue;
       final raw = i.rawModelRef;
       if (raw is CoffretArmoire) {
         final st = raw.statut.trim().toLowerCase();
         if (st == 'incomplet' || st == 'brouillon') {
-          return false;
+          continue;
         }
       }
-      return true;
-    }).toList();
+      if (seenInstanceIds.add(i.instanceId)) {
+        allEquipmentInstances.add(i);
+      }
+    }
 
     // Regroupement hiérarchique strict des équipements par repère d'affectation
     // Structure : Local si présent, sinon Zone directe.
@@ -1867,7 +1876,7 @@ class TechnicalEnrichmentEngine {
       String? reqIk;
 
       if (meta.isLocal) {
-        // 1. Recherche dans les classements de locaux
+        // 1. Recherche dans les classements de locaux (ClassementEmplacement)
         ClassementEmplacement? matchedEmp;
         for (final emp in emplacements) {
           if (emp.localisation.trim().toLowerCase() ==
@@ -1891,20 +1900,10 @@ class TechnicalEnrichmentEngine {
           reqIp = matchedEmp.ipEffective ?? matchedEmp.ip;
           reqIk = matchedEmp.ikEffective ?? matchedEmp.ik;
         }
-
-        // Fallback sur la zone parente si l'indice du local n'est pas renseigné
-        if ((reqIp == null || reqIp.isEmpty) && meta.zoneName != null) {
-          for (final z in zones) {
-            if (z.nomZone.trim().toLowerCase() ==
-                meta.zoneName!.toLowerCase()) {
-              reqIp = z.ip;
-              reqIk = z.ik;
-              break;
-            }
-          }
-        }
+        // Strict : Si le local n'a pas d'indice IP/IK requis spécifié dans ClassementEmplacement,
+        // on n'invente AUCUN indice attendu (pas de fallback sur la zone) afin de ne pas fausser l'évaluation.
       } else {
-        // 2. Recherche dans les classements de zones
+        // 2. Recherche dans les classements de zones (ClassementZone)
         if (meta.zoneName != null) {
           for (final z in zones) {
             if (z.nomZone.trim().toLowerCase() ==
@@ -1927,13 +1926,12 @@ class TechnicalEnrichmentEngine {
         final raw = inst.rawModelRef;
         if (raw is CoffretArmoire) {
           final ipVal = raw.indiceIpIk?.trim();
-          final repVal = raw.indiceIpIkRepere?.trim();
           obsIpIk = (ipVal != null &&
                   ipVal.isNotEmpty &&
                   ipVal != '-' &&
                   ipVal.toLowerCase() != 'absent')
               ? ipVal
-              : repVal;
+              : null;
         }
 
         final status = IpIkEvaluator.evaluate(

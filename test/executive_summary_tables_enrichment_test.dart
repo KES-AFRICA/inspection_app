@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:inspec_app/services/statistics/technical_enrichment_engine.dart';
 import 'package:inspec_app/services/statistics/domain_entity_instance.dart';
@@ -143,20 +142,24 @@ void main() {
     test('4. Section 9 - Adéquation classement des zones et indices IP/IK', () {
       final zoneItem = const IpIkZoneItem(
         zoneNom: 'Local TGBT',
+        ipRequis: 'IP55',
+        ikRequis: 'IK08',
         totalEquipements: 20,
-        conformes: 35,
-        nonConformes: 5,
-        nonRenseignes: 0,
+        adequatCount: 15,
+        presentDifferentCount: 3,
+        absentCount: 2,
         indicesPresents: 18,
         pointsVerifies: 40,
         pointsNonConformes: 5,
       );
 
       expect(zoneItem.totalEquipements, equals(20));
-      expect(zoneItem.pointsVerifies, equals(40));
-      expect(zoneItem.pointsNonConformes, equals(5));
-      expect(zoneItem.nonComplianceRate, equals(12.5));
-      expect(zoneItem.formattedNonComplianceRate, equals('12,5 %'));
+      expect(zoneItem.adequatCount, equals(15));
+      expect(zoneItem.presentDifferentCount, equals(3));
+      expect(zoneItem.absentCount, equals(2));
+      expect(zoneItem.nonConformesCount, equals(5));
+      expect(zoneItem.nonComplianceRate, equals(25.0));
+      expect(zoneItem.formattedNonComplianceRate, equals('25 %'));
       expect(zoneItem.indicesPresents, equals(18));
 
       // Index calculation:

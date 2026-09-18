@@ -121,21 +121,21 @@ class IpIkEvaluator {
     required String? reqIk,
     required String? obsRaw,
   }) {
-    // 1. Détection de l'absence de l'indice observé
-    if (isAbsent(obsRaw)) {
-      return IpIkAdequationStatus.absent;
-    }
-
-    // 2. Détection de l'absence de l'indice requis
+    // 1. Détection de l'absence de l'indice requis du repère (local ou zone)
     final requiredPair = combineRequired(reqIp, reqIk);
     if (requiredPair.isEmpty) {
       return IpIkAdequationStatus.nonEvaluable;
     }
 
+    // 2. Détection de l'absence de l'indice observé sur l'équipement
+    if (isAbsent(obsRaw)) {
+      return IpIkAdequationStatus.absent;
+    }
+
     // 3. Extraction et comparaison des indices observés
     final observedPair = parse(obsRaw);
     if (observedPair.isEmpty) {
-      // Si la chaîne n'est pas "absent" mais ne contient aucun token IP ou IK valide
+      // Si la chaîne n'est pas vide mais ne contient aucun token IP ou IK valide
       return IpIkAdequationStatus.absent;
     }
 
