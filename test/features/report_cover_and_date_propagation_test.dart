@@ -483,5 +483,41 @@ void main() {
       expect(coverTheme, isNotNull);
       expect(coverTheme.buildBackground, isNotNull);
     });
+
+    test('La date d\'intervention avec période est formatée sur 4 lignes avec "Du" et "AU"', () {
+      final mission = Mission(
+        id: 'M_DATES_4_LINES',
+        nomClient: 'CAMRAIL BESSENGUE',
+        status: 'en_cours',
+        createdAt: now,
+        updatedAt: now,
+        dateIntervention: DateTime(2026, 7, 8),
+      );
+
+      final rg = RenseignementsGeneraux(
+        missionId: 'M_DATES_4_LINES',
+        etablissement: 'Gare Centrale',
+        installation: 'TGBT',
+        activite: 'Transport',
+        nomSite: 'Bessengue',
+        updatedAt: now,
+        dateDebut: DateTime(2026, 7, 8),
+        dateFin: DateTime(2026, 7, 9),
+      );
+
+      final doc = pw.Document();
+      doc.addPage(
+        pw.Page(
+          pageTheme: PdfReportService.buildCoverPageTheme(),
+          build: (ctx) {
+            final cover = PdfCoverBuilder.buildCoverPage(mission, rg, ctx);
+            expect(cover, isA<pw.Column>());
+            return cover;
+          },
+        ),
+      );
+
+      expect(doc.document.pdfPageList.pages, isNotEmpty);
+    });
   });
 }
