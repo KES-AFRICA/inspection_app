@@ -254,6 +254,10 @@ class IpIkZoneItem {
   double get complianceRate =>
       isEvaluable ? (adequatCount / totalEquipements) * 100.0 : 0.0;
 
+  String get formattedEquipmentCount => totalEquipements <= 1
+      ? '$totalEquipements équipement'
+      : '$totalEquipements équipements';
+
   static String formatPercent(double val) {
     if (val == val.roundToDouble()) {
       return '${val.toInt()} %';
@@ -262,7 +266,10 @@ class IpIkZoneItem {
   }
 
   String get formattedNonComplianceRate =>
-      isEvaluable ? formatPercent(nonComplianceRate) : 'Non évaluable';
+      isEvaluable ? formatPercent(nonComplianceRate) : "Absence d'indice IP/IK, repère non classé.";
+
+  String get formattedComplianceRate =>
+      isEvaluable ? formatPercent(complianceRate) : "Absence d'indice IP/IK, repère non classé.";
 
   String get formattedAdequatPct => formatPercent(adequatPct);
   String get formattedPresentDifferentPct => formatPercent(presentDifferentPct);
@@ -271,7 +278,9 @@ class IpIkZoneItem {
 
   String get formattedRate => isEvaluable
       ? formatPercent(complianceRate)
-      : (totalEquipements == 0 ? 'Aucun équipement' : 'Non évaluable');
+      : (totalEquipements == 0
+          ? '0 équipement'
+          : "Absence d'indice IP/IK, repère non classé.");
 
   int get evaluables =>
       pointsVerifies > 0 ? pointsVerifies : (totalEquipements - nonEvaluableCount);

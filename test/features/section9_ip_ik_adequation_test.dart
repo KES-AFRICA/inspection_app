@@ -80,8 +80,11 @@ void main() {
       expect(item.presentDifferentPct, equals(0.0));
       expect(item.absentPct, equals(0.0));
       expect(item.nonComplianceRate, equals(0.0));
+      expect(item.complianceRate, equals(100.0));
 
       expect(item.formattedNonComplianceRate, equals('0 %'));
+      expect(item.formattedComplianceRate, equals('100 %'));
+      expect(item.formattedEquipmentCount, equals('10 équipements'));
       expect(item.formattedAdequatPct, equals('100 %'));
       expect(item.formattedPresentDifferentPct, equals('0 %'));
       expect(item.formattedAbsentPct, equals('0 %'));
@@ -89,7 +92,7 @@ void main() {
       // Cohérence mathématique
       expect(item.adequatCount + item.presentDifferentCount + item.absentCount, equals(item.totalEquipements));
       expect(item.adequatPct + item.presentDifferentPct + item.absentPct, equals(100.0));
-      expect(item.nonComplianceRate, equals(100.0 - item.adequatPct));
+      expect(item.complianceRate + item.nonComplianceRate, equals(100.0));
     });
 
     test('Cas B — 50 % non conformes (5 adéquats, 5 différents, 0 absent)', () {
@@ -113,15 +116,17 @@ void main() {
       expect(item.presentDifferentPct, equals(50.0));
       expect(item.absentPct, equals(0.0));
       expect(item.nonComplianceRate, equals(50.0));
+      expect(item.complianceRate, equals(50.0));
 
       expect(item.formattedNonComplianceRate, equals('50 %'));
+      expect(item.formattedComplianceRate, equals('50 %'));
       expect(item.formattedAdequatPct, equals('50 %'));
       expect(item.formattedPresentDifferentPct, equals('50 %'));
       expect(item.formattedAbsentPct, equals('0 %'));
 
       expect(item.adequatCount + item.presentDifferentCount + item.absentCount, equals(item.totalEquipements));
       expect(item.adequatPct + item.presentDifferentPct + item.absentPct, equals(100.0));
-      expect(item.nonComplianceRate, equals(100.0 - item.adequatPct));
+      expect(item.complianceRate + item.nonComplianceRate, equals(100.0));
     });
 
     test('Cas C — 100 % non conformes par différence (0 adéquat, 10 différents, 0 absent)', () {
@@ -145,15 +150,17 @@ void main() {
       expect(item.presentDifferentPct, equals(100.0));
       expect(item.absentPct, equals(0.0));
       expect(item.nonComplianceRate, equals(100.0));
+      expect(item.complianceRate, equals(0.0));
 
       expect(item.formattedNonComplianceRate, equals('100 %'));
+      expect(item.formattedComplianceRate, equals('0 %'));
       expect(item.formattedAdequatPct, equals('0 %'));
       expect(item.formattedPresentDifferentPct, equals('100 %'));
       expect(item.formattedAbsentPct, equals('0 %'));
 
       expect(item.adequatCount + item.presentDifferentCount + item.absentCount, equals(item.totalEquipements));
       expect(item.adequatPct + item.presentDifferentPct + item.absentPct, equals(100.0));
-      expect(item.nonComplianceRate, equals(100.0 - item.adequatPct));
+      expect(item.complianceRate + item.nonComplianceRate, equals(100.0));
     });
 
     test('Cas D — 100 % non conformes par absence (0 adéquat, 0 différent, 10 absents)', () {
@@ -177,18 +184,20 @@ void main() {
       expect(item.presentDifferentPct, equals(0.0));
       expect(item.absentPct, equals(100.0));
       expect(item.nonComplianceRate, equals(100.0));
+      expect(item.complianceRate, equals(0.0));
 
       expect(item.formattedNonComplianceRate, equals('100 %'));
+      expect(item.formattedComplianceRate, equals('0 %'));
       expect(item.formattedAdequatPct, equals('0 %'));
       expect(item.formattedPresentDifferentPct, equals('0 %'));
-      expect(item.formattedAbsentPct, equals('100 %'));
+      expect(item.formattedAbsentPct, equals( '100 %'));
 
       expect(item.adequatCount + item.presentDifferentCount + item.absentCount, equals(item.totalEquipements));
       expect(item.adequatPct + item.presentDifferentPct + item.absentPct, equals(100.0));
-      expect(item.nonComplianceRate, equals(100.0 - item.adequatPct));
+      expect(item.complianceRate + item.nonComplianceRate, equals(100.0));
     });
 
-    test('Cas E — Mélange (4 adéquats, 3 différents, 3 absents => 60 % NC)', () {
+    test('Cas E — Mélange (4 adéquats, 3 différents, 3 absents => 40 % conformité, 60 % NC)', () {
       final item = const IpIkZoneItem(
         zoneNom: 'Atelier Central',
         ipRequis: 'IP55',
@@ -209,15 +218,17 @@ void main() {
       expect(item.presentDifferentPct, equals(30.0));
       expect(item.absentPct, equals(30.0));
       expect(item.nonComplianceRate, equals(60.0));
+      expect(item.complianceRate, equals(40.0));
 
       expect(item.formattedNonComplianceRate, equals('60 %'));
+      expect(item.formattedComplianceRate, equals('40 %'));
       expect(item.formattedAdequatPct, equals('40 %'));
       expect(item.formattedPresentDifferentPct, equals('30 %'));
       expect(item.formattedAbsentPct, equals('30 %'));
 
       expect(item.adequatCount + item.presentDifferentCount + item.absentCount, equals(item.totalEquipements));
       expect(item.adequatPct + item.presentDifferentPct + item.absentPct, equals(100.0));
-      expect(item.nonComplianceRate, equals(100.0 - item.adequatPct));
+      expect(item.complianceRate + item.nonComplianceRate, equals(100.0));
     });
 
     test('Cas F & H — Hiérarchie stricte et plusieurs locaux (Local = référence de rattachement)', () {
@@ -332,8 +343,19 @@ void main() {
       );
 
       expect(item.isEvaluable, isFalse);
-      expect(item.formattedNonComplianceRate, equals('Non évaluable'));
-      expect(item.formattedRate, equals('Non évaluable'));
+      expect(item.formattedEquipmentCount, equals('5 équipements'));
+      expect(item.formattedComplianceRate, equals("Absence d'indice IP/IK, repère non classé."));
+      expect(item.formattedRate, equals("Absence d'indice IP/IK, repère non classé."));
+
+      final singleItem = const IpIkZoneItem(
+        zoneNom: 'Local Mono Equipement Sans Indice',
+        ipRequis: null,
+        ikRequis: null,
+        totalEquipements: 1,
+        nonEvaluableCount: 1,
+      );
+      expect(singleItem.formattedEquipmentCount, equals('1 équipement'));
+      expect(singleItem.formattedComplianceRate, equals("Absence d'indice IP/IK, repère non classé."));
     });
 
     test('Cas J — Rétrocompatibilité avec anciennes structures de données et valeurs historiques', () {
@@ -356,6 +378,18 @@ void main() {
       expect(legacyItem.indicesPresents, equals(8));
     });
 
+    test('Formatage du nombre d\'équipements : singulier pour 0 et 1, pluriel pour >= 2', () {
+      const item0 = IpIkZoneItem(zoneNom: 'Z0', totalEquipements: 0);
+      const item1 = IpIkZoneItem(zoneNom: 'Z1', totalEquipements: 1);
+      const item2 = IpIkZoneItem(zoneNom: 'Z2', totalEquipements: 2);
+      const item7 = IpIkZoneItem(zoneNom: 'Z7', totalEquipements: 7);
+
+      expect(item0.formattedEquipmentCount, equals('0 équipement'));
+      expect(item1.formattedEquipmentCount, equals('1 équipement'));
+      expect(item2.formattedEquipmentCount, equals('2 équipements'));
+      expect(item7.formattedEquipmentCount, equals('7 équipements'));
+    });
+
     test('Formatage des pourcentages : entiers sans virgule inutile, décimaux avec virgule', () {
       expect(IpIkZoneItem.formatPercent(50.0), equals('50 %'));
       expect(IpIkZoneItem.formatPercent(0.0), equals('0 %'));
@@ -366,7 +400,7 @@ void main() {
       expect(IpIkZoneItem.formatPercent(99.9), equals('99,9 %'));
     });
 
-    test('Règle de coloration dynamique du taux de non-conformité (0-50% rouge, >50%-<100% orange, 100% vert)', () {
+    test('Règle de coloration dynamique du taux de conformité (0-50% rouge, >50%-<100% orange, 100% vert)', () {
       PdfColor resolveColor(double rate) {
         if (rate <= 50.0) {
           return PdfColor.fromHex('#B71C1C'); // rouge
@@ -385,13 +419,13 @@ void main() {
       // strictement supérieur à 50 % et inférieur à 100 % → orange
       expect(resolveColor(50.1), equals(PdfColor.fromHex('#E65100')));
       expect(resolveColor(75.0), equals(PdfColor.fromHex('#E65100')));
-      expect(resolveColor(99.0), equals(PdfColor.fromHex('#E65100')));
+      expect(resolveColor(99.9), equals(PdfColor.fromHex('#E65100')));
 
       // 100 % → vert
       expect(resolveColor(100.0), equals(PdfColor.fromHex('#2E7D32')));
     });
 
-    test('Rendu PDF — buildIpIkTableForTesting génère un tableau pw.Table valide avec les 3 sous-catégories', () {
+    test('Rendu PDF — buildIpIkTableForTesting génère un tableau pw.Table valide avec les 3 sous-catégories et les repères non classés', () {
       final items = [
         const IpIkZoneItem(
           zoneNom: 'Local TGBT',
@@ -403,13 +437,18 @@ void main() {
           absentCount: 0,
         ),
         const IpIkZoneItem(
-          zoneNom: 'Local Atelier',
-          ipRequis: 'IP65',
-          ikRequis: 'IK08',
-          totalEquipements: 10,
-          adequatCount: 10,
-          presentDifferentCount: 0,
-          absentCount: 0,
+          zoneNom: 'Local Chaudière (Indice absent)',
+          ipRequis: null,
+          ikRequis: null,
+          totalEquipements: 1,
+          nonEvaluableCount: 1,
+        ),
+        const IpIkZoneItem(
+          zoneNom: 'Local Stockage (Indice absent)',
+          ipRequis: null,
+          ikRequis: null,
+          totalEquipements: 3,
+          nonEvaluableCount: 3,
         ),
       ];
 
@@ -452,8 +491,8 @@ void main() {
       final widget = PdfExecutiveSummaryBuilder.buildIpIkTableForTesting(technical);
       expect(widget, isA<pw.Table>());
       final table = widget as pw.Table;
-      // En-tête + 2 lignes pour les 2 repères
-      expect(table.children.length, equals(3));
+      // En-tête + 3 lignes pour les 3 repères
+      expect(table.children.length, equals(4));
     });
   });
 }

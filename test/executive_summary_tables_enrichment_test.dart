@@ -159,7 +159,10 @@ void main() {
       expect(zoneItem.absentCount, equals(2));
       expect(zoneItem.nonConformesCount, equals(5));
       expect(zoneItem.nonComplianceRate, equals(25.0));
+      expect(zoneItem.complianceRate, equals(75.0));
       expect(zoneItem.formattedNonComplianceRate, equals('25 %'));
+      expect(zoneItem.formattedComplianceRate, equals('75 %'));
+      expect(zoneItem.formattedEquipmentCount, equals('20 équipements'));
       expect(zoneItem.indicesPresents, equals(18));
 
       // Index calculation:
@@ -179,7 +182,8 @@ void main() {
       );
       expect(emptyZone.totalEquipements, equals(0));
       expect(emptyZone.complianceRate, equals(0.0));
-      expect(emptyZone.formattedNonComplianceRate, equals('Non évaluable'));
+      expect(emptyZone.formattedEquipmentCount, equals('0 équipement'));
+      expect(emptyZone.formattedComplianceRate, equals("Absence d'indice IP/IK, repère non classé."));
     });
   });
 }

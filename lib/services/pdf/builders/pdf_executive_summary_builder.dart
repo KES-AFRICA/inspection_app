@@ -1974,42 +1974,54 @@ class PdfExecutiveSummaryBuilder {
   static pw.Widget _buildIpIkTable(TechnicalEnrichmentResult technical) {
     pw.Widget buildRichStatsCell(IpIkZoneItem item) {
       final total = item.totalEquipements;
-      if (total == 0) {
-        return _buildTableCell(
-          '0 équipement (non évaluable)',
-          align: pw.TextAlign.left,
+      final equipLabel = item.formattedEquipmentCount;
+
+      // 1. Quand l'indice est absent dans le repère (ou non évaluable), la case affiche :
+      // x équipement(s)
+      // Absence d'indice IP/IK, repère non classé.
+      if (!item.isEvaluable) {
+        return pw.Container(
           alignment: pw.Alignment.centerLeft,
+          padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            mainAxisSize: pw.MainAxisSize.min,
+            children: [
+              pw.Text(
+                equipLabel,
+                style: pw.TextStyle(
+                  font: fontBold,
+                  fontSize: fsSmall,
+                  color: PdfReportStyles.headerColor,
+                ),
+              ),
+              pw.SizedBox(height: 2),
+              pw.Text(
+                "Absence d'indice IP/IK, repère non classé.",
+                style: pw.TextStyle(
+                  font: fontRegular,
+                  fontSize: fsSmall,
+                  color: PdfReportStyles.darkGrey,
+                  fontStyle: pw.FontStyle.italic,
+                ),
+              ),
+            ],
+          ),
         );
       }
 
-      final isEvaluable = item.isEvaluable;
-
-      // Règle stricte de coloration du Taux de non-conformité :
-      // 0 % à 50 % → rouge
-      // strictement supérieur à 50 % et inférieur à 100 % → orange
-      // 100 % → vert
+      // Règle stricte de coloration du Taux de conformité :
+      // 0 % à 50 % → rouge (#B71C1C)
+      // strictement supérieur à 50 % et inférieur à 100 % → orange (#E65100)
+      // 100 % → vert (#2E7D32)
+      final rate = item.complianceRate;
       final PdfColor rateColor;
-      if (!isEvaluable) {
-        rateColor = PdfReportStyles.darkGrey;
+      if (rate <= 50.0) {
+        rateColor = PdfColor.fromHex('#B71C1C'); // rouge
+      } else if (rate < 100.0) {
+        rateColor = PdfColor.fromHex('#E65100'); // orange
       } else {
-        final rate = item.nonComplianceRate;
-        if (rate <= 50.0) {
-          rateColor = PdfColor.fromHex('#B71C1C'); // rouge
-        } else if (rate < 100.0) {
-          rateColor = PdfColor.fromHex('#E65100'); // orange
-        } else {
-          rateColor = PdfColor.fromHex('#2E7D32'); // vert
-        }
-      }
-
-      final String rateDisplay;
-      if (isEvaluable) {
-        rateDisplay = item.formattedNonComplianceRate;
-      } else if (item.totalEquipements > 0 &&
-          item.nonEvaluableCount == item.totalEquipements) {
-        rateDisplay = 'Non évaluable (Indice requis non défini)';
-      } else {
-        rateDisplay = 'Non évaluable';
+        rateColor = PdfColor.fromHex('#2E7D32'); // vert
       }
 
       return pw.Container(
@@ -2021,7 +2033,7 @@ class PdfExecutiveSummaryBuilder {
           children: [
             // 1. Nombre total d'équipements
             pw.Text(
-              '$total équipement${total > 1 ? "s" : ""}',
+              equipLabel,
               style: pw.TextStyle(
                 font: fontBold,
                 fontSize: fsSmall,
@@ -2030,7 +2042,7 @@ class PdfExecutiveSummaryBuilder {
             ),
             pw.SizedBox(height: 2),
 
-            // 2. Taux de non-conformité
+            // 2. Taux de conformité
             pw.RichText(
               text: pw.TextSpan(
                 style: pw.TextStyle(
@@ -2040,14 +2052,14 @@ class PdfExecutiveSummaryBuilder {
                 ),
                 children: [
                   pw.TextSpan(
-                    text: 'Taux de non-conformité : ',
+                    text: 'Taux de conformité : ',
                     style: pw.TextStyle(
                       font: fontBold,
                       color: PdfReportStyles.headerColor,
                     ),
                   ),
                   pw.TextSpan(
-                    text: rateDisplay,
+                    text: item.formattedComplianceRate,
                     style: pw.TextStyle(
                       font: fontBold,
                       color: rateColor,
