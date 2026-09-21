@@ -13,6 +13,7 @@ import 'package:inspec_app/services/statistics/audit_finding.dart';
 import 'package:inspec_app/services/pdf/pdf_page_tracker.dart';
 import 'package:inspec_app/services/pdf/pdf_report_styles.dart';
 import 'package:inspec_app/services/statistics/global_assessment_engine.dart';
+import 'package:inspec_app/services/statistics/hierarchical_recommendations_engine.dart';
 
 /// Builder responsable du Résumé Exécutif KES (12 sections officielles, fidélité stricte au document de référence)
 class PdfExecutiveSummaryBuilder {
@@ -507,138 +508,135 @@ class PdfExecutiveSummaryBuilder {
         );
       }
     }
-    widgets.add(pw.SizedBox(height: 10));
+    widgets.add(pw.NewPage());
 
     // ── 11. Recommandations prioritaires hiérarchisées ──
-    final recoRows = <pw.TableRow>[];
-    if (data.recommandationsPrioritaires.priority1Immediate.isNotEmpty) {
-      recoRows.add(
-        pw.TableRow(
-          verticalAlignment: pw.TableCellVerticalAlignment.middle,
-          decoration: pw.BoxDecoration(color: PdfColor.fromHex('#FEF2F2')),
-          children: [
-            pw.Padding(
-              padding: const pw.EdgeInsets.all(5),
-              child: pw.Text(
-                'Critique',
-                style: pw.TextStyle(font: fontBold, fontSize: 7.5, color: PdfColor.fromHex('#B71C1C')),
-                textAlign: pw.TextAlign.center,
-              ),
+    final hierarchicalRecos = HierarchicalRecommendationsEngine.analyze(statsSummary);
+
+    const recoColWidths = {
+      0: pw.FlexColumnWidth(2.0),
+      1: pw.FlexColumnWidth(2.8),
+      2: pw.FlexColumnWidth(3.8),
+      3: pw.FlexColumnWidth(2.4),
+    };
+
+    pw.TableRow buildRecoHeaderRow() {
+      return pw.TableRow(
+        decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
+        children: [
+          pw.Padding(
+            padding: const pw.EdgeInsets.all(5),
+            child: pw.Text(
+              'NIVEAU & CRITICITÉ',
+              style: pw.TextStyle(font: fontBold, fontSize: 8, color: PdfColors.white),
+              textAlign: pw.TextAlign.center,
             ),
-            pw.Padding(
-              padding: const pw.EdgeInsets.all(5),
-              child: pw.Text(
-                'Priorité 1 — Action Immédiate',
-                style: pw.TextStyle(font: fontBold, fontSize: 7.5, color: PdfColor.fromHex('#B71C1C')),
-                textAlign: pw.TextAlign.center,
-              ),
+          ),
+          pw.Padding(
+            padding: const pw.EdgeInsets.all(5),
+            child: pw.Text(
+              'CONSTAT & OCCURRENCES',
+              style: pw.TextStyle(font: fontBold, fontSize: 8, color: PdfColors.white),
+              textAlign: pw.TextAlign.center,
             ),
-            pw.Padding(
-              padding: const pw.EdgeInsets.all(5),
-              child: pw.Text(
-                PdfReportStyles.cleanRecommendationText(data.recommandationsPrioritaires.priority1Immediate),
-                style: pw.TextStyle(font: fontRegular, fontSize: 7.5),
-              ),
+          ),
+          pw.Padding(
+            padding: const pw.EdgeInsets.all(5),
+            child: pw.Text(
+              'ACTION CORRECTIVE RECOMMANDÉE',
+              style: pw.TextStyle(font: fontBold, fontSize: 8, color: PdfColors.white),
+              textAlign: pw.TextAlign.center,
             ),
-          ],
-        ),
-      );
-    }
-    if (data.recommandationsPrioritaires.priority2ShortTerm.isNotEmpty) {
-      recoRows.add(
-        pw.TableRow(
-          verticalAlignment: pw.TableCellVerticalAlignment.middle,
-          decoration: pw.BoxDecoration(color: PdfColor.fromHex('#FFF7ED')),
-          children: [
-            pw.Padding(
-              padding: const pw.EdgeInsets.all(5),
-              child: pw.Text(
-                'Majeure',
-                style: pw.TextStyle(font: fontBold, fontSize: 7.5, color: PdfColor.fromHex('#C2410C')),
-                textAlign: pw.TextAlign.center,
-              ),
+          ),
+          pw.Padding(
+            padding: const pw.EdgeInsets.all(5),
+            child: pw.Text(
+              'ÉQUIPEMENTS & CONTEXTE',
+              style: pw.TextStyle(font: fontBold, fontSize: 8, color: PdfColors.white),
+              textAlign: pw.TextAlign.center,
             ),
-            pw.Padding(
-              padding: const pw.EdgeInsets.all(5),
-              child: pw.Text(
-                'Priorité 2 — Court Terme',
-                style: pw.TextStyle(font: fontBold, fontSize: 7.5, color: PdfColor.fromHex('#C2410C')),
-                textAlign: pw.TextAlign.center,
-              ),
-            ),
-            pw.Padding(
-              padding: const pw.EdgeInsets.all(5),
-              child: pw.Text(
-                PdfReportStyles.cleanRecommendationText(data.recommandationsPrioritaires.priority2ShortTerm),
-                style: pw.TextStyle(font: fontRegular, fontSize: 7.5),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-    if (data.recommandationsPrioritaires.priority3MediumTerm.isNotEmpty) {
-      recoRows.add(
-        pw.TableRow(
-          verticalAlignment: pw.TableCellVerticalAlignment.middle,
-          children: [
-            pw.Padding(
-              padding: const pw.EdgeInsets.all(5),
-              child: pw.Text(
-                'Mineure',
-                style: pw.TextStyle(font: fontBold, fontSize: 7.5, color: PdfReportStyles.darkGrey),
-                textAlign: pw.TextAlign.center,
-              ),
-            ),
-            pw.Padding(
-              padding: const pw.EdgeInsets.all(5),
-              child: pw.Text(
-                'Priorité 3 — Moyen Terme',
-                style: pw.TextStyle(font: fontBold, fontSize: 7.5, color: PdfReportStyles.darkGrey),
-                textAlign: pw.TextAlign.center,
-              ),
-            ),
-            pw.Padding(
-              padding: const pw.EdgeInsets.all(5),
-              child: pw.Text(
-                PdfReportStyles.cleanRecommendationText(data.recommandationsPrioritaires.priority3MediumTerm),
-                style: pw.TextStyle(font: fontRegular, fontSize: 7.5),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       );
     }
 
-    final recoHeaderRow = pw.TableRow(
-      decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
-      children: [
-        pw.Padding(
-          padding: const pw.EdgeInsets.all(5),
-          child: pw.Text(
-            'CRITICITÉ',
-            style: pw.TextStyle(font: fontBold, fontSize: 8, color: PdfColors.white),
-            textAlign: pw.TextAlign.center,
+    pw.TableRow buildRecoRow(HierarchicalRecommendation reco) {
+      final PdfColor rowBg;
+      final PdfColor tagColor;
+      if (reco.priorityLevel == RecommendationPriorityLevel.priority1Immediate) {
+        rowBg = PdfColor.fromHex('#FEF2F2');
+        tagColor = PdfColor.fromHex('#B71C1C');
+      } else if (reco.priorityLevel == RecommendationPriorityLevel.priority2ShortTerm) {
+        rowBg = PdfColor.fromHex('#FFF7ED');
+        tagColor = PdfColor.fromHex('#C2410C');
+      } else {
+        rowBg = PdfColor.fromHex('#F9FAFB');
+        tagColor = PdfReportStyles.darkGrey;
+      }
+
+      final occurrencesStr = reco.occurrenceCount > 1
+          ? '(${reco.occurrenceCount} occurrences)'
+          : '(1 occurrence)';
+
+      return pw.TableRow(
+        verticalAlignment: pw.TableCellVerticalAlignment.middle,
+        decoration: pw.BoxDecoration(color: rowBg),
+        children: [
+          pw.Padding(
+            padding: const pw.EdgeInsets.all(5),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.center,
+              mainAxisAlignment: pw.MainAxisAlignment.center,
+              children: [
+                pw.Text(
+                  reco.priorityLabel,
+                  style: pw.TextStyle(font: fontBold, fontSize: 7.0, color: tagColor),
+                  textAlign: pw.TextAlign.center,
+                ),
+                pw.SizedBox(height: 2),
+                pw.Text(
+                  reco.criticalityLabel,
+                  style: pw.TextStyle(font: fontBold, fontSize: 6.5, color: tagColor),
+                  textAlign: pw.TextAlign.center,
+                ),
+              ],
+            ),
           ),
-        ),
-        pw.Padding(
-          padding: const pw.EdgeInsets.all(5),
-          child: pw.Text(
-            'NIVEAU DE PRIORITÉ',
-            style: pw.TextStyle(font: fontBold, fontSize: 8, color: PdfColors.white),
-            textAlign: pw.TextAlign.center,
+          pw.Padding(
+            padding: const pw.EdgeInsets.all(5),
+            child: pw.RichText(
+              text: pw.TextSpan(
+                children: [
+                  pw.TextSpan(
+                    text: reco.issueTitle,
+                    style: pw.TextStyle(font: fontBold, fontSize: 7.2, color: PdfReportStyles.darkGrey),
+                  ),
+                  pw.TextSpan(
+                    text: '\n$occurrencesStr',
+                    style: pw.TextStyle(font: fontRegular, fontSize: 6.5, color: PdfReportStyles.accentColor),
+                  ),
+                ],
+              ),
+            ),
           ),
-        ),
-        pw.Padding(
-          padding: const pw.EdgeInsets.all(5),
-          child: pw.Text(
-            'ACTION CORRECTIVE RECOMMANDÉE',
-            style: pw.TextStyle(font: fontBold, fontSize: 8, color: PdfColors.white),
-            textAlign: pw.TextAlign.center,
+          pw.Padding(
+            padding: const pw.EdgeInsets.all(5),
+            child: pw.Text(
+              reco.recommendedAction,
+              style: pw.TextStyle(font: fontRegular, fontSize: 7.0, lineSpacing: 1.8),
+              textAlign: pw.TextAlign.justify,
+            ),
           ),
-        ),
-      ],
-    );
+          pw.Padding(
+            padding: const pw.EdgeInsets.all(5),
+            child: pw.Text(
+              reco.contextSummary,
+              style: pw.TextStyle(font: fontRegular, fontSize: 6.8, color: PdfReportStyles.darkGrey, lineSpacing: 1.6),
+            ),
+          ),
+        ],
+      );
+    }
 
     final recoHeaderWidget = PageTracker(
       key: 'resume_executif_1_11',
@@ -648,44 +646,135 @@ class PdfExecutiveSummaryBuilder {
     );
 
     final recoIntroWidget = pw.Text(
-      'Les actions correctives sont hiérarchisées en trois niveaux de priorité :',
+      'Les actions correctives recommandées sont déduites strictement des non-conformités relevées lors des vérifications et hiérarchisées selon leur niveau de priorité (Priorité 1 — Action Immédiate pour les écarts critiques, Priorité 2 — Court Terme pour les écarts majeurs, et Priorité 3 — Moyen Terme pour les écarts mineurs) :',
       style: pw.TextStyle(font: fontRegular, fontSize: fsBody, color: PdfReportStyles.darkGrey, lineSpacing: 2.5),
       textAlign: pw.TextAlign.justify,
     );
 
-    final recoBlocks = PdfReportStyles.buildHeaderWithTableList(
-      headerWidget: recoHeaderWidget,
-      introWidget: recoIntroWidget,
-      headerRow: recoHeaderRow,
-      dataRows: recoRows,
-      columnWidths: const {
-        0: pw.FlexColumnWidth(1.8),
-        1: pw.FlexColumnWidth(2.7),
-        2: pw.FlexColumnWidth(5.5),
-      },
-      minFreeSpace: 220,
-      minRowsWithHeader: recoRows.length,
-    );
+    bool isFirstSection = true;
 
-    widgets.addAll(recoBlocks);
-    widgets.add(pw.SizedBox(height: 10));
+    if (hierarchicalRecos.isEmpty) {
+      widgets.add(recoHeaderWidget);
+      widgets.add(pw.SizedBox(height: 6));
+      widgets.add(
+        pw.Container(
+          padding: const pw.EdgeInsets.all(8),
+          decoration: pw.BoxDecoration(
+            color: PdfColor.fromHex('#F0FDF4'),
+            borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+            border: pw.Border.all(color: PdfColor.fromHex('#86EFAC'), width: 0.5),
+          ),
+          child: pw.Text(
+            'Aucune non-conformité n’ayant été recensée lors de l\'inspection, aucune action corrective n\'est requise.',
+            style: pw.TextStyle(font: fontRegular, fontSize: fsBody, color: PdfColor.fromHex('#166534')),
+          ),
+        ),
+      );
+      widgets.add(pw.SizedBox(height: 10));
+    } else {
+      // ── Actions MT ──
+      if (hierarchicalRecos.hasMt) {
+        final mtHeaderRow = buildRecoHeaderRow();
+        final mtRows = hierarchicalRecos.mtRecommendations.map(buildRecoRow).toList();
+        final mtBanner = pw.Container(
+          margin: const pw.EdgeInsets.only(top: 8, bottom: 4),
+          padding: const pw.EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+          decoration: pw.BoxDecoration(
+            color: PdfReportStyles.accentColor,
+            borderRadius: const pw.BorderRadius.all(pw.Radius.circular(2)),
+          ),
+          child: pw.Text(
+            'ACTIONS À RÉALISER EN MOYENNE TENSION (HTA)',
+            style: pw.TextStyle(font: fontBold, fontSize: 8.5, color: PdfColors.white),
+          ),
+        );
+
+        final mtBlocks = PdfReportStyles.buildHeaderWithTableList(
+          headerWidget: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              recoHeaderWidget,
+              pw.SizedBox(height: 4),
+              recoIntroWidget,
+              pw.SizedBox(height: 6),
+              mtBanner,
+            ],
+          ),
+          headerRow: mtHeaderRow,
+          dataRows: mtRows,
+          columnWidths: recoColWidths,
+          minFreeSpace: 180,
+          minRowsWithHeader: 1,
+        );
+        widgets.addAll(mtBlocks);
+        widgets.add(pw.SizedBox(height: 8));
+        isFirstSection = false;
+      }
+
+      // ── Actions BT ──
+      if (hierarchicalRecos.hasBt) {
+        final btHeaderRow = buildRecoHeaderRow();
+        final btRows = hierarchicalRecos.btRecommendations.map(buildRecoRow).toList();
+        final btBanner = pw.Container(
+          margin: const pw.EdgeInsets.only(top: 8, bottom: 4),
+          padding: const pw.EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+          decoration: pw.BoxDecoration(
+            color: PdfReportStyles.accentColor,
+            borderRadius: const pw.BorderRadius.all(pw.Radius.circular(2)),
+          ),
+          child: pw.Text(
+            'ACTIONS À RÉALISER EN BASSE TENSION (BT)',
+            style: pw.TextStyle(font: fontBold, fontSize: 8.5, color: PdfColors.white),
+          ),
+        );
+
+        final btBlocks = PdfReportStyles.buildHeaderWithTableList(
+          headerWidget: isFirstSection
+              ? pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    recoHeaderWidget,
+                    pw.SizedBox(height: 4),
+                    recoIntroWidget,
+                    pw.SizedBox(height: 6),
+                    btBanner,
+                  ],
+                )
+              : btBanner,
+          headerRow: btHeaderRow,
+          dataRows: btRows,
+          columnWidths: recoColWidths,
+          minFreeSpace: 180,
+          minRowsWithHeader: 1,
+        );
+        widgets.addAll(btBlocks);
+        widgets.add(pw.SizedBox(height: 8));
+      }
+    }
+
+    widgets.add(pw.SizedBox(height: 6));
 
     // ── 12. Appréciation globale ──
     widgets.add(
-      pw.Inseparable(
-        child: pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            PageTracker(
-              key: 'resume_executif_1_12',
-              registry: trackedPages,
-              offset: offset,
-              child: _subSectionHeader('12. Appréciation globale'),
+      pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Inseparable(
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                PageTracker(
+                  key: 'resume_executif_1_12',
+                  registry: trackedPages,
+                  offset: offset,
+                  child: _subSectionHeader('12. Appréciation globale'),
+                ),
+                pw.SizedBox(height: 6),
+              ],
             ),
-            pw.SizedBox(height: 6),
-            _buildAppreciationGlobaleText(statsSummary, snapshot, technical),
-          ],
-        ),
+          ),
+          _buildAppreciationGlobaleText(statsSummary, snapshot, technical, hierarchicalRecos),
+        ],
       ),
     );
 
@@ -696,11 +785,13 @@ class PdfExecutiveSummaryBuilder {
     MissionStatisticsSummary stats,
     ExecutiveSummarySnapshot snapshot,
     TechnicalEnrichmentResult technical,
+    HierarchicalRecommendationsResult hierarchicalRecos,
   ) {
     final result = GlobalAssessmentEngine.analyze(
       summary: stats,
       snapshot: snapshot,
       technical: technical,
+      recommendationsResult: hierarchicalRecos,
     );
 
     final children = <pw.Widget>[];

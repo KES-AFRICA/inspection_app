@@ -1,6 +1,7 @@
 // lib/services/statistics/global_assessment_engine.dart
 
 import 'audit_finding.dart';
+import 'hierarchical_recommendations_engine.dart';
 import 'mission_statistics.dart';
 import 'technical_enrichment_engine.dart';
 import '../ai/executive_summary_snapshot.dart';
@@ -124,8 +125,10 @@ class GlobalAssessmentEngine {
     required MissionStatisticsSummary summary,
     required ExecutiveSummarySnapshot snapshot,
     TechnicalEnrichmentResult? technical,
+    HierarchicalRecommendationsResult? recommendationsResult,
   }) {
     final tech = technical ?? summary.technical;
+    final recoResult = recommendationsResult ?? HierarchicalRecommendationsEngine.analyze(summary);
     final totalNc = summary.totalNC > 0 ? summary.totalNC : summary.criticalityStats.total;
     final cStats = summary.criticalityStats;
     final densityStr = summary.globalDensityStr;
@@ -148,6 +151,7 @@ class GlobalAssessmentEngine {
     // 2. PARAGRAPHE 1 : Contexte périmètre, volume global et criticité
     final p1 = _buildPerimeterAndCriticalityParagraph(
       clientSiteLabel: clientSiteLabel,
+      summary: summary,
       totalNc: totalNc,
       densityStr: densityStr,
       cStats: cStats,
@@ -178,8 +182,8 @@ class GlobalAssessmentEngine {
     // 6. PARAGRAPHE 4 : Asymétrie HTA/BT ou dispersion Pareto
     final p4TensionOrPareto = _buildTensionOrParetoObservation(summary);
 
-    // 7. PARAGRAPHE 5 : Enjeux opérationnels chiffrés
-    final p5Operational = _buildOperationalPrioritiesParagraph(summary, cStats);
+    // 7. PARAGRAPHE 5 : Enjeux opérationnels chiffrés et alignés sur les recommandations de la Section 11
+    final p5Operational = _buildOperationalPrioritiesParagraph(summary, cStats, recoResult);
 
     // 8. PARAGRAPHE FINAL : Appréciation finale proportionnée
     final p6Final = _buildFinalAppreciationParagraph(summary, riskLevel);
@@ -219,6 +223,7 @@ class GlobalAssessmentEngine {
   /// Construction du paragraphe 1 : Périmètre, volume et criticité
   static String _buildPerimeterAndCriticalityParagraph({
     required String clientSiteLabel,
+    required MissionStatisticsSummary summary,
     required int totalNc,
     required String densityStr,
     required CriticalityStats cStats,
@@ -256,15 +261,28 @@ class GlobalAssessmentEngine {
       if (cStats.critique > 0 && cStats.majeure > 0) {
         critDistributionText = 'La répartition par criticité montre que **$pctCritStr % des écarts sont critiques et $pctMajStr % majeurs**, aucune non-conformité mineure n’ayant été recensée.';
       } else if (cStats.critique > 0) {
-        critDistributionText = 'L\'intégralité des écarts constatés (**100 %**) relève d\'une criticité **critique**.';
+        critDistributionText = 'L\'intégralité des écarts constatés (**100 %**) relève d\'une criticité **critique**, aucune anomalie majeure ou mineure n’ayant été relevée.';
       } else {
-        critDistributionText = 'L\'intégralité des écarts constatés (**100 %**) relève d\'une criticité **majeure**, sans dérive critique immédiate.';
+        critDistributionText = 'L\'intégralité des écarts constatés (**100 %**) relève d\'une criticité **majeure**, sans dérive critique immédiate ni écart mineur.';
       }
+    } else if (cStats.critique == 0 && cStats.majeure == 0) {
+      critDistributionText = 'L\'intégralité des écarts constatés (**100 %**) relève d\'une criticité **mineure**, sans dérive critique ni majeure.';
     } else {
       critDistributionText = 'La répartition par criticité s\'établit à **$pctCritStr % d\'écarts critiques**, **$pctMajStr % majeurs** et **$pctMinStr % mineurs**.';
     }
 
-    return 'La vérification périodique des installations électriques de **$clientSiteLabel** met en évidence $riskQualification. Sur le périmètre vérifié, **$totalNc non-conformités** ont été recensées, correspondant à une densité moyenne de **$densityStr non-conformités par équipement**. $critDistributionText';
+    final String perimeterDetails;
+    if (summary.htaEquipmentsCount > 0 && summary.btEquipmentsCount > 0) {
+      perimeterDetails = 'Sur le périmètre vérifié (**${summary.totalEquipments} équipements contrôlés**, dont **${summary.htaEquipmentsCount} en Moyenne Tension** et **${summary.btEquipmentsCount} en Basse Tension**), **$totalNc non-conformités** ont été recensées, correspondant à une densité moyenne de **$densityStr non-conformités par équipement**';
+    } else if (summary.htaEquipmentsCount > 0) {
+      perimeterDetails = 'Sur le périmètre vérifié (**${summary.htaEquipmentsCount} équipements contrôlés en Moyenne Tension**), **$totalNc non-conformités** ont été recensées, correspondant à une densité moyenne de **$densityStr non-conformités par équipement**';
+    } else if (summary.btEquipmentsCount > 0) {
+      perimeterDetails = 'Sur le périmètre vérifié (**${summary.btEquipmentsCount} équipements contrôlés en Basse Tension**), **$totalNc non-conformités** ont été recensées, correspondant à une densité moyenne de **$densityStr non-conformités par équipement**';
+    } else {
+      perimeterDetails = 'Sur le périmètre vérifié, **$totalNc non-conformités** ont été recensées, correspondant à une densité moyenne de **$densityStr non-conformités par équipement**';
+    }
+
+    return 'La vérification périodique des installations électriques de **$clientSiteLabel** met en évidence $riskQualification. $perimeterDetails. $critDistributionText';
   }
 
   /// Construction du paragraphe 2 : Analyse des familles de risques dominantes
@@ -492,38 +510,86 @@ class GlobalAssessmentEngine {
     final total = summary.totalNC > 0 ? summary.totalNC : summary.criticalityStats.total;
     if (total == 0) return null;
 
-    // Asymétrie HTA vs BT marquée
+    // Si un seul domaine est audité
+    if (tension.mtCount > 0 && tension.btCount == 0) {
+      return 'L’ensemble des non-conformités recensées (**100 %**) relève exclusivement du domaine de la **Moyenne Tension (HTA)**, les vérifications ayant été concentrées sur les postes de transformation et cellules de distribution.';
+    }
+    if (tension.btCount > 0 && tension.mtCount == 0) {
+      return 'L’ensemble des non-conformités recensées (**100 %**) relève exclusivement du domaine de la **Basse Tension (BT)**, aucun écart n’ayant été constaté ou audité sur le réseau Moyenne Tension.';
+    }
+
+    // Répartition HTA vs BT
     if (tension.mtCount > 0 && tension.btCount > 0) {
       final htaPct = ((tension.mtCount / total) * 100).toStringAsFixed(1).replaceAll('.', ',');
       final btPct = ((tension.btCount / total) * 100).toStringAsFixed(1).replaceAll('.', ',');
 
       if (tension.mtCount > tension.btCount) {
         return 'Sur le plan de la distribution par niveau de tension, le domaine de la **Moyenne Tension (HTA)** concentre **$htaPct % des non-conformités**, contre **$btPct % en Basse Tension (BT)**, traduisant une vulnérabilité accrue sur les postes de distribution principale.';
-      } else if (tension.btCount >= (tension.mtCount * 3)) {
-        return 'La répartition par niveau de tension met en exergue une prépondérance massive des constats en **Basse Tension (BT)** avec **$btPct % des anomalies**, contre **$htaPct % en Moyenne Tension (HTA)**, soulignant que les postes HTA conservent un niveau d\'intégrité globalement supérieur aux armoires divisionnaires.';
+      } else if (tension.btCount > tension.mtCount) {
+        return 'La répartition par niveau de tension met en exergue une prépondérance des constats en **Basse Tension (BT)** avec **$btPct % des anomalies**, contre **$htaPct % en Moyenne Tension (HTA)**, soulignant que les postes HTA conservent un niveau d\'intégrité globalement supérieur aux armoires divisionnaires.';
+      } else {
+        return 'La répartition par niveau de tension présente un équilibre parfait entre le domaine **Moyenne Tension (HTA)** (**$htaPct %**) et la **Basse Tension (BT)** (**$btPct %**).';
       }
     }
 
     return null;
   }
 
-  /// Paragraphe 5 : Enjeux opérationnels et priorisation chiffrée
+  /// Paragraphe 5 : Enjeux opérationnels et priorisation chiffrée alignée sur la Section 11
   static String _buildOperationalPrioritiesParagraph(
     MissionStatisticsSummary summary,
     CriticalityStats cStats,
+    HierarchicalRecommendationsResult recoResult,
   ) {
     final critique = cStats.critique;
     final majeure = cStats.majeure;
+    final mineure = cStats.mineure;
+    final countImmediate = recoResult.countImmediate;
+    final countShortTerm = recoResult.countShortTerm;
+    final countMediumTerm = recoResult.countMediumTerm;
 
-    if (critique > 0 && majeure > 0) {
-      return 'En conséquence, la priorité doit être donnée à la **levée des non-conformités critiques**, suivie du traitement des non-conformités majeures, tout en conduisant en parallèle un programme de **fiabilisation de la documentation technique, de structuration de la maintenance préventive et de renforcement des compétences des équipes**. Le rapport préconise ainsi une action immédiate sur les **$critique non-conformités critiques** et un traitement à court terme des **$majeure non-conformités majeures**.';
-    } else if (critique > 0) {
-      return 'En conséquence, la priorité absolue doit être réservée à la **levée immédiate des $critique non-conformités critiques** recensées sur le site, afin d’éliminer sans délai tout risque direct d’électrisation ou de court-circuit destructeur, avant d’engager un plan de fiabilisation documentaire.';
-    } else if (majeure > 0) {
-      return 'En l’absence d’écart critique nécessitant une interruption immédiate, l’effort principal doit être focalisé sur la résorption méthodique des **$majeure non-conformités majeures**, complétée par une consolidation des procédures de maintenance et d’identification des circuits.';
-    } else {
-      return 'Les écarts constatés étant d’un niveau de gravité mineur, leur traitement pourra être intégré directement dans le cadre des opérations courantes de maintenance sans exiger de mobilisation exceptionnelle.';
+    final parts = <String>[];
+
+    if (critique > 0) {
+      final recoText = countImmediate > 0 ? ' ($countImmediate recommandation${countImmediate > 1 ? 's' : ''} d\'action immédiate)' : '';
+      parts.add('une **action immédiate (Priorité 1)** sur les **$critique non-conformités critiques** recensées$recoText afin d’éliminer tout risque direct d’électrisation ou d\'incendie');
     }
+
+    if (majeure > 0) {
+      final recoText = countShortTerm > 0 ? ' ($countShortTerm recommandation${countShortTerm > 1 ? 's' : ''} structurante${countShortTerm > 1 ? 's' : ''})' : '';
+      parts.add('un **traitement à court terme (Priorité 2)** des **$majeure non-conformités majeures**$recoText pour rétablir la conformité normative des équipements');
+    }
+
+    if (mineure > 0) {
+      final recoText = countMediumTerm > 0 ? ' ($countMediumTerm recommandation${countMediumTerm > 1 ? 's' : ''})' : '';
+      parts.add('une intégration à **moyen terme (Priorité 3)** des **$mineure écarts mineurs**$recoText dans le cadre des opérations courantes de maintenance');
+    }
+
+    if (parts.isEmpty) {
+      return 'Aucune action corrective d’urgence n’est requise, la priorité résidant dans la surveillance régulière et la maintenance préventive du réseau.';
+    }
+
+    final String prioritiesSequence;
+    if (parts.length == 1) {
+      prioritiesSequence = parts.first;
+    } else if (parts.length == 2) {
+      prioritiesSequence = '${parts[0]}, complétée par ${parts[1]}';
+    } else {
+      prioritiesSequence = '${parts[0]}, suivie par ${parts[1]}, et enfin ${parts[2]}';
+    }
+
+    final String mtBtBreakdown;
+    if (recoResult.hasMt && recoResult.hasBt) {
+      mtBtBreakdown = ' Ces actions sont réparties entre les domaines **Moyenne Tension (${recoResult.mtRecommendations.length} recommandation${recoResult.mtRecommendations.length > 1 ? 's' : ''})** et **Basse Tension (${recoResult.btRecommendations.length} recommandation${recoResult.btRecommendations.length > 1 ? 's' : ''})**.';
+    } else if (recoResult.hasMt) {
+      mtBtBreakdown = ' L’intégralité des recommandations concerne le domaine de la **Moyenne Tension (HTA)**.';
+    } else if (recoResult.hasBt) {
+      mtBtBreakdown = ' L’intégralité des recommandations concerne le domaine de la **Basse Tension (BT)**.';
+    } else {
+      mtBtBreakdown = '';
+    }
+
+    return 'En conséquence, le plan d’actions hiérarchisé préconise $prioritiesSequence.$mtBtBreakdown';
   }
 
   /// Paragraphe final : Conclusion et appréciation finale calibrée
