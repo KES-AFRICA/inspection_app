@@ -23,130 +23,60 @@ void main() {
     }
   });
 
-  group('CompetencyNeedsEngine — Tests Unitaires & Profils Statistiques', () {
-    test('Scénario A : Forte concentration — 2 thématiques majeures (ex: Identification 112 et Câblage 107)', () {
+  group('CompetencyNeedsEngine — Refonte Section 10 « Renforcement des compétences »', () {
+    // Cas 1 : 5 NC majeures MT + 5 NC majeures BT → 10 axes maximum, classement global décroissant A. à J.
+    test('Cas 1 : 5 NC majeures MT + 5 NC majeures BT → 10 axes maximum, classement global A. à J.', () {
       final findings = <AuditFinding>[];
-      // 112 constats Identification & Schémas
-      for (int i = 0; i < 112; i++) {
-        findings.add(
-          AuditFinding(
-            id: 'id_$i',
-            missionId: 'M-001',
-            tensionDomain: TensionDomain.bt,
-            origin: 'Local TGBT',
-            objectType: 'Armoire',
-            objectName: 'Armoire Climatisation $i',
-            tableName: 'Points de vérification',
-            verificationPoint: 'Repérage et étiquetage des départs et circuits',
-            observationText: 'Absence de repérage et schéma unifilaire non disponible',
-            conformity: 'non',
-            criticality: i < 10 ? 'Critique' : 'Majeure',
-            riskFamily: 'Erreur d\'exploitation / maintenance',
-          ),
-        );
-      }
-      // 107 constats Câblage & Serrage
-      for (int i = 0; i < 107; i++) {
-        findings.add(
-          AuditFinding(
-            id: 'cab_$i',
-            missionId: 'M-001',
-            tensionDomain: TensionDomain.bt,
-            origin: 'Atelier',
-            objectType: 'Coffret',
-            objectName: 'Coffret Prises $i',
-            tableName: 'Points de vérification',
-            verificationPoint: 'Serrage des connexions et passage de câbles',
-            observationText: 'Connexions lâches et absence de protection mécanique sur câblage',
-            conformity: 'non',
-            criticality: i < 5 ? 'Critique' : 'Majeure',
-            riskFamily: 'Dégradation des canalisations et matériels',
-          ),
-        );
-      }
-      // 10 constats Terre
-      for (int i = 0; i < 10; i++) {
-        findings.add(
-          AuditFinding(
-            id: 'terre_$i',
-            missionId: 'M-001',
-            tensionDomain: TensionDomain.bt,
-            origin: 'Local TGBT',
-            objectType: 'TGBT',
-            objectName: 'TGBT Principal',
-            tableName: 'Points de vérification',
-            verificationPoint: 'Continuité des liaisons équipotentielles',
-            observationText: 'Liaison équipotentielle non raccordée',
-            conformity: 'non',
-            criticality: 'Majeure',
-            riskFamily: 'Électrisation / électrocution',
-          ),
-        );
-      }
 
-      final result = CompetencyNeedsEngine.analyze(
-        missionId: 'M-001',
-        findings: findings,
-        totalNC: findings.length,
-      );
-
-      expect(result.totalOccurrences, equals(229));
-      expect(result.isConcentrated, isTrue);
-      expect(result.axes.isNotEmpty, isTrue);
-
-      // Le premier axe doit être l'axe le plus fréquent (112 constats)
-      final top1 = result.axes.first;
-      expect(top1.letter, equals('a)'));
-      expect(top1.title, contains('Identification'));
-      expect(top1.occurrenceCount, equals(112));
-      expect(top1.percentageStr, equals('48,9'));
-      expect(top1.critiqueCount, equals(10));
-
-      // Le deuxième axe doit être le second plus fréquent (107 constats)
-      final top2 = result.axes[1];
-      expect(top2.letter, equals('b)'));
-      expect(top2.title, contains('Câblage'));
-      expect(top2.occurrenceCount, equals(107));
-      expect(top2.percentageStr, equals('46,7'));
-      expect(top2.critiqueCount, equals(5));
-
-      // Le troisième axe : Terre
-      final top3 = result.axes[2];
-      expect(top3.letter, equals('c)'));
-      expect(top3.title, contains('terre'));
-      expect(top3.occurrenceCount, equals(10));
-
-      // Vérifier le texte narratif d'introduction dynamique
-      expect(result.introNarrative, contains('forte concentration des écarts autour de deux thématiques'));
-      expect(result.introNarrative, contains('112 constats'));
-      expect(result.introNarrative, contains('107 constats'));
-    });
-
-    test('Scénario B : Distribution homogène / dispersée sur plusieurs domaines', () {
-      final findings = <AuditFinding>[];
-      final topics = [
-        ('Repérage des départs', 'Schéma unifilaire manquant', 'Armoire', 15),
-        ('Vérification des disjoncteurs', 'Calibre inadapté et pouvoir de coupure', 'TGBT', 14),
-        ('Contrôle de mise à la terre', 'Prise de terre non mesurée', 'Local MT', 13),
-        ('Câblage et serrage', 'Connexions lâches sur bornier', 'Coffret', 12),
-        ('Plastron et obturateur', 'Ouverture béante sans plastron IP', 'Armoire', 11),
-        ('Bloc autonome BAES', 'Batterie d\'éclairage de sécurité déchargée', 'Local BT', 10),
+      // MT : 5 défaillances avec fréquences 50, 40, 30, 20, 10
+      final mtTopics = [
+        ('Verrouillage mécanique cellule HTA', 50),
+        ('Surveillance relais DGPT2 transfo', 40),
+        ('Niveau diélectrique transformateur', 30),
+        ('Sectionneur de terre MT', 20),
+        ('Éclairage de sécurité local MT', 10),
       ];
-
-      int id = 0;
-      for (final t in topics) {
-        for (int i = 0; i < t.$4; i++) {
+      for (final t in mtTopics) {
+        for (int i = 0; i < t.$2; i++) {
           findings.add(
             AuditFinding(
-              id: 'f_${id++}',
-              missionId: 'M-DISP',
+              id: 'mt_${t.$1}_$i',
+              missionId: 'M-1',
+              tensionDomain: TensionDomain.mt,
+              origin: 'Poste MT',
+              objectType: 'Cellule MT',
+              objectName: 'Cellule $i',
+              tableName: 'Cellule audit',
+              verificationPoint: t.$1,
+              observationText: 'Non-conformité sur ${t.$1}',
+              conformity: 'non',
+              criticality: 'Majeure',
+            ),
+          );
+        }
+      }
+
+      // BT : 5 défaillances avec fréquences 45, 35, 25, 15, 5
+      final btTopics = [
+        ('Repérage des circuits et schémas unifilaires', 45),
+        ('Continuité des liaisons équipotentielles', 35),
+        ('Calibre protection disjoncteur', 25),
+        ('Obturation des plages du plastron', 15),
+        ('Serrage des connexions et borniers', 5),
+      ];
+      for (final t in btTopics) {
+        for (int i = 0; i < t.$2; i++) {
+          findings.add(
+            AuditFinding(
+              id: 'bt_${t.$1}_$i',
+              missionId: 'M-1',
               tensionDomain: TensionDomain.bt,
-              origin: 'Site Industriel',
-              objectType: t.$3,
-              objectName: '${t.$3} $i',
+              origin: 'Atelier',
+              objectType: 'Armoire',
+              objectName: 'Armoire $i',
               tableName: 'Points de vérification',
               verificationPoint: t.$1,
-              observationText: t.$2,
+              observationText: 'Défaut majeur ${t.$1}',
               conformity: 'non',
               criticality: 'Majeure',
             ),
@@ -155,232 +85,395 @@ void main() {
       }
 
       final result = CompetencyNeedsEngine.analyze(
-        missionId: 'M-DISP',
+        missionId: 'M-1',
         findings: findings,
-        totalNC: findings.length,
       );
 
-      expect(result.totalOccurrences, equals(75));
-      expect(result.isDispersed, isTrue);
-      // Les axes doivent être triés par nombre d'occurrences décroissant
-      for (int i = 0; i < result.axes.length - 1; i++) {
-        expect(
-          result.axes[i].occurrenceCount >= result.axes[i + 1].occurrenceCount,
-          isTrue,
-          reason: 'Les axes doivent être strictement classés par occurrences décroissantes',
-        );
+      // Exactement 10 axes produits
+      expect(result.axes.length, equals(10));
+
+      // Les lettres doivent être A. à J.
+      expect(result.axes[0].letter, equals('A.'));
+      expect(result.axes[1].letter, equals('B.'));
+      expect(result.axes[2].letter, equals('C.'));
+      expect(result.axes[3].letter, equals('D.'));
+      expect(result.axes[4].letter, equals('E.'));
+      expect(result.axes[5].letter, equals('F.'));
+      expect(result.axes[6].letter, equals('G.'));
+      expect(result.axes[7].letter, equals('H.'));
+      expect(result.axes[8].letter, equals('I.'));
+      expect(result.axes[9].letter, equals('J.'));
+
+      // Vérification du tri global décroissant absolu :
+      // 50 (MT), 45 (BT), 40 (MT), 35 (BT), 30 (MT), 25 (BT), 20 (MT), 15 (BT), 10 (MT), 5 (BT)
+      expect(result.axes[0].occurrenceCount, equals(50));
+      expect(result.axes[1].occurrenceCount, equals(45));
+      expect(result.axes[2].occurrenceCount, equals(40));
+      expect(result.axes[3].occurrenceCount, equals(35));
+      expect(result.axes[4].occurrenceCount, equals(30));
+      expect(result.axes[5].occurrenceCount, equals(25));
+      expect(result.axes[6].occurrenceCount, equals(20));
+      expect(result.axes[7].occurrenceCount, equals(15));
+      expect(result.axes[8].occurrenceCount, equals(10));
+      expect(result.axes[9].occurrenceCount, equals(5));
+
+      // Vérification de la concision (~2 lignes, entre 80 et 260 caractères)
+      for (final axis in result.axes) {
+        expect(axis.fullNarrative.length, greaterThan(60));
+        expect(axis.fullNarrative.length, lessThan(300));
       }
-      expect(result.introNarrative, contains('répartition des écarts sur plusieurs registres techniques'));
     });
 
-    test('Scénario C : Très peu de non-conformités (2 constats) — Ne force PAS 8 axes', () {
+    // Cas 2 : 2 NC majeures MT + 3 NC majeures BT → Exactement 5 axes (A. à E.)
+    test('Cas 2 : 2 NC majeures MT + 3 NC majeures BT → Exactement 5 axes', () {
+      final findings = <AuditFinding>[];
+      // MT : 2 types
+      for (int i = 0; i < 8; i++) {
+        findings.add(AuditFinding(
+          id: 'mt1_$i',
+          missionId: 'M-2',
+          tensionDomain: TensionDomain.mt,
+          origin: 'Poste',
+          objectType: 'Cellule MT',
+          objectName: 'C1',
+          tableName: 'Cellules',
+          verificationPoint: 'Interverrouillage HTA',
+          observationText: 'Défaut verrou',
+          conformity: 'non',
+          criticality: 'Majeure',
+        ));
+      }
+      for (int i = 0; i < 4; i++) {
+        findings.add(AuditFinding(
+          id: 'mt2_$i',
+          missionId: 'M-2',
+          tensionDomain: TensionDomain.mt,
+          origin: 'Poste',
+          objectType: 'Transfo',
+          objectName: 'T1',
+          tableName: 'Transfos',
+          verificationPoint: 'DGPT2 transfo',
+          observationText: 'Défaut relais',
+          conformity: 'non',
+          criticality: 'Majeure',
+        ));
+      }
+
+      // BT : 3 types
+      for (int i = 0; i < 15; i++) {
+        findings.add(AuditFinding(
+          id: 'bt1_$i',
+          missionId: 'M-2',
+          tensionDomain: TensionDomain.bt,
+          origin: 'Atelier',
+          objectType: 'Coffret',
+          objectName: 'C1',
+          tableName: 'Points',
+          verificationPoint: 'Repérage des départs',
+          observationText: 'Absence repérage',
+          conformity: 'non',
+          criticality: 'Majeure',
+        ));
+      }
+      for (int i = 0; i < 10; i++) {
+        findings.add(AuditFinding(
+          id: 'bt2_$i',
+          missionId: 'M-2',
+          tensionDomain: TensionDomain.bt,
+          origin: 'Atelier',
+          objectType: 'Armoire',
+          objectName: 'A1',
+          tableName: 'Points',
+          verificationPoint: 'Obturation des plages',
+          observationText: 'Plastron ouvert',
+          conformity: 'non',
+          criticality: 'Majeure',
+        ));
+      }
+      for (int i = 0; i < 6; i++) {
+        findings.add(AuditFinding(
+          id: 'bt3_$i',
+          missionId: 'M-2',
+          tensionDomain: TensionDomain.bt,
+          origin: 'TGBT',
+          objectType: 'TGBT',
+          objectName: 'TG',
+          tableName: 'Points',
+          verificationPoint: 'Liaisons équipotentielles',
+          observationText: 'Terre coupée',
+          conformity: 'non',
+          criticality: 'Majeure',
+        ));
+      }
+
+      final result = CompetencyNeedsEngine.analyze(
+        missionId: 'M-2',
+        findings: findings,
+      );
+
+      expect(result.axes.length, equals(5));
+      expect(result.axes[0].letter, equals('A.'));
+      expect(result.axes[4].letter, equals('E.'));
+
+      // Ordre décroissant global : 15 (BT), 10 (BT), 8 (MT), 6 (BT), 4 (MT)
+      expect(result.axes[0].occurrenceCount, equals(15));
+      expect(result.axes[1].occurrenceCount, equals(10));
+      expect(result.axes[2].occurrenceCount, equals(8));
+      expect(result.axes[3].occurrenceCount, equals(6));
+      expect(result.axes[4].occurrenceCount, equals(4));
+    });
+
+    // Cas 3 : 5 MT + 0 BT → Exactement 5 axes
+    test('Cas 3 : 5 MT + 0 BT → Exactement 5 axes', () {
+      final findings = <AuditFinding>[];
+      for (int t = 0; t < 5; t++) {
+        for (int i = 0; i < (t + 1) * 3; i++) {
+          findings.add(AuditFinding(
+            id: 'mt_${t}_$i',
+            missionId: 'M-3',
+            tensionDomain: TensionDomain.mt,
+            origin: 'Poste',
+            objectType: 'Cellule MT',
+            objectName: 'C$t',
+            tableName: 'Cellule',
+            verificationPoint: 'Point MT $t',
+            observationText: 'Observation $t',
+            conformity: 'non',
+            criticality: 'Majeure',
+          ));
+        }
+      }
+
+      final result = CompetencyNeedsEngine.analyze(
+        missionId: 'M-3',
+        findings: findings,
+      );
+
+      expect(result.axes.length, equals(5));
+      expect(result.introNarrative, contains('Moyenne Tension (HTA)'));
+    });
+
+    // Cas 4 : 0 MT + 5 BT → Exactement 5 axes
+    test('Cas 4 : 0 MT + 5 BT → Exactement 5 axes', () {
+      final findings = <AuditFinding>[];
+      for (int t = 0; t < 5; t++) {
+        for (int i = 0; i < (t + 1) * 4; i++) {
+          findings.add(AuditFinding(
+            id: 'bt_${t}_$i',
+            missionId: 'M-4',
+            tensionDomain: TensionDomain.bt,
+            origin: 'Usine',
+            objectType: 'Coffret',
+            objectName: 'COF$t',
+            tableName: 'Coffret',
+            verificationPoint: 'Point BT $t',
+            observationText: 'Observation $t',
+            conformity: 'non',
+            criticality: 'Majeure',
+          ));
+        }
+      }
+
+      final result = CompetencyNeedsEngine.analyze(
+        missionId: 'M-4',
+        findings: findings,
+      );
+
+      expect(result.axes.length, equals(5));
+      expect(result.introNarrative, contains('Basse Tension (BT)'));
+    });
+
+    // Cas 5 : Une seule NC majeure → Exactement 1 axe A.
+    test('Cas 5 : Une seule NC majeure → 1 axe A.', () {
       final findings = [
         AuditFinding(
           id: 'single_1',
-          missionId: 'M-FEW',
+          missionId: 'M-5',
           tensionDomain: TensionDomain.bt,
-          origin: 'Local Technique',
+          origin: 'Atelier',
           objectType: 'Coffret',
-          objectName: 'Coffret Éclairage',
-          tableName: 'Points de vérification',
-          verificationPoint: 'Serrage des bornes',
-          observationText: 'Connexion mal serrée',
+          objectName: 'C1',
+          tableName: 'Points',
+          verificationPoint: 'Obturation des plages du plastron',
+          observationText: 'Absence d’obturateurs',
           conformity: 'non',
           criticality: 'Majeure',
         ),
+      ];
+
+      final result = CompetencyNeedsEngine.analyze(
+        missionId: 'M-5',
+        findings: findings,
+      );
+
+      expect(result.axes.length, equals(1));
+      expect(result.axes.first.letter, equals('A.'));
+      expect(result.axes.first.occurrenceCount, equals(1));
+    });
+
+    // Cas 6 : Aucune NC majeure → 0 axe artificiel, texte professionnel propre
+    test('Cas 6 : Aucune NC majeure → 0 axe artificiel, message professionnel', () {
+      final findings = [
         AuditFinding(
-          id: 'single_2',
-          missionId: 'M-FEW',
+          id: 'min_1',
+          missionId: 'M-6',
           tensionDomain: TensionDomain.bt,
-          origin: 'Local Technique',
+          origin: 'Local',
           objectType: 'Coffret',
-          objectName: 'Coffret Éclairage',
-          tableName: 'Points de vérification',
-          verificationPoint: 'Repérage du circuit',
-          observationText: 'Étiquette absente',
+          objectName: 'C1',
+          tableName: 'Points',
+          verificationPoint: 'Propreté du coffret',
+          observationText: 'Légère poussière',
           conformity: 'non',
           criticality: 'Mineure',
         ),
       ];
 
       final result = CompetencyNeedsEngine.analyze(
-        missionId: 'M-FEW',
+        missionId: 'M-6',
         findings: findings,
-        totalNC: 2,
       );
 
-      expect(result.totalOccurrences, equals(2));
-      // RÈGLE ABSOLUE : exactement 2 axes produits, PAS 8 axes inventés !
-      expect(result.axes.length, equals(2));
-      expect(result.axes[0].letter, equals('a)'));
-      expect(result.axes[1].letter, equals('b)'));
-      expect(result.axes[0].occurrenceCount, equals(1));
-      expect(result.axes[1].occurrenceCount, equals(1));
-    });
-
-    test('Scénario D : Zéro non-conformité (Mission 100% conforme)', () {
-      final result = CompetencyNeedsEngine.analyze(
-        missionId: 'M-ZERO',
-        findings: [],
-        totalNC: 0,
-      );
-
-      expect(result.totalOccurrences, equals(0));
-      expect(result.hasNoDefects, isTrue);
       expect(result.axes, isEmpty);
-      expect(result.introNarrative, contains('aucun constat de non-conformité'));
+      expect(result.hasNoDefects, isTrue);
+      expect(result.introNarrative, contains('aucune non-conformité majeure'));
     });
 
-    test('Scénario E : Mission avec forte composante HTA (Poste Moyenne Tension)', () {
-      final findings = <AuditFinding>[
-        AuditFinding(
-          id: 'hta_1',
-          missionId: 'M-HTA',
-          tensionDomain: TensionDomain.mt,
-          origin: 'Poste Livraison HTA',
-          objectType: 'Cellule MT',
-          objectName: 'Cellule Arrivée 01',
-          tableName: 'Cellule audit',
-          verificationPoint: 'Interverrouillage et mise à la terre MT',
-          observationText: 'Séquence de verrouillage mécanique défectueuse sur sectionneur MT',
-          conformity: 'non',
-          criticality: 'Critique',
-        ),
-        AuditFinding(
-          id: 'hta_2',
-          missionId: 'M-HTA',
-          tensionDomain: TensionDomain.mt,
-          origin: 'Poste Livraison HTA',
-          objectType: 'Transformateur MT/BT',
-          objectName: 'Transformateur 630kVA',
-          tableName: 'Transformateur audit',
-          verificationPoint: 'Surveillance relais DGPT2 et diélectrique',
-          observationText: 'Fuite légère sur joint de cuve diélectrique transfo',
-          conformity: 'non',
-          criticality: 'Majeure',
-        ),
-      ];
-
-      final tensionStats = TensionDomainStats(
-        mtCount: 2,
-        btCount: 0,
-        totalCount: 2,
-        mtPct: 100.0,
-        btPct: 0.0,
-      );
-
-      final result = CompetencyNeedsEngine.analyze(
-        missionId: 'M-HTA',
-        findings: findings,
-        totalNC: 2,
-        tensionDomainStats: tensionStats,
-      );
-
-      expect(result.axes.first.id, equals('poste_haute_tension_mt'));
-      expect(result.axes.first.hasMtDomain, isTrue);
-      expect(result.introNarrative, contains('Moyenne Tension (HTA)'));
-    });
-
-    test('Scénario F : Cohérence statistique stricte', () {
-      final findings = <AuditFinding>[
-        AuditFinding(
-          id: 'f1',
-          missionId: 'M-COH',
-          tensionDomain: TensionDomain.bt,
-          origin: 'TGBT',
-          objectType: 'TGBT',
-          objectName: 'TGBT',
-          tableName: 'Points de vérification',
-          verificationPoint: 'Disjoncteur calibre',
-          observationText: 'Calibre non conforme',
-          conformity: 'non',
-          criticality: 'Critique',
-        ),
-        AuditFinding(
-          id: 'f2',
-          missionId: 'M-COH',
-          tensionDomain: TensionDomain.bt,
-          origin: 'TGBT',
-          objectType: 'TGBT',
-          objectName: 'TGBT',
-          tableName: 'Points de vérification',
-          verificationPoint: 'Repérage',
-          observationText: 'Repérage absent',
-          conformity: 'non',
-          criticality: 'Majeure',
-        ),
-      ];
-
-      final result = CompetencyNeedsEngine.analyze(
-        missionId: 'M-COH',
-        findings: findings,
-        totalNC: 2,
-      );
-
-      int sumOccurrences = 0;
-      for (final a in result.axes) {
-        expect(a.occurrenceCount, greaterThan(0));
-        expect(a.percentage, greaterThan(0.0));
-        expect(a.percentage, lessThanOrEqualTo(100.0));
-        sumOccurrences += a.occurrenceCount;
+    // Cas 7 : Fréquences très proches → rédaction équilibrée
+    test('Cas 7 : Fréquences très proches (35, 34, 33, 32, 31) → rédaction équilibrée', () {
+      final findings = <AuditFinding>[];
+      final counts = [35, 34, 33, 32, 31];
+      for (int c = 0; c < counts.length; c++) {
+        for (int i = 0; i < counts[c]; i++) {
+          findings.add(AuditFinding(
+            id: 'close_${c}_$i',
+            missionId: 'M-7',
+            tensionDomain: TensionDomain.bt,
+            origin: 'Usine',
+            objectType: 'Coffret',
+            objectName: 'C_$c',
+            tableName: 'Points',
+            verificationPoint: 'Défaut équilibré $c',
+            observationText: 'Obs $c',
+            conformity: 'non',
+            criticality: 'Majeure',
+          ));
+        }
       }
-      expect(sumOccurrences, equals(2));
+
+      final result = CompetencyNeedsEngine.analyze(
+        missionId: 'M-7',
+        findings: findings,
+      );
+
+      expect(result.isConcentrated, isFalse);
+      expect(result.introNarrative, contains('de manière homogène'));
+      expect(result.introNarrative.contains('priorité absolue'), isFalse);
     });
 
-    test('Scénario G : Synthèse épurée sans informations de localisation détaillées (Règle Sous-section 10)', () {
-      final findings = <AuditFinding>[
+    // Cas 8 : Une NC très dominante (70 vs 10, 8, 4, 2) → mise en évidence de la priorité
+    test('Cas 8 : Une NC très dominante (70 vs 10, 8, 4, 2) → priorité marquée', () {
+      final findings = <AuditFinding>[];
+      final counts = [70, 10, 8, 4, 2];
+      for (int c = 0; c < counts.length; c++) {
+        for (int i = 0; i < counts[c]; i++) {
+          findings.add(AuditFinding(
+            id: 'dom_${c}_$i',
+            missionId: 'M-8',
+            tensionDomain: TensionDomain.bt,
+            origin: 'Usine',
+            objectType: 'Coffret',
+            objectName: 'C_$c',
+            tableName: 'Points',
+            verificationPoint: c == 0 ? 'Repérage et schémas' : 'Autre défaut $c',
+            observationText: 'Obs $c',
+            conformity: 'non',
+            criticality: 'Majeure',
+          ));
+        }
+      }
+
+      final result = CompetencyNeedsEngine.analyze(
+        missionId: 'M-8',
+        findings: findings,
+      );
+
+      expect(result.isConcentrated, isTrue);
+      expect(result.introNarrative, contains('priorité technique prépondérante'));
+      expect(result.axes.first.fullNarrative, contains('Priorité immédiate'));
+    });
+
+    // Cas 9 : Nouveau point de vérification non prévu historiquement → intégration dynamique sans erreur
+    test('Cas 9 : Nouveau point de vérification non répertorié → inclusion automatique', () {
+      final findings = [
         AuditFinding(
-          id: 'g1',
-          missionId: 'M-SYNTH',
-          tensionDomain: TensionDomain.mt,
-          origin: 'Zone MT "Zone PETCOKE" / Local "Local transformateur 1600 KVA"',
-          objectType: 'Cellule MT',
-          objectName: 'Cellule Arrivée HTA 01',
-          tableName: 'Cellule audit',
-          verificationPoint: 'Interverrouillage et mise à la terre MT',
-          observationText: 'Séquence mécanique bloquée',
-          conformity: 'non',
-          criticality: 'Critique',
-        ),
-        AuditFinding(
-          id: 'g2',
-          missionId: 'M-SYNTH',
+          id: 'new_point_1',
+          missionId: 'M-9',
           tensionDomain: TensionDomain.bt,
-          origin: 'Zone BT "Zone locaux transformateurs VRM. RAW MILL" / Local "Local électrique VRM Raw Mill"',
-          objectType: 'Local MT',
-          objectName: 'Local Électrique',
-          tableName: 'Points de vérification',
-          verificationPoint: 'DGPT2 et diélectrique',
-          observationText: 'Fuite diélectrique',
+          origin: 'Local Onduleur',
+          objectType: 'Système Solaire Hybride',
+          objectName: 'Onduleur Photovoltaïque 50kVA',
+          tableName: 'Contrôle ENR',
+          verificationPoint: 'Synchronisation onduleur et découplage réseau',
+          observationText: 'Absence de relais de découplage normalisé VDE',
           conformity: 'non',
           criticality: 'Majeure',
         ),
       ];
 
       final result = CompetencyNeedsEngine.analyze(
-        missionId: 'M-SYNTH',
+        missionId: 'M-9',
         findings: findings,
-        totalNC: 2,
       );
 
-      expect(result.axes.isNotEmpty, isTrue);
-      for (final axis in result.axes) {
-        final narrative = axis.fullNarrative;
+      expect(result.axes.length, equals(1));
+      expect(result.axes.first.title, contains('Synchronisation onduleur et découplage réseau'));
+      expect(result.axes.first.fullNarrative, contains('Renforcer la maîtrise des règles de l’art'));
+      expect(result.axes.first.fullNarrative, contains('Basse Tension'));
+    });
 
-        // 1. Structure attendue : compétence, besoin factuel/chiffré, finalité opérationnelle
-        expect(narrative, contains(axis.recommendedSkills.trim()));
-        expect(narrative, contains(axis.rationale.trim()));
-        expect(narrative, contains(axis.operationalObjective.trim()));
-
-        // 2. Suppression stricte de toutes informations de localisation ou descriptions d'installations
-        expect(narrative.contains('Ces constats ont été observés principalement'), isFalse);
-        expect(narrative.contains('Zone PETCOKE'), isFalse);
-        expect(narrative.contains('VRM. RAW MILL'), isFalse);
-        expect(narrative.contains('VRM Raw Mill'), isFalse);
-        expect(narrative.contains('Local transformateur 1600 KVA'), isFalse);
-        expect(narrative.contains('au sein de :'), isFalse);
-        expect(narrative.contains('sur les Local MT et Cellule MT'), isFalse);
+    // Cas 10 : Égalité entre plusieurs fréquences → classement déterministe et reproductible
+    test('Cas 10 : Égalité parfaite entre plusieurs fréquences → ordre déterministe', () {
+      final findings = <AuditFinding>[];
+      // 3 points avec exactement 10 constats chacun
+      final pts = ['Point Zèbre', 'Point Alpha', 'Point Delta'];
+      for (final p in pts) {
+        for (int i = 0; i < 10; i++) {
+          findings.add(AuditFinding(
+            id: 'eq_${p}_$i',
+            missionId: 'M-10',
+            tensionDomain: TensionDomain.bt,
+            origin: 'Local',
+            objectType: 'Coffret',
+            objectName: 'C',
+            tableName: 'Points',
+            verificationPoint: p,
+            observationText: 'Obs',
+            conformity: 'non',
+            criticality: 'Majeure',
+          ));
+        }
       }
+
+      final result1 = CompetencyNeedsEngine.analyze(
+        missionId: 'M-10',
+        findings: findings,
+      );
+      final result2 = CompetencyNeedsEngine.analyze(
+        missionId: 'M-10',
+        findings: findings,
+      );
+
+      // Reproductibilité parfaite
+      expect(result1.axes.length, equals(3));
+      expect(result1.axes[0].title, equals(result2.axes[0].title));
+      expect(result1.axes[1].title, equals(result2.axes[1].title));
+      expect(result1.axes[2].title, equals(result2.axes[2].title));
+
+      // L'ordre alphabétique secondaire place "Point Alpha" avant "Point Delta", puis "Point Zèbre"
+      expect(result1.axes[0].sourceVerificationPoints.first, equals('Point Alpha'));
+      expect(result1.axes[1].sourceVerificationPoints.first, equals('Point Delta'));
+      expect(result1.axes[2].sourceVerificationPoints.first, equals('Point Zèbre'));
     });
   });
 

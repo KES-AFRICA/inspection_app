@@ -186,7 +186,7 @@ class PdfExecutiveSummaryBuilder {
     widgets.add(pw.SizedBox(height: 10));
 
     // ── 3. Facteurs de risque prépondérants ──
-    widgets.add(pw.NewPage(freeSpace: 85));
+    widgets.add(pw.NewPage());
     widgets.add(
       PageTracker(
         key: 'resume_executif_1_3',
@@ -213,7 +213,7 @@ class PdfExecutiveSummaryBuilder {
     widgets.add(pw.SizedBox(height: 10));
 
     // ── 4. Répartition des non-conformités ──
-    widgets.add(pw.NewPage(freeSpace: 120));
+    widgets.add(pw.NewPage());
     widgets.add(
       PageTracker(
         key: 'resume_executif_1_4',
@@ -425,6 +425,7 @@ class PdfExecutiveSummaryBuilder {
     widgets.add(pw.SizedBox(height: 10));
 
     // ── 10. Renforcement des compétences ──
+    widgets.add(pw.NewPage());
     final compAnalysis = statsSummary.competencyNeeds;
 
     widgets.add(
@@ -436,18 +437,27 @@ class PdfExecutiveSummaryBuilder {
       ),
     );
     widgets.add(pw.SizedBox(height: 5));
-    widgets.add(
-      pw.Text(
-        compAnalysis.introNarrative,
-        style: pw.TextStyle(
-          font: fontRegular,
-          fontSize: fsBody,
-          color: PdfReportStyles.darkGrey,
-          lineSpacing: 2.2,
+
+    final introParagraphs = compAnalysis.introNarrative.split('\n\n');
+    for (int pIdx = 0; pIdx < introParagraphs.length; pIdx++) {
+      final pText = introParagraphs[pIdx].trim();
+      if (pText.isEmpty) continue;
+      widgets.add(
+        pw.Text(
+          pText,
+          style: pw.TextStyle(
+            font: fontRegular,
+            fontSize: fsBody,
+            color: PdfReportStyles.darkGrey,
+            lineSpacing: 2.2,
+          ),
+          textAlign: pw.TextAlign.justify,
         ),
-        textAlign: pw.TextAlign.justify,
-      ),
-    );
+      );
+      if (pIdx < introParagraphs.length - 1) {
+        widgets.add(pw.SizedBox(height: 4));
+      }
+    }
 
     if (compAnalysis.axes.isNotEmpty) {
       widgets.add(pw.SizedBox(height: 6));

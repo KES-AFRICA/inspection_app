@@ -1,17 +1,16 @@
 // lib/services/statistics/competency_needs_engine.dart
 
 import 'audit_finding.dart';
-import 'canonical_risk_family_registry.dart';
 import 'mission_statistics.dart';
 
 /// Modèle d'un axe dynamique de renforcement des compétences.
 ///
-/// Directement dérivé des constats réels et de la distribution statistique de la mission.
+/// Dérivé strictement des non-conformités majeures réelles et de leur contexte technique.
 class CompetencyNeed {
-  /// Identifiant technique unique de l'axe (ex: 'identification_documentation')
+  /// Identifiant technique unique de l'axe
   final String id;
 
-  /// Lettre de repérage dans le rapport : "a)", "b)", "c)", etc.
+  /// Lettre majuscule de repérage dans le rapport : "A.", "B.", "C.", etc.
   final String letter;
 
   /// Intitulé métier clair, intelligible et professionnel de l'axe de compétence
@@ -26,10 +25,10 @@ class CompetencyNeed {
   /// Résultat opérationnel concret attendu pour l'exploitation et la maintenance
   final String operationalObjective;
 
-  /// Nombre exact d'occurrences de non-conformités rattachées à cet axe
+  /// Nombre exact d'occurrences de non-conformités majeures rattachées à cet axe
   final int occurrenceCount;
 
-  /// Part relative en pourcentage par rapport au total des non-conformités pertinentes (%)
+  /// Part relative en pourcentage par rapport au total des non-conformités majeures (%)
   final double percentage;
 
   /// Nombre de non-conformités critiques rattachées
@@ -59,6 +58,12 @@ class CompetencyNeed {
   /// Présence de constats en Basse Tension (BT)
   final bool hasBtDomain;
 
+  /// Domaine de tension prépondérant
+  final TensionDomain domain;
+
+  /// Texte narratif concis personnalisé (environ 2 lignes visuelles)
+  final String? customNarrative;
+
   CompetencyNeed({
     required this.id,
     required this.letter,
@@ -77,6 +82,8 @@ class CompetencyNeed {
     required this.topLocations,
     required this.hasMtDomain,
     required this.hasBtDomain,
+    this.domain = TensionDomain.bt,
+    this.customNarrative,
   });
 
   /// Chaîne formatée du pourcentage (ex: "22,6")
@@ -96,18 +103,14 @@ class CompetencyNeed {
     return parts.join(' — ');
   }
 
-  /// Texte narratif complet prêt pour le rendu documentaire (synthétique, orienté compétences)
+  /// Texte narratif concis prêt pour le rendu documentaire (~2 lignes visuelles)
   String get fullNarrative {
+    if (customNarrative != null && customNarrative!.trim().isNotEmpty) {
+      return customNarrative!.trim();
+    }
     final buffer = StringBuffer();
     buffer.write(recommendedSkills.trim());
     if (!recommendedSkills.trim().endsWith('.')) {
-      buffer.write('. ');
-    } else {
-      buffer.write(' ');
-    }
-
-    buffer.write(rationale.trim());
-    if (!rationale.trim().endsWith('.')) {
       buffer.write('. ');
     } else {
       buffer.write(' ');
@@ -126,23 +129,29 @@ class CompetencyNeed {
 class CompetencyNeedsAnalysisResult {
   final String missionId;
 
-  /// Nombre total de non-conformités normatives analysées
+  /// Nombre total de non-conformités majeures analysées
   final int totalOccurrences;
 
-  /// Texte d'introduction dynamique contextualisé à la mission
+  /// Texte d'introduction dynamique contextualisé à la mission (structuré en paragraphes)
   final String introNarrative;
 
-  /// Liste dynamique des axes de compétences prioritaires retenus, classés par ordre décroissant
+  /// Liste dynamique des axes prioritaires (TOP 5 MT + TOP 5 BT fusionnés, triés par occurrences décroissantes)
   final List<CompetencyNeed> axes;
 
-  /// Indique si la distribution présente une forte concentration sur 1 ou 2 thématiques
+  /// Indique si la distribution présente une forte concentration sur 1 ou 2 thématiques majeures
   final bool isConcentrated;
 
-  /// Indique si la distribution est étalée / homogène sur de nombreuses thématiques
+  /// Indique si la distribution est étalée / homogène sur de nombreuses défaillances
   final bool isDispersed;
 
-  /// Indique s'il n'y a aucune non-conformité recensée
+  /// Indique s'il n'y a aucune non-conformité majeure recensée
   final bool hasNoDefects;
+
+  /// Nombre de non-conformités majeures MT
+  final int topMajeuresMtCount;
+
+  /// Nombre de non-conformités majeures BT
+  final int topMajeuresBtCount;
 
   CompetencyNeedsAnalysisResult({
     required this.missionId,
@@ -152,292 +161,19 @@ class CompetencyNeedsAnalysisResult {
     required this.isConcentrated,
     required this.isDispersed,
     required this.hasNoDefects,
+    this.topMajeuresMtCount = 0,
+    this.topMajeuresBtCount = 0,
   });
-}
-
-/// Définition canonique d'un domaine / thématique de compétences.
-class _CompetencyThemeDefinition {
-  final String id;
-  final String title;
-  final String recommendedSkills;
-  final String operationalObjective;
-  final List<String> keywords;
-
-  const _CompetencyThemeDefinition({
-    required this.id,
-    required this.title,
-    required this.recommendedSkills,
-    required this.operationalObjective,
-    required this.keywords,
-  });
-
-  /// Score de pertinence pour un constat donné
-  int matchScore(String text) {
-    int score = 0;
-    for (final kw in keywords) {
-      if (text.contains(kw)) {
-        score += kw.length > 5 ? 2 : 1;
-      }
-    }
-    return score;
-  }
 }
 
 /// Moteur expert déterministe d'analyse des besoins de renforcement des compétences.
 ///
-/// Entièrement local, sans IA externe, strictement fondé sur les données statistiques réelles.
+/// Fondé exclusivement sur l'identification des non-conformités majeures réelles,
+/// la sélection du TOP 5 MT + TOP 5 BT, et un classement global décroissant A. à J.
 class CompetencyNeedsEngine {
-  /// Bibliothèque canonique des thématiques de renforcement des compétences
-  static const List<_CompetencyThemeDefinition> _themes = [
-    _CompetencyThemeDefinition(
-      id: 'identification_documentation',
-      title: 'Identification, repérage et documentation des installations',
-      recommendedSkills:
-          'Former les équipes à l’identification systématique des circuits, au repérage normalisé des départs et borniers, à la tenue à jour des schémas unifilaires et à la traçabilité immédiate de toute modification apportée aux tableaux',
-      operationalObjective:
-          'Cet axe vise à fiabiliser l’exploitation courante, à réduire les temps de localisation en cas d’avarie et à prévenir les erreurs de manœuvre lors des interventions',
-      keywords: [
-        'repérage',
-        'reperage',
-        'identification',
-        'étiquetage',
-        'etiquetage',
-        'schéma',
-        'schema',
-        'unifilaire',
-        'marquage',
-        'signalisation',
-        'code couleur',
-        'pictogramme',
-        'dossier technique',
-        'désignation',
-        'designation',
-      ],
-    ),
-    _CompetencyThemeDefinition(
-      id: 'cablage_connexions_maintenance',
-      title: 'Câblage, raccordement et maintenance préventive',
-      recommendedSkills:
-          'Renforcer les compétences relatives aux règles de l’art du câblage, au contrôle périodique des couples de serrage des connexions, à la pose et à la protection mécanique des canalisations ainsi qu’à la détection précoce des échauffements et dégradations',
-      operationalObjective:
-          'L’objectif est de prévenir les défaillances de contact, d’éliminer les risques de surchauffe et de préserver l’intégrité des isolants et canalisations électriques',
-      keywords: [
-        'câblage',
-        'cablage',
-        'canalisation',
-        'raccordement',
-        'connexion',
-        'serrage',
-        'échauffement',
-        'echauffement',
-        'gaine',
-        'cheminement',
-        'passage de câble',
-        'passage de cable',
-        'protection mécanique',
-        'protection mecanique',
-        'bornier',
-        'peigne',
-        'cosse',
-        'détérioré',
-        'deteriore',
-      ],
-    ),
-    _CompetencyThemeDefinition(
-      id: 'consignation_securite',
-      title: 'Consignation, déconsignation et sécurité électrique',
-      recommendedSkills:
-          'Renforcer la maîtrise des procédures réglementaires de consignation en 5 étapes, de déconsignation, de manœuvre des organes de coupure d’urgence, de vérification d’absence de tension (VAT) et de contrôle systématique de l’état des équipements de protection individuelle (EPI)',
-      operationalObjective:
-          'Ce renforcement est indispensable pour garantir la protection physique des intervenants et éliminer tout risque d’électrisation lors des opérations de maintenance',
-      keywords: [
-        'consignation',
-        'déconsignation',
-        'deconsignation',
-        'vat',
-        'absence de tension',
-        'coupure d\'urgence',
-        'coupure d’urgence',
-        'arrêt d\'urgence',
-        'arret d\'urgence',
-        'organe de coupure',
-        'sectionneur',
-        'cadenas',
-        'condamnation',
-        'epi',
-        'habilitation',
-        'gant isolant',
-        'nfc 18-510',
-        'matériel de sécurité',
-      ],
-    ),
-    _CompetencyThemeDefinition(
-      id: 'protections_selectivite',
-      title: 'Protections électriques, calibres et sélectivité',
-      recommendedSkills:
-          'Développer les compétences des équipes sur le dimensionnement et le fonctionnement des dispositifs de protection, la coordination et la sélectivité amont/aval, ainsi que sur l’interprétation des caractéristiques des appareillages et leur adéquation avec les sections de conducteurs',
-      operationalObjective:
-          'Cette démarche assure une élimination rapide et ciblée des défauts de surintensité sans déclenchement intempestif étendu à l’ensemble de l’installation',
-      keywords: [
-        'surintensité',
-        'surintensite',
-        'calibre',
-        'disjoncteur',
-        'fusible',
-        'pouvoir de coupure',
-        'sélectivité',
-        'selectivite',
-        'court-circuit',
-        'coordination',
-        'déclencheur',
-        'declencheur',
-        'inadéquation',
-        'inadequation',
-      ],
-    ),
-    _CompetencyThemeDefinition(
-      id: 'terre_equipotentialite_surtensions',
-      title: 'Mise à la terre, liaisons équipotentielles et parafoudres',
-      recommendedSkills:
-          'Former les intervenants aux principes de mise à la terre des masses, au contrôle périodique de la continuité des conducteurs de protection (PE) et des liaisons équipotentielles, ainsi qu’à la surveillance de l’état fonctionnel des parafoudres',
-      operationalObjective:
-          'L’enjeu est d’évacuer en toute sécurité les courants de défaut et de protéger les équipements sensibles contre les surtensions transitoires d’origine atmosphérique ou industrielle',
-      keywords: [
-        'mise à la terre',
-        'mise a la terre',
-        'prise de terre',
-        'équipotentiel',
-        'equipotentiel',
-        'conducteur de protection',
-        'barrette de coupure',
-        'parafoudre',
-        'surtension',
-        'foudre',
-        'liaison équipotentielle',
-      ],
-    ),
-    _CompetencyThemeDefinition(
-      id: 'differentiels_isolement',
-      title: 'Dispositifs différentiels et surveillance d’isolement',
-      recommendedSkills:
-          'Perfectionner la pratique des essais périodiques des dispositifs différentiels à courant résiduel (DDR), la vérification des seuils et temps de déclenchement au contrôleur d’installation, ainsi que la méthode de recherche des défauts d’isolement',
-      operationalObjective:
-          'Cette compétence est essentielle pour prévenir les risques de contact indirect et éviter les départs d’incendie consécutifs à des courants de fuite permanents',
-      keywords: [
-        'différentiel',
-        'differentiel',
-        'ddr',
-        'isolement',
-        'courant de fuite',
-        '30ma',
-        '300ma',
-        'sensibilité',
-        'sensibilite',
-        'cpi',
-        'régime de neutre',
-        'regime de neutre',
-      ],
-    ),
-    _CompetencyThemeDefinition(
-      id: 'enveloppes_etancheite_ip',
-      title: 'Intégrité des enveloppes, plastrons et adéquation des indices IP/IK',
-      recommendedSkills:
-          'Sensibiliser les techniciens au maintien rigoureux de l’intégrité mécanique des enveloppes, à la pose systématique d’obturateurs sur les modules de réserve, au respect des degrés d’étanchéité IP/IK et à la prévention des infiltrations d’eau ou de poussière',
-      operationalObjective:
-          'L’objectif est d’éviter tout contact direct fortuit avec des pièces sous tension et de préserver les tableaux contre les dégradations liées à leur environnement',
-      keywords: [
-        'enveloppe',
-        'plastron',
-        'obturation',
-        'obturateur',
-        'ip',
-        'ik',
-        'étanchéité',
-        'etancheite',
-        'contact direct',
-        'porte',
-        'serrure',
-        'corrosion',
-        'indice de protection',
-      ],
-    ),
-    _CompetencyThemeDefinition(
-      id: 'poste_haute_tension_mt',
-      title: 'Postes HTA, appareillages Moyenne Tension et manœuvres',
-      recommendedSkills:
-          'Renforcer les compétences spécifiques nécessaires à l’exploitation des postes de transformation et de livraison HTA, au respect des séquences d’interverrouillage mécanique, à la surveillance des transformateurs (DGPT2, diélectrique) et à la réalisation des manœuvres de mise à la terre',
-      operationalObjective:
-          'Cet axe garantit une exploitation sécurisée sur le domaine HTA et fiabilise les organes d’alimentation amont stratégiques du site',
-      keywords: [
-        'cellule mt',
-        'cellule hta',
-        'moyenne tension',
-        'transformateur',
-        'transfo',
-        'interrupteur mt',
-        'disjoncteur mt',
-        'verrouillage',
-        'gaep',
-        'dgpt2',
-        'manœuvre mt',
-        'manoeuvre mt',
-      ],
-    ),
-    _CompetencyThemeDefinition(
-      id: 'groupes_secours_inverseurs',
-      title: 'Groupes électrogènes, inverseurs de source et alimentations de secours',
-      recommendedSkills:
-          'Développer les savoir-faire sur la maintenance préventive des groupes électrogènes de secours (contrôle des batteries de démarrage, circuits carburant, réchauffage, tests périodiques en charge) et la manœuvre des inverseurs de source Normal/Secours',
-      operationalObjective:
-          'L’enjeu est d’assurer une reprise de secours fiable et instantanée sans risque de retour de tension vers le réseau amont',
-      keywords: [
-        'groupe électrogène',
-        'groupe electrogene',
-        'inverseur',
-        'secours',
-        'batterie de démarrage',
-        'batterie de demarrage',
-        'fioul',
-        'carburant',
-        'cuve',
-        'démarrage automatique',
-      ],
-    ),
-    _CompetencyThemeDefinition(
-      id: 'eclairage_securite_evacuation',
-      title: 'Éclairage de sécurité et blocs autonomes d’évacuation',
-      recommendedSkills:
-          'Former les intervenants aux procédures de contrôle réglementaire périodique des blocs autonomes d’éclairage de sécurité (BAES/BAEH), à la vérification de leur autonomie sur batterie et à la gestion du registre de sécurité associé',
-      operationalObjective:
-          'Cet axe garantit le balisage des cheminements et l’évacuation du personnel en toute circonstance en cas de perte de tension',
-      keywords: [
-        'éclairage de sécurité',
-        'eclairage de securite',
-        'baes',
-        'baeh',
-        'bloc autonome',
-        'évacuation',
-        'evacuation',
-        'autonomie batterie',
-      ],
-    ),
-    _CompetencyThemeDefinition(
-      id: 'thermographie_points_chauds',
-      title: 'Thermographie infrarouge et diagnostic prédictif',
-      recommendedSkills:
-          'Former les équipes à l’utilisation de la caméra thermique infrarouge comme outil de maintenance préventive, pour la détection méthodique des échauffements anormaux au niveau des connexions, départs et appareillages en charge',
-      operationalObjective:
-          'L’objectif est de déceler les points chauds avant dégradation irrémédiable des composants et d’éviter les départs d’incendie',
-      keywords: [
-        'thermographie',
-        'infrarouge',
-        'caméra thermique',
-        'camera thermique',
-        'point chaud',
-        'échauffement anormal',
-        'delta t',
-      ],
-    ),
+  /// Lettres officielles de numérotation des axes (A. à J.)
+  static const List<String> axisLetters = [
+    'A.', 'B.', 'C.', 'D.', 'E.', 'F.', 'G.', 'H.', 'I.', 'J.'
   ];
 
   /// Analyse les données statistiques d'une mission et construit le résultat complet
@@ -461,376 +197,518 @@ class CompetencyNeedsEngine {
     TensionDomainStats? tensionDomainStats,
     List<CategoryCrossItem>? crossCategoryItems,
   }) {
+    // 1. Filtrer les non-conformités normatives réelles
     final pertinent = findings.where(AuditFindingInventory.isNormativeNonConformity).toList();
-    final totalOccurrences = totalNC ?? pertinent.length;
 
-    // Cas 0 non-conformité
-    if (totalOccurrences == 0 || pertinent.isEmpty) {
+    // 2. Extraire la population stricte des NC majeures
+    final majeures = pertinent.where(_isMajeureFinding).toList();
+    final totalMajeuresCount = majeures.length;
+
+    // Cas limite : aucune NC majeure
+    if (totalMajeuresCount == 0) {
       return CompetencyNeedsAnalysisResult(
         missionId: missionId,
         totalOccurrences: 0,
         introNarrative:
-            'L’audit n’a relevé aucun constat de non-conformité sur les installations contrôlées. '
-            'Le niveau de conformité technique est optimal. Il convient de maintenir les compétences actuelles '
-            'des équipes par des recyclages réguliers sur les procédures de sécurité et d’habilitation électrique.',
-        axes: [],
+            'L’audit ne met en évidence aucune non-conformité majeure sur les installations contrôlées selon le référentiel normatif applicable.\n\n'
+            'Les écarts éventuellement constatés relèvent de dysfonctionnements mineurs ne justifiant pas d’action prioritaire de formation. '
+            'Il convient de maintenir le niveau actuel des compétences par des actions régulières de sensibilisation et de recyclage des habilitations électriques.',
+        axes: const [],
         isConcentrated: false,
         isDispersed: false,
         hasNoDefects: true,
+        topMajeuresMtCount: 0,
+        topMajeuresBtCount: 0,
       );
     }
 
-    // 1. Regroupement sémantique de chaque non-conformité dans les thématiques
-    final themeBuckets = <String, List<AuditFinding>>{};
-    for (final th in _themes) {
-      themeBuckets[th.id] = [];
+    // 3. Séparation stricte Domaine MT / Domaine BT
+    final mtMajeures = majeures.where((f) => f.tensionDomain == TensionDomain.mt).toList();
+    final btMajeures = majeures.where((f) => f.tensionDomain == TensionDomain.bt).toList();
+
+    // 4. Regroupement par point de défaillance dans chaque domaine
+    final mtGroups = _groupMajeuresByPoint(mtMajeures, TensionDomain.mt);
+    final btGroups = _groupMajeuresByPoint(btMajeures, TensionDomain.bt);
+
+    // 5. Sélection TOP 5 MT et TOP 5 BT (max 5 chacun)
+    final top5Mt = mtGroups.take(5).toList();
+    final top5Bt = btGroups.take(5).toList();
+
+    // 6. Fusion des deux populations et classement global décroissant
+    final combinedGroups = <_FindingPointGroup>[...top5Mt, ...top5Bt];
+    combinedGroups.sort((a, b) {
+      final cmpCount = b.findings.length.compareTo(a.findings.length);
+      if (cmpCount != 0) return cmpCount;
+      return a.verificationPoint.compareTo(b.verificationPoint);
+    });
+
+    // 7. Analyse des variances et de la concentration
+    final top1Count = combinedGroups.isNotEmpty ? combinedGroups.first.findings.length : 0;
+    final top2Count = combinedGroups.length > 1 ? combinedGroups[1].findings.length : 0;
+
+    final isSingleDominant = combinedGroups.length == 1 ||
+        (combinedGroups.length >= 2 && top1Count >= 2 * top2Count && top1Count >= 5);
+    final top2Share = totalMajeuresCount > 0 ? ((top1Count + top2Count) / totalMajeuresCount) * 100.0 : 0.0;
+    final isConcentrated = isSingleDominant || (top2Share >= 50.0 && totalMajeuresCount >= 6);
+    final isDispersed = !isConcentrated && combinedGroups.length >= 4;
+
+    // 8. Génération dynamique des axes A. à J.
+    final axes = <CompetencyNeed>[];
+    for (int i = 0; i < combinedGroups.length; i++) {
+      final group = combinedGroups[i];
+      final letter = i < axisLetters.length ? axisLetters[i] : '${i + 1}.';
+      final isTopDominant = (i == 0 && isSingleDominant);
+
+      final interpretation = _deriveTechnicalCompetency(
+        group: group,
+        totalMajeures: totalMajeuresCount,
+        isTopDominant: isTopDominant,
+      );
+
+      final pct = totalMajeuresCount > 0
+          ? (group.findings.length / totalMajeuresCount) * 100.0
+          : 0.0;
+
+      axes.add(
+        CompetencyNeed(
+          id: 'axis_${group.domain.name}_${i + 1}',
+          letter: letter,
+          title: interpretation.title,
+          recommendedSkills: interpretation.skills,
+          rationale: interpretation.rationale,
+          operationalObjective: interpretation.objective,
+          occurrenceCount: group.findings.length,
+          percentage: pct,
+          critiqueCount: 0,
+          majeureCount: group.findings.length,
+          mineureCount: 0,
+          sourceVerificationPoints: [group.verificationPoint],
+          riskFamilies: group.riskFamilies.toList(),
+          topEquipmentTypes: group.topEquipmentTypes,
+          topLocations: group.topLocations,
+          hasMtDomain: group.domain == TensionDomain.mt,
+          hasBtDomain: group.domain == TensionDomain.bt,
+          domain: group.domain,
+          customNarrative: interpretation.fullNarrative,
+        ),
+      );
     }
 
-    final unclassified = <AuditFinding>[];
+    // 9. Rédaction de l'introduction narrative structurée en paragraphes
+    final introNarrative = _buildStructuredIntroNarrative(
+      totalMajeures: totalMajeuresCount,
+      mtCount: mtMajeures.length,
+      btCount: btMajeures.length,
+      axes: axes,
+      isConcentrated: isConcentrated,
+      isSingleDominant: isSingleDominant,
+      isDispersed: isDispersed,
+    );
 
-    for (final f in pertinent) {
-      final matchedTheme = _matchFindingToTheme(f);
-      if (matchedTheme != null) {
-        themeBuckets[matchedTheme.id]!.add(f);
-      } else {
-        unclassified.add(f);
-      }
+    return CompetencyNeedsAnalysisResult(
+      missionId: missionId,
+      totalOccurrences: totalMajeuresCount,
+      introNarrative: introNarrative,
+      axes: axes,
+      isConcentrated: isConcentrated,
+      isDispersed: isDispersed,
+      hasNoDefects: false,
+      topMajeuresMtCount: mtMajeures.length,
+      topMajeuresBtCount: btMajeures.length,
+    );
+  }
+
+  /// Détecte si un constat correspond à une non-conformité majeure
+  static bool _isMajeureFinding(AuditFinding f) {
+    final crit = f.criticality.trim().toLowerCase();
+    if (crit.contains('majeur')) return true;
+    if (f.priority == 2) return true;
+    return false;
+  }
+
+  /// Regroupe les non-conformités d'un domaine par point de défaillance
+  static List<_FindingPointGroup> _groupMajeuresByPoint(
+    List<AuditFinding> findings,
+    TensionDomain domain,
+  ) {
+    if (findings.isEmpty) return const [];
+
+    final map = <String, List<AuditFinding>>{};
+    for (final f in findings) {
+      final key = _canonicalizeVerificationPoint(f.verificationPoint);
+      map.putIfAbsent(key, () => []).add(f);
     }
 
-    // Si certains constats n'ont pas matché de façon évidente, les affecter selon leur famille de risque
-    for (final f in unclassified) {
-      final fallbackTheme = _fallbackThemeFromRiskFamily(f);
-      themeBuckets[fallbackTheme.id]!.add(f);
-    }
+    final groups = map.entries.map((e) {
+      final list = e.value;
+      final repFinding = list.first;
 
-    // 2. Construction des objets intermédiaires pour chaque thématique active
-    final activeThemeResults = <_ThemeAccumulator>[];
-
-    for (final th in _themes) {
-      final bucket = themeBuckets[th.id]!;
-      if (bucket.isEmpty) continue; // RÈGLE ABSOLUE : aucun thème avec 0 constat n'est retenu
-
-      final count = bucket.length;
-      final pct = (count / totalOccurrences) * 100.0;
-      final critiques = bucket.where((f) => f.criticality.trim().toLowerCase() == 'critique').length;
-      final majeures = bucket.where((f) => f.criticality.trim().toLowerCase() == 'majeure').length;
-      final mineures = bucket.where((f) => f.criticality.trim().toLowerCase() == 'mineure').length;
-
-      // Points de contrôle uniques
-      final pts = bucket.map((f) => f.verificationPoint.trim()).where((p) => p.isNotEmpty).toSet().toList();
-
-      // Familles de risques
-      final rfs = bucket.map((f) => f.riskFamily?.trim() ?? '').where((r) => r.isNotEmpty).toSet().toList();
-
-      // Équipements touchés
+      // Collecte des équipements
       final eqCounts = <String, int>{};
-      for (final f in bucket) {
-        final eq = f.objectType.trim().isNotEmpty ? f.objectType.trim() : 'Équipements';
+      for (final f in list) {
+        final eq = f.objectType.trim().isNotEmpty ? f.objectType.trim() : 'Équipement';
         eqCounts[eq] = (eqCounts[eq] ?? 0) + 1;
       }
       final sortedEqs = eqCounts.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
-      final topEqs = sortedEqs.take(3).map((e) => e.key).toList();
+      final topEqs = sortedEqs.take(2).map((x) => x.key).toList();
 
-      // Locaux / origines touchés
+      // Collecte des locaux
       final locCounts = <String, int>{};
-      for (final f in bucket) {
+      for (final f in list) {
         final loc = f.origin.trim().isNotEmpty ? f.origin.trim() : f.objectName.trim();
         if (loc.isNotEmpty && !loc.toLowerCase().contains('inconnu')) {
           locCounts[loc] = (locCounts[loc] ?? 0) + 1;
         }
       }
       final sortedLocs = locCounts.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
-      final topLocs = sortedLocs.take(2).map((e) => e.key).toList();
+      final topLocs = sortedLocs.take(2).map((x) => x.key).toList();
 
-      final hasMt = bucket.any((f) => f.tensionDomain == TensionDomain.mt);
-      final hasBt = bucket.any((f) => f.tensionDomain == TensionDomain.bt);
+      final riskFamilies = list.map((f) => f.riskFamily?.trim() ?? '').where((r) => r.isNotEmpty).toSet();
 
-      activeThemeResults.add(
-        _ThemeAccumulator(
-          themeDef: th,
-          findings: bucket,
-          count: count,
-          percentage: pct,
-          critiqueCount: critiques,
-          majeureCount: majeures,
-          mineureCount: mineures,
-          sourceVerificationPoints: pts,
-          riskFamilies: rfs,
-          topEquipmentTypes: topEqs,
-          topLocations: topLocs,
-          hasMtDomain: hasMt,
-          hasBtDomain: hasBt,
-        ),
+      return _FindingPointGroup(
+        verificationPoint: e.key,
+        representativeFinding: repFinding,
+        findings: list,
+        domain: domain,
+        topEquipmentTypes: topEqs,
+        topLocations: topLocs,
+        riskFamilies: riskFamilies,
       );
-    }
+    }).toList();
 
-    // 3. Classement strict par nombre d'occurrences décroissant (puis criticité)
-    activeThemeResults.sort((a, b) {
-      final cmp = b.count.compareTo(a.count);
+    // Tri décroissant par fréquence avec bris d'égalité déterministe
+    groups.sort((a, b) {
+      final cmp = b.findings.length.compareTo(a.findings.length);
       if (cmp != 0) return cmp;
-      return b.critiqueCount.compareTo(a.critiqueCount);
+      return a.verificationPoint.compareTo(b.verificationPoint);
     });
 
-    // 4. Sélection dynamique du nombre d'axes
-    // Le nombre d'axes s'adapte à la distribution réelle sans inventer ni forcer de quotas
-    final selectedAccumulators = _selectRelevantThemes(activeThemeResults, totalOccurrences);
+    return groups;
+  }
 
-    // 5. Attribution des lettres dynamiques a), b), c)...
-    final letters = ['a)', 'b)', 'c)', 'd)', 'e)', 'f)', 'g)', 'h)', 'i)', 'j)', 'k)'];
-    final axes = <CompetencyNeed>[];
+  /// Normalisation propre du point de vérification pour regroupement déterministe
+  static String _canonicalizeVerificationPoint(String raw) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) return 'Anomalie non spécifiée';
+    return trimmed;
+  }
 
-    for (int i = 0; i < selectedAccumulators.length; i++) {
-      final acc = selectedAccumulators[i];
-      final letter = i < letters.length ? letters[i] : '${i + 1})';
+  /// Moteur d'interprétation technique dynamique
+  ///
+  /// Analyse les attributs techniques réels (point de contrôle, objet technique, défaillance)
+  /// pour produire un texte extrêmement concis (~2 lignes visuelles) orienté compétence.
+  static _DerivedCompetency _deriveTechnicalCompetency({
+    required _FindingPointGroup group,
+    required int totalMajeures,
+    required bool isTopDominant,
+  }) {
+    final f = group.representativeFinding;
+    final pointLower = group.verificationPoint.toLowerCase();
+    final obsLower = f.observationText.toLowerCase();
+    final combinedText = '$pointLower $obsLower ${f.objectType.toLowerCase()} ${f.normativeReference ?? ""}';
 
-      // Construction de la justification factuelle chiffrée
-      final rationale = _buildRationale(acc, totalOccurrences);
+    String title;
+    String skills;
+    String objective;
 
-      axes.add(
-        CompetencyNeed(
-          id: acc.themeDef.id,
-          letter: letter,
-          title: acc.themeDef.title,
-          recommendedSkills: acc.themeDef.recommendedSkills,
-          rationale: rationale,
-          operationalObjective: acc.themeDef.operationalObjective,
-          occurrenceCount: acc.count,
-          percentage: acc.percentage,
-          critiqueCount: acc.critiqueCount,
-          majeureCount: acc.majeureCount,
-          mineureCount: acc.mineureCount,
-          sourceVerificationPoints: acc.sourceVerificationPoints,
-          riskFamilies: acc.riskFamilies,
-          topEquipmentTypes: acc.topEquipmentTypes,
-          topLocations: acc.topLocations,
-          hasMtDomain: acc.hasMtDomain,
-          hasBtDomain: acc.hasBtDomain,
-        ),
+    // 1. Repérage, identification, schémas unifilaires
+    if (combinedText.contains('repérage') ||
+        combinedText.contains('reperage') ||
+        combinedText.contains('identification') ||
+        combinedText.contains('schéma') ||
+        combinedText.contains('unifilaire') ||
+        combinedText.contains('étiquetage') ||
+        combinedText.contains('marquage')) {
+      title = 'Identification, repérage et tenue à jour des schémas unifilaires';
+      skills = 'Renforcer la rigueur du repérage normalisé des circuits et la mise à jour documentaire des tableaux';
+      objective = 'afin de fiabiliser l’exploitation courante et de sécuriser les consignations';
+    }
+    // 2. Prises de terre, équipotentialité, continuité PE
+    else if (combinedText.contains('terre') ||
+        combinedText.contains('équipotentielle') ||
+        combinedText.contains('equipotentiel') ||
+        combinedText.contains('continuité de masse') ||
+        combinedText.contains('barrette de coupure') ||
+        combinedText.contains('prise de terre') ||
+        RegExp(r'\bpe\b').hasMatch(combinedText)) {
+      title = 'Raccordement à la terre et continuité des conducteurs de protection';
+      skills = 'Développer la maîtrise des contrôles de continuité PE et du raccordement des liaisons équipotentielles';
+      objective = 'afin de garantir l’écoulement des courants de défaut et de prévenir le risque d’électrisation';
+    }
+    // 3. Dispositifs différentiels, DDR, isolement
+    else if (combinedText.contains('différentiel') ||
+        combinedText.contains('differentiel') ||
+        combinedText.contains('ddr') ||
+        combinedText.contains('isolement') ||
+        combinedText.contains('courant de fuite')) {
+      title = 'Protections différentielles et surveillance de l’isolement';
+      skills = 'Former aux essais périodiques des DDR, à la vérification des seuils de déclenchement et à la mesure d’isolement';
+      objective = 'afin d’assurer la protection contre les contacts indirects et d’éliminer les risques de départ de feu';
+    }
+    // 4. Protections contre les surintensités, calibres, sélectivité
+    else if (combinedText.contains('surintensité') ||
+        combinedText.contains('calibre') ||
+        combinedText.contains('disjoncteur') ||
+        combinedText.contains('fusible') ||
+        combinedText.contains('pouvoir de coupure') ||
+        combinedText.contains('sélectivité')) {
+      title = 'Coordination et calibre des dispositifs de protection amont/aval';
+      skills = 'Consolider les compétences de dimensionnement des calibres et de vérification de l’adéquation protection/câble';
+      objective = 'afin d’assurer la coupure instantanée des surintensités sans déclenchement généralisé';
+    }
+    // 5. Enveloppes, plastrons, obturateurs, degrés IP/IK
+    else if (combinedText.contains('enveloppe') ||
+        combinedText.contains('plastron') ||
+        combinedText.contains('obturat') ||
+        combinedText.contains('étanchéité') ||
+        combinedText.contains('etancheite') ||
+        combinedText.contains('ip') ||
+        combinedText.contains('ik') ||
+        combinedText.contains('contact direct') ||
+        combinedText.contains('porte')) {
+      title = 'Intégrité des enveloppes, plastrons et obturation des réserves';
+      skills = 'Sensibiliser à la pose systématique d’obturateurs sur les modules de réserve et au maintien de l’étanchéité IP';
+      objective = 'afin d’éliminer tout risque de contact direct avec des pièces sous tension';
+    }
+    // 6. Câblage, raccordements, connexions, échauffement, serrage
+    else if (combinedText.contains('câblage') ||
+        combinedText.contains('cablage') ||
+        combinedText.contains('serrage') ||
+        combinedText.contains('connexion') ||
+        combinedText.contains('raccordement') ||
+        combinedText.contains('bornier') ||
+        combinedText.contains('échauffement') ||
+        combinedText.contains('canalisation')) {
+      title = 'Règles de l’art du câblage, raccordements et couples de serrage';
+      skills = 'Renforcer les pratiques de vérification des couples de serrage et de protection mécanique des conducteurs';
+      objective = 'afin d’éviter les échauffements anormaux et la détérioration prématurée des isolants';
+    }
+    // 7. Organes de coupure d'urgence, arrêt d'urgence
+    else if (combinedText.contains('coupure d’urgence') ||
+        combinedText.contains('coupure d\'urgence') ||
+        combinedText.contains('arrêt d’urgence') ||
+        combinedText.contains('arret d\'urgence') ||
+        combinedText.contains('sectionneur')) {
+      title = 'Organes de coupure d’urgence et dispositifs de sectionnement';
+      skills = 'Former au contrôle de l’accessibilité, de la manœuvrabilité et du fonctionnement des organes de coupure d’urgence';
+      objective = 'afin de garantir une mise hors tension immédiate en cas de situation de danger';
+    }
+    // 8. Cellules HTA, interverrouillage, mise à la terre MT
+    else if (group.domain == TensionDomain.mt &&
+        (combinedText.contains('cellule') ||
+         combinedText.contains('interverrouillage') ||
+         combinedText.contains('sectionneur') ||
+         combinedText.contains('gaep') ||
+         combinedText.contains('manœuvre'))) {
+      title = 'Exploitation et manœuvres des cellules Moyenne Tension (HTA)';
+      skills = 'Renforcer la stricte application des séquences d’interverrouillage mécanique et de mise à la terre des cellules MT';
+      objective = 'afin d’éliminer tout risque d’arc électrique lors des opérations d’exploitation en poste HTA';
+    }
+    // 9. Transformateurs MT/BT, diélectrique, DGPT2
+    else if (group.domain == TensionDomain.mt &&
+        (combinedText.contains('transformateur') ||
+         combinedText.contains('transfo') ||
+         combinedText.contains('diélectrique') ||
+         combinedText.contains('dgpt2') ||
+         combinedText.contains('rétention'))) {
+      title = 'Surveillance et protection des transformateurs HTA/BT';
+      skills = 'Perfectionner la surveillance de l’état du diélectrique, le contrôle des relais DGPT2 et des dispositifs de rétention';
+      objective = 'afin de prévenir les défaillances diélectriques majeures et d’assurer la continuité de service amont';
+    }
+    // 10. Groupes électrogènes, inverseurs de source
+    else if (combinedText.contains('groupe électrogène') ||
+        combinedText.contains('groupe electrogene') ||
+        combinedText.contains('inverseur') ||
+        combinedText.contains('secours')) {
+      title = 'Maintenance des groupes électrogènes et inverseurs Normal/Secours';
+      skills = 'Développer les savoir-faire de maintenance préventive des groupes de secours et de contrôle des batteries de démarrage';
+      objective = 'afin de garantir une reprise automatique et fiable de l’alimentation en cas de perte secteur';
+    }
+    // 11. Éclairage de sécurité, blocs autonomes BAES
+    else if (combinedText.contains('éclairage de sécurité') ||
+        combinedText.contains('eclairage de securite') ||
+        combinedText.contains('baes') ||
+        combinedText.contains('bloc autonome') ||
+        combinedText.contains('évacuation')) {
+      title = 'Vérification et maintenance de l’éclairage de sécurité (BAES)';
+      skills = 'Former au contrôle périodique de l’autonomie des blocs autonomes d’éclairage de sécurité et à leur traçabilité';
+      objective = 'afin d’assurer le balisage permanent des cheminements d’évacuation en cas d’urgence';
+    }
+    // 12. Consignation, EPI, sécurité réglementaire
+    else if (combinedText.contains('consignation') ||
+        combinedText.contains('vat') ||
+        combinedText.contains('epi') ||
+        combinedText.contains('habilitation') ||
+        combinedText.contains('gant')) {
+      title = 'Procédures de consignation électrique, VAT et port des EPI';
+      skills = 'Renforcer la pratique rigoureuse de la consignation en 5 étapes, de la vérification d’absence de tension et du contrôle des EPI';
+      objective = 'afin de préserver l’intégrité physique des intervenants lors des opérations de maintenance';
+    }
+    // 13. Protection foudre
+    else if (combinedText.contains('foudre') ||
+        combinedText.contains('parafoudre') ||
+        combinedText.contains('descente')) {
+      title = 'Protection contre la foudre et conformité des descentes';
+      skills = 'Former au contrôle de l’état physique des conducteurs de descente et à la surveillance des modules parafoudres';
+      objective = 'afin d’assurer l’écoulement direct des décharges atmosphériques sans détérioration des récepteurs';
+    }
+    // 14. Fallback dynamique universel (tout point de contrôle inconnu / futur)
+    else {
+      title = _formatCleanTitle(group.verificationPoint);
+      final cleanPointLower = group.verificationPoint.trim().toLowerCase();
+      final domainLabel = group.domain == TensionDomain.mt ? 'Moyenne Tension' : 'Basse Tension';
+      skills = 'Renforcer la maîtrise des règles de l’art et des contrôles relatifs à « $cleanPointLower »';
+      objective = 'afin d’éliminer les écarts récurrents constatés sur les installations $domainLabel';
+    }
+
+    // Construction du texte narratif concis (~2 lignes visuelles)
+    final narrativeBuffer = StringBuffer();
+    if (isTopDominant) {
+      narrativeBuffer.write('Priorité immédiate : ');
+    }
+    narrativeBuffer.write(skills);
+    narrativeBuffer.write(', ');
+    narrativeBuffer.write(objective);
+    narrativeBuffer.write('.');
+
+    final rationale = '${group.findings.length} constat${group.findings.length > 1 ? "s" : ""} '
+        'relevé${group.findings.length > 1 ? "s" : ""} en ${group.domain == TensionDomain.mt ? "HTA" : "BT"}';
+
+    return _DerivedCompetency(
+      title: title,
+      skills: skills,
+      objective: objective,
+      rationale: rationale,
+      fullNarrative: narrativeBuffer.toString(),
+    );
+  }
+
+  /// Nettoie et capitalise un titre de point de vérification
+  static String _formatCleanTitle(String raw) {
+    var t = raw.trim();
+    if (t.endsWith('.')) t = t.substring(0, t.length - 1).trim();
+    if (t.isEmpty) return 'Non-conformité technique majeure';
+    return t[0].toUpperCase() + t.substring(1);
+  }
+
+  /// Construit le paragraphe d'introduction structuré et concis
+  static String _buildStructuredIntroNarrative({
+    required int totalMajeures,
+    required int mtCount,
+    required int btCount,
+    required List<CompetencyNeed> axes,
+    required bool isConcentrated,
+    required bool isSingleDominant,
+    required bool isDispersed,
+  }) {
+    final buffer = StringBuffer();
+
+    // ── Paragraphe 1 : Constat général factuel issu des données réelles
+    buffer.write(
+      'L’analyse des résultats de la mission met en évidence $totalMajeures non-conformité'
+      '${totalMajeures > 1 ? "s" : ""} majeure${totalMajeures > 1 ? "s" : ""}, ',
+    );
+
+    if (mtCount > 0 && btCount > 0) {
+      if (btCount >= 3 * mtCount) {
+        buffer.write(
+          'fortement concentrées sur les installations Basse Tension ($btCount constats) '
+          'tout en impactant des équipements amont en Moyenne Tension ($mtCount constats).',
+        );
+      } else if (mtCount >= 2 * btCount) {
+        buffer.write(
+          'avec une prépondérance marquée sur les installations Moyenne Tension ($mtCount constats), '
+          'complétées par des écarts sur les départs Basse Tension ($btCount constats).',
+        );
+      } else {
+        buffer.write(
+          'réparties entre le domaine Moyenne Tension ($mtCount constats) et '
+          'le réseau Basse Tension ($btCount constats).',
+        );
+      }
+    } else if (mtCount > 0) {
+      buffer.write(
+        'concernant exclusivement le domaine Moyenne Tension (HTA), '
+        'au niveau des postes de livraison et transformateurs.',
+      );
+    } else {
+      buffer.write(
+        'intéressant l’ensemble des tableaux et armoires de distribution du réseau Basse Tension (BT).',
       );
     }
 
-    // 6. Diagnostic de concentration et génération de l'introduction narrative
-    final top2Share = selectedAccumulators.take(2).fold<double>(0.0, (s, e) => s + e.percentage);
-    final isConcentrated = selectedAccumulators.length <= 3 || (top2Share >= 55.0 && totalOccurrences >= 10);
-    final isDispersed = !isConcentrated && selectedAccumulators.length >= 4;
+    buffer.write('\n\n');
 
-    final introNarrative = _buildIntroNarrative(
-      totalOccurrences: totalOccurrences,
-      axes: axes,
-      isConcentrated: isConcentrated,
-      top2Share: top2Share,
-      tensionStats: tensionDomainStats,
-      riskStats: riskFamilyStats,
-    );
+    // ── Paragraphe 2 : Diagnostic de concentration vs dispersion
+    if (axes.isNotEmpty) {
+      final top1 = axes.first;
+      final top2 = axes.length > 1 ? axes[1] : null;
 
-    return CompetencyNeedsAnalysisResult(
-      missionId: missionId,
-      totalOccurrences: totalOccurrences,
-      introNarrative: introNarrative,
-      axes: axes,
-      isConcentrated: isConcentrated,
-      isDispersed: isDispersed,
-      hasNoDefects: false,
-    );
-  }
-
-  /// Associe un constat au thème le plus pertinent selon un scoring sémantique
-  static _CompetencyThemeDefinition? _matchFindingToTheme(AuditFinding f) {
-    final text = '${f.verificationPoint} ${f.observationText} ${f.tableName} ${f.objectType} ${f.origin} ${f.riskFamily ?? ""}'
-        .toLowerCase();
-
-    _CompetencyThemeDefinition? bestTheme;
-    int maxScore = 0;
-
-    for (final th in _themes) {
-      int score = th.matchScore(text);
-      // Si constat sur équipement MT (Cellule MT, Transformateur MT/BT) ou domaine MT
-      if (th.id == 'poste_haute_tension_mt' &&
-          (f.tensionDomain == TensionDomain.mt ||
-           f.objectType.toLowerCase().contains('cellule') ||
-           f.objectType.toLowerCase().contains('transformateur') ||
-           text.contains('hta') ||
-           text.contains('moyenne tension'))) {
-        score += 5;
+      if (isSingleDominant) {
+        buffer.write(
+          'Les défaillances révèlent une priorité technique prépondérante sur « ${top1.title} » '
+          '(${top1.occurrenceCount} constats), qui nécessite une action de mise à niveau ciblée et immédiate.',
+        );
+      } else if (isConcentrated && top2 != null) {
+        buffer.write(
+          'Les écarts majeurs se concentrent principalement sur deux problématiques dominantes : '
+          '« ${top1.title} » (${top1.occurrenceCount} constats) et « ${top2.title} » (${top2.occurrenceCount} constats).',
+        );
+      } else {
+        buffer.write(
+          'Les non-conformités se distribuent de manière homogène sur plusieurs volets techniques distincts, '
+          'traduisant un besoin de consolidation transverse des gestes professionnels et des procédures de contrôle.',
+        );
       }
 
-      if (score > maxScore) {
-        maxScore = score;
-        bestTheme = th;
-      }
+      buffer.write('\n\n');
+
+      // ── Paragraphe 3 : Orientation opérationnelle du plan de compétences
+      final axisCount = axes.length;
+      buffer.write(
+        'Afin d’assurer une réduction durable du risque d’exploitation, le plan de renforcement des compétences '
+        'doit prioritairement porter sur les $axisCount axe${axisCount > 1 ? "s" : ""} d’intervention ci-dessous.',
+      );
     }
-
-    return maxScore > 0 ? bestTheme : null;
-  }
-
-  /// Thème de repli déterministe en fonction de la famille de risque canonique
-  static _CompetencyThemeDefinition _fallbackThemeFromRiskFamily(AuditFinding f) {
-    final rf = CanonicalRiskFamilyRegistry.mapToCanonical(f.riskFamily, verificationPoint: f.verificationPoint);
-    switch (rf) {
-      case CanonicalRiskFamilyRegistry.erreurExploitation:
-        return _themes.firstWhere((t) => t.id == 'identification_documentation');
-      case CanonicalRiskFamilyRegistry.degradationCanalisations:
-      case CanonicalRiskFamilyRegistry.echauffementSurcharge:
-        return _themes.firstWhere((t) => t.id == 'cablage_connexions_maintenance');
-      case CanonicalRiskFamilyRegistry.surintensiteCourtCircuit:
-        return _themes.firstWhere((t) => t.id == 'protections_selectivite');
-      case CanonicalRiskFamilyRegistry.electrissationElectrocution:
-      default:
-        return _themes.firstWhere((t) => t.id == 'terre_equipotentialite_surtensions');
-    }
-  }
-
-  /// Sélectionne dynamiquement les thèmes pertinents
-  static List<_ThemeAccumulator> _selectRelevantThemes(
-    List<_ThemeAccumulator> allActive,
-    int totalOccurrences,
-  ) {
-    if (allActive.isEmpty) return [];
-
-    // Si peu de non-conformités (<= 5), ne garder que les thèmes ayant effectivement des constats
-    if (totalOccurrences <= 5) {
-      return allActive;
-    }
-
-    // Si plusieurs thématiques, on retient celles qui ont une part significative (>= 3% ou au moins 2 constats)
-    // ou les thématiques du Pareto couvrant la majorité des défauts
-    final selected = <_ThemeAccumulator>[];
-    double cumulativePct = 0.0;
-
-    for (final item in allActive) {
-      // Retenir systématiquement les thèmes ayant au moins 4 % des défauts ou au moins 3 constats
-      // ou tant qu'on n'a pas couvert 85% des constats
-      final isSignificant = item.percentage >= 4.0 || item.count >= 3;
-      final needsCoverage = cumulativePct < 85.0 || selected.length < 2;
-
-      if (isSignificant || needsCoverage) {
-        selected.add(item);
-        cumulativePct += item.percentage;
-      }
-    }
-
-    // Garantir au moins 1 thème si disponible
-    if (selected.isEmpty && allActive.isNotEmpty) {
-      selected.add(allActive.first);
-    }
-
-    return selected;
-  }
-
-  /// Construit la justification factuelle chiffrée pour un axe
-  static String _buildRationale(_ThemeAccumulator acc, int totalOccurrences) {
-    final count = acc.count;
-    final pctStr = acc.percentage.toStringAsFixed(1).replaceAll('.', ',');
-
-    final buffer = StringBuffer();
-    if (acc.percentage >= 25.0) {
-      buffer.write('Cet axe constitue une priorité absolue de la mission, rassemblant $count constats ');
-      buffer.write('(soit $pctStr % de l’ensemble des non-conformités recensées)');
-    } else if (acc.percentage >= 15.0) {
-      buffer.write('Cette thématique représente un volume majeur d’écarts avec $count constats ');
-      buffer.write('(soit $pctStr % du total de la mission)');
-    } else {
-      buffer.write('Cette thématique totalise $count constat${count > 1 ? "s" : ""} ');
-      buffer.write('($pctStr % des écarts identifiés)');
-    }
-
-    if (acc.critiqueCount > 0) {
-      buffer.write(', dont ${acc.critiqueCount} non-conformité${acc.critiqueCount > 1 ? "s" : ""} critique${acc.critiqueCount > 1 ? "s" : ""} ');
-      buffer.write('exigeant une vigilance accrue');
-    } else if (acc.majeureCount > 0) {
-      buffer.write(', dont ${acc.majeureCount} non-conformité${acc.majeureCount > 1 ? "s" : ""} majeure${acc.majeureCount > 1 ? "s" : ""}');
-    }
-
-    return buffer.toString();
-  }
-
-  /// Construit le paragraphe introductif d'analyse dynamique de la section 10
-  static String _buildIntroNarrative({
-    required int totalOccurrences,
-    required List<CompetencyNeed> axes,
-    required bool isConcentrated,
-    required double top2Share,
-    TensionDomainStats? tensionStats,
-    List<RiskFamilyItem>? riskStats,
-  }) {
-    if (axes.isEmpty) {
-      return 'L’analyse des non-conformités ne met en évidence aucun besoin de renforcement particulier.';
-    }
-
-    final top1 = axes.first;
-    final top2 = axes.length > 1 ? axes[1] : null;
-
-    final buffer = StringBuffer();
-    buffer.write('L’analyse des non-conformités de la mission ');
-
-    // 1. Analyse de la distribution statistique (Concentration vs Dispersion)
-    if (isConcentrated && top2 != null) {
-      buffer.write('met en évidence une forte concentration des écarts autour de deux thématiques prépondérantes : ');
-      buffer.write('« ${top1.title} » (${top1.occurrenceCount} constats, soit ${top1.percentageStr} %) et ');
-      buffer.write('« ${top2.title} » (${top2.occurrenceCount} constats, soit ${top2.percentageStr} %), ');
-      buffer.write('qui cumulent à elles seules ${top2Share.toStringAsFixed(1).replaceAll('.', ',')} % des défaillances. ');
-    } else if (isConcentrated && top2 == null) {
-      buffer.write('révèle une prédominance marquée de la thématique « ${top1.title} », ');
-      buffer.write('qui rassemble ${top1.occurrenceCount} des $totalOccurrences non-conformités identifiées (${top1.percentageStr} %). ');
-    } else {
-      buffer.write('révèle une répartition des écarts sur plusieurs registres techniques, ');
-      buffer.write('menée principalement par « ${top1.title} » (${top1.occurrenceCount} constats, ${top1.percentageStr} %) ');
-      if (top2 != null) {
-        buffer.write('et « ${top2.title} » (${top2.occurrenceCount} constats, ${top2.percentageStr} %), ');
-      }
-      buffer.write('traduisant des besoins de consolidation diversifiés au sein des équipes. ');
-    }
-
-    // 2. Contexte tension HTA / BT si disponible
-    if (tensionStats != null && tensionStats.totalCount > 0) {
-      if (tensionStats.btPct >= 70.0) {
-        buffer.write('Ces constats concernent très majoritairement le réseau Basse Tension (${tensionStats.btPercentageStr} des non-conformités), ');
-        buffer.write('qui concentre les opérations d’exploitation quotidienne et de maintenance de premier niveau. ');
-      } else if (tensionStats.mtPct >= 40.0) {
-        buffer.write('Une part significative des écarts (${tensionStats.mtPercentageStr}) intéresse directement les installations Moyenne Tension (HTA), ');
-        buffer.write('ce qui nécessite des compétences spécifiques de manœuvre et de consignation haute sécurité. ');
-      }
-    }
-
-    // 3. Conclusion opérationnelle sur les compétences
-    buffer.write(
-      'Ces résultats traduisent la nécessité de structurer le programme de formation autour des pratiques réelles '
-      'du terrain afin de sécuriser durablement l’exploitation des installations électriques.',
-    );
 
     return buffer.toString();
   }
 }
 
-/// Structure temporaire pour l'accumulation et le tri
-class _ThemeAccumulator {
-  final _CompetencyThemeDefinition themeDef;
+/// Structure de regroupement par point de défaillance
+class _FindingPointGroup {
+  final String verificationPoint;
+  final AuditFinding representativeFinding;
   final List<AuditFinding> findings;
-  final int count;
-  final double percentage;
-  final int critiqueCount;
-  final int majeureCount;
-  final int mineureCount;
-  final List<String> sourceVerificationPoints;
-  final List<String> riskFamilies;
+  final TensionDomain domain;
   final List<String> topEquipmentTypes;
   final List<String> topLocations;
-  final bool hasMtDomain;
-  final bool hasBtDomain;
+  final Set<String> riskFamilies;
 
-  _ThemeAccumulator({
-    required this.themeDef,
+  _FindingPointGroup({
+    required this.verificationPoint,
+    required this.representativeFinding,
     required this.findings,
-    required this.count,
-    required this.percentage,
-    required this.critiqueCount,
-    required this.majeureCount,
-    required this.mineureCount,
-    required this.sourceVerificationPoints,
-    required this.riskFamilies,
+    required this.domain,
     required this.topEquipmentTypes,
     required this.topLocations,
-    required this.hasMtDomain,
-    required this.hasBtDomain,
+    required this.riskFamilies,
+  });
+}
+
+/// DTO d'interprétation d'un groupe
+class _DerivedCompetency {
+  final String title;
+  final String skills;
+  final String objective;
+  final String rationale;
+  final String fullNarrative;
+
+  _DerivedCompetency({
+    required this.title,
+    required this.skills,
+    required this.objective,
+    required this.rationale,
+    required this.fullNarrative,
   });
 }
