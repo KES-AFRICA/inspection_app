@@ -481,12 +481,21 @@ class PdfEquipementsSynthesisBuilder {
           equipNom = seqDesignation;
         }
 
+        // Résolution déterministe du N° de classement de la cellule
+        String cellNum = '';
+        final rawNum = c.numerotation.trim();
+        if (rawNum.isNotEmpty && !isGenericDesignation(rawNum)) {
+          cellNum = rawNum;
+        } else {
+          cellNum = celluleSeq.toString();
+        }
+
         addEquipement(
           refObj: c,
           zoneName: zoneName,
           localName: localName,
           repere: rep.isNotEmpty ? rep : seqDesignation,
-          numero: c.numerotation.trim(),
+          numero: cellNum,
           nom: equipNom,
           type: 'Cellule',
           accessible: true,
@@ -522,12 +531,23 @@ class PdfEquipementsSynthesisBuilder {
           equipNom = seqDesignation;
         }
 
+        // Résolution déterministe du N° de classement du transformateur
+        String transfoNum = '';
+        final rawTransfoRep = t.repere?.trim() ?? '';
+        if (rawTransfoRep.isNotEmpty &&
+            rawTransfoRep != localName &&
+            !isGenericDesignation(rawTransfoRep)) {
+          transfoNum = rawTransfoRep;
+        } else {
+          transfoNum = transfoSeq.toString();
+        }
+
         addEquipement(
           refObj: t,
           zoneName: zoneName,
           localName: localName,
           repere: rep,
-          numero: (t.repere != null && t.repere!.trim().isNotEmpty) ? t.repere!.trim() : '',
+          numero: transfoNum,
           nom: equipNom,
           type: 'Transformateur',
           accessible: true,

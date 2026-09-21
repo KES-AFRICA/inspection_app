@@ -1448,7 +1448,7 @@ class PdfClassementFoudreBuilder {
           PdfReportStyles.tableHeaderRow([
             'ZONE',
             'REPÈRE',
-            'N',
+            'N°',
             'DÉSIGNATION',
             'POINT DE VÉRIFICATION',
             'RÉF. NORMATIVE',
