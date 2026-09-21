@@ -230,12 +230,15 @@ class PdfReportLightService {
   /// Tableau des Renseignements Principaux (Établissement, Adresse, Site, Vérificateurs)
   static pw.Widget _buildGeneralInfoTable(
       Mission mission, RenseignementsGeneraux? rg) {
-    final verificateursNoms = IntervenantsService.getMissionIntervenantsNoms(
+    final verificateursList = IntervenantsService.getMissionIntervenantsNoms(
       mission.id,
       mission: mission,
       rg: rg,
       uppercase: false,
-    ).join(', ');
+    );
+    final verificateursNoms = verificateursList.join(', ');
+    final verificateursLabel =
+        verificateursList.length > 1 ? 'Vérificateurs' : 'Vérificateur';
 
     final etab = rg?.etablissement.isNotEmpty == true
         ? rg!.etablissement
@@ -253,7 +256,7 @@ class PdfReportLightService {
       PdfReportService.tableDataRow(['Établissement vérifié', etab], alt: false),
       PdfReportService.tableDataRow(['Adresse', adresse], alt: true),
       PdfReportService.tableDataRow(['Nom du site', site], alt: false),
-      PdfReportService.tableDataRow(['Vérificateur(s)', verificateursNoms], alt: true),
+      PdfReportService.tableDataRow([verificateursLabel, verificateursNoms], alt: true),
     ];
 
     return pw.Table(

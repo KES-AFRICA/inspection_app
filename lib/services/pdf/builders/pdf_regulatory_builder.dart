@@ -175,6 +175,9 @@ class PdfRegulatoryBuilder {
       jsa: jsa,
       uppercase: true,
     );
+    final verificateursLabel = verificateursList.length > 1
+        ? 'Vérificateurs'
+        : 'Vérificateur';
 
     // Bordures sombres (#475569 slate dark, épaisseur 0.8 pt) pour une visibilité parfaite
     final gridColor = PdfColor.fromHex('#475569');
@@ -198,10 +201,14 @@ class PdfRegulatoryBuilder {
       String label,
       pw.Widget contentWidget, {
       required bool isOdd,
+      bool centerLabelVertical = false,
     }) {
       final bg = isOdd ? PdfColor.fromHex('#F8FAFC') : PdfColors.white;
       return pw.TableRow(
         decoration: pw.BoxDecoration(color: bg),
+        verticalAlignment: centerLabelVertical
+            ? pw.TableCellVerticalAlignment.middle
+            : pw.TableCellVerticalAlignment.top,
         children: [
           pw.Padding(
             padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 8),
@@ -225,6 +232,7 @@ class PdfRegulatoryBuilder {
         // ── PARTIE A: MISSIONS (PÉRIMÈTRE - CELLULE UNIQUE À GAUCHE) ──
         pw.TableRow(
           decoration: const pw.BoxDecoration(color: PdfColors.white),
+          verticalAlignment: pw.TableCellVerticalAlignment.middle,
           children: [
             pw.Padding(
               padding: const pw.EdgeInsets.symmetric(
@@ -298,7 +306,7 @@ class PdfRegulatoryBuilder {
           isOdd: false,
         ),
         buildTableRow(
-          'Vérificateur(s)',
+          verificateursLabel,
           pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: verificateursList
@@ -306,6 +314,7 @@ class PdfRegulatoryBuilder {
                 .toList(),
           ),
           isOdd: true,
+          centerLabelVertical: true,
         ),
       ],
     );
