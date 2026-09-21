@@ -8,6 +8,7 @@ import 'package:inspec_app/models/mesures_essais.dart';
 import 'package:inspec_app/models/foudre.dart';
 import 'package:inspec_app/services/pdf/pdf_page_tracker.dart';
 import 'package:inspec_app/services/pdf/pdf_report_styles.dart';
+import 'package:inspec_app/services/pdf/builders/pdf_equipements_synthesis_builder.dart';
 
 /// Builder responsable de la collecte des entrées et du rendu du Sommaire dynamique
 class PdfSommaireBuilder {
@@ -797,38 +798,7 @@ class PdfSommaireBuilder {
 
   static bool hasUnknownSources(AuditInstallationsElectriques? audit) {
     if (audit == null) return false;
-    bool checkCoffret(CoffretArmoire c) {
-      for (final a in c.alimentations) {
-        if (a.effectiveSourceKnown == 'Inconnue') return true;
-      }
-      return false;
-    }
-    for (final l in audit.moyenneTensionLocaux) {
-      for (final c in l.coffrets) {
-        if (checkCoffret(c)) return true;
-      }
-    }
-    for (final z in audit.moyenneTensionZones) {
-      for (final c in z.coffrets) {
-        if (checkCoffret(c)) return true;
-      }
-      for (final l in z.locaux) {
-        for (final c in l.coffrets) {
-          if (checkCoffret(c)) return true;
-        }
-      }
-    }
-    for (final z in audit.basseTensionZones) {
-      for (final c in z.coffretsDirects) {
-        if (checkCoffret(c)) return true;
-      }
-      for (final l in z.locaux) {
-        for (final c in l.coffrets) {
-          if (checkCoffret(c)) return true;
-        }
-      }
-    }
-    return false;
+    return PdfEquipementsSynthesisBuilder.collectEquipementsUnknownSource(audit).isNotEmpty;
   }
 
   static void addSommairePages(

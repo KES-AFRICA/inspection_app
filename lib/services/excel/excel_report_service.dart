@@ -346,7 +346,7 @@ class ExcelReportService {
           final cellNom = sheet.getRangeByIndex(currentRow, 4);
           cellNom.setText(item.nom);
           _styleDataCell(cellNom,
-              bgColor: bgColor, hAlign: xlsio.HAlignType.left, wrapText: true);
+              bgColor: bgColor, hAlign: xlsio.HAlignType.center, wrapText: true);
 
           // Col 5 : Type
           final cellType = sheet.getRangeByIndex(currentRow, 5);
@@ -557,7 +557,7 @@ class ExcelReportService {
           final cellNom = sheet.getRangeByIndex(currentRow, 4);
           cellNom.setText(item.nom);
           _styleDataCell(cellNom,
-              bgColor: bgColor, hAlign: xlsio.HAlignType.left, wrapText: true);
+              bgColor: bgColor, hAlign: xlsio.HAlignType.center, wrapText: true);
 
           // Col 5 : Type
           final cellType = sheet.getRangeByIndex(currentRow, 5);

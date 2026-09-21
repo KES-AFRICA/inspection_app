@@ -732,9 +732,7 @@ class PdfEquipementsSynthesisBuilder {
       final nom = coffret.nom.trim().isNotEmpty ? coffret.nom.trim() : (rep.isNotEmpty ? rep : '-');
 
       if (coffret.type == 'INVERSEUR') {
-        if (coffret.alimentations.isNotEmpty &&
-            coffret.alimentations[0].effectiveSourceKnown == 'Inconnue') {
-          final s = coffret.alimentations[0].source.trim();
+        if (coffret.alimentations.isEmpty) {
           list.add(
             PdfUnknownSourceItem(
               zoneName: zoneName.trim(),
@@ -743,39 +741,53 @@ class PdfEquipementsSynthesisBuilder {
               numero: coffret.numeroEquipement?.trim() ?? '',
               nom: nom,
               type: 'Inverseur',
-              alimentationConcernee: (s.isNotEmpty && s.toLowerCase() != 'inconnu') ? s : 'Source non identifiée',
-              source: (s.isNotEmpty && s.toLowerCase() != 'inconnu') ? s : 'Non identifiée',
+              alimentationConcernee: 'Sources non identifiées',
+              source: 'Non identifiée',
             ),
           );
-        }
-        if (coffret.alimentations.length > 1 &&
-            coffret.alimentations[1].effectiveSourceKnown == 'Inconnue') {
-          final s = coffret.alimentations[1].source.trim();
-          list.add(
-            PdfUnknownSourceItem(
-              zoneName: zoneName.trim(),
-              localName: localName.trim(),
-              repere: rep,
-              numero: coffret.numeroEquipement?.trim() ?? '',
-              nom: nom,
-              type: 'Inverseur',
-              alimentationConcernee: (s.isNotEmpty && s.toLowerCase() != 'inconnu') ? s : 'Source non identifiée',
-              source: (s.isNotEmpty && s.toLowerCase() != 'inconnu') ? s : 'Non identifiée',
-            ),
-          );
-        }
-      } else {
-        bool isUnknown = false;
-        for (final a in coffret.alimentations) {
-          if (a.effectiveSourceKnown == 'Inconnue') {
-            isUnknown = true;
-            break;
+        } else {
+          final s1 = coffret.alimentations[0].source.trim();
+          if (!isSourceIdentified(s1)) {
+            list.add(
+              PdfUnknownSourceItem(
+                zoneName: zoneName.trim(),
+                localName: localName.trim(),
+                repere: rep,
+                numero: coffret.numeroEquipement?.trim() ?? '',
+                nom: nom,
+                type: 'Inverseur',
+                alimentationConcernee: 'Source 1 non identifiée',
+                source: 'Non identifiée',
+              ),
+            );
+          }
+          if (coffret.alimentations.length > 1) {
+            final s2 = coffret.alimentations[1].source.trim();
+            if (!isSourceIdentified(s2)) {
+              list.add(
+                PdfUnknownSourceItem(
+                  zoneName: zoneName.trim(),
+                  localName: localName.trim(),
+                  repere: rep,
+                  numero: coffret.numeroEquipement?.trim() ?? '',
+                  nom: nom,
+                  type: 'Inverseur',
+                  alimentationConcernee: 'Source 2 non identifiée',
+                  source: 'Non identifiée',
+                ),
+              );
+            }
           }
         }
-        if (isUnknown) {
-          final resolvedSource = (coffret.sourceNomComplet?.trim().isNotEmpty == true)
-              ? coffret.sourceNomComplet!.trim()
-              : (coffret.alimentations.isNotEmpty ? coffret.alimentations.first.source.trim() : '');
+      } else {
+        final resolvedSource = (coffret.sourceNomComplet?.trim().isNotEmpty == true)
+            ? coffret.sourceNomComplet!.trim()
+            : (coffret.alimentations.isNotEmpty ? coffret.alimentations.first.source.trim() : '');
+
+        // RÈGLE MÉTIER STRICTE :
+        // Les équipements dont la source est formellement identifiée ne doivent JAMAIS apparaître
+        // dans le tableau des sources non identifiées. Seuls ceux dont la source n'est pas identifiée y figurent.
+        if (!isSourceIdentified(resolvedSource)) {
           list.add(
             PdfUnknownSourceItem(
               zoneName: zoneName.trim(),
@@ -785,9 +797,7 @@ class PdfEquipementsSynthesisBuilder {
               nom: nom,
               type: normType,
               alimentationConcernee: 'Source d\'alimentation',
-              source: (resolvedSource.isNotEmpty && resolvedSource.toLowerCase() != 'inconnu')
-                  ? resolvedSource
-                  : 'Non identifiée',
+              source: 'Non identifiée',
             ),
           );
         }
