@@ -326,26 +326,14 @@ class PdfReportService {
     );
   }
 
-  // Filigrane seul dans background
+  // Filigrane seul dans background des pages intérieures
   static pw.Widget _buildWatermarkBackground() {
-    if (_watermarkImage == null) return pw.SizedBox();
-    return pw.Center(
-      child: pw.Opacity(
-        opacity: 0.15,
-        child: pw.Image(_watermarkImage!, width: 400, height: 400),
-      ),
-    );
+    return PdfReportStyles.buildWatermarkBackground(_watermarkImage);
   }
 
-  // Filigrane spécifique page de garde (opacité 0.30 - plus visible sans masquer le texte)
+  // Filigrane spécifique page de garde (opacité 0.30, centré sur le texte de couverture)
   static pw.Widget _buildCoverWatermarkBackground() {
-    if (_watermarkImage == null) return pw.SizedBox();
-    return pw.Center(
-      child: pw.Opacity(
-        opacity: 0.30,
-        child: pw.Image(_watermarkImage!, width: 420, height: 420),
-      ),
-    );
+    return PdfReportStyles.buildCoverWatermarkBackground(_watermarkImage);
   }
 
   // Footer bord à bord physique vectoriel natif

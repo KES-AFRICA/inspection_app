@@ -135,6 +135,12 @@ class PdfReportStyles {
   //  THEMES DE PAGE
   // ──────────────────────────────────────────────────────────────
 
+  // Ratios calculés sur filigranne_image.png (1023 x 887 px) :
+  // Le centre du cercle de la loupe est à cx = 660 px, cy = 372 px
+  static const double kWatermarkCircleCxRatio = 660.0 / 1023.0; // ~0.64516
+  static const double kWatermarkCircleCyRatio = 372.0 / 887.0;  // ~0.41939
+  static const double kWatermarkAspectRatio = 887.0 / 1023.0;   // ~0.86706
+
   static pw.PageTheme buildCoverPageTheme(
     pw.Font fontRegular,
     pw.Font fontBold, {
@@ -150,7 +156,7 @@ class PdfReportStyles {
         bottom: kBottomMargin + 40,
       ),
       buildBackground: (ctx) =>
-          watermarkImage != null ? buildWatermarkBackground(watermarkImage, opacity: 0.30) : pw.SizedBox(),
+          watermarkImage != null ? buildCoverWatermarkBackground(watermarkImage, opacity: 0.30) : pw.SizedBox(),
       buildForeground: (ctx) => buildFooterAbsolute(
         isFirstPage: true,
         ctx: ctx,
@@ -191,13 +197,99 @@ class PdfReportStyles {
     );
   }
 
-  static pw.Widget buildWatermarkBackground(pw.MemoryImage? watermarkImage, {double opacity = 0.15}) {
+  /// Filigrane spécifique de la page de couverture :
+  /// - Loupe agrandie à width = 680 pt
+  /// - Cercle de la loupe centré horizontalement (+18 pt vers la droite pour centrage absolu)
+  /// - Positionné verticalement pour cadrer au centre le texte 'RAPPORT / NATURE / SITE' (targetCenterY = 405 pt)
+  /// - Le bas de la loupe déborde harmonieusement sans erreur (Stack overflow visible)
+  /// - Opacité 0.30
+  static pw.Widget buildCoverWatermarkBackground(
+    pw.MemoryImage? watermarkImage, {
+    double width = 680,
+    double targetCenterY = 405.0,
+    double shiftRight = 18.0,
+    double opacity = 0.30,
+  }) {
     if (watermarkImage == null) return pw.SizedBox();
-    return pw.Center(
-      child: pw.Opacity(
-        opacity: opacity,
-        child: pw.Image(watermarkImage, width: 400, height: 400),
-      ),
+
+    const double pageWidth = PdfFooterBuilder.kFullPageWidth;
+    final double height = width * kWatermarkAspectRatio;
+
+    final double circleCenterXInImage = width * kWatermarkCircleCxRatio;
+    final double circleCenterYInImage = height * kWatermarkCircleCyRatio;
+
+    final double imagePageX = (pageWidth / 2.0) - circleCenterXInImage + shiftRight;
+    final double imagePageY = targetCenterY - circleCenterYInImage;
+
+    final double left = imagePageX - kLeftMargin;
+    final double top = imagePageY - kTopMargin;
+
+    return pw.Stack(
+      overflow: pw.Overflow.visible,
+      children: [
+        pw.Positioned(
+          left: left,
+          top: top,
+          child: pw.Opacity(
+            opacity: opacity,
+            child: pw.Image(
+              watermarkImage,
+              width: width,
+              height: height,
+              fit: pw.BoxFit.contain,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Filigrane des pages intérieures :
+  /// - Loupe agrandie à width = 680 pt
+  /// - Cercle de la loupe rigoureusement centré horizontalement (+18 pt vers la droite)
+  ///   et verticalement sur la page A4 (targetCenterY = 420.95 pt)
+  /// - Le bas de la loupe (manche) déborde sur le côté gauche de la page sans erreur
+  /// - Opacité 0.15
+  static pw.Widget buildWatermarkBackground(
+    pw.MemoryImage? watermarkImage, {
+    double width = 680,
+    double? targetCenterY,
+    double shiftRight = 18.0,
+    double opacity = 0.15,
+  }) {
+    if (watermarkImage == null) return pw.SizedBox();
+
+    const double pageWidth = PdfFooterBuilder.kFullPageWidth;
+    const double pageHeight = 841.89;
+    final double height = width * kWatermarkAspectRatio;
+    final double actualTargetCenterY = targetCenterY ?? (pageHeight / 2.0);
+
+    final double circleCenterXInImage = width * kWatermarkCircleCxRatio;
+    final double circleCenterYInImage = height * kWatermarkCircleCyRatio;
+
+    final double imagePageX = (pageWidth / 2.0) - circleCenterXInImage + shiftRight;
+    final double imagePageY = actualTargetCenterY - circleCenterYInImage;
+
+    final double left = imagePageX - kLeftMargin;
+    final double top = imagePageY - kTopMargin;
+
+    return pw.Stack(
+      overflow: pw.Overflow.visible,
+      children: [
+        pw.Positioned(
+          left: left,
+          top: top,
+          child: pw.Opacity(
+            opacity: opacity,
+            child: pw.Image(
+              watermarkImage,
+              width: width,
+              height: height,
+              fit: pw.BoxFit.contain,
+            ),
+          ),
+        ),
+      ],
     );
   }
 

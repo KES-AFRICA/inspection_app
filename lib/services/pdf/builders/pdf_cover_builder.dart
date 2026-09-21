@@ -280,8 +280,8 @@ class PdfCoverBuilder {
           ),
         ),
 
-        // Espace compensatoire pour remonter le bloc central de 15pt
-        pw.SizedBox(height: 50),
+        // Espace compensatoire agrandi (85pt) pour remonter le bloc central net au centre du cercle de la loupe
+        pw.SizedBox(height: 85),
 
         pw.Spacer(flex: 1),
 
