@@ -16,14 +16,34 @@ class JSAInspecteur {
   @HiveField(2)
   String signature;
 
+  @HiveField(3)
+  String? matricule;
+
+  @HiveField(4)
+  String? email;
+
+  @HiveField(5)
+  String? role;
+
   JSAInspecteur({
     required this.nom,
     required this.prenom,
     this.signature = '',
+    this.matricule,
+    this.email,
+    this.role,
   });
+
+  /// Nom complet formaté
+  String get fullName => '$prenom $nom'.trim();
 }
 
 class JSAUtils {
+  /// Normalise une chaîne pour comparaison (insensible à la casse, espaces multiples réduits)
+  static String normalize(String s) {
+    return s.trim().replaceAll(RegExp(r'\s+'), ' ').toLowerCase();
+  }
+
   /// Normalise un nom et prénom d'inspecteur pour la comparaison (insensible à la casse, espaces unifiés)
   static String normalizeInspectorName(String nom, [String prenom = '']) {
     return '$prenom $nom'
@@ -32,34 +52,130 @@ class JSAUtils {
         .toLowerCase();
   }
 
-  /// Vérifie si un inspecteur est déjà présent dans la liste (insensible à la casse)
-  static bool hasInspector(List<JSAInspecteur> list, String nom, [String prenom = '']) {
-    final targetKey = normalizeInspectorName(nom, prenom);
-    if (targetKey.isEmpty) return false;
-    return list.any((i) => normalizeInspectorName(i.nom, i.prenom) == targetKey);
+  /// Détermine si deux inspecteurs représentent la même identité technique
+  static bool isSameInspector(
+    JSAInspecteur existing, {
+    required String nom,
+    required String prenom,
+    String? matricule,
+    String? email,
+  }) {
+    // 1. Clé prioritaire : Matricule stable
+    if (matricule != null && matricule.trim().isNotEmpty &&
+        existing.matricule != null && existing.matricule!.trim().isNotEmpty) {
+      if (normalize(existing.matricule!) == normalize(matricule)) {
+        return true;
+      }
+    }
+
+    // 2. Clé secondaire : Email professionnel
+    if (email != null && email.trim().isNotEmpty &&
+        existing.email != null && existing.email!.trim().isNotEmpty) {
+      if (normalize(existing.email!) == normalize(email)) {
+        return true;
+      }
+    }
+
+    // 3. Clé de repli : Nom et prénom normalisés
+    final keyExisting = normalizeInspectorName(existing.nom, existing.prenom);
+    final keyCandidate = normalizeInspectorName(nom, prenom);
+    if (keyExisting.isNotEmpty && keyExisting == keyCandidate) {
+      return true;
+    }
+
+    // Cas où le nom contient à la fois prénom et nom
+    if (keyExisting.isNotEmpty && normalize(existing.nom) == keyCandidate) {
+      return true;
+    }
+    if (normalize(nom) == keyExisting) {
+      return true;
+    }
+
+    return false;
   }
 
-  /// Ajoute un inspecteur s'il n'est pas déjà présent (insensible à la casse)
-  /// Conserve la casse originale transmise lors de l'ajout
+  /// Vérifie si un inspecteur est déjà présent dans la liste (insensible à la casse ou par identifiant)
+  static bool hasInspector(
+    List<JSAInspecteur> list,
+    String nom, [
+    String prenom = '',
+    String? matricule,
+    String? email,
+  ]) {
+    final cleanNom = nom.trim();
+    final cleanPrenom = prenom.trim();
+    if (cleanNom.isEmpty && cleanPrenom.isEmpty && (matricule == null || matricule.trim().isEmpty)) {
+      return false;
+    }
+
+    return list.any((i) => isSameInspector(
+      i,
+      nom: cleanNom,
+      prenom: cleanPrenom,
+      matricule: matricule,
+      email: email,
+    ));
+  }
+
+  /// Ajoute un inspecteur s'il n'est pas déjà présent (idempotent, insensible à la casse)
+  /// Conserve la casse originale transmise lors de l'ajout et enrichit les champs manquants
   static bool addInspectorIfAbsent(
     List<JSAInspecteur> list,
     String nom,
     String prenom, {
     String signature = '',
+    String? matricule,
+    String? email,
+    String? role,
   }) {
     final cleanNom = nom.trim();
     final cleanPrenom = prenom.trim();
-    if (cleanNom.isEmpty && cleanPrenom.isEmpty) return false;
+    final cleanMatricule = matricule?.trim();
+    final cleanEmail = email?.trim();
+    final cleanRole = role?.trim();
 
-    if (!hasInspector(list, cleanNom, cleanPrenom)) {
-      list.add(JSAInspecteur(
-        nom: cleanNom,
-        prenom: cleanPrenom,
-        signature: signature,
-      ));
-      return true;
+    if (cleanNom.isEmpty && cleanPrenom.isEmpty && (cleanMatricule == null || cleanMatricule.isEmpty)) {
+      return false;
     }
-    return false;
+
+    final index = list.indexWhere((i) => isSameInspector(
+      i,
+      nom: cleanNom,
+      prenom: cleanPrenom,
+      matricule: cleanMatricule,
+      email: cleanEmail,
+    ));
+
+    if (index >= 0) {
+      // Déjà présent : enrichir les champs manquants sans créer de doublon
+      final existing = list[index];
+      if ((existing.matricule == null || existing.matricule!.isEmpty) &&
+          cleanMatricule != null && cleanMatricule.isNotEmpty) {
+        existing.matricule = cleanMatricule;
+      }
+      if ((existing.email == null || existing.email!.isEmpty) &&
+          cleanEmail != null && cleanEmail.isNotEmpty) {
+        existing.email = cleanEmail;
+      }
+      if ((existing.role == null || existing.role!.isEmpty) &&
+          cleanRole != null && cleanRole.isNotEmpty) {
+        existing.role = cleanRole;
+      }
+      if (existing.signature.isEmpty && signature.isNotEmpty) {
+        existing.signature = signature;
+      }
+      return false; // Pas d'ajout supplémentaire
+    }
+
+    list.add(JSAInspecteur(
+      nom: cleanNom,
+      prenom: cleanPrenom,
+      signature: signature,
+      matricule: cleanMatricule?.isNotEmpty == true ? cleanMatricule : null,
+      email: cleanEmail?.isNotEmpty == true ? cleanEmail : null,
+      role: cleanRole?.isNotEmpty == true ? cleanRole : null,
+    ));
+    return true;
   }
 }
 

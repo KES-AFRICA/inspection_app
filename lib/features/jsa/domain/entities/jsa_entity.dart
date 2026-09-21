@@ -4,11 +4,17 @@ class JsaInspecteurEntity {
   final String nom;
   final String prenom;
   final String signature;
+  final String? matricule;
+  final String? email;
+  final String? role;
 
   const JsaInspecteurEntity({
     required this.nom,
     required this.prenom,
     this.signature = '',
+    this.matricule,
+    this.email,
+    this.role,
   });
 }
 

@@ -4,6 +4,7 @@ import 'package:inspec_app/models/lighting_inspection.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/renseignements_generaux.dart';
 import 'package:inspec_app/services/hive_service.dart';
+import 'package:inspec_app/services/intervenants_service.dart';
 import 'package:inspec_app/services/pdf/pdf_report_service.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
@@ -229,17 +230,12 @@ class PdfReportLightService {
   /// Tableau des Renseignements Principaux (Établissement, Adresse, Site, Vérificateurs)
   static pw.Widget _buildGeneralInfoTable(
       Mission mission, RenseignementsGeneraux? rg) {
-    final verificateursNoms = rg != null && rg.verificateurs.isNotEmpty
-        ? rg.verificateurs
-            .map((v) => '${v['prenom'] ?? ''} ${v['nom'] ?? ''}'.trim())
-            .where((s) => s.isNotEmpty)
-            .join(', ')
-        : (mission.verificateurs != null
-            ? mission.verificateurs!
-                .map((v) => '${v['prenom'] ?? ''} ${v['nom'] ?? ''}'.trim())
-                .where((s) => s.isNotEmpty)
-                .join(', ')
-            : 'Non renseigné');
+    final verificateursNoms = IntervenantsService.getMissionIntervenantsNoms(
+      mission.id,
+      mission: mission,
+      rg: rg,
+      uppercase: false,
+    ).join(', ');
 
     final etab = rg?.etablissement.isNotEmpty == true
         ? rg!.etablissement

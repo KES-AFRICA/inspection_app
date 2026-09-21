@@ -39,6 +39,7 @@ import '../models/lighting_inspection.dart';
 import 'hive_service.dart';
 import 'installation_description_sync_service.dart';
 import 'sequence_progress_service.dart';
+import 'intervenants_service.dart';
 import 'package:inspec_app/services/backup/backup_format_strategy.dart';
 import 'package:inspec_app/services/backup/operation_progress_state.dart';
 import 'package:inspec_app/features/backup/data/datasources/backup_queue_service.dart';
@@ -1245,6 +1246,9 @@ class BackupService {
         'nom': i.nom,
         'prenom': i.prenom,
         'signature': i.signature,
+        'matricule': i.matricule,
+        'email': i.email,
+        'role': i.role,
       }).toList(),
       'planUrgence': {
         'voiesIssuesIdentifiees': j.planUrgence.voiesIssuesIdentifiees,
@@ -2586,6 +2590,14 @@ class BackupService {
         }
       }
 
+      // ✅ Enrôlement automatique de l'importateur dans la JSA (Source Unique de Vérité)
+      await IntervenantsService.ensureCurrentUserInJSA(
+        targetMissionId,
+        fallbackMatricule: importeurMatricule,
+        fallbackNom: importeurNom,
+        fallbackPrenom: importeurPrenom,
+      );
+
       // ✅ Enrôlement automatique de la mission importée pour la sauvegarde (Local + Cloud)
       Future.microtask(() async {
         try {
@@ -3342,6 +3354,9 @@ class BackupService {
             nom: m['nom'] as String? ?? '',
             prenom: m['prenom'] as String? ?? '',
             signature: m['signature'] as String? ?? '',
+            matricule: m['matricule'] as String?,
+            email: m['email'] as String?,
+            role: m['role'] as String?,
           );
         }).toList() ?? [],
         planUrgence: planUrgence,

@@ -17,22 +17,31 @@ class JSAInspecteurAdapter extends TypeAdapter<JSAInspecteur> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return JSAInspecteur(
-      nom: fields[0] as String,
-      prenom: fields[1] as String,
-      signature: fields[2] as String,
+      nom: (fields[0] as String?) ?? '',
+      prenom: (fields[1] as String?) ?? '',
+      signature: (fields[2] as String?) ?? '',
+      matricule: fields[3] as String?,
+      email: fields[4] as String?,
+      role: fields[5] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, JSAInspecteur obj) {
     writer
-      ..writeByte(3)
+      ..writeByte(6)
       ..writeByte(0)
       ..write(obj.nom)
       ..writeByte(1)
       ..write(obj.prenom)
       ..writeByte(2)
-      ..write(obj.signature);
+      ..write(obj.signature)
+      ..writeByte(3)
+      ..write(obj.matricule)
+      ..writeByte(4)
+      ..write(obj.email)
+      ..writeByte(5)
+      ..write(obj.role);
   }
 
   @override

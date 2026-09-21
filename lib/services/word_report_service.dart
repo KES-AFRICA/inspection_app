@@ -11,6 +11,7 @@ import 'package:inspec_app/models/mesures_essais.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/renseignements_generaux.dart';
 import 'package:inspec_app/services/hive_service.dart';
+import 'package:inspec_app/services/intervenants_service.dart';
 import 'package:inspec_app/services/installation_fields_registry.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -308,16 +309,21 @@ class WordReportService {
     ];
     doc.addTable(Table(rows: missionRows, borders: TableBorders.all()));
 
-    // Vérificateurs
-    if (rg != null && rg.verificateurs.isNotEmpty) {
+    // Vérificateurs (Source Unique de Vérité : JSA)
+    final intervenants = IntervenantsService.getMissionIntervenants(
+      mission.id,
+      mission: mission,
+      rg: rg,
+    );
+    if (intervenants.isNotEmpty) {
       _subTitle(doc, 'Équipe de vérification');
       final verifRows = <TableRow>[
-        _headerRow(['Nom', 'Prénom', 'Fonction']),
-        for (final v in rg.verificateurs)
+        _headerRow(['Nom', 'Prénom', 'Fonction / Rôle']),
+        for (final insp in intervenants)
           TableRow(cells: [
-            TableCell.text(v['nom'] as String? ?? ''),
-            TableCell.text(v['prenom'] as String? ?? ''),
-            TableCell.text(v['fonction'] as String? ?? ''),
+            TableCell.text(insp.nom),
+            TableCell.text(insp.prenom),
+            TableCell.text(insp.role ?? 'Inspecteur'),
           ]),
       ];
       doc.addTable(Table(rows: verifRows, borders: TableBorders.all()));

@@ -41,6 +41,9 @@ class JsaNotifier extends StateNotifier<AsyncValue<JSA>> {
           model.inspecteurs,
           currentUser.nom,
           currentUser.prenom,
+          matricule: currentUser.matricule,
+          email: currentUser.email,
+          role: 'Inspecteur',
         );
 
         if (added) {

@@ -8,6 +8,9 @@ class JsaInspecteurMapper {
       nom: model.nom,
       prenom: model.prenom,
       signature: model.signature,
+      matricule: model.matricule,
+      email: model.email,
+      role: model.role,
     );
   }
 
@@ -16,6 +19,9 @@ class JsaInspecteurMapper {
       nom: entity.nom,
       prenom: entity.prenom,
       signature: entity.signature,
+      matricule: entity.matricule,
+      email: entity.email,
+      role: entity.role,
     );
   }
 }

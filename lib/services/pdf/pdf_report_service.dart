@@ -572,10 +572,12 @@ class PdfReportService {
 
   static pw.Widget _buildPerimetreTable(
     Mission mission,
-    RenseignementsGeneraux? rg,
-  ) => PdfRegulatoryBuilder.buildPerimetreTable(
+    RenseignementsGeneraux? rg, {
+    JSA? jsa,
+  }) => PdfRegulatoryBuilder.buildPerimetreTable(
     mission,
     rg,
+    jsa: jsa,
     fontBold: _fontBold,
     fontRegular: _fontRegular,
   );
@@ -2729,7 +2731,7 @@ class PdfReportService {
             child: _sectionBox('PERIMETRE DE LA MISSION'),
           ),
           pw.SizedBox(height: 14),
-          _buildPerimetreTable(mission, renseignements),
+          _buildPerimetreTable(mission, renseignements, jsa: jsaPreflight),
           pw.NewPage(),
           PageTracker(
             key: 'rappel',

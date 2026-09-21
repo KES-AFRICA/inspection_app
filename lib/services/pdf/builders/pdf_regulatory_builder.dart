@@ -2,6 +2,8 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/renseignements_generaux.dart';
+import 'package:inspec_app/models/jsa.dart';
+import 'package:inspec_app/services/intervenants_service.dart';
 import 'package:inspec_app/services/pdf/pdf_report_styles.dart';
 
 /// Builder responsable des tableaux réglementaires : normes, matériels et périmètre de la mission
@@ -95,6 +97,7 @@ class PdfRegulatoryBuilder {
   static pw.Widget buildPerimetreTable(
     Mission mission,
     RenseignementsGeneraux? rg, {
+    JSA? jsa,
     pw.Font? fontBold,
     pw.Font? fontRegular,
   }) {
@@ -164,28 +167,14 @@ class PdfRegulatoryBuilder {
       compteRenduStr = rg.compteRendu.join(', ');
     }
 
-    // 5. Vérificateurs
-    List<String> verificateursList = [];
-    if (mission.verificateurs != null && mission.verificateurs!.isNotEmpty) {
-      verificateursList = mission.verificateurs!
-          .map(
-            (v) =>
-                '${v['prenom'] ?? ''} ${v['nom'] ?? ''}'.trim().toUpperCase(),
-          )
-          .where((s) => s.isNotEmpty)
-          .toList();
-    } else if (rg != null && rg.verificateurs.isNotEmpty) {
-      verificateursList = rg.verificateurs
-          .map(
-            (v) =>
-                '${v['prenom'] ?? ''} ${v['nom'] ?? ''}'.trim().toUpperCase(),
-          )
-          .where((s) => s.isNotEmpty)
-          .toList();
-    }
-    if (verificateursList.isEmpty) {
-      verificateursList = ['Non spécifié'];
-    }
+    // 5. Vérificateurs (Source Unique de Vérité : JSA)
+    final verificateursList = IntervenantsService.getMissionIntervenantsNoms(
+      mission.id,
+      mission: mission,
+      rg: rg,
+      jsa: jsa,
+      uppercase: true,
+    );
 
     // Bordures sombres (#475569 slate dark, épaisseur 0.8 pt) pour une visibilité parfaite
     final gridColor = PdfColor.fromHex('#475569');

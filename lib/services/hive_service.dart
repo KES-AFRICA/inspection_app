@@ -25,6 +25,7 @@ import 'ip_ik_evaluator_service.dart';
 import 'persistence_queue.dart';
 import 'package:inspec_app/features/backup/data/services/mission_activity_tracker.dart';
 import '../utils/normative_reference_cleaner.dart';
+import 'intervenants_service.dart';
 
 class HiveService {
   static const String _verificateurBox = 'verificateurs';
@@ -7629,7 +7630,11 @@ static Future<RenseignementsGeneraux> getOrCreateRenseignementsGeneraux(String m
 static Future<void> saveRenseignementsGeneraux(RenseignementsGeneraux data) async {
   final box = Hive.box<RenseignementsGeneraux>(_renseignementsGenerauxBox);
   data.updatedAt = DateTime.now();
-  await data.save();
+  if (data.isInBox) {
+    await data.save();
+  } else {
+    await box.add(data);
+  }
 
   // ✅ Synchroniser avec la Mission correspondante
   final missionBox = Hive.box<Mission>(_missionBox);
@@ -7743,8 +7748,13 @@ static Future<JSA> getOrCreateJSA(String missionId) async {
 }
 
 static Future<void> saveJSA(JSA jsa) async {
+  final box = Hive.box<JSA>(_jsaBox);
   jsa.updatedAt = DateTime.now();
-  await jsa.save();
+  if (jsa.isInBox) {
+    await jsa.save();
+  } else {
+    await box.add(jsa);
+  }
 }
 
 static JSA? getJSAByMissionId(String missionId) {
@@ -7758,26 +7768,9 @@ static JSA? getJSAByMissionId(String missionId) {
 }
 
 /// S'assure que l'inspecteur connecté actuel est présent dans la liste des inspecteurs JSA (sans doublon)
+/// et synchronise la source unique de vérité.
 static Future<void> ensureCurrentUserInJSA(String missionId) async {
-  try {
-    final currentUser = getCurrentUser();
-    if (currentUser == null) return;
-    if (currentUser.nom.trim().isEmpty && currentUser.prenom.trim().isEmpty) return;
-
-    final jsa = getJSAByMissionId(missionId);
-    if (jsa != null) {
-      final added = JSAUtils.addInspectorIfAbsent(
-        jsa.inspecteurs,
-        currentUser.nom,
-        currentUser.prenom,
-      );
-      if (added) {
-        await saveJSA(jsa);
-      }
-    }
-  } catch (e) {
-    if (kDebugMode) print('⚠️ Erreur ensureCurrentUserInJSA: $e');
-  }
+  await IntervenantsService.ensureCurrentUserInJSA(missionId);
 }
 
 /// Vérifie si les 6 sous-sections du JSA d'une mission sont intégralement complétées

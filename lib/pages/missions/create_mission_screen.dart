@@ -4,6 +4,7 @@ import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/verificateur.dart';
 import 'package:inspec_app/services/hive_service.dart';
+import 'package:inspec_app/services/intervenants_service.dart';
 import 'package:inspec_app/services/regulatory_classification_service.dart';
 
 class CreateMissionScreen extends StatefulWidget {
@@ -220,6 +221,7 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
       );
       
       await HiveService.saveMission(mission);
+      await IntervenantsService.ensureCurrentUserInJSA(mission.id);
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

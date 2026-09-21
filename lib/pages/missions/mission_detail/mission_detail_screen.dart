@@ -5,6 +5,7 @@ import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/verificateur.dart';
 import 'package:inspec_app/pages/missions/sequence/sequence_screen.dart';
 import 'package:inspec_app/services/hive_service.dart';
+import 'package:inspec_app/services/intervenants_service.dart';
 import 'package:inspec_app/services/pdf/pdf_report_service.dart';
 import 'package:inspec_app/services/sequence_progress_service.dart';
 import 'package:inspec_app/widgets/report_generation_loader.dart';
@@ -46,6 +47,9 @@ class _MissionDetailScreenState extends State<MissionDetailScreen>
       curve: Curves.easeOut,
     );
     _animController.forward();
+
+    // ✅ Enrôlement idempotent de l'utilisateur actuel dans la JSA
+    IntervenantsService.ensureCurrentUserInJSA(widget.mission.id);
   }
 
   @override

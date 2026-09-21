@@ -6,6 +6,7 @@ import 'package:inspec_app/components/safe_file_image.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/renseignements_generaux.dart';
 import 'package:inspec_app/models/jsa.dart';
+import 'package:inspec_app/services/intervenants_service.dart';
 import 'package:inspec_app/services/pdf/pdf_page_tracker.dart';
 import 'package:inspec_app/services/pdf/pdf_report_styles.dart';
 
@@ -483,37 +484,13 @@ class PdfCoverBuilder {
     Mission? mission,
     String? dateIntervention,
   }) {
-    final List<String> inspecteursNoms = [];
-    if (jsa != null && jsa.inspecteurs.isNotEmpty) {
-      for (final insp in jsa.inspecteurs) {
-        final fullName = '${insp.prenom} ${insp.nom}'.trim();
-        if (fullName.isNotEmpty &&
-            !inspecteursNoms.any(
-              (existing) =>
-                  JSAUtils.normalizeInspectorName(existing) ==
-                  JSAUtils.normalizeInspectorName(fullName),
-            )) {
-          inspecteursNoms.add(fullName);
-        }
-      }
-    }
-
-    if (inspecteursNoms.isEmpty) {
-      final userFullName = currentUser != null && currentUser.fullName != null
-          ? currentUser.fullName.toString().trim()
-          : '';
-      if (userFullName.isNotEmpty) {
-        inspecteursNoms.add(userFullName);
-      } else if (rg != null && rg.verificateurs.isNotEmpty) {
-        for (final v in rg.verificateurs) {
-          final nom = '${v['prenom'] ?? ''} ${v['nom'] ?? ''}'.trim();
-          if (nom.isNotEmpty) inspecteursNoms.add(nom);
-        }
-      }
-      if (inspecteursNoms.isEmpty) {
-        inspecteursNoms.add('Inspecteur non renseigné');
-      }
-    }
+    final List<String> inspecteursNoms = IntervenantsService.getMissionIntervenantsNoms(
+      mission?.id ?? '',
+      mission: mission,
+      rg: rg,
+      jsa: jsa,
+      uppercase: false,
+    );
 
     final dateGen = mission?.dateRapport ?? reportGenerationDate ?? DateTime.now();
     final dateGenStr = PdfReportStyles.formatDate(dateGen);

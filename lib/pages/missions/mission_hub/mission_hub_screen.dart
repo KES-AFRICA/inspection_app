@@ -8,6 +8,7 @@ import 'package:inspec_app/pages/missions/lighting/lighting_mission_detail_scree
 import 'package:inspec_app/pages/missions/logo/client_logo_screen.dart';
 import 'package:inspec_app/pages/missions/jsa/jsa_standalone_screen.dart';
 import 'package:inspec_app/services/hive_service.dart';
+import 'package:inspec_app/services/intervenants_service.dart';
 import 'package:inspec_app/pages/missions/create_mission_screen.dart';
 import 'package:inspec_app/services/sequence_progress_service.dart';
 
@@ -44,6 +45,9 @@ class _MissionHubScreenState extends State<MissionHubScreen>
 
     _animController.forward();
     _computeProgress();
+
+    // ✅ Enrôlement idempotent de l'utilisateur actuel dans la JSA
+    IntervenantsService.ensureCurrentUserInJSA(widget.mission.id);
   }
 
   Future<void> _computeProgress() async {
