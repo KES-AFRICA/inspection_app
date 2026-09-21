@@ -592,6 +592,11 @@ class TechnicalEnrichmentResult {
   final EquipmentBrandPopulationStats departsBrandStats;
   final EquipmentBrandPopulationStats circuitsBrandStats;
 
+  final int totalMissionNc;
+  final int totalMissionMajeures;
+  final int totalHtaMajeures;
+  final int totalBtMajeures;
+
   const TechnicalEnrichmentResult({
     required this.missionId,
     required this.essaisCoverage,
@@ -631,7 +636,19 @@ class TechnicalEnrichmentResult {
     this.protectionsTeteBrandStats = const EquipmentBrandPopulationStats.empty(populationTitle: 'Protections de tête'),
     this.departsBrandStats = const EquipmentBrandPopulationStats.empty(populationTitle: 'Départs'),
     this.circuitsBrandStats = const EquipmentBrandPopulationStats.empty(populationTitle: 'Circuits'),
+    this.totalMissionNc = 0,
+    this.totalMissionMajeures = 0,
+    this.totalHtaMajeures = 0,
+    this.totalBtMajeures = 0,
   });
+
+  /// Getters canoniques de totalisation et sous-ensembles (Source de vérité unique)
+  int get htaConditionsExploit => locauxMtFindings.conditionsExploitation;
+  int get btConditionsExploit => locauxBtFindings.conditionsExploitation;
+  int get htaDispoConstructives => locauxMtFindings.dispoConstructives;
+  int get btDispoConstructives => locauxBtFindings.dispoConstructives;
+  int get totalHtaNc => htaDispoConstructives + mtTotalCrossRow.ncCount;
+  int get totalBtNc => btDispoConstructives + btTotalCrossRow.ncCount;
 
   int get globalCoupureTetePresents =>
       coupureTeteStats.values.fold(0, (s, e) => s + e.presents);
@@ -1236,6 +1253,30 @@ class TechnicalEnrichmentEngine {
       );
     }
 
+    // Sécurité de couverture absolue MT : aucune occurrence ne peut être omise
+    final accountedMtFindingIds = <String>{
+      ...mtLocauxExploitFindings.map((f) => f.id),
+      ...domainInventory.getInstancesByCategory(DomainObjectType.celluleMT).expand((i) => i.pertinentFindings).map((f) => f.id),
+      ...domainInventory.getInstancesByCategory(DomainObjectType.transformateurMTBT).expand((i) => i.pertinentFindings).map((f) => f.id),
+      ...mtCoffrets.expand((i) => i.pertinentFindings).map((f) => f.id),
+    };
+    final htaExploitFindings = domainInventory.pertinentFindings
+        .where((f) => f.tensionDomain == TensionDomain.mt && !_isDispositionConstructiveFinding(f))
+        .toList();
+    final orphanMtFindings = htaExploitFindings
+        .where((f) => !accountedMtFindingIds.contains(f.id))
+        .toList();
+    if (orphanMtFindings.isNotEmpty) {
+      mtCatRows.add(
+        buildCategoryRow(
+          'Autres équipements MT',
+          const [],
+          totalMissionNc,
+          customFindings: orphanMtFindings,
+        ),
+      );
+    }
+
     final mtTotalEq = mtCatRows.fold(0, (s, r) => s + r.equipementsCount);
     final mtTotalCrit = mtCatRows.fold(0, (s, r) => s + r.critiquesCount);
     final mtTotalMaj = mtCatRows.fold(0, (s, r) => s + r.majeuresCount);
@@ -1317,13 +1358,54 @@ class TechnicalEnrichmentEngine {
         totalMissionNc,
       ),
     );
-    btCatRows.add(
-      buildCategoryRow(
-        'Prises de terre mesurées',
-        domainInventory.getInstancesByCategory(DomainObjectType.priseTerre),
-        totalMissionNc,
-      ),
-    );
+    final ptInstances = domainInventory.getInstancesByCategory(DomainObjectType.priseTerre);
+    if (ptInstances.isNotEmpty) {
+      btCatRows.add(
+        buildCategoryRow(
+          'Prises de terre mesurées',
+          ptInstances,
+          totalMissionNc,
+        ),
+      );
+    }
+    final foudreInstances = domainInventory.getInstancesByCategory(DomainObjectType.foudre);
+    if (foudreInstances.isNotEmpty) {
+      btCatRows.add(
+        buildCategoryRow(
+          'Installations Foudre',
+          foudreInstances,
+          totalMissionNc,
+        ),
+      );
+    }
+
+    // Sécurité de couverture absolue BT : aucune occurrence ne peut être omise
+    final accountedBtFindingIds = <String>{
+      ...btLocauxGeExploitFindings.map((f) => f.id),
+      ...btLocauxBtExploitFindings.map((f) => f.id),
+      ...domainInventory.getInstancesByCategory(DomainObjectType.inverseur).expand((i) => i.pertinentFindings).map((f) => f.id),
+      ...domainInventory.getInstancesByCategory(DomainObjectType.tgbt).expand((i) => i.pertinentFindings).map((f) => f.id),
+      ...domainInventory.getInstancesByCategory(DomainObjectType.armoire).where((i) => i.tensionDomain == TensionDomain.bt).expand((i) => i.pertinentFindings).map((f) => f.id),
+      ...domainInventory.getInstancesByCategory(DomainObjectType.coffret).where((i) => i.tensionDomain == TensionDomain.bt).expand((i) => i.pertinentFindings).map((f) => f.id),
+      ...ptInstances.expand((i) => i.pertinentFindings).map((f) => f.id),
+      ...foudreInstances.expand((i) => i.pertinentFindings).map((f) => f.id),
+    };
+    final btExploitFindings = domainInventory.pertinentFindings
+        .where((f) => f.tensionDomain == TensionDomain.bt && !_isDispositionConstructiveFinding(f))
+        .toList();
+    final orphanBtFindings = btExploitFindings
+        .where((f) => !accountedBtFindingIds.contains(f.id))
+        .toList();
+    if (orphanBtFindings.isNotEmpty) {
+      btCatRows.add(
+        buildCategoryRow(
+          'Autres équipements BT',
+          const [],
+          totalMissionNc,
+          customFindings: orphanBtFindings,
+        ),
+      );
+    }
 
     final btTotalEq = btCatRows.fold(0, (s, r) => s + r.equipementsCount);
     final btTotalCrit = btCatRows.fold(0, (s, r) => s + r.critiquesCount);
@@ -1513,6 +1595,14 @@ class TechnicalEnrichmentEngine {
       brandPercentages: brandPercentagesCirc,
     );
 
+    final totalMajeuresHta = domainInventory.pertinentFindings
+        .where((f) => f.tensionDomain == TensionDomain.mt && f.criticality.trim().toLowerCase().contains('majeur'))
+        .length;
+    final totalMajeuresBt = domainInventory.pertinentFindings
+        .where((f) => f.tensionDomain == TensionDomain.bt && f.criticality.trim().toLowerCase().contains('majeur'))
+        .length;
+    final totalMissionMajeures = findingInventory.majeureCount;
+
     return TechnicalEnrichmentResult(
       missionId: missionId,
       essaisCoverage: essaisCoverage,
@@ -1552,6 +1642,10 @@ class TechnicalEnrichmentEngine {
       circuitsBrandStats: circuitsBrandStats,
       totalEquipementsEligiblesIpIk: totalEquipementsEligiblesIpIk,
       totalEquipementsClassesIpIk: totalEquipementsClassesIpIk,
+      totalMissionNc: totalMissionNc,
+      totalMissionMajeures: totalMissionMajeures,
+      totalHtaMajeures: totalMajeuresHta,
+      totalBtMajeures: totalMajeuresBt,
     );
   }
 

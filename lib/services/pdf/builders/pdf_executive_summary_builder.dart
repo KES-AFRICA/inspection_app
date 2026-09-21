@@ -269,8 +269,15 @@ class PdfExecutiveSummaryBuilder {
         style: pw.TextStyle(font: fontBold, fontSize: 7.5, color: PdfReportStyles.darkGrey),
       ),
     );
-    widgets.add(pw.SizedBox(height: 2));
-    widgets.add(_buildTopFindingsTable(technical.top5Hta, 'Aucune non-conformité MT recensée'));
+    widgets.add(
+      _buildTopFindingsTable(
+        technical.top5Hta,
+        'Aucune non-conformité MT recensée',
+        domainTotalConstats: technical.totalHtaNc,
+        globalTotalMajeures: technical.totalMissionMajeures,
+        globalTotalMissionNc: technical.totalMissionNc,
+      ),
+    );
     widgets.add(pw.SizedBox(height: 8));
 
     // 4.2 Analyse Basse Tension (BT)
@@ -320,7 +327,15 @@ class PdfExecutiveSummaryBuilder {
       ),
     );
     widgets.add(pw.SizedBox(height: 2));
-    widgets.add(_buildTopFindingsTable(technical.top5Bt, 'Aucune non-conformité BT recensée'));
+    widgets.add(
+      _buildTopFindingsTable(
+        technical.top5Bt,
+        'Aucune non-conformité BT recensée',
+        domainTotalConstats: technical.totalBtNc,
+        globalTotalMajeures: technical.totalMissionMajeures,
+        globalTotalMissionNc: technical.totalMissionNc,
+      ),
+    );
     widgets.add(pw.SizedBox(height: 10));
 
     // ── 5. Diversification des marques des appareillages de protection ──
@@ -810,8 +825,8 @@ class PdfExecutiveSummaryBuilder {
     ExecutiveSummarySnapshot snapshot,
     TechnicalEnrichmentResult technical,
   ) {
-    final htaTot = summary.tensionDomainStats.mtCount;
-    final btTot = summary.tensionDomainStats.btCount;
+    final htaTot = technical.totalHtaNc > 0 ? technical.totalHtaNc : summary.tensionDomainStats.mtCount;
+    final btTot = technical.totalBtNc > 0 ? technical.totalBtNc : summary.tensionDomainStats.btCount;
 
     // Tri pour trouver la catégorie la plus dense en HTA et BT
     const htaAllowed = {'Locaux techniques', 'Locaux techniques MT', 'Cellules', 'Cellules MT', 'Transformateurs', 'Transformateurs MT/BT'};
@@ -976,15 +991,19 @@ class PdfExecutiveSummaryBuilder {
       return spans;
     }
 
-    final htaDispo = technical.riskFamilyMatrix.totalHtaDispo;
-    final htaExploit = technical.riskFamilyMatrix.totalHtaExploit;
+    final htaDispo = technical.htaDispoConstructives;
+    final htaExploit = technical.mtTotalCrossRow.ncCount;
+    final htaConditionsExploit = technical.htaConditionsExploit;
     final htaDispoPct = htaTot > 0 ? (htaDispo / htaTot * 100).toStringAsFixed(1).replaceAll('.', ',') : '0,0';
     final htaExploitPct = htaTot > 0 ? (htaExploit / htaTot * 100).toStringAsFixed(1).replaceAll('.', ',') : '0,0';
+    final htaConditionsExploitPct = htaTot > 0 ? (htaConditionsExploit / htaTot * 100).toStringAsFixed(1).replaceAll('.', ',') : '0,0';
 
-    final btDispo = technical.riskFamilyMatrix.totalBtDispo;
-    final btExploit = technical.riskFamilyMatrix.totalBtExploit;
+    final btDispo = technical.btDispoConstructives;
+    final btExploit = technical.btTotalCrossRow.ncCount;
+    final btConditionsExploit = technical.btConditionsExploit;
     final btDispoPct = btTot > 0 ? (btDispo / btTot * 100).toStringAsFixed(1).replaceAll('.', ',') : '0,0';
     final btExploitPct = btTot > 0 ? (btExploit / btTot * 100).toStringAsFixed(1).replaceAll('.', ',') : '0,0';
+    final btConditionsExploitPct = btTot > 0 ? (btConditionsExploit / btTot * 100).toStringAsFixed(1).replaceAll('.', ',') : '0,0';
 
     String formatCoupure(DomainObjectType type) {
       final s = technical.coupureTeteStats[type];
@@ -1098,9 +1117,11 @@ class PdfExecutiveSummaryBuilder {
             bSpan('NC HTA : $htaTot NC (${summary.tensionDomainStats.mtPercentageStr})\n'),
             bSpan('  - Disposition constructive : '), nSpan('$htaDispo NC ($htaDispoPct %)\n'),
             bSpan('  - Exploitation et maintenance : '), nSpan('$htaExploit NC ($htaExploitPct %)\n'),
+            bSpan('      - Conditions d\'exploitation : '), nSpan('$htaConditionsExploit NC ($htaConditionsExploitPct %)\n'),
             bSpan('NC BT : $btTot NC (${summary.tensionDomainStats.btPercentageStr})\n'),
             bSpan('  - Disposition constructive : '), nSpan('$btDispo NC ($btDispoPct %)\n'),
-            bSpan('  - Exploitation et maintenance : '), nSpan('$btExploit NC ($btExploitPct %)'),
+            bSpan('  - Exploitation et maintenance : '), nSpan('$btExploit NC ($btExploitPct %)\n'),
+            bSpan('      - Conditions d\'exploitation : '), nSpan('$btConditionsExploit NC ($btConditionsExploitPct %)'),
           ],
         ),
         buildRichRow(
@@ -1622,7 +1643,13 @@ class PdfExecutiveSummaryBuilder {
     );
   }
 
-  static pw.Widget _buildTopFindingsTable(List<TopDefectDomainItem> items, String emptyLabel) {
+  static pw.Widget _buildTopFindingsTable(
+    List<TopDefectDomainItem> items,
+    String emptyLabel, {
+    int domainTotalConstats = 0,
+    int globalTotalMajeures = 0,
+    int globalTotalMissionNc = 0,
+  }) {
     if (items.isEmpty) {
       return pw.Table(
         border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.5),
@@ -1639,23 +1666,40 @@ class PdfExecutiveSummaryBuilder {
             children: [
               _buildTableCell('-'),
               _buildTableCell(emptyLabel, isBold: true, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
-              _buildTableCell('0 constat'),
+              _buildTableCell(
+                domainTotalConstats > 0
+                    ? '0 constat / $domainTotalConstats, soit 0,0 %'
+                    : '0 constat',
+              ),
             ],
           ),
         ],
       );
     }
 
-    final totalCount = items.fold<int>(0, (sum, it) => sum + it.count);
-    final totalPct = items.fold<double>(0.0, (sum, it) => sum + it.percentageOfDomain);
-    final totalCountStr = totalCount > 1 ? '$totalCount constats' : '$totalCount constat';
+    // Format attendu pour la ligne TOTAL selon la Section XII du référentiel :
+    // TOTAL_CONSTATS_MAJEURS / TOTAL_CONSTATS_GLOBAL, soit POURCENTAGE_GLOBAL_MAJEUR
+    final globalMajeuresCount = globalTotalMajeures > 0
+        ? globalTotalMajeures
+        : items.fold<int>(0, (sum, it) => sum + it.count);
+    final globalNcDenominator = globalTotalMissionNc > 0
+        ? globalTotalMissionNc
+        : (domainTotalConstats > 0 ? domainTotalConstats : items.fold<int>(0, (sum, it) => sum + it.count));
+
+    final globalMajeuresPct = globalNcDenominator > 0
+        ? (globalMajeuresCount / globalNcDenominator) * 100.0
+        : 0.0;
+    final globalMajeuresPctStr = '${globalMajeuresPct.toStringAsFixed(1).replaceAll('.', ',')} %';
+    final globalMajeuresCountStr = globalMajeuresCount > 1
+        ? '$globalMajeuresCount constats'
+        : '$globalMajeuresCount constat';
 
     return pw.Table(
       border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.5),
       columnWidths: const {
         0: pw.FlexColumnWidth(0.8),
-        1: pw.FlexColumnWidth(6.2),
-        2: pw.FlexColumnWidth(3.0),
+        1: pw.FlexColumnWidth(5.7),
+        2: pw.FlexColumnWidth(3.5),
       },
       children: [
         pw.TableRow(
@@ -1680,7 +1724,9 @@ class PdfExecutiveSummaryBuilder {
                 alignment: pw.Alignment.centerLeft,
               ),
               _buildTableCell(
-                '${items[i].count} constats, ${items[i].percentageOfDomain.toStringAsFixed(1).replaceAll('.', ',')}%',
+                domainTotalConstats > 0
+                    ? '${items[i].count > 1 ? '${items[i].count} constats' : '${items[i].count} constat'} / $domainTotalConstats, soit ${items[i].percentageOfDomain.toStringAsFixed(1).replaceAll('.', ',')} %'
+                    : '${items[i].count > 1 ? '${items[i].count} constats' : '${items[i].count} constat'}, ${items[i].percentageOfDomain.toStringAsFixed(1).replaceAll('.', ',')}%',
                 align: pw.TextAlign.center,
               ),
             ],
@@ -1691,7 +1737,9 @@ class PdfExecutiveSummaryBuilder {
             _buildTableCell('', isBold: true),
             _buildTableCell('TOTAL', isBold: true, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
             _buildTableCell(
-              '$totalCountStr, ${totalPct.toStringAsFixed(1).replaceAll('.', ',')}%',
+              globalNcDenominator > 0
+                  ? '$globalMajeuresCountStr / $globalNcDenominator, soit $globalMajeuresPctStr'
+                  : '$globalMajeuresCountStr, $globalMajeuresPctStr',
               isBold: true,
               align: pw.TextAlign.center,
             ),
