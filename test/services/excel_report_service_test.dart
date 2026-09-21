@@ -195,12 +195,14 @@ void main() {
       final ssFile = archive.files.firstWhere((f) => f.name == 'xl/sharedStrings.xml');
       final ssXml = utf8.decode(ssFile.content as List<int>);
 
-      // Colonnes feuille 1
+      // Colonnes feuille 1 (MT: 9 cols, BT: 11 cols avec parafoudre et thermo)
       expect(ssXml.contains('Zone'), isTrue);
       expect(ssXml.contains('Repère'), isTrue);
       expect(ssXml.contains('Désignation'), isTrue);
       expect(ssXml.contains('Type'), isTrue);
       expect(ssXml.contains('Vérifié'), isTrue);
+      expect(ssXml.contains('Présence du parafoudre'), isTrue);
+      expect(ssXml.contains('Vérification thermo'), isTrue);
       expect(ssXml.contains('Observation'), isTrue);
       expect(ssXml.contains('Date de réserve'), isTrue);
       expect(ssXml.contains('Date de rapport'), isTrue);

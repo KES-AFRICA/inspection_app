@@ -3192,15 +3192,15 @@
     "semantic_hash": ""
   },
   "lib/services/excel/excel_report_service.dart": {
-    "mtime": 1789977664.5576632,
-    "seen": 1789980585.7265058,
-    "ast_hash": "e33c10171a75a26019e52d967a649532",
+    "mtime": 1789982204.578037,
+    "seen": 1789982281.164261,
+    "ast_hash": "ebd7196cc74c8ebe1e1c15f8c57570e8",
     "semantic_hash": ""
   },
   "test/services/excel_report_service_test.dart": {
-    "mtime": 1789557270.9784298,
-    "seen": 1789557602.242492,
-    "ast_hash": "8557b1026c37b991ea3ec753b4871102",
+    "mtime": 1789982214.212852,
+    "seen": 1789982281.164606,
+    "ast_hash": "647a149da19172530024991f18e4e4ed",
     "semantic_hash": ""
   },
   "lib/services/statistics/technical_enrichment_engine.dart": {

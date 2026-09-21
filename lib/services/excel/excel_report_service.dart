@@ -134,9 +134,9 @@ class ExcelReportService {
     DescriptionInstallations? description,
     required String reportDateStr,
   }) {
-    // 9 colonnes exactes :
+    // 9 colonnes exactes pour MT (7 colonnes PDF + 2 colonnes supplémentaires Excel) :
     // Zone | Repère | N° | Désignation | Type | Vérifié | Observation | Date de réserve | Date de rapport
-    final headers = [
+    final headersMT = [
       'Zone',
       'Repère',
       'N°',
@@ -148,16 +148,44 @@ class ExcelReportService {
       'Date de rapport',
     ];
 
-    // Largeurs de colonnes optimisées (en caractères)
-    final colWidths = [18.0, 22.0, 8.0, 32.0, 18.0, 12.0, 14.0, 18.0, 18.0];
+    // 11 colonnes exactes pour BT (9 colonnes PDF répliquées + 2 colonnes supplémentaires Excel) :
+    // Zone | Repère | N° | Désignation | Type | Vérifié | Présence du parafoudre | Vérification thermo | Observation | Date de réserve | Date de rapport
+    final headersBT = [
+      'Zone',
+      'Repère',
+      'N°',
+      'Désignation',
+      'Type',
+      'Vérifié',
+      'Présence du parafoudre',
+      'Vérification thermo',
+      'Observation',
+      'Date de réserve',
+      'Date de rapport',
+    ];
+
+    // Largeurs de colonnes optimisées (en caractères) pour les 11 colonnes de la feuille
+    final colWidths = [
+      18.0, // Col 1 : Zone
+      22.0, // Col 2 : Repère
+      8.0,  // Col 3 : N°
+      30.0, // Col 4 : Désignation
+      16.0, // Col 5 : Type
+      14.0, // Col 6 : Vérifié
+      22.0, // Col 7 : Présence du parafoudre (BT) / Observation (MT)
+      20.0, // Col 8 : Vérification thermo (BT) / Date de réserve (MT)
+      18.0, // Col 9 : Observation (BT) / Date de rapport (MT)
+      18.0, // Col 10 : Date de réserve (BT)
+      18.0, // Col 11 : Date de rapport (BT)
+    ];
     for (int i = 0; i < colWidths.length; i++) {
       sheet.getRangeByIndex(1, i + 1).columnWidth = colWidths[i];
     }
 
     int currentRow = 1;
 
-    // 1. Grand bandeau de titre KES
-    final titleRange = sheet.getRangeByIndex(currentRow, 1, currentRow, 9);
+    // 1. Grand bandeau de titre KES (fusionné sur la largeur maximale de 11 colonnes)
+    final titleRange = sheet.getRangeByIndex(currentRow, 1, currentRow, 11);
     titleRange.merge();
     titleRange.setText(
       'SYNTHÈSE RÉCAPITULATIVE DES ÉQUIPEMENTS — ${mission.nomClient.toUpperCase()}${mission.nomSite != null && mission.nomSite!.isNotEmpty ? ' (${mission.nomSite})' : ''}',
@@ -166,30 +194,32 @@ class ExcelReportService {
     _styleBanner(titleRange, _colorNavy, 12);
     currentRow += 2; // Ligne vide de respiration
 
-    // 2. TABLEAU 1 : Équipements Moyenne Tension (MT)
+    // 2. TABLEAU 1 : Équipements Moyenne Tension (MT) - 9 colonnes (7 PDF + 2 Excel)
     final equipementsMT =
         PdfEquipementsSynthesisBuilder.collectEquipementsMT(audit);
     currentRow = _renderEquipementsTable(
       sheet: sheet,
       items: equipementsMT,
       sectionTitle: '1. ÉQUIPEMENTS MOYENNE TENSION',
-      headers: headers,
+      headers: headersMT,
       startRow: currentRow,
       reportDateStr: reportDateStr,
+      isMT: true,
     );
 
     currentRow += 2; // Séparation entre les 2 tableaux
 
-    // 3. TABLEAU 2 : Équipements Basse Tension (BT)
+    // 3. TABLEAU 2 : Équipements Basse Tension (BT) - 11 colonnes (9 PDF + 2 Excel)
     final equipementsBT =
         PdfEquipementsSynthesisBuilder.collectEquipementsBT(audit, description);
     currentRow = _renderEquipementsTable(
       sheet: sheet,
       items: equipementsBT,
       sectionTitle: '2. ÉQUIPEMENTS BASSE TENSION',
-      headers: headers,
+      headers: headersBT,
       startRow: currentRow,
       reportDateStr: reportDateStr,
+      isMT: false,
     );
 
     // 4. TABLEAU 3 : Équipements aux sources d'alimentation non identifiées
@@ -225,11 +255,13 @@ class ExcelReportService {
     required List<String> headers,
     required int startRow,
     required String reportDateStr,
+    bool isMT = false,
   }) {
     int currentRow = startRow;
+    final int totalCols = headers.length;
 
-    // Titre de section (MT ou BT)
-    final sectionRange = sheet.getRangeByIndex(currentRow, 1, currentRow, 9);
+    // Titre de section (MT sur 9 colonnes ou BT sur 11 colonnes)
+    final sectionRange = sheet.getRangeByIndex(currentRow, 1, currentRow, totalCols);
     sectionRange.merge();
     sectionRange.setText(sectionTitle);
     sectionRange.rowHeight = 24;
@@ -246,7 +278,7 @@ class ExcelReportService {
     currentRow++;
 
     if (items.isEmpty) {
-      final emptyRange = sheet.getRangeByIndex(currentRow, 1, currentRow, 9);
+      final emptyRange = sheet.getRangeByIndex(currentRow, 1, currentRow, totalCols);
       emptyRange.merge();
       emptyRange.setText('Aucun équipement recensé.');
       emptyRange.rowHeight = 22;
@@ -345,23 +377,57 @@ class ExcelReportService {
           _styleDataCell(cellVerifie,
               bgColor: bgColor, hAlign: xlsio.HAlignType.center);
 
-          // Col 7 : Observation
-          final cellObs = sheet.getRangeByIndex(currentRow, 7);
-          cellObs.setText(item.hasObservation);
-          _styleDataCell(cellObs,
-              bgColor: bgColor, hAlign: xlsio.HAlignType.center);
+          if (isMT) {
+            // MT : 7 colonnes PDF + 2 colonnes supplémentaires Excel
+            // Col 7 : Observation
+            final cellObs = sheet.getRangeByIndex(currentRow, 7);
+            cellObs.setText(item.hasObservation);
+            _styleDataCell(cellObs,
+                bgColor: bgColor, hAlign: xlsio.HAlignType.center);
 
-          // Col 8 : Date de réserve (laisser strictement vide)
-          final cellDateRes = sheet.getRangeByIndex(currentRow, 8);
-          cellDateRes.setText('');
-          _styleDataCell(cellDateRes,
-              bgColor: bgColor, hAlign: xlsio.HAlignType.center);
+            // Col 8 : Date de réserve (laisser strictement vide)
+            final cellDateRes = sheet.getRangeByIndex(currentRow, 8);
+            cellDateRes.setText('');
+            _styleDataCell(cellDateRes,
+                bgColor: bgColor, hAlign: xlsio.HAlignType.center);
 
-          // Col 9 : Date de rapport (date réelle de génération)
-          final cellDateRap = sheet.getRangeByIndex(currentRow, 9);
-          cellDateRap.setText(reportDateStr);
-          _styleDataCell(cellDateRap,
-              bgColor: bgColor, hAlign: xlsio.HAlignType.center);
+            // Col 9 : Date de rapport (date réelle de génération)
+            final cellDateRap = sheet.getRangeByIndex(currentRow, 9);
+            cellDateRap.setText(reportDateStr);
+            _styleDataCell(cellDateRap,
+                bgColor: bgColor, hAlign: xlsio.HAlignType.center);
+          } else {
+            // BT : 9 colonnes PDF répliquées + 2 colonnes supplémentaires Excel
+            // Col 7 : Présence du parafoudre
+            final cellPara = sheet.getRangeByIndex(currentRow, 7);
+            cellPara.setText(item.presenceParafoudre ?? '-');
+            _styleDataCell(cellPara,
+                bgColor: bgColor, hAlign: xlsio.HAlignType.center);
+
+            // Col 8 : Vérification thermo
+            final cellThermo = sheet.getRangeByIndex(currentRow, 8);
+            cellThermo.setText(item.verificationThermo ?? '-');
+            _styleDataCell(cellThermo,
+                bgColor: bgColor, hAlign: xlsio.HAlignType.center);
+
+            // Col 9 : Observation
+            final cellObs = sheet.getRangeByIndex(currentRow, 9);
+            cellObs.setText(item.hasObservation);
+            _styleDataCell(cellObs,
+                bgColor: bgColor, hAlign: xlsio.HAlignType.center);
+
+            // Col 10 : Date de réserve (laisser strictement vide)
+            final cellDateRes = sheet.getRangeByIndex(currentRow, 10);
+            cellDateRes.setText('');
+            _styleDataCell(cellDateRes,
+                bgColor: bgColor, hAlign: xlsio.HAlignType.center);
+
+            // Col 11 : Date de rapport (date réelle de génération)
+            final cellDateRap = sheet.getRangeByIndex(currentRow, 11);
+            cellDateRap.setText(reportDateStr);
+            _styleDataCell(cellDateRap,
+                bgColor: bgColor, hAlign: xlsio.HAlignType.center);
+          }
 
           sheet.getRangeByIndex(currentRow, 1).rowHeight = 22;
 
@@ -374,7 +440,7 @@ class ExcelReportService {
             sheet,
             repereStartRow,
             1,
-            9,
+            totalCols,
             color: _colorNavy,
             lineStyle: xlsio.LineStyle.medium,
           );
@@ -383,7 +449,7 @@ class ExcelReportService {
             sheet,
             repereStartRow,
             2,
-            9,
+            totalCols,
             color: _colorSepRepere,
             lineStyle: xlsio.LineStyle.medium,
           );
