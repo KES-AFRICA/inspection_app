@@ -39,6 +39,9 @@ class ExecutiveSummarySnapshot {
   final int installationsCount;
   final String globalDensityStr;
 
+  /// Libellés réels des catégories d'équipements actives (count > 0)
+  final List<String> activeCategoryLabels;
+
   ExecutiveSummarySnapshot({
     required this.missionId,
     required this.clientName,
@@ -56,6 +59,7 @@ class ExecutiveSummarySnapshot {
     required this.equipmentCount,
     required this.installationsCount,
     required this.globalDensityStr,
+    this.activeCategoryLabels = const [],
   });
 
   /// Construit un snapshot à partir de la mission et de notre moteur de statistiques centralisé
@@ -94,7 +98,11 @@ class ExecutiveSummarySnapshot {
       final eqCount = summary.totalEquipments;
       final totalNc = summary.totalNC;
       final globalDensityStr = summary.globalDensityStr;
-      final activeCategoriesCount = summary.equipmentInventory.where((i) => i.count > 0).length;
+      final activeCategories = summary.equipmentInventory
+          .where((i) => i.count > 0)
+          .map((i) => i.label)
+          .toList();
+      final activeCategoriesCount = activeCategories.length;
 
       // Trier les catégories par nombre de non-conformités décroissant pour déterminer le Top 2
       final sortedCategories = List<CategoryCrossItem>.from(summary.crossCategoryItems)
@@ -162,6 +170,7 @@ class ExecutiveSummarySnapshot {
         equipmentCount: eqCount,
         installationsCount: activeCategoriesCount > 0 ? activeCategoriesCount : summary.installationTypeStats.length,
         globalDensityStr: globalDensityStr,
+        activeCategoryLabels: activeCategories,
       );
     } catch (_) {
       return ExecutiveSummarySnapshot(
@@ -189,6 +198,7 @@ class ExecutiveSummarySnapshot {
         equipmentCount: 0,
         installationsCount: 0,
         globalDensityStr: '0,00',
+        activeCategoryLabels: const [],
       );
     }
   }
@@ -223,6 +233,7 @@ class ExecutiveSummarySnapshot {
       'equipmentCount': equipmentCount,
       'installationsCount': installationsCount,
       'globalDensityStr': globalDensityStr,
+      'activeCategoryLabels': activeCategoryLabels,
     };
   }
 

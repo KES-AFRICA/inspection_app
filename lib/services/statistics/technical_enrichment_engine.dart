@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../../models/audit_installations_electriques.dart';
 import '../../models/classement_locaux.dart';
 import '../../models/classement_zone.dart';
+import '../../models/description_installations.dart';
 import '../../models/mesures_essais.dart';
 import '../dispositions_constructives_registry.dart';
 import '../hive_service.dart';
@@ -296,6 +297,10 @@ class EssaisCoverageStats {
   final int demarrageGeCount;
   final int arretUrgenceCount;
 
+  final bool isArretUrgenceApplicable;
+  final bool isDemarrageGeApplicable;
+  final bool isCpiApplicable;
+
   const EssaisCoverageStats({
     required this.prisesTerreCount,
     required this.testDdrCount,
@@ -304,16 +309,19 @@ class EssaisCoverageStats {
     required this.continuitePeCount,
     required this.demarrageGeCount,
     required this.arretUrgenceCount,
+    this.isArretUrgenceApplicable = true,
+    this.isDemarrageGeApplicable = true,
+    this.isCpiApplicable = true,
   });
 
   int get totalEssais =>
       prisesTerreCount +
       testDdrCount +
       mesureIsolementCount +
-      testCpiCount +
+      (isCpiApplicable ? testCpiCount : 0) +
       continuitePeCount +
-      demarrageGeCount +
-      arretUrgenceCount;
+      (isDemarrageGeApplicable ? demarrageGeCount : 0) +
+      (isArretUrgenceApplicable ? arretUrgenceCount : 0);
 }
 
 /// Élément statistique unitaire pour une famille de risque réelle.
@@ -385,6 +393,9 @@ class RiskFamilyQuadrantStats {
 
   /// Somme réelle des occurrences affichées (Top 5 + Autres)
   int get sumDisplayedOccurrences => sumTopOccurrences + autresConstats;
+
+  /// Somme réelle de toutes les occurrences du quadrant (toutes familles)
+  int get sumAllOccurrences => allFamilies.fold(0, (s, i) => s + i.constats);
 
   /// Somme réelle des pourcentages affichés (Top 5 + Autres), sans forcer 100%
   double get sumDisplayedParts {
@@ -573,6 +584,9 @@ class TechnicalEnrichmentResult {
   final int totalCircuitsAudit;
   final int totalCircuitsAvecProtection;
 
+  final int totalEquipementsEligiblesIpIk;
+  final int totalEquipementsClassesIpIk;
+
   final EquipmentBrandPopulationStats protectionsTeteBrandStats;
   final EquipmentBrandPopulationStats departsBrandStats;
   final EquipmentBrandPopulationStats circuitsBrandStats;
@@ -611,6 +625,8 @@ class TechnicalEnrichmentResult {
     this.totalDepartsAvecProtection = 0,
     this.totalCircuitsAudit = 0,
     this.totalCircuitsAvecProtection = 0,
+    this.totalEquipementsEligiblesIpIk = 0,
+    this.totalEquipementsClassesIpIk = 0,
     this.protectionsTeteBrandStats = const EquipmentBrandPopulationStats.empty(populationTitle: 'Protections de tête'),
     this.departsBrandStats = const EquipmentBrandPopulationStats.empty(populationTitle: 'Départs'),
     this.circuitsBrandStats = const EquipmentBrandPopulationStats.empty(populationTitle: 'Circuits'),
@@ -680,7 +696,20 @@ class TechnicalEnrichmentResult {
   int get totalEquipementsElectriques =>
       totalEquipementsMT + totalEquipementsBT;
 
-  /// Adéquation globale IP/IK = (% zones classées + % locaux classés) / 2
+  /// % d'équipements classés IP/IK (TGBT, inverseurs, armoires, coffrets)
+  double get equipementsIpIkAdequationRate => totalEquipementsEligiblesIpIk > 0
+      ? (totalEquipementsClassesIpIk / totalEquipementsEligiblesIpIk) * 100.0
+      : 0.0;
+
+  String get equipementsIpIkAdequationRateStr {
+    final rate = equipementsIpIkAdequationRate;
+    if (rate.truncateToDouble() == rate) {
+      return '${rate.toInt()} %';
+    }
+    return '${rate.toStringAsFixed(1).replaceAll('.', ',')} %';
+  }
+
+  /// Adéquation globale IP/IK = (% zones classées + % locaux classés + % équipements classés) / 3
   double get globalIpIkAdequationRate {
     final zonesPct = totalZonesAudit > 0
         ? (totalZonesClasseesCount / totalZonesAudit) * 100.0
@@ -691,7 +720,8 @@ class TechnicalEnrichmentResult {
     final locauxPct = totalLocaux > 0
         ? (totalLocauxClassesCount / totalLocaux) * 100.0
         : 0.0;
-    return (zonesPct + locauxPct) / 2.0;
+    final equipementsPct = equipementsIpIkAdequationRate;
+    return (zonesPct + locauxPct + equipementsPct) / 3.0;
   }
 
   String get globalIpIkAdequationRateStr {
@@ -728,7 +758,13 @@ class TechnicalEnrichmentEngine {
     } catch (_) {
       mesures = null;
     }
-    final essaisCoverage = _computeEssaisCoverage(mesures);
+    DescriptionInstallations? description;
+    try {
+      description =
+          HiveService.getDescriptionInstallationsByMissionId(missionId);
+    } catch (_) {
+      description = null;
+    }
 
     // 2. Décompte des locaux par typologie
     int locauxMt = domainInventory
@@ -740,6 +776,41 @@ class TechnicalEnrichmentEngine {
     int locauxGe = domainInventory
         .getInstancesByCategory(DomainObjectType.localGE)
         .length;
+
+    final transfos = domainInventory
+        .getInstancesByCategory(DomainObjectType.transformateurMTBT)
+        .map((i) => i.rawModelRef)
+        .toList();
+
+    final essaisCoverage = _computeEssaisCoverage(
+      mesures,
+      desc: description,
+      locauxGe: locauxGe,
+      transfos: transfos,
+    );
+
+    // 2.bis Équipements éligibles IP/IK : strictement TGBT, inverseurs, armoires, coffrets
+    final eligibleEquipments = [
+      ...domainInventory.getInstancesByCategory(DomainObjectType.tgbt),
+      ...domainInventory.getInstancesByCategory(DomainObjectType.inverseur),
+      ...domainInventory.getInstancesByCategory(DomainObjectType.armoire),
+      ...domainInventory.getInstancesByCategory(DomainObjectType.coffret),
+    ];
+    final totalEquipementsEligiblesIpIk = eligibleEquipments.length;
+    int totalEquipementsClassesIpIk = 0;
+    for (final eq in eligibleEquipments) {
+      final raw = eq.rawModelRef;
+      if (raw is CoffretArmoire) {
+        final ipVal = raw.indiceIpIk?.trim();
+        final hasExploitableIp = ipVal != null &&
+            ipVal.isNotEmpty &&
+            ipVal != '-' &&
+            ipVal.toLowerCase() != 'absent';
+        if (hasExploitableIp) {
+          totalEquipementsClassesIpIk++;
+        }
+      }
+    }
 
     // 3. Indicateurs de sécurité BT (Inverseur, TGBT, Armoire, Coffret)
     final btCategories = [
@@ -1478,6 +1549,8 @@ class TechnicalEnrichmentEngine {
       protectionsTeteBrandStats: protectionsTeteBrandStats,
       departsBrandStats: departsBrandStats,
       circuitsBrandStats: circuitsBrandStats,
+      totalEquipementsEligiblesIpIk: totalEquipementsEligiblesIpIk,
+      totalEquipementsClassesIpIk: totalEquipementsClassesIpIk,
     );
   }
 
@@ -1485,7 +1558,12 @@ class TechnicalEnrichmentEngine {
   //  MÉTHODES INTERNES DE CALCUL
   // ──────────────────────────────────────────────────────────────
 
-  static EssaisCoverageStats _computeEssaisCoverage(MesuresEssais? m) {
+  static EssaisCoverageStats _computeEssaisCoverage(
+    MesuresEssais? m, {
+    DescriptionInstallations? desc,
+    int locauxGe = 0,
+    List<dynamic> transfos = const [],
+  }) {
     if (m == null) {
       return const EssaisCoverageStats(
         prisesTerreCount: 0,
@@ -1495,6 +1573,9 @@ class TechnicalEnrichmentEngine {
         continuitePeCount: 0,
         demarrageGeCount: 0,
         arretUrgenceCount: 0,
+        isArretUrgenceApplicable: false,
+        isDemarrageGeApplicable: false,
+        isCpiApplicable: false,
       );
     }
 
@@ -1502,6 +1583,27 @@ class TechnicalEnrichmentEngine {
         m.essaiDemarrageAuto.observation?.trim().isNotEmpty == true;
     final hasArretUrg =
         m.testArretUrgence.observation?.trim().isNotEmpty == true;
+
+    // Détermination de l'applicabilité :
+    // 1. Arrêt d'urgence : sans objet si explicitement non présent (presence == false)
+    final bool isArretUrgenceApplicable = m.testArretUrgence.presence != false;
+
+    // 2. Démarrage GE : applicable si un GE est renseigné ou si un local GE existe
+    final bool hasGeOnSite =
+        (desc != null && desc.groupeElectrogene.isNotEmpty) || locauxGe > 0;
+    final bool isDemarrageGeApplicable = hasGeOnSite || hasDemarrage;
+
+    // 3. CPI : applicable uniquement en régime IT (description ou transformateurs) ou section CPI renseignée
+    final bool hasItRegime = (desc != null &&
+            ((desc.regimeNeutre?.trim().toUpperCase() == 'IT') ||
+                desc.cpi.isNotEmpty)) ||
+        transfos.any((t) {
+          if (t is TransformateurMTBT) {
+            return t.regimeNeutre.trim().toUpperCase() == 'IT';
+          }
+          return false;
+        });
+    final bool isCpiApplicable = hasItRegime || m.cpiTests.isNotEmpty;
 
     return EssaisCoverageStats(
       prisesTerreCount: m.prisesTerre.length,
@@ -1511,6 +1613,9 @@ class TechnicalEnrichmentEngine {
       continuitePeCount: m.continuiteResistances.length,
       demarrageGeCount: hasDemarrage ? 1 : 0,
       arretUrgenceCount: hasArretUrg ? 1 : 0,
+      isArretUrgenceApplicable: isArretUrgenceApplicable,
+      isDemarrageGeApplicable: isDemarrageGeApplicable,
+      isCpiApplicable: isCpiApplicable,
     );
   }
 

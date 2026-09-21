@@ -1788,9 +1788,9 @@
     "semantic_hash": ""
   },
   "lib/services/pdf/builders/pdf_regulatory_builder.dart": {
-    "mtime": 1789985977.941102,
-    "seen": 1789986804.6298614,
-    "ast_hash": "88e249b3f4ad0350c4d93dc844cf5ce8",
+    "mtime": 1789988537.5420756,
+    "seen": 1789988604.8163202,
+    "ast_hash": "3657a3f7d0f1c1b5cf3cb082a82cb3c9",
     "semantic_hash": ""
   },
   "lib/services/pdf/builders/pdf_renseignements_builder.dart": {
@@ -1848,9 +1848,9 @@
     "semantic_hash": ""
   },
   "lib/services/pdf/pdf_report_light_service.dart": {
-    "mtime": 1789986094.838343,
-    "seen": 1789986804.6298792,
-    "ast_hash": "9afa04fb0cf9fb87f092c55ed54f3aae",
+    "mtime": 1789988481.6121857,
+    "seen": 1789988604.8163373,
+    "ast_hash": "bb9b68d9fb99edb3193be6a651e8da20",
     "semantic_hash": ""
   },
   "lib/services/pdf/pdf_report_service.dart": {
@@ -3765,6 +3765,12 @@
     "mtime": 1789986487.8537014,
     "seen": 1789986804.6301775,
     "ast_hash": "52ffd47dc938828ec3c84aab42bb98da",
+    "semantic_hash": ""
+  },
+  "test/features/pdf_perimetre_centering_test.dart": {
+    "mtime": 1789988543.8854449,
+    "seen": 1789988604.816537,
+    "ast_hash": "f47f61a6e8853610e63a8a9106402f9c",
     "semantic_hash": ""
   }
 }

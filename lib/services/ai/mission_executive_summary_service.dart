@@ -302,7 +302,7 @@ class MissionExecutiveSummaryService {
               print('🧹 [AI Executive Summary] Purge automatique du cache obsolète (v${cachedEntry.schemaVersion} vs v$schemaVersion) pour $missionId...');
             }
             try {
-              await cacheBox?.delete(missionId);
+              await cacheBox.delete(missionId);
             } catch (_) {}
             cachedEntry = null;
           }
@@ -320,7 +320,7 @@ class MissionExecutiveSummaryService {
         } catch (e) {
           if (kDebugMode) print('⚠️ Erreur lecture cache entry: $e');
           try {
-            await cacheBox?.delete(missionId);
+            await cacheBox.delete(missionId);
           } catch (_) {}
           cachedEntry = null;
         }
@@ -443,7 +443,7 @@ DONNÉES OFFICIELLES CERTIFIÉES DE LA MISSION (NE JAMAIS EN MODIFIER LES CHIFFR
 - Période d'intervention : ${snapshot.dateRangeText}
 - Domaine de tension : ${snapshot.domainTension}
 - Nombre total d'équipements/installations contrôlés : ${snapshot.equipmentCount}
-- Nombre de catégories d'équipements : ${snapshot.installationsCount}
+- Nombre de catégories d'équipements : ${snapshot.installationsCount}${snapshot.activeCategoryLabels.isNotEmpty ? ' (${snapshot.activeCategoryLabels.join(', ')})' : ''}
 - Total Non-Conformités : ${snapshot.officialStats['totalNC']}
 - Densité moyenne globale : ${snapshot.globalDensityStr} NC / équipement
 - Non-Conformités Critiques : ${snapshot.officialStats['critique']} (${snapshot.officialStats['pctCritique']}%)
@@ -515,14 +515,31 @@ INSTRUCTIONS ET CONTRAT RÉDACTIONNEL STRICT :
     final eqCount = snapshot.equipmentCount;
     final globalDensityStr = snapshot.globalDensityStr;
 
+    final labels = snapshot.activeCategoryLabels;
+    final String categoriesText;
+    if (labels.isEmpty) {
+      if (snapshot.installationsCount > 0) {
+        categoriesText = ' répartis en ${snapshot.installationsCount} catégorie${snapshot.installationsCount > 1 ? 's' : ''}.';
+      } else {
+        categoriesText = '.';
+      }
+    } else if (labels.length == 1) {
+      categoriesText = ' réparti${snapshot.equipmentCount > 1 ? 's' : ''} en 1 catégorie (${labels.first}).';
+    } else {
+      final joined = labels.length == 2
+          ? '${labels[0]} et ${labels[1]}'
+          : '${labels.sublist(0, labels.length - 1).join(', ')} et ${labels.last}';
+      categoriesText = ' répartis en ${labels.length} catégories ($joined).';
+    }
+
     final contextText =
         'La vérification périodique réglementaire des installations électriques du site ${snapshot.siteName} '
         'a été réalisée ${snapshot.dateRangeText} par ${snapshot.companyName} '
         '(rapport n° ${snapshot.reportNumber}, émis le ${snapshot.reportDateStr}). '
         'La mission a couvert l\'ensemble des installations électriques ${snapshot.domainTension}, '
         'depuis les sources d\'alimentation jusqu\'aux équipements terminaux, conformément au périmètre défini dans le rapport, '
-        'soit un total de ${snapshot.equipmentCount} installation${snapshot.equipmentCount > 1 ? 's' : ''} et équipement${snapshot.equipmentCount > 1 ? 's' : ''} '
-        'répartis en ${snapshot.installationsCount} catégories.';
+        'soit un total de ${snapshot.equipmentCount} installation${snapshot.equipmentCount > 1 ? 's' : ''} et équipement${snapshot.equipmentCount > 1 ? 's' : ''}'
+        '$categoriesText';
 
     final introSynthese =
         'Les vérifications ont permis de recenser $total non-conformité${total > 1 ? 's' : ''} sur l\'ensemble du périmètre, '

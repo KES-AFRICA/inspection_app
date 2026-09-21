@@ -173,7 +173,7 @@ class PdfExecutiveSummaryBuilder {
     widgets.add(pw.SizedBox(height: 5));
     widgets.add(
       pw.Text(
-        'Avec ${cStats.pctCritique.toStringAsFixed(1).replaceAll('.', ',')} % de non-conformités critiques et ${cStats.pctMajeure.toStringAsFixed(1).replaceAll('.', ',')} % majeures, soit 100,0 % des écarts relevant des deux niveaux de gravité les plus élevés, et une absence totale de non-conformité mineure, le site présente un profil de risque très largement supérieur aux seuils habituellement admis en exploitation maîtrisée (10 à 15 %).',
+        _generateCriticalityExplanation(cStats, statsSummary.totalNC),
         style: pw.TextStyle(
           font: fontRegular,
           fontSize: fsBody,
@@ -1086,9 +1086,9 @@ class PdfExecutiveSummaryBuilder {
             bSpan('  - Prise de terre : '), nSpan('${technical.essaisCoverage.prisesTerreCount}\n'),
             bSpan('  - Test différentiel (DDR) : '), nSpan('${technical.essaisCoverage.testDdrCount}\n'),
             bSpan('  - Mesure d\'isolement : '), nSpan('${technical.essaisCoverage.mesureIsolementCount}\n'),
-            bSpan('  - Démarrage GE : '), nSpan('${technical.essaisCoverage.demarrageGeCount > 0 ? "Réalisé (${technical.essaisCoverage.demarrageGeCount})" : "Non réalisé"}\n'),
-            bSpan('  - Test arrêt d\'urgence : '), nSpan('${technical.essaisCoverage.arretUrgenceCount > 0 ? "Réalisé (${technical.essaisCoverage.arretUrgenceCount})" : "Non réalisé"}\n'),
-            bSpan('  - Contrôleur permanent d\'isolement (CPI) : '), nSpan('${technical.essaisCoverage.testCpiCount}\n'),
+            bSpan('  - Démarrage GE : '), nSpan('${!technical.essaisCoverage.isDemarrageGeApplicable ? "Sans objet" : (technical.essaisCoverage.demarrageGeCount > 0 ? "Réalisé (${technical.essaisCoverage.demarrageGeCount})" : "Non réalisé")}\n'),
+            bSpan('  - Test arrêt d\'urgence : '), nSpan('${!technical.essaisCoverage.isArretUrgenceApplicable ? "Sans objet" : (technical.essaisCoverage.arretUrgenceCount > 0 ? "Réalisé (${technical.essaisCoverage.arretUrgenceCount})" : "Non réalisé")}\n'),
+            bSpan('  - Contrôleur permanent d\'isolement (CPI) : '), nSpan('${!technical.essaisCoverage.isCpiApplicable ? "Sans objet" : technical.essaisCoverage.testCpiCount.toString()}\n'),
             bSpan('  - Continuité des masses (PE) : '), nSpan('${technical.essaisCoverage.continuitePeCount}'),
           ],
         ),
@@ -1126,21 +1126,21 @@ class PdfExecutiveSummaryBuilder {
           ],
         ),
         buildRichRow(
-          'Présence organe de coupure en tête d’installation',
-          [
-            bSpan('Inverseur : '), nSpan('${formatCoupure(DomainObjectType.inverseur)}\n'),
-            bSpan('TGBT : '), nSpan('${formatCoupure(DomainObjectType.tgbt)}\n'),
-            bSpan('Armoire : '), nSpan('${formatCoupure(DomainObjectType.armoire)}\n'),
-            bSpan('Coffret : '), nSpan(formatCoupure(DomainObjectType.coffret)),
-          ],
-        ),
-        buildRichRow(
           'Identification des sources d\'alimentation',
           [
             bSpan('Inverseur : '), nSpan('${formatSource(DomainObjectType.inverseur)}\n'),
             bSpan('TGBT : '), nSpan('${formatSource(DomainObjectType.tgbt)}\n'),
             bSpan('Armoire : '), nSpan('${formatSource(DomainObjectType.armoire)}\n'),
             bSpan('Coffret : '), nSpan(formatSource(DomainObjectType.coffret)),
+          ],
+        ),
+        buildRichRow(
+          'Présence organe de coupure en tête d’installation',
+          [
+            bSpan('Inverseur : '), nSpan('${formatCoupure(DomainObjectType.inverseur)}\n'),
+            bSpan('TGBT : '), nSpan('${formatCoupure(DomainObjectType.tgbt)}\n'),
+            bSpan('Armoire : '), nSpan('${formatCoupure(DomainObjectType.armoire)}\n'),
+            bSpan('Coffret : '), nSpan(formatCoupure(DomainObjectType.coffret)),
           ],
         ),
         buildRichRow(
@@ -1168,6 +1168,8 @@ class PdfExecutiveSummaryBuilder {
             bSpan('  - Zones classées : '), nSpan('$totZonesClassees / $totZones, soit $zonesPct %\n'),
             bSpan('Nombre total de locaux : '), nSpan('$totLocaux\n'),
             bSpan('  - Locaux classés : '), nSpan('$totLocauxClasses / $totLocaux, soit $locauxPct %\n'),
+            bSpan('Nombre total d\'équipements : '), nSpan('${technical.totalEquipementsEligiblesIpIk}\n'),
+            bSpan('  - Équipements classés : '), nSpan('${technical.totalEquipementsClassesIpIk} / ${technical.totalEquipementsEligiblesIpIk}, soit ${technical.equipementsIpIkAdequationRateStr}\n'),
             bSpan('Adéquation globale IP/IK : '), nSpan(technical.globalIpIkAdequationRateStr),
           ],
         ),
@@ -1429,7 +1431,8 @@ class PdfExecutiveSummaryBuilder {
 
     pw.Widget buildRiskDataTable(RiskFamilyQuadrantStats quadrant) {
       final rows = <pw.TableRow>[];
-      if (quadrant.topFamilies.isEmpty) {
+      final families = quadrant.allFamilies;
+      if (families.isEmpty) {
         rows.add(
           pw.TableRow(
             children: [
@@ -1442,7 +1445,7 @@ class PdfExecutiveSummaryBuilder {
           ),
         );
       } else {
-        for (final item in quadrant.topFamilies) {
+        for (final item in families) {
           rows.add(
             pw.TableRow(
               children: [
@@ -1457,19 +1460,9 @@ class PdfExecutiveSummaryBuilder {
         }
       }
 
-      // Ligne Autres : toujours présente comme requis en MT comme en BT
-      rows.add(
-        pw.TableRow(
-          children: [
-            _buildTableCell('Autres',
-                align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
-            _buildTableCell('${quadrant.autresConstats}'),
-            _buildTableCell(quadrant.formattedAutresPart),
-          ],
-        ),
-      );
-
-      // Ligne TOTAL : somme réelle calculée (non forcée)
+      // Ligne TOTAL : somme réelle calculée de toutes les familles
+      final totalConstats = quadrant.totalConstats;
+      final formattedTotalPart = totalConstats > 0 ? '100,0 %' : '0,0 %';
       rows.add(
         pw.TableRow(
           decoration: pw.BoxDecoration(color: PdfReportStyles.tableRowAlt),
@@ -1478,8 +1471,8 @@ class PdfExecutiveSummaryBuilder {
                 isBold: true,
                 align: pw.TextAlign.left,
                 alignment: pw.Alignment.centerLeft),
-            _buildTableCell('${quadrant.sumDisplayedOccurrences}', isBold: true),
-            _buildTableCell(quadrant.formattedSumDisplayedParts, isBold: true),
+            _buildTableCell('$totalConstats', isBold: true),
+            _buildTableCell(formattedTotalPart, isBold: true),
           ],
         ),
       );
@@ -2278,6 +2271,82 @@ class PdfExecutiveSummaryBuilder {
   @visibleForTesting
   static pw.Widget buildRiskFamilyMatrixTableForTesting(RiskFamilyCrossMatrix matrix) {
     return _buildEnrichedRiskFamilyMatrixTable(matrix);
+  }
+
+  /// Génère une explication dynamique, pédagogique et déterministe du tableau de criticité.
+  static String _generateCriticalityExplanation(CriticalityStats cStats, int totalNC) {
+    if (totalNC == 0) {
+      return "L'ensemble des vérifications n'a révélé aucune non-conformité sur le périmètre audité. Les installations et équipements contrôlés présentent un état de conformité satisfaisant au regard des exigences réglementaires et normatives applicables.";
+    }
+
+    final crit = cStats.critique;
+    final maj = cStats.majeure;
+    final min = cStats.mineure;
+
+    final pctCritStr = cStats.pctCritique.toStringAsFixed(1).replaceAll('.', ',');
+    final pctMajStr = cStats.pctMajeure.toStringAsFixed(1).replaceAll('.', ',');
+    final pctMinStr = cStats.pctMineure.toStringAsFixed(1).replaceAll('.', ',');
+
+    // 1. Décomposition factuelle et pédagogique des niveaux
+    final parts = <String>[];
+    if (crit > 0) {
+      parts.add('$crit relève${crit > 1 ? 'nt' : ''} de la criticité Critique ($pctCritStr %)');
+    }
+    if (maj > 0) {
+      parts.add('$maj relève${maj > 1 ? 'nt' : ''} de la criticité Majeure ($pctMajStr %)');
+    }
+    if (min > 0) {
+      parts.add('$min relève${min > 1 ? 'nt' : ''} de la criticité Mineure ($pctMinStr %)');
+    }
+
+    final String repartitionPhrase;
+    if (parts.length == 1) {
+      final uniqueLevel = crit > 0 ? 'Critique' : (maj > 0 ? 'Majeure' : 'Mineure');
+      repartitionPhrase = "Sur l'ensemble des $totalNC non-conformité${totalNC > 1 ? 's' : ''} recensée${totalNC > 1 ? 's' : ''}, la totalité des écarts relève de la criticité $uniqueLevel, soit 100,0 % du total.";
+    } else if (parts.length == 2) {
+      repartitionPhrase = "Sur l'ensemble des $totalNC non-conformités recensées, ${parts[0]} et ${parts[1]}.";
+    } else {
+      repartitionPhrase = "Sur l'ensemble des $totalNC non-conformités recensées, ${parts[0]}, ${parts[1]} et ${parts[2]}.";
+    }
+
+    // 2. Identification du niveau prépondérant / dominant
+    String dominancePhrase = '';
+    final maxVal = [crit, maj, min].reduce((a, b) => a > b ? a : b);
+    final dominants = <String>[];
+    if (crit == maxVal) dominants.add('Critique ($pctCritStr %)');
+    if (maj == maxVal) dominants.add('Majeure ($pctMajStr %)');
+    if (min == maxVal) dominants.add('Mineure ($pctMinStr %)');
+
+    if (parts.length > 1) {
+      if (dominants.length == 1) {
+        dominancePhrase = " La répartition est dominée par la criticité ${dominants.first}, qui constitue la part prépondérante des observations.";
+      } else if (dominants.length == 2) {
+        dominancePhrase = " Les criticités ${dominants[0]} et ${dominants[1]} représentent des volumes équivalents et prépondérants.";
+      } else {
+        dominancePhrase = " Les trois niveaux de criticité se répartissent de manière strictement équivalente (${dominants[0]} chacun).";
+      }
+    }
+
+    // 3. Synthèse sur les niveaux de gravité élevés (Critique + Majeure)
+    final severeCount = crit + maj;
+    final severePct = totalNC > 0 ? (severeCount / totalNC) * 100.0 : 0.0;
+    final severePctStr = severePct.toStringAsFixed(1).replaceAll('.', ',');
+
+    String gravitePhrase = '';
+    if (severeCount == totalNC && min == 0) {
+      gravitePhrase = " L'intégralité des non-conformités (100,0 %) relève des niveaux de gravité les plus élevés (Critique et Majeure), justifiant une mise en œuvre prioritaire des mesures correctives sur les équipements concernés.";
+    } else if (severeCount > 0 && min > 0) {
+      gravitePhrase = " Les écarts à niveau de gravité élevé (criticités Critique et Majeure) regroupent au total $severeCount non-conformité${severeCount > 1 ? 's' : ''}, soit $severePctStr % de l'ensemble des observations du site.";
+    } else if (severeCount == 0) {
+      gravitePhrase = " L'ensemble des écarts constatés relève exclusivement de la criticité Mineure, concernant principalement des dispositions constructives secondaires sans mise en cause directe de la sécurité immédiate.";
+    }
+
+    return '$repartitionPhrase$dominancePhrase$gravitePhrase';
+  }
+
+  @visibleForTesting
+  static String generateCriticalityExplanationForTesting(CriticalityStats cStats, int totalNC) {
+    return _generateCriticalityExplanation(cStats, totalNC);
   }
 
   @visibleForTesting
