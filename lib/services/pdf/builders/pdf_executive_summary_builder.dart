@@ -186,7 +186,7 @@ class PdfExecutiveSummaryBuilder {
     widgets.add(pw.SizedBox(height: 10));
 
     // ── 3. Facteurs de risque prépondérants ──
-    widgets.add(pw.NewPage(freeSpace: 460));
+    widgets.add(pw.NewPage(freeSpace: 85));
     widgets.add(
       PageTracker(
         key: 'resume_executif_1_3',
@@ -209,7 +209,7 @@ class PdfExecutiveSummaryBuilder {
       ),
     );
     widgets.add(pw.SizedBox(height: 5));
-    widgets.add(_buildEnrichedRiskFamilyMatrixTable(technical.riskFamilyMatrix));
+    widgets.addAll(_buildEnrichedRiskFamilyMatrixWidgets(technical.riskFamilyMatrix));
     widgets.add(pw.SizedBox(height: 10));
 
     // ── 4. Répartition des non-conformités ──
@@ -1383,7 +1383,7 @@ class PdfExecutiveSummaryBuilder {
     );
   }
 
-  static pw.Widget _buildEnrichedRiskFamilyMatrixTable(RiskFamilyCrossMatrix matrix) {
+  static List<pw.Widget> _buildEnrichedRiskFamilyMatrixWidgets(RiskFamilyCrossMatrix matrix) {
     const riskColWidths = {
       0: pw.FlexColumnWidth(5.5),
       1: pw.FlexColumnWidth(2.2),
@@ -1428,30 +1428,28 @@ class PdfExecutiveSummaryBuilder {
       );
     }
 
-    final riskHeaderTable = pw.Table(
-      border: pw.TableBorder(
-        top: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
-        left: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
-        right: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
-        bottom: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
-        verticalInside:
-            pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
-      ),
-      columnWidths: riskColWidths,
-      children: [
-        pw.TableRow(
-          decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
-          children: [
-            _buildTableHeaderCell('Famille de risque'),
-            _buildTableHeaderCell('Constats'),
-            _buildTableHeaderCell('Part'),
-          ],
-        ),
-      ],
-    );
+    pw.TableRow buildRiskHeaderRow() {
+      return pw.TableRow(
+        repeat: true,
+        decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
+        children: [
+          _buildTableHeaderCell('Famille de risque'),
+          _buildTableHeaderCell('Constats'),
+          _buildTableHeaderCell('Part'),
+        ],
+      );
+    }
 
-    pw.Widget buildRiskDataTable(RiskFamilyQuadrantStats quadrant) {
+    List<pw.Widget> buildQuadrantWidgets({
+      String? mainDomain,
+      required String subBannerTitle,
+      required RiskFamilyQuadrantStats quadrant,
+    }) {
       final rows = <pw.TableRow>[];
+      // En-tête de colonnes avec repeat: true pour garantir la répétition
+      // automatique sur toute page de continuation
+      rows.add(buildRiskHeaderRow());
+
       final families = quadrant.allFamilies;
       if (families.isEmpty) {
         rows.add(
@@ -1498,7 +1496,7 @@ class PdfExecutiveSummaryBuilder {
         ),
       );
 
-      return pw.Table(
+      final dataTable = pw.Table(
         border: pw.TableBorder(
           left: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
           right: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
@@ -1511,32 +1509,50 @@ class PdfExecutiveSummaryBuilder {
         columnWidths: riskColWidths,
         children: rows,
       );
+
+      // Protection anti-bannière orpheline :
+      // Seuil minimal pour s'assurer que la bannière ne se retrouve pas seule au bas d'une page.
+      // 65 pt suffisent pour la bannière (~18pt), l'en-tête (~16pt) et 2 lignes (~30pt).
+      // Si l'espace disponible est inférieur à ce seuil, le bloc bascule proprement sur la page suivante.
+      final minSpace = mainDomain != null ? 85.0 : 65.0;
+
+      return [
+        pw.NewPage(freeSpace: minSpace),
+        if (mainDomain != null)
+          buildRiskBannerTable(mainDomain, PdfReportStyles.accentColor, PdfColors.white, isMainDomain: true),
+        buildRiskBannerTable(subBannerTitle, PdfReportStyles.lightBlue, PdfReportStyles.headerColor),
+        dataTable,
+      ];
     }
 
+    return [
+      // ─── HTA ──────────────────────────────────────────────────
+      ...buildQuadrantWidgets(
+        mainDomain: 'HTA',
+        subBannerTitle: 'DISPOSITION CONSTRUCTIVE',
+        quadrant: matrix.htaDispositionsConstructives,
+      ),
+      ...buildQuadrantWidgets(
+        subBannerTitle: 'EXPLOITATION ET MAINTENANCE',
+        quadrant: matrix.htaExploitationMaintenance,
+      ),
+
+      // ─── BT ───────────────────────────────────────────────────
+      ...buildQuadrantWidgets(
+        mainDomain: 'BT',
+        subBannerTitle: 'DISPOSITION CONSTRUCTIVE',
+        quadrant: matrix.btDispositionsConstructives,
+      ),
+      ...buildQuadrantWidgets(
+        subBannerTitle: 'EXPLOITATION ET MAINTENANCE',
+        quadrant: matrix.btExploitationMaintenance,
+      ),
+    ];
+  }
+
+  static pw.Widget _buildEnrichedRiskFamilyMatrixTable(RiskFamilyCrossMatrix matrix) {
     return pw.Column(
-      children: [
-        riskHeaderTable,
-
-        // ─── HTA ──────────────────────────────────────────────────
-        buildRiskBannerTable('HTA', PdfReportStyles.accentColor, PdfColors.white,
-            isMainDomain: true),
-        buildRiskBannerTable('DISPOSITION CONSTRUCTIVE',
-            PdfReportStyles.lightBlue, PdfReportStyles.headerColor),
-        buildRiskDataTable(matrix.htaDispositionsConstructives),
-        buildRiskBannerTable('EXPLOITATION ET MAINTENANCE',
-            PdfReportStyles.lightBlue, PdfReportStyles.headerColor),
-        buildRiskDataTable(matrix.htaExploitationMaintenance),
-
-        // ─── BT ───────────────────────────────────────────────────
-        buildRiskBannerTable('BT', PdfReportStyles.accentColor, PdfColors.white,
-            isMainDomain: true),
-        buildRiskBannerTable('DISPOSITION CONSTRUCTIVE',
-            PdfReportStyles.lightBlue, PdfReportStyles.headerColor),
-        buildRiskDataTable(matrix.btDispositionsConstructives),
-        buildRiskBannerTable('EXPLOITATION ET MAINTENANCE',
-            PdfReportStyles.lightBlue, PdfReportStyles.headerColor),
-        buildRiskDataTable(matrix.btExploitationMaintenance),
-      ],
+      children: _buildEnrichedRiskFamilyMatrixWidgets(matrix),
     );
   }
 
@@ -1677,22 +1693,21 @@ class PdfExecutiveSummaryBuilder {
       );
     }
 
-    // Format attendu pour la ligne TOTAL selon la Section XII du référentiel :
-    // TOTAL_CONSTATS_MAJEURS / TOTAL_CONSTATS_GLOBAL, soit POURCENTAGE_GLOBAL_MAJEUR
-    final globalMajeuresCount = globalTotalMajeures > 0
-        ? globalTotalMajeures
-        : items.fold<int>(0, (sum, it) => sum + it.count);
-    final globalNcDenominator = globalTotalMissionNc > 0
-        ? globalTotalMissionNc
-        : (domainTotalConstats > 0 ? domainTotalConstats : items.fold<int>(0, (sum, it) => sum + it.count));
+    // La ligne TOTAL totalise rigoureusement la couverture cumulée du Top 5 des défaillances
+    // rapportée au volume total des constats du domaine audité (Pareto)
+    final topItemsCount = items.fold<int>(0, (sum, it) => sum + it.count);
+    final topItemsCountStr = topItemsCount > 1
+        ? '$topItemsCount constats'
+        : '$topItemsCount constat';
 
-    final globalMajeuresPct = globalNcDenominator > 0
-        ? (globalMajeuresCount / globalNcDenominator) * 100.0
+    final ncDenominator = domainTotalConstats > 0
+        ? domainTotalConstats
+        : (globalTotalMissionNc > 0 ? globalTotalMissionNc : topItemsCount);
+
+    final topCoveragePct = ncDenominator > 0
+        ? (topItemsCount / ncDenominator) * 100.0
         : 0.0;
-    final globalMajeuresPctStr = '${globalMajeuresPct.toStringAsFixed(1).replaceAll('.', ',')} %';
-    final globalMajeuresCountStr = globalMajeuresCount > 1
-        ? '$globalMajeuresCount constats'
-        : '$globalMajeuresCount constat';
+    final topCoveragePctStr = '${topCoveragePct.toStringAsFixed(1).replaceAll('.', ',')} %';
 
     return pw.Table(
       border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.5),
@@ -1737,9 +1752,9 @@ class PdfExecutiveSummaryBuilder {
             _buildTableCell('', isBold: true),
             _buildTableCell('TOTAL', isBold: true, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
             _buildTableCell(
-              globalNcDenominator > 0
-                  ? '$globalMajeuresCountStr / $globalNcDenominator, soit $globalMajeuresPctStr'
-                  : '$globalMajeuresCountStr, $globalMajeuresPctStr',
+              ncDenominator > 0
+                  ? '$topItemsCountStr / $ncDenominator, soit $topCoveragePctStr'
+                  : '$topItemsCountStr, $topCoveragePctStr',
               isBold: true,
               align: pw.TextAlign.center,
             ),
@@ -2319,6 +2334,11 @@ class PdfExecutiveSummaryBuilder {
   @visibleForTesting
   static pw.Widget buildRiskFamilyMatrixTableForTesting(RiskFamilyCrossMatrix matrix) {
     return _buildEnrichedRiskFamilyMatrixTable(matrix);
+  }
+
+  @visibleForTesting
+  static List<pw.Widget> buildRiskFamilyMatrixWidgetsForTesting(RiskFamilyCrossMatrix matrix) {
+    return _buildEnrichedRiskFamilyMatrixWidgets(matrix);
   }
 
   /// Génère une explication dynamique, pédagogique et déterministe du tableau de criticité.

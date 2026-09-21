@@ -2380,7 +2380,11 @@ class TechnicalEnrichmentEngine {
     }
 
     final sorted = counts.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
+      ..sort((a, b) {
+        final cmp = b.value.compareTo(a.value);
+        if (cmp != 0) return cmp;
+        return a.key.compareTo(b.key);
+      });
 
     return sorted.take(5).map((e) {
       return TopDefectDomainItem(

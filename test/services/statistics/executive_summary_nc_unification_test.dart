@@ -5,6 +5,8 @@ import 'package:inspec_app/services/statistics/audit_finding.dart';
 import 'package:inspec_app/services/statistics/domain_entity_instance.dart';
 import 'package:inspec_app/services/statistics/mission_domain_inventory_engine.dart';
 import 'package:inspec_app/services/statistics/technical_enrichment_engine.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:inspec_app/services/pdf/builders/pdf_executive_summary_builder.dart';
 
 void main() {
   group('Unification et Fiabilisation des Non-Conformités (2.1, 3, 4)', () {
@@ -512,6 +514,126 @@ void main() {
       expect(technical.riskFamilyMatrix.totalBtExploit, equals(0));
       expect(technical.mtTotalCrossRow.ncCount, equals(0));
       expect(technical.btTotalCrossRow.ncCount, equals(0));
+    });
+
+    test('Test 7 — Pagination Section 3 : Fractionnement ligne par ligne, répétition des en-têtes et protection anti-orphelin', () {
+      final matrix = RiskFamilyCrossMatrix(
+        htaDispositionsConstructives: RiskFamilyQuadrantStats.empty(
+          domainTitle: 'HTA - DISPOSITION CONSTRUCTIVE',
+          sectionTitle: 'DISPOSITION CONSTRUCTIVE',
+          allFamilies: [
+            RiskFamilyStatItem(famille: 'Risque MT 1', constats: 2, part: 100.0, formattedPart: '100,0 %'),
+          ],
+        ),
+        htaExploitationMaintenance: RiskFamilyQuadrantStats.empty(
+          domainTitle: 'HTA - EXPLOITATION ET MAINTENANCE',
+          sectionTitle: 'EXPLOITATION ET MAINTENANCE',
+          allFamilies: [
+            RiskFamilyStatItem(famille: 'Risque MT Exploit 1', constats: 5, part: 100.0, formattedPart: '100,0 %'),
+          ],
+        ),
+        btDispositionsConstructives: RiskFamilyQuadrantStats.empty(
+          domainTitle: 'BT - DISPOSITION CONSTRUCTIVE',
+          sectionTitle: 'DISPOSITION CONSTRUCTIVE',
+          allFamilies: [
+            RiskFamilyStatItem(famille: 'Risque BT 1', constats: 4, part: 80.0, formattedPart: '80,0 %'),
+            RiskFamilyStatItem(famille: 'Risque BT 2', constats: 1, part: 20.0, formattedPart: '20,0 %'),
+          ],
+        ),
+        btExploitationMaintenance: RiskFamilyQuadrantStats.empty(
+          domainTitle: 'BT - EXPLOITATION ET MAINTENANCE',
+          sectionTitle: 'EXPLOITATION ET MAINTENANCE',
+          allFamilies: [
+            RiskFamilyStatItem(famille: 'Sécurité / conformité réglementaire', constats: 84, part: 28.3, formattedPart: '28,3 %'),
+            RiskFamilyStatItem(famille: 'Contact électrique', constats: 51, part: 17.2, formattedPart: '17,2 %'),
+            RiskFamilyStatItem(famille: 'Erreur d\'exploitation', constats: 40, part: 13.5, formattedPart: '13,5 %'),
+          ],
+        ),
+      );
+
+      final widgets = PdfExecutiveSummaryBuilder.buildRiskFamilyMatrixWidgetsForTesting(matrix);
+
+      // La section doit émettre une liste de widgets directs (et non un simple pw.Column bloquant)
+      expect(widgets, isNotEmpty);
+
+      // On retrouve des sauts conditionnels de protection anti-orphelin (pw.NewPage)
+      final newPageWidgets = widgets.whereType<pw.NewPage>().toList();
+      expect(newPageWidgets.length, equals(4)); // 1 par quadrant
+
+      // Vérifier les seuils anti-orphelins (85 pour grand domaine, 65 pour sous-domaine)
+      expect(newPageWidgets[0].freeSpace, equals(85.0)); // HTA
+      expect(newPageWidgets[1].freeSpace, equals(65.0)); // HTA Exploit
+      expect(newPageWidgets[2].freeSpace, equals(85.0)); // BT
+      expect(newPageWidgets[3].freeSpace, equals(65.0)); // BT Exploit
+
+      // Vérifier que chaque tableau de données possède une ligne d'en-tête avec repeat: true
+      final dataTables = widgets.whereType<pw.Table>().where((t) => t.children.length > 1).toList();
+      expect(dataTables.length, equals(4));
+      for (final table in dataTables) {
+        expect(table.children.first.repeat, isTrue, reason: 'La ligne d\'en-tête doit se répéter en cas de saut de page');
+      }
+    });
+
+    test('Test 8 — Tableau C : Totalisation exacte cumulée Pareto et bris d\'égalité déterministe', () {
+      final topItems = [
+        const TopDefectDomainItem(title: 'Interconnexion à la terre', count: 52, percentageOfDomain: 17.5),
+        const TopDefectDomainItem(title: 'Intégrité des enveloppes', count: 48, percentageOfDomain: 16.2),
+        const TopDefectDomainItem(title: 'Câblages et canalisations', count: 35, percentageOfDomain: 11.8),
+        const TopDefectDomainItem(title: 'Dispositifs de protection', count: 31, percentageOfDomain: 10.4),
+        const TopDefectDomainItem(title: 'Identification et repérage', count: 28, percentageOfDomain: 9.4),
+      ];
+
+      final tableWidget = PdfExecutiveSummaryBuilder.buildTopFindingsTableForTesting(
+        topItems,
+        'Aucun constat',
+      );
+      expect(tableWidget, isA<pw.Table>());
+      final table = tableWidget as pw.Table;
+
+      // 1 en-tête + 5 items + 1 TOTAL = 7 lignes
+      expect(table.children.length, equals(7));
+
+      final totalRow = table.children.last;
+      expect(totalRow.children.length, equals(3));
+
+      // Numérateur du total = somme des items = 52 + 48 + 35 + 31 + 28 = 194
+      final totalSum = topItems.fold<int>(0, (s, it) => s + it.count);
+      expect(totalSum, equals(194));
+
+      // Vérifier le tri déterministe avec égalité de décomptes
+      final f1 = createFinding(
+        id: 'f_tie_1',
+        tensionDomain: TensionDomain.bt,
+        origin: 'Local BT',
+        objectType: 'Coffret',
+        tableName: 'Points de vérification',
+        verificationPoint: 'Point Z',
+        riskFamily: 'Protection contre les surintensités',
+      );
+      final f2 = createFinding(
+        id: 'f_tie_2',
+        tensionDomain: TensionDomain.bt,
+        origin: 'Local BT',
+        objectType: 'Coffret',
+        tableName: 'Points de vérification',
+        verificationPoint: 'Point A',
+        riskFamily: 'Interconnexion à la terre et protections différentielles',
+      );
+
+      final domainInv = MissionDomainInventory(
+        missionId: 'm_tie',
+        instances: const [],
+        allFindings: [f1, f2],
+      );
+      final findingInv = AuditFindingInventory(
+        missionId: 'm_tie',
+        findings: [f1, f2],
+      );
+
+      final result = TechnicalEnrichmentEngine.compute('m_tie', domainInv, findingInv);
+      // Les deux catégories ont count = 1. L'ordre doit être alphabétique stable.
+      expect(result.top5Bt.length, equals(2));
+      expect(result.top5Bt[0].title.compareTo(result.top5Bt[1].title) < 0, isTrue);
     });
   });
 }
