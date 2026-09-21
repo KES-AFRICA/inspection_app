@@ -1764,9 +1764,9 @@
     "semantic_hash": ""
   },
   "lib/services/pdf/builders/pdf_executive_summary_builder.dart": {
-    "mtime": 1789990454.4203074,
-    "seen": 1789990693.7840922,
-    "ast_hash": "b9cc6c87ff662ee770a996502e5a853b",
+    "mtime": 1789996609.8528352,
+    "seen": 1789997067.9966614,
+    "ast_hash": "a79ad051e0e8a2873aff34263de378f7",
     "semantic_hash": ""
   },
   "lib/services/pdf/builders/pdf_mesures_essais_builder.dart": {
@@ -3204,9 +3204,9 @@
     "semantic_hash": ""
   },
   "lib/services/statistics/technical_enrichment_engine.dart": {
-    "mtime": 1789990391.4824426,
-    "seen": 1789990693.7841544,
-    "ast_hash": "7ab80d51cc7b881e4002a6ffe87a7413",
+    "mtime": 1789996689.4661047,
+    "seen": 1789997067.9967258,
+    "ast_hash": "50407ad8c58fa9936a921686f2be6a6b",
     "semantic_hash": ""
   },
   "test/features/statistics_enrichment_test.dart": {
@@ -3774,9 +3774,9 @@
     "semantic_hash": ""
   },
   "test/services/executive_summary_evolution_test.dart": {
-    "mtime": 1789990641.986985,
-    "seen": 1789990693.784398,
-    "ast_hash": "68c2fdff5dca8069d68c4eebae3a52e1",
+    "mtime": 1789996618.4141164,
+    "seen": 1789997067.996979,
+    "ast_hash": "5096f74faf5686a1c0fdc841bb995576",
     "semantic_hash": ""
   }
 }

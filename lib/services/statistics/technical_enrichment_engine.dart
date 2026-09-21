@@ -7,6 +7,7 @@ import '../../models/description_installations.dart';
 import '../../models/mesures_essais.dart';
 import '../dispositions_constructives_registry.dart';
 import '../hive_service.dart';
+import '../installation_description_sync_service.dart';
 import 'audit_finding.dart';
 import 'canonical_defect_category_registry.dart';
 import 'domain_entity_instance.dart';
@@ -1593,17 +1594,35 @@ class TechnicalEnrichmentEngine {
         (desc != null && desc.groupeElectrogene.isNotEmpty) || locauxGe > 0;
     final bool isDemarrageGeApplicable = hasGeOnSite || hasDemarrage;
 
-    // 3. CPI : applicable uniquement en régime IT (description ou transformateurs) ou section CPI renseignée
-    final bool hasItRegime = (desc != null &&
-            ((desc.regimeNeutre?.trim().toUpperCase() == 'IT') ||
-                desc.cpi.isNotEmpty)) ||
+    // 3. CPI : applicable uniquement en régime IT (description ou transformateurs) et si un CPI est recensé ou testé
+    final Set<String> descRegimes = desc != null
+        ? InstallationDescriptionSyncService.extractRegimesFromText(
+            desc.regimeNeutre,
+            detail: desc.regimeNeutreDetail,
+          )
+        : <String>{};
+    final bool hasItRegime = descRegimes.contains('IT') ||
         transfos.any((t) {
           if (t is TransformateurMTBT) {
             return t.regimeNeutre.trim().toUpperCase() == 'IT';
           }
           return false;
         });
-    final bool isCpiApplicable = hasItRegime || m.cpiTests.isNotEmpty;
+
+    final bool hasValidCpiInDesc = desc != null &&
+        desc.cpi.any((item) {
+          final d = item.data;
+          final res = d['RESULTAT_TEST']?.trim().toLowerCase();
+          if (res == 'sans objet' || res == 'néant' || res == 'neant') {
+            return false;
+          }
+          return (d['MARQUE']?.trim().isNotEmpty == true) ||
+              (d['TYPE']?.trim().isNotEmpty == true) ||
+              (d['SEUIL DE RÉGLAGE (kΩ)']?.trim().isNotEmpty == true);
+        });
+
+    final bool isCpiApplicable =
+        (hasItRegime && hasValidCpiInDesc) || m.cpiTests.isNotEmpty;
 
     return EssaisCoverageStats(
       prisesTerreCount: m.prisesTerre.length,

@@ -1088,7 +1088,7 @@ class PdfExecutiveSummaryBuilder {
             bSpan('  - Mesure d\'isolement : '), nSpan('${technical.essaisCoverage.mesureIsolementCount}\n'),
             bSpan('  - Démarrage GE : '), nSpan('${!technical.essaisCoverage.isDemarrageGeApplicable ? "Sans objet" : (technical.essaisCoverage.demarrageGeCount > 0 ? "Réalisé (${technical.essaisCoverage.demarrageGeCount})" : "Non réalisé")}\n'),
             bSpan('  - Test arrêt d\'urgence : '), nSpan('${!technical.essaisCoverage.isArretUrgenceApplicable ? "Sans objet" : (technical.essaisCoverage.arretUrgenceCount > 0 ? "Réalisé (${technical.essaisCoverage.arretUrgenceCount})" : "Non réalisé")}\n'),
-            bSpan('  - Contrôleur permanent d\'isolement (CPI) : '), nSpan('${!technical.essaisCoverage.isCpiApplicable ? "Sans objet" : technical.essaisCoverage.testCpiCount.toString()}\n'),
+            bSpan('  - Contrôleur permanent d\'isolement (CPI) : '), nSpan('${(!technical.essaisCoverage.isCpiApplicable || technical.essaisCoverage.testCpiCount == 0) ? "Sans objet" : technical.essaisCoverage.testCpiCount.toString()}\n'),
             bSpan('  - Continuité des masses (PE) : '), nSpan('${technical.essaisCoverage.continuitePeCount}'),
           ],
         ),

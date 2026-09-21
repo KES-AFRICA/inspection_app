@@ -156,6 +156,28 @@ void main() {
       expect(statsApplicable.isDemarrageGeApplicable, isTrue);
       expect(statsApplicable.isCpiApplicable, isTrue);
       expect(statsApplicable.totalEssais, equals(14));
+
+      // 3. Rendu textuel CPI : Sans objet si inerte (0) ou non applicable
+      String formatCpi(EssaisCoverageStats s) {
+        return (!s.isCpiApplicable || s.testCpiCount == 0)
+            ? "Sans objet"
+            : s.testCpiCount.toString();
+      }
+      expect(formatCpi(statsSo), equals("Sans objet"));
+      expect(
+        formatCpi(const EssaisCoverageStats(
+          prisesTerreCount: 1,
+          testDdrCount: 1,
+          mesureIsolementCount: 1,
+          testCpiCount: 0,
+          continuitePeCount: 1,
+          demarrageGeCount: 0,
+          arretUrgenceCount: 0,
+          isCpiApplicable: true,
+        )),
+        equals("Sans objet"),
+      );
+      expect(formatCpi(statsApplicable), equals("2"));
     });
 
     test('C - Équipements classés IP/IK & Adéquation globale arithmétique 3 populations', () {
