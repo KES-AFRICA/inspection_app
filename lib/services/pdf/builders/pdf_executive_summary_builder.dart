@@ -689,24 +689,33 @@ class PdfExecutiveSummaryBuilder {
           ),
         );
 
-        final mtBlocks = PdfReportStyles.buildHeaderWithTableList(
-          headerWidget: pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              recoHeaderWidget,
-              pw.SizedBox(height: 4),
-              recoIntroWidget,
-              pw.SizedBox(height: 6),
-              mtBanner,
-            ],
+        if (isFirstSection) {
+          widgets.add(recoHeaderWidget);
+          widgets.add(pw.SizedBox(height: 4));
+          widgets.add(recoIntroWidget);
+          widgets.add(pw.SizedBox(height: 6));
+        }
+
+        widgets.add(
+          pw.Inseparable(
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                mtBanner,
+                pw.SizedBox(height: 2),
+              ],
+            ),
           ),
-          headerRow: mtHeaderRow,
-          dataRows: mtRows,
-          columnWidths: recoColWidths,
-          minFreeSpace: 180,
-          minRowsWithHeader: 1,
         );
-        widgets.addAll(mtBlocks);
+
+        widgets.add(
+          pw.Table(
+            defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
+            border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.5),
+            columnWidths: recoColWidths,
+            children: [mtHeaderRow, ...mtRows],
+          ),
+        );
         widgets.add(pw.SizedBox(height: 8));
         isFirstSection = false;
       }
@@ -728,31 +737,39 @@ class PdfExecutiveSummaryBuilder {
           ),
         );
 
-        final btBlocks = PdfReportStyles.buildHeaderWithTableList(
-          headerWidget: isFirstSection
-              ? pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    recoHeaderWidget,
-                    pw.SizedBox(height: 4),
-                    recoIntroWidget,
-                    pw.SizedBox(height: 6),
-                    btBanner,
-                  ],
-                )
-              : btBanner,
-          headerRow: btHeaderRow,
-          dataRows: btRows,
-          columnWidths: recoColWidths,
-          minFreeSpace: 180,
-          minRowsWithHeader: 1,
+        if (isFirstSection) {
+          widgets.add(recoHeaderWidget);
+          widgets.add(pw.SizedBox(height: 4));
+          widgets.add(recoIntroWidget);
+          widgets.add(pw.SizedBox(height: 6));
+        }
+
+        widgets.add(pw.NewPage(freeSpace: 80));
+        widgets.add(
+          pw.Inseparable(
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                btBanner,
+                pw.SizedBox(height: 2),
+              ],
+            ),
+          ),
         );
-        widgets.addAll(btBlocks);
+
+        widgets.add(
+          pw.Table(
+            defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
+            border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.5),
+            columnWidths: recoColWidths,
+            children: [btHeaderRow, ...btRows],
+          ),
+        );
         widgets.add(pw.SizedBox(height: 8));
       }
     }
 
-    widgets.add(pw.SizedBox(height: 6));
+    widgets.add(pw.NewPage());
 
     // ── 12. Appréciation globale ──
     final appreciationResult = GlobalAssessmentEngine.analyze(

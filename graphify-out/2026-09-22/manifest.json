@@ -1764,9 +1764,9 @@
     "semantic_hash": ""
   },
   "lib/services/pdf/builders/pdf_executive_summary_builder.dart": {
-    "mtime": 1790070859.2335763,
-    "seen": 1790070925.4163525,
-    "ast_hash": "c5fa2621c78d7ecea694d22c1be55637",
+    "mtime": 1790003233.8865824,
+    "seen": 1790003420.721195,
+    "ast_hash": "82530bc6a40d0738c5d8371eeea14405",
     "semantic_hash": ""
   },
   "lib/services/pdf/builders/pdf_mesures_essais_builder.dart": {
@@ -3240,9 +3240,9 @@
     "semantic_hash": ""
   },
   "scratch/test_statistics_full_output.pdf": {
-    "mtime": 1790008800.0475,
-    "seen": 1790070334.7956543,
-    "ast_hash": "419bee3aa99e6e0ea09330f789bcab47",
+    "mtime": 1789980521.230772,
+    "seen": 1789980585.7268891,
+    "ast_hash": "f08e92c5542637609c8c8b5462294f01",
     "semantic_hash": ""
   },
   "scratch/test_statistics_output.pdf": {
@@ -3540,15 +3540,15 @@
     "semantic_hash": ""
   },
   "lib/services/statistics/competency_needs_engine.dart": {
-    "mtime": 1790005993.8020997,
-    "seen": 1790070334.7952015,
-    "ast_hash": "fdcb71aad35fea5e17c1bf46b585a715",
+    "mtime": 1789729707.8645074,
+    "seen": 1789729796.4549341,
+    "ast_hash": "3bf2ffe854ebf1445ef192031823809f",
     "semantic_hash": ""
   },
   "lib/services/statistics/global_assessment_engine.dart": {
-    "mtime": 1790008551.8425715,
-    "seen": 1790070334.7952049,
-    "ast_hash": "0ba6b0b0a1e156b5940908b4a0b2ff75",
+    "mtime": 1789535476.0878885,
+    "seen": 1789537796.3362472,
+    "ast_hash": "a05980c0489282efa519a38824113e63",
     "semantic_hash": ""
   },
   "lib/services/statistics/statistical_synthesis_engine.dart": {
@@ -3564,9 +3564,9 @@
     "semantic_hash": ""
   },
   "test/features/competency_needs_engine_test.dart": {
-    "mtime": 1790006025.5880094,
-    "seen": 1790070334.7953029,
-    "ast_hash": "df0c9d60f4bb894f7e1d17caedb84f04",
+    "mtime": 1789729721.8798418,
+    "seen": 1789729796.4550219,
+    "ast_hash": "33bbee3f1d7bc155a73fdfd5c7f7c14e",
     "semantic_hash": ""
   },
   "test/features/global_assessment_engine_test.dart": {
@@ -3783,18 +3783,6 @@
     "mtime": 1790003356.9205418,
     "seen": 1790003420.7215095,
     "ast_hash": "9290814b4676897b38e8c92c78262da8",
-    "semantic_hash": ""
-  },
-  "lib/services/statistics/hierarchical_recommendations_engine.dart": {
-    "mtime": 1790070104.5082347,
-    "seen": 1790070334.7952065,
-    "ast_hash": "c0e2bfde564278e4f2185eeaaa94a7cf",
-    "semantic_hash": ""
-  },
-  "test/features/hierarchical_recommendations_and_global_assessment_test.dart": {
-    "mtime": 1790070032.0535283,
-    "seen": 1790070334.7953763,
-    "ast_hash": "1917f316c9ef0b0947a9baf66028a794",
     "semantic_hash": ""
   }
 }

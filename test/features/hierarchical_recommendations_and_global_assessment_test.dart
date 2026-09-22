@@ -530,7 +530,10 @@ void main() {
 
       expect(repBullet, isNotEmpty);
       expect(peBullet, isNotEmpty);
-      expect(repBullet, contains('Concerne'));
+      expect(repBullet, isNot(contains('Concerne')));
+      expect(repBullet, isNot(contains('NF C')));
+      expect(peBullet, isNot(contains('Concerne')));
+      expect(peBullet, isNot(contains('NF C')));
     });
   });
 }

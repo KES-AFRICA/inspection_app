@@ -483,7 +483,23 @@ class HierarchicalRecommendationsEngine {
     return tableName.isNotEmpty ? tableName : 'Point de contrôle non spécifié';
   }
 
-  /// Génère une action corrective précise, technique et reliée aux normes
+  /// Nettoie un libellé de point de vérification pour formulation concise
+  static String _cleanVerificationPoint(String raw) {
+    var clean = raw.trim();
+    if (clean.startsWith('•') || clean.startsWith('-') || clean.startsWith('*')) {
+      clean = clean.substring(1).trim();
+    }
+    if ((clean.startsWith('«') && clean.endsWith('»')) ||
+        (clean.startsWith('"') && clean.endsWith('"'))) {
+      clean = clean.substring(1, clean.length - 1).trim();
+    }
+    if (clean.endsWith('.')) {
+      clean = clean.substring(0, clean.length - 1).trim();
+    }
+    return clean.isNotEmpty ? clean : 'l\'écart constaté';
+  }
+
+  /// Génère une action corrective précise, technique, concise et sans références normatives
   static String _generateActionText({
     required String issueTitle,
     required String verificationPoint,
@@ -494,80 +510,101 @@ class HierarchicalRecommendationsEngine {
   }) {
     final lower = '$issueTitle $verificationPoint'.toLowerCase();
     final isMt = domain == TensionDomain.mt;
-    final normRefStr = normativeRefs.isNotEmpty ? ' (${normativeRefs.first})' : (isMt ? ' (NF C 13-100 / 13-200)' : ' (NF C 15-100)');
 
-    // 1. Obturation / Passages de câbles / Plastrons / IP2X
+    // 1. DGPT2 / Buchholz
+    if (lower.contains('dgpt2') || lower.contains('buchholz')) {
+      return 'Remettre en état fonctionnel et raccorder les protections DGPT2 / Buchholz.';
+    }
+
+    // 2. Eau / Infiltrations / Étanchéité
+    if (lower.contains('infiltrat') || lower.contains('étanchéité') || lower.contains('etancheite') || lower.contains('entrée d\'eau') || RegExp(r'\beau\b|\beaux\b').hasMatch(lower)) {
+      return 'Étanchéifier les locaux et réservations pour supprimer toute infiltration d\'eau.';
+    }
+
+    // 3. Consignes de sécurité / Plaques de danger / Signalisation
+    if (lower.contains('consigne') || lower.contains('plaque') || lower.contains('danger') || lower.contains('signalisation')) {
+      return 'Installer et rendre lisibles les consignes de sécurité et plaques de danger.';
+    }
+
+    // 4. Isolateurs / Amorçages / Diélectrique
+    if (lower.contains('isolateur') || lower.contains('amorçage') || lower.contains('amorcage')) {
+      return 'Nettoyer ou remplacer les isolateurs présentant des traces d\'amorçage.';
+    }
+
+    // 5. Obturation / Passages de câbles / Plastrons / IP2X
     if (lower.contains('obturation') || lower.contains('plastron') || lower.contains('ip2x') || lower.contains('enveloppe')) {
-      return 'Obturer immédiatement toutes les réservations, passages de câbles et alvéoles ouvertes au moyen d\'obturateurs et plastrons coupe-feu adaptés garantissant le degré de protection IP2X requis$normRefStr.';
+      return 'Obturer les réservations et ouvertures, et poser les plastrons pour garantir l\'indice IP2X.';
     }
 
-    // 2. Prises de terre / Continuité / PE / Liaisons équipotentielles
-    if (lower.contains('terre') || lower.contains('équipotentielle') || lower.contains('continuité') || lower.contains('liaison')) {
-      return 'Rétablir la continuité des conducteurs de protection (PE) et des liaisons équipotentielles principales et supplémentaires sur l\'ensemble des masses métalliques, avec vérification des seuils de résistance réglementaires$normRefStr.';
+    // 6. Prises de terre / Continuité / PE / Liaisons équipotentielles
+    if (lower.contains('terre') || lower.contains('équipotentielle') || lower.contains('continuité') || lower.contains('liaison') || lower.contains('conducteur de protection')) {
+      return 'Rétablir la continuité des conducteurs de protection (PE) et des liaisons équipotentielles.';
     }
 
-    // 3. Protection différentielle / DDR / Isolement
+    // 7. Protection différentielle / DDR / Isolement
     if (lower.contains('différentiel') || lower.contains('ddr') || lower.contains('isolement') || lower.contains('déclenchement')) {
-      return 'Remplacer ou recalibrer les dispositifs différentiels défaillants et corriger les défauts d\'isolement identifiés afin de garantir le déclenchement automatique et instantané en cas de courant de fuite$normRefStr.';
+      return 'Remplacer les différentiels (DDR) défectueux et éliminer les défauts d\'isolement.';
     }
 
-    // 4. Repérage des circuits / Schémas unifilaires / Documentation
+    // 8. Repérage des circuits / Schémas unifilaires / Documentation
     if (lower.contains('repérage') || lower.contains('identification') || lower.contains('étiquetage') || lower.contains('schéma') || lower.contains('unifilaire')) {
-      return 'Mettre à jour et apposer les repérages normalisés sur l\'ensemble des départs, appareillages et borniers, et afficher les schémas unifilaires conformes à l\'intérieur des enveloppes$normRefStr.';
+      return 'Mettre à jour le repérage des circuits et afficher les schémas unifilaires conformes.';
     }
 
-    // 5. Câblages / Serrages / Échauffements / Connexions
-    if (lower.contains('câble') || lower.contains('serrage') || lower.contains('connexion') || lower.contains('raccordement')) {
-      return 'Procéder au resserrage au couple dynamométrique prescrit de toutes les connexions électriques, reprendre les raccordements détériorés et remplacer les conducteurs présentant des traces de surchauffe$normRefStr.';
+    // 9. Câblages / Serrages / Échauffements / Connexions
+    if (lower.contains('serrage') || lower.contains('échauffement') || lower.contains('connexion') || lower.contains('raccordement') || lower.contains('câble')) {
+      return 'Contrôler le serrage dynamométrique des connexions et remplacer les conducteurs échauffés.';
     }
 
-    // 6. Calibre / Protection contre les surintensités / Pouvoir de coupure
+    // 10. Calibre / Protection contre les surintensités / Pouvoir de coupure
     if (lower.contains('calibre') || lower.contains('disjoncteur') || lower.contains('fusible') || lower.contains('surintensité') || lower.contains('pouvoir de coupure')) {
-      return 'Mettre en adéquation les calibres et pouvoirs de coupure des dispositifs de protection amont avec les sections de câbles protégées et les courants de court-circuit présumés$normRefStr.';
+      return 'Mettre en adéquation les calibres des protections avec les sections de câbles associées.';
     }
 
-    // 7. Parafoudre / Protection contre la foudre
+    // 11. Parafoudre / Protection contre la foudre
     if (lower.contains('parafoudre') || lower.contains('foudre') || lower.contains('surtension')) {
-      return 'Installer ou remplacer les cartouches de parafoudres en tête d\'installation, raccorder leur déconnecteur associé et vérifier la liaison directe au collecteur principal de terre$normRefStr.';
+      return 'Remplacer les cartouches de parafoudres défaillantes et raccorder leur déconnecteur à la terre.';
     }
 
-    // 8. Coupure d'urgence / Arrêt d'urgence
+    // 12. Coupure d'urgence / Arrêt d'urgence
     if (lower.contains('coupure d\'urgence') || lower.contains('arrêt d\'urgence') || lower.contains('organe de coupure')) {
-      return 'Installer ou remettre en état fonctionnel les organes de coupure d\'urgence identifiés, en assurant leur accessibilité permanente et leur action directe sur les sources d\'alimentation$normRefStr.';
+      return 'Remettre en état fonctionnel et dégager l\'accès aux organes de coupure d\'urgence.';
     }
 
-    // 9. Équipements de protection individuelle (EPI) / Outillage
+    // 13. Équipements de protection individuelle (EPI) / Outillage
     if (lower.contains('epi') || lower.contains('gant') || lower.contains('tabouret') || lower.contains('visière') || lower.contains('tapis')) {
-      return 'Approvisionner et mettre à disposition immédiate dans les locaux techniques les équipements de protection individuelle (EPI) et collectifs conformes, contrôlés et en cours de validité (gants isolants, écran facial, tabouret/tapis isolant, perche de sauvetage)$normRefStr.';
+      return 'Mettre à disposition dans les locaux les équipements de protection (EPI) réglementaires.';
     }
 
-    // 10. Cellules MT / Transformateurs / Verrouillage
+    // 14. Cellules MT / Transformateurs / Verrouillage
     if (isMt && (lower.contains('cellule') || lower.contains('transfo') || lower.contains('verrouillage') || lower.contains('poste'))) {
-      return 'Effectuer la révision complète des cellules HTA et transformateurs : contrôle des asservissements et verrouillages mécaniques, vérification des diélectriques et dépoussiérage approfondi$normRefStr.';
+      return 'Réviser les cellules HTA et transformateurs (asservissements, verrouillages et dépoussiérage).';
     }
 
-    // 11. Éclairage de sécurité / Blocs autonomes (BAES)
+    // 15. Éclairage de sécurité / Blocs autonomes (BAES)
     if (lower.contains('éclairage') || lower.contains('baes') || lower.contains('secours')) {
-      return 'Remettre en service les blocs autonomes d\'éclairage de sécurité (BAES) défectueux et tester leur autonomie réglementaire d\'une heure$normRefStr.';
+      return 'Remettre en service les blocs autonomes d\'éclairage de sécurité (BAES) défectueux.';
     }
 
-    // 12. Ventilation / Température / Encombrement des locaux
+    // 16. Ventilation / Température / Encombrement des locaux
     if (lower.contains('ventilation') || lower.contains('encombrement') || lower.contains('dégagement') || lower.contains('température')) {
-      return 'Dégager intégralement les allées de circulation et accès aux armoires électriques, et rétablir une ventilation efficace des locaux pour éviter toute montée anormale en température$normRefStr.';
+      return 'Dégager les accès aux armoires et rétablir une ventilation efficace des locaux.';
     }
 
-    // Formule technique contextuelle par défaut (dérivée du point et de la criticité)
+    // Formule concise par défaut (dérivée du point et de la criticité, sans blabla ni citation normative)
+    final cleanPoint = _cleanVerificationPoint(verificationPoint.isNotEmpty ? verificationPoint : issueTitle);
     if (criticality == 'critique') {
-      return 'Consigner sans délai le circuit concerné et procéder aux travaux de mise en conformité immédiate sur le point « $verificationPoint »$normRefStr.';
+      return 'Remédier d\'urgence à la non-conformité constatée : $cleanPoint.';
     } else if (criticality == 'majeure') {
-      return 'Planifier à court terme la remise en conformité technique de l\'installation sur le point « $verificationPoint » selon les prescriptions normatives applicables$normRefStr.';
+      return 'Remettre en conformité technique : $cleanPoint.';
     } else {
-      return 'Intégrer la régularisation du point « $verificationPoint » dans le programme de maintenance préventive courante$normRefStr.';
+      return 'Régulariser lors de la maintenance préventive : $cleanPoint.';
     }
   }
 
-  /// Synthétise des puces d'actions pour une criticité donnée en regroupant les constats par famille technique.
+  /// Synthétise des puces d'actions concises pour une criticité donnée en regroupant les constats par famille technique.
   /// RÈGLE ABSOLUE : ZÉRO invention ! Seuls les écarts réels sont transformés en puces.
+  /// Précis et concis : Aucune référence normative, aucune mention [Concerne : ...] dans les puces.
   static List<String> _synthesizeAggregatedBullets(
     List<HierarchicalRecommendation> recos,
     TensionDomain domain,
@@ -588,21 +625,8 @@ class HierarchicalRecommendationsEngine {
       final group = entry.value;
       if (group.isEmpty) continue;
 
-      // Rassembler les équipements et normes concernés
-      final equipmentsSet = <String>{};
-      final normSet = <String>{};
-      for (final r in group) {
-        equipmentsSet.addAll(r.impactedEquipments);
-        normSet.addAll(r.normativeReferences);
-      }
-
-      final normSuffix = normSet.isNotEmpty
-          ? ' (${normSet.first})'
-          : (domain == TensionDomain.mt ? ' (NF C 13-100 / 13-200)' : ' (NF C 15-100)');
-
       final String actionText;
       if (group.length == 1) {
-        // Une seule recommandation dans la famille
         actionText = group.first.recommendedAction;
       } else {
         // Plusieurs recommandations dans la même famille : formulation synthétique unifiée
@@ -612,23 +636,13 @@ class HierarchicalRecommendationsEngine {
           criticality: criticality,
           sampleActions: group.map((r) => r.recommendedAction).toList(),
           sampleTitles: group.map((r) => r.issueTitle).toList(),
-          normSuffix: normSuffix,
         );
       }
 
-      // Contexte des équipements si disponible et pertinent
-      String finalBullet = actionText;
-      if (equipmentsSet.isNotEmpty) {
-        final equipSummary = equipmentsSet.length <= 3
-            ? equipmentsSet.join(', ')
-            : '${equipmentsSet.take(3).join(', ')} (+${equipmentsSet.length - 3} autres)';
-        // Vérifier si l'équipement n'est pas déjà mentionné dans le texte
-        if (!actionText.toLowerCase().contains(equipmentsSet.first.toLowerCase())) {
-          finalBullet = '$actionText [Concerne : $equipSummary]';
-        }
+      final trimmed = actionText.trim();
+      if (trimmed.isNotEmpty && !bullets.contains(trimmed)) {
+        bullets.add(trimmed);
       }
-
-      bullets.add(finalBullet);
     }
 
     return bullets;
@@ -637,6 +651,18 @@ class HierarchicalRecommendationsEngine {
   /// Détecte la famille technique d'une recommandation pour regroupement intelligent
   static String _detectTechnicalFamily(HierarchicalRecommendation reco) {
     final text = '${reco.issueTitle} ${reco.recommendedAction}'.toLowerCase();
+    if (text.contains('dgpt2') || text.contains('buchholz')) {
+      return 'dgpt2_buchholz';
+    }
+    if (text.contains('infiltrat') || text.contains('étanchéité') || text.contains('etancheite') || text.contains('entrée d\'eau') || RegExp(r'\beau\b|\beaux\b').hasMatch(text)) {
+      return 'eau_infiltrations';
+    }
+    if (text.contains('consigne') || text.contains('plaque') || text.contains('danger') || text.contains('signalisation')) {
+      return 'consignes_plaques';
+    }
+    if (text.contains('isolateur') || text.contains('amorçage') || text.contains('amorcage')) {
+      return 'isolateurs_amorcage';
+    }
     if (text.contains('obturation') || text.contains('plastron') || text.contains('ip2x') || text.contains('contact direct') || text.contains('enveloppe')) {
       return 'ip2x_contacts_directs';
     }
@@ -676,43 +702,50 @@ class HierarchicalRecommendationsEngine {
     return reco.id;
   }
 
-  /// Synthétise une action unifiée pour un groupe de recommandations de même famille
+  /// Synthétise une action unifiée concise pour un groupe de recommandations de même famille
   static String _synthesizeClusterAction({
     required String familyKey,
     required TensionDomain domain,
     required String criticality,
     required List<String> sampleActions,
     required List<String> sampleTitles,
-    required String normSuffix,
   }) {
     switch (familyKey) {
+      case 'dgpt2_buchholz':
+        return 'Remettre en état fonctionnel et raccorder les protections DGPT2 / Buchholz.';
+      case 'eau_infiltrations':
+        return 'Étanchéifier les locaux et réservations pour supprimer toute infiltration d\'eau.';
+      case 'consignes_plaques':
+        return 'Installer et rendre lisibles les consignes de sécurité et plaques de danger.';
+      case 'isolateurs_amorcage':
+        return 'Nettoyer ou remplacer les isolateurs présentant des traces d\'amorçage.';
       case 'ip2x_contacts_directs':
-        return 'Obturer l\'ensemble des réservations, passages de câbles et alvéoles ouvertes au moyen d\'obturateurs coupe-feu et plastrons conformes pour garantir l\'indice IP2X et prévenir tout risque de contact direct$normSuffix.';
+        return 'Obturer les réservations et ouvertures, et poser les plastrons pour garantir l\'indice IP2X.';
       case 'pe_terre_equipotentialite':
-        return 'Rétablir la continuité des conducteurs de protection (PE) et des liaisons équipotentielles sur l\'ensemble des masses métalliques avec vérification des seuils de résistance réglementaires$normSuffix.';
+        return 'Rétablir la continuité des conducteurs de protection (PE) et des liaisons équipotentielles.';
       case 'ddr_isolement':
-        return 'Remplacer ou recalibrer les dispositifs différentiels (DDR) défaillants et remédier aux défauts d\'isolement identifiés pour assurer le déclenchement automatique instantané$normSuffix.';
+        return 'Remplacer les différentiels (DDR) défectueux et éliminer les défauts d\'isolement.';
       case 'reperage_schema_documentation':
-        return 'Généraliser le repérage normalisé sur l\'ensemble des départs, appareillages et borniers, et afficher les schémas unifilaires conformes à l\'intérieur des enveloppes$normSuffix.';
+        return 'Mettre à jour le repérage des circuits et afficher les schémas unifilaires conformes.';
       case 'connexions_serrage_cables':
-        return 'Procéder au contrôle du couple de serrage dynamométrique de toutes les connexions électriques, reprendre les raccordements et remplacer les conducteurs présentant des traces d\'échauffement$normSuffix.';
+        return 'Contrôler le serrage dynamométrique des connexions et remplacer les conducteurs échauffés.';
       case 'protections_calibres':
-        return 'Mettre en conformité les calibres et pouvoirs de coupure des dispositifs de protection amont avec les sections de câbles protégées et les contraintes thermiques présumées$normSuffix.';
+        return 'Mettre en adéquation les calibres des protections avec les sections de câbles associées.';
       case 'parafoudres_foudre':
-        return 'Installer ou remplacer les cartouches de parafoudres en tête d\'installation avec leurs déconnecteurs associés et vérifier leur raccordement au collecteur principal de terre$normSuffix.';
+        return 'Remplacer les cartouches de parafoudres défaillantes et raccorder leur déconnecteur à la terre.';
       case 'coupure_urgence':
-        return 'Installer ou remettre en état fonctionnel les organes de coupure d\'urgence identifiés, en assurant leur accessibilité immédiate et leur action directe sur l\'alimentation$normSuffix.';
+        return 'Remettre en état fonctionnel et dégager l\'accès aux organes de coupure d\'urgence.';
       case 'epi_securite':
-        return 'Approvisionner et mettre à disposition immédiate dans les locaux techniques les équipements de protection individuelle et collectifs réglementaires vérifiés et valides$normSuffix.';
+        return 'Mettre à disposition dans les locaux les équipements de protection (EPI) réglementaires.';
       case 'cellules_transfos_verrouillage':
-        return 'Effectuer la révision complète des cellules HTA et transformateurs : asservissements, verrouillages mécaniques, contrôle diélectrique et dépoussiérage approfondi$normSuffix.';
+        return 'Réviser les cellules HTA et transformateurs (asservissements, verrouillages et dépoussiérage).';
       case 'eclairage_securite':
-        return 'Remettre en service les blocs autonomes d\'éclairage de sécurité (BAES) défectueux et tester leur autonomie réglementaire d\'une heure$normSuffix.';
+        return 'Remettre en service les blocs autonomes d\'éclairage de sécurité (BAES) défectueux.';
       case 'locaux_ventilation':
-        return 'Dégager intégralement les allées de circulation et accès aux armoires, et rétablir une ventilation efficace des locaux pour prévenir tout échauffement anormal$normSuffix.';
+        return 'Dégager les accès aux armoires et rétablir une ventilation efficace des locaux.';
       default:
         if (sampleActions.isNotEmpty) return sampleActions.first;
-        return 'Mettre en conformité l\'ensemble des écarts constatés selon les prescriptions normatives applicables$normSuffix.';
+        return 'Remettre en conformité technique l\'ensemble des écarts constatés.';
     }
   }
 }
