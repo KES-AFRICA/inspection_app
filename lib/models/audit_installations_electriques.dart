@@ -1770,9 +1770,30 @@ class DepartEquipement {
     this.conducteursPhase,
     this.conducteursNeutre,
     this.natureCable,
-  }) : id = (id != null && id.trim().isNotEmpty)
-            ? id
-            : 'dep_${DateTime.now().microsecondsSinceEpoch}_${identification.hashCode.abs()}';
+  }) : id = _resolveStableDepartId(
+          id: id,
+          identification: identification,
+          calibre: calibre,
+          typeProtection: typeProtection,
+          sectionCable: sectionCable,
+        );
+
+  static String _resolveStableDepartId({
+    String? id,
+    required String identification,
+    required String calibre,
+    required String typeProtection,
+    required String sectionCable,
+  }) {
+    if (id != null && id.trim().isNotEmpty) {
+      return id.trim();
+    }
+    if (identification.trim().isNotEmpty || calibre.trim().isNotEmpty || typeProtection.trim().isNotEmpty) {
+      final sig = '${identification.trim()}_${calibre.trim()}_${typeProtection.trim()}_${sectionCable.trim()}';
+      return 'dep_legacy_${sig.hashCode.abs()}';
+    }
+    return 'dep_${DateTime.now().microsecondsSinceEpoch}_${identityHashCode(identification)}';
+  }
 
   DepartEquipement copyWith({
     String? id,
@@ -1904,9 +1925,30 @@ class CircuitTerminalEquipement {
     this.conducteursPhase,
     this.conducteursNeutre,
     this.natureCable,
-  }) : id = (id != null && id.trim().isNotEmpty)
-            ? id
-            : 'ct_${DateTime.now().microsecondsSinceEpoch}_${identification.hashCode.abs()}';
+  }) : id = _resolveStableCircuitId(
+          id: id,
+          identification: identification,
+          calibre: calibre,
+          typeProtection: typeProtection,
+          sectionCable: sectionCable,
+        );
+
+  static String _resolveStableCircuitId({
+    String? id,
+    required String identification,
+    required String calibre,
+    required String typeProtection,
+    required String sectionCable,
+  }) {
+    if (id != null && id.trim().isNotEmpty) {
+      return id.trim();
+    }
+    if (identification.trim().isNotEmpty || calibre.trim().isNotEmpty || typeProtection.trim().isNotEmpty) {
+      final sig = '${identification.trim()}_${calibre.trim()}_${typeProtection.trim()}_${sectionCable.trim()}';
+      return 'ct_legacy_${sig.hashCode.abs()}';
+    }
+    return 'ct_${DateTime.now().microsecondsSinceEpoch}_${identityHashCode(identification)}';
+  }
 
   CircuitTerminalEquipement copyWith({
     String? id,

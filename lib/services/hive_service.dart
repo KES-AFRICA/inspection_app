@@ -2313,6 +2313,52 @@ static CoffretArmoire? findCoffretByQrCode(String missionId, String qrCode) {
     });
   }
 
+  /// Déconnecte proprement tout équipement aval qui référençait ce [departId] supprimé
+  static Future<int> cleanupOrphanDepartSources(String missionId, String departId) async {
+    if (departId.trim().isEmpty) return 0;
+    try {
+      final audit = getAuditInstallationsByMissionId(missionId);
+      if (audit == null) return 0;
+
+      int cleanedCount = 0;
+      void checkAndClean(List<CoffretArmoire> coffrets) {
+        for (final c in coffrets) {
+          if (c.sourceDepartId != null && c.sourceDepartId == departId) {
+            c.sourceDepartId = null;
+            cleanedCount++;
+          }
+        }
+      }
+
+      for (final l in audit.moyenneTensionLocaux) {
+        checkAndClean(l.coffrets);
+      }
+      for (final z in audit.moyenneTensionZones) {
+        checkAndClean(z.coffrets);
+        for (final l in z.locaux) {
+          checkAndClean(l.coffrets);
+        }
+      }
+      for (final z in audit.basseTensionZones) {
+        checkAndClean(z.coffretsDirects);
+        for (final l in z.locaux) {
+          checkAndClean(l.coffrets);
+        }
+      }
+
+      if (cleanedCount > 0) {
+        await saveAuditInstallations(audit, skipDescriptionSync: true);
+        if (kDebugMode) {
+          print('🧹 [CLEANUP ORPHAN DEPART] $cleanedCount équipement(s) aval déconnecté(s) du départ supprimé $departId');
+        }
+      }
+      return cleanedCount;
+    } catch (e) {
+      if (kDebugMode) print('⚠️ Erreur cleanupOrphanDepartSources: $e');
+      return 0;
+    }
+  }
+
 // Vérifier si un QR code existe déjà
 static bool qrCodeExists(String missionId, String qrCode) {
   if (qrCode.trim().isEmpty) return false;
@@ -3009,9 +3055,23 @@ static Future<bool> addLocalToBasseTensionZone({
         // FUSION PROTECTRICE DES DÉPARTS (Deep Merge sans perte)
         final mergedDepartures = <DepartEquipement>[...base.effectiveDepartures];
         for (final dep in donor.effectiveDepartures) {
-          final idx = mergedDepartures.indexWhere((d) =>
-              (d.id.isNotEmpty && d.id == dep.id) ||
-              (d.identification.trim().isNotEmpty && d.identification.trim().toLowerCase() == dep.identification.trim().toLowerCase()));
+          final idx = mergedDepartures.indexWhere((d) {
+            // 1. Même ID explicite non-vide
+            if (d.id.isNotEmpty && dep.id.isNotEmpty && d.id == dep.id) {
+              return true;
+            }
+            // 2. Clone strict en cas d'absence de concordance d'ID : même identification ET mêmes specs techniques clés
+            final dNom = d.identification.trim().toLowerCase();
+            final depNom = dep.identification.trim().toLowerCase();
+            if (dNom.isNotEmpty && dNom == depNom) {
+              final sameCalibre = d.calibre.trim() == dep.calibre.trim();
+              final sameType = d.typeProtection.trim() == dep.typeProtection.trim();
+              final sameCourbe = d.courbe.trim() == dep.courbe.trim();
+              final sameDdr = d.ddr.trim() == dep.ddr.trim();
+              return sameCalibre && sameType && sameCourbe && sameDdr;
+            }
+            return false;
+          });
           if (idx == -1) {
             mergedDepartures.add(dep);
           } else {
@@ -3034,9 +3094,23 @@ static Future<bool> addLocalToBasseTensionZone({
         // FUSION PROTECTRICE DES CIRCUITS TERMINAUX (Deep Merge sans perte)
         final mergedCircuits = <CircuitTerminalEquipement>[...base.effectiveTerminalCircuits];
         for (final ct in donor.effectiveTerminalCircuits) {
-          final idx = mergedCircuits.indexWhere((c) =>
-              (c.id.isNotEmpty && c.id == ct.id) ||
-              (c.identification.trim().isNotEmpty && c.identification.trim().toLowerCase() == ct.identification.trim().toLowerCase()));
+          final idx = mergedCircuits.indexWhere((c) {
+            // 1. Même ID explicite non-vide
+            if (c.id.isNotEmpty && ct.id.isNotEmpty && c.id == ct.id) {
+              return true;
+            }
+            // 2. Clone strict en cas d'absence de concordance d'ID : même identification ET mêmes specs techniques clés
+            final cNom = c.identification.trim().toLowerCase();
+            final ctNom = ct.identification.trim().toLowerCase();
+            if (cNom.isNotEmpty && cNom == ctNom) {
+              final sameCalibre = c.calibre.trim() == ct.calibre.trim();
+              final sameType = c.typeProtection.trim() == ct.typeProtection.trim();
+              final sameCourbe = c.courbe.trim() == ct.courbe.trim();
+              final sameDdr = c.ddr.trim() == ct.ddr.trim();
+              return sameCalibre && sameType && sameCourbe && sameDdr;
+            }
+            return false;
+          });
           if (idx == -1) {
             mergedCircuits.add(ct);
           } else {

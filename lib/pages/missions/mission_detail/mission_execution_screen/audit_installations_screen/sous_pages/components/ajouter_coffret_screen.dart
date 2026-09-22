@@ -5418,8 +5418,8 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         target.verificationThermographie = newCoffret.verificationThermographie;
         target.presenceDefautThermo = newCoffret.presenceDefautThermo;
         target.indiceIpIk = newCoffret.indiceIpIk;
-        target.departures = newCoffret.effectiveDepartures.isNotEmpty ? newCoffret.departures : (target.departures ?? []);
-        target.terminalCircuits = newCoffret.effectiveTerminalCircuits.isNotEmpty ? newCoffret.terminalCircuits : (target.terminalCircuits ?? []);
+        target.departures = List.from(newCoffret.effectiveDepartures);
+        target.terminalCircuits = List.from(newCoffret.effectiveTerminalCircuits);
         target.sourceEquipementId = newCoffret.sourceEquipementId;
         target.sourceNomComplet = newCoffret.sourceNomComplet;
         target.sourceDepartId = newCoffret.sourceDepartId;
@@ -7061,12 +7061,16 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
                                 title: 'Supprimer ce départ ?',
                                 message: 'Cette action supprimera définitivement les informations saisies pour le Départ ${index + 1}.',
                                 onConfirm: () {
+                                  final deletedId = dep.id;
                                   setState(() {
                                     widget.departures.removeWhere((d) => d.id == dep.id);
                                     if (_expandedDepartId == dep.id) {
                                       _expandedDepartId = null;
                                     }
                                   });
+                                  if (deletedId.trim().isNotEmpty) {
+                                    HiveService.cleanupOrphanDepartSources(widget.missionId, deletedId);
+                                  }
                                   widget.onDataChanged();
                                 },
                               );
