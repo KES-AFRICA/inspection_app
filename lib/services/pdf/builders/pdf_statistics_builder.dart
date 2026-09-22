@@ -972,7 +972,6 @@ class PdfStatisticsBuilder {
           '- % du total : Part relative des NC de la catégorie rapportée à l\'ensemble des non-conformités de la mission.\n'
           '- Taux critique : Proportion de constats critiques parmi les non-conformités de la catégorie.\n'
           '- Densité : Ratio moyen de non-conformités par équipement de la catégorie.\n\n'
-          'Note méthodologique : Les non-conformités afférentes aux dispositions constructives du génie civil des locaux techniques sont isolées dans le volet bâtiment du résumé exécutif pour garantir la stricte comparabilité de l\'exploitation et de la maintenance des parcs d\'équipements.',
         ),
       ],
     );
