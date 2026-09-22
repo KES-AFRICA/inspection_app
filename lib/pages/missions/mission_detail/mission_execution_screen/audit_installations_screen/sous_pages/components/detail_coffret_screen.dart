@@ -1852,6 +1852,368 @@ Future<void> _supprimerEssai(EssaiDeclenchementDifferentiel essai) async {
   );
 }
 
+  Widget _buildDepartsCircuitsTab() {
+    final departs = _coffret.effectiveDepartures;
+    final circuits = _coffret.effectiveTerminalCircuits;
+
+    if (departs.isEmpty && circuits.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.alt_route,
+                  size: 56,
+                  color: AppTheme.primaryBlue,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Aucun départ ni circuit',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey.shade800,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Les départs et circuits terminaux issus de cet équipement apparaîtront ici.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: _editerCoffret,
+                icon: const Icon(Icons.edit, size: 18),
+                label: const Text('Configurer départs & circuits'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryBlue,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        if (departs.isNotEmpty) ...[
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryBlue.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Icon(Icons.alt_route, color: AppTheme.primaryBlue, size: 20),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'DÉPARTS (${departs.length})',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.primaryBlue,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...departs.asMap().entries.map((entry) => _buildDepartItemCard(entry.value, entry.key + 1)),
+        ],
+
+        if (departs.isNotEmpty && circuits.isNotEmpty)
+          const SizedBox(height: 24),
+
+        if (circuits.isNotEmpty) ...[
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.teal.shade50,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Icon(Icons.electrical_services, color: Colors.teal.shade700, size: 20),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'CIRCUITS TERMINAUX (${circuits.length})',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.teal.shade800,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...circuits.asMap().entries.map((entry) => _buildCircuitTerminalItemCard(entry.value, entry.key + 1)),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildDepartItemCard(DepartEquipement dep, int index) {
+    final title = dep.identification.trim().isNotEmpty ? dep.identification.trim() : 'Départ #$index';
+    final hasProt = dep.protectionTete.trim().toLowerCase() == 'présent' ||
+        dep.protectionTete.trim().toLowerCase() == 'oui' ||
+        dep.protectionTete.trim().toLowerCase() == 'present';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey.shade300),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(9)),
+              border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryBlue,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    'D$index',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: hasProt ? Colors.green.shade50 : Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: hasProt ? Colors.green.shade300 : Colors.orange.shade300,
+                    ),
+                  ),
+                  child: Text(
+                    hasProt ? 'Prot. présente' : 'Prot. absente',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: hasProt ? Colors.green.shade800 : Colors.orange.shade800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildInfoRow('Type protection', dep.typeProtection),
+                if (dep.marque.trim().isNotEmpty)
+                  _buildInfoRow('Marque', dep.marque),
+                if (dep.calibre.trim().isNotEmpty)
+                  _buildInfoRow('Calibre', '${dep.calibre} A'),
+                if (dep.courbe.trim().isNotEmpty)
+                  _buildInfoRow('Courbe', dep.courbe),
+                if (dep.ddr.trim().isNotEmpty)
+                  _buildInfoRow('DDR (IΔn)', '${dep.ddr} mA'),
+                if (dep.pdcKA.trim().isNotEmpty)
+                  _buildInfoRow('PDC (kA)', '${dep.pdcKA} kA'),
+                if (dep.icc3Max.trim().isNotEmpty)
+                  _buildInfoRow('Icc3 max', '${dep.icc3Max} kA'),
+                if (dep.sectionCable.trim().isNotEmpty || (dep.sectionCableNeutre != null && dep.sectionCableNeutre!.trim().isNotEmpty)) ...[
+                  const Divider(height: 16),
+                  _buildInfoRow(
+                    'Câble Phase',
+                    '${dep.effectiveConducteursPhase != null ? "${dep.effectiveConducteursPhase}x" : ""}${dep.effectiveSectionCablePhase} mm²',
+                  ),
+                  if (dep.effectiveSectionCableNeutre.trim().isNotEmpty)
+                    _buildInfoRow(
+                      'Câble Neutre',
+                      '${dep.effectiveConducteursNeutre != null ? "${dep.effectiveConducteursNeutre}x" : ""}${dep.effectiveSectionCableNeutre} mm²',
+                    ),
+                  if (dep.natureCable != null && dep.natureCable!.trim().isNotEmpty)
+                    _buildInfoRow('Nature câble', dep.natureCable!),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCircuitTerminalItemCard(CircuitTerminalEquipement ct, int index) {
+    final title = ct.identification.trim().isNotEmpty ? ct.identification.trim() : 'Circuit terminal #$index';
+    final hasProt = ct.protectionTete.trim().toLowerCase() == 'oui' ||
+        ct.protectionTete.trim().toLowerCase() == 'présent' ||
+        ct.protectionTete.trim().toLowerCase() == 'present';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey.shade300),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.teal.shade50.withValues(alpha: 0.5),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(9)),
+              border: Border(bottom: BorderSide(color: Colors.teal.shade100)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Colors.teal.shade600,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    'C$index',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: hasProt ? Colors.green.shade50 : Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: hasProt ? Colors.green.shade300 : Colors.orange.shade300,
+                    ),
+                  ),
+                  child: Text(
+                    hasProt ? 'Prot. présente' : 'Prot. absente',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: hasProt ? Colors.green.shade800 : Colors.orange.shade800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildInfoRow('Type protection', ct.typeProtection),
+                if (ct.marque.trim().isNotEmpty)
+                  _buildInfoRow('Marque', ct.marque),
+                if (ct.calibre.trim().isNotEmpty)
+                  _buildInfoRow('Calibre', '${ct.calibre} A'),
+                if (ct.courbe.trim().isNotEmpty)
+                  _buildInfoRow('Courbe', ct.courbe),
+                if (ct.ddr.trim().isNotEmpty)
+                  _buildInfoRow('DDR (IΔn)', '${ct.ddr} mA'),
+                if (ct.pdcKA.trim().isNotEmpty)
+                  _buildInfoRow('PDC (kA)', '${ct.pdcKA} kA'),
+                if (ct.icc3Max.trim().isNotEmpty)
+                  _buildInfoRow('Icc3 max', '${ct.icc3Max} kA'),
+                if (ct.sectionCable.trim().isNotEmpty || (ct.sectionCableNeutre != null && ct.sectionCableNeutre!.trim().isNotEmpty)) ...[
+                  const Divider(height: 16),
+                  _buildInfoRow(
+                    'Câble Phase',
+                    '${ct.effectiveConducteursPhase != null ? "${ct.effectiveConducteursPhase}x" : ""}${ct.effectiveSectionCablePhase} mm²',
+                  ),
+                  if (ct.effectiveSectionCableNeutre.trim().isNotEmpty)
+                    _buildInfoRow(
+                      'Câble Neutre',
+                      '${ct.effectiveConducteursNeutre != null ? "${ct.effectiveConducteursNeutre}x" : ""}${ct.effectiveSectionCableNeutre} mm²',
+                    ),
+                  if (ct.natureCable != null && ct.natureCable!.trim().isNotEmpty)
+                    _buildInfoRow('Nature câble', ct.natureCable!),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildStatItem(String title, String value) {
     return Column(
       children: [
@@ -1917,9 +2279,9 @@ Future<void> _supprimerEssai(EssaiDeclenchementDifferentiel essai) async {
           _buildCoffretStats(),
           Expanded(
             child: DefaultTabController(
-              length: 5,
-              // currentStep peut dépasser 5 si sauvegardé avec ancienne logique → clamp
-              initialIndex: (_coffret.currentStep).clamp(0, 4),
+              length: 6,
+              // currentStep peut dépasser 6 si sauvegardé avec ancienne logique → clamp
+              initialIndex: (_coffret.currentStep).clamp(0, 5),
               child: Column(
                 children: [
                   Container(
@@ -1933,6 +2295,7 @@ Future<void> _supprimerEssai(EssaiDeclenchementDifferentiel essai) async {
                         Tab(text: 'OBSERVATIONS (${_coffret.observationsLibres.length + _coffret.observationsParafoudre.length})'),
                         Tab(text: 'PHOTOS (${_coffretPhotos.length})'),
                         Tab(text: 'INFORMATIONS'),
+                        Tab(text: 'DÉPARTS & CIRCUITS (${_coffret.effectiveDepartures.length + _coffret.effectiveTerminalCircuits.length})'),
                         Tab(text: 'POINTS (${_coffret.pointsVerification.length})'),
                          Tab(text: 'ESSAI'),
                       ],
@@ -2068,6 +2431,9 @@ Future<void> _supprimerEssai(EssaiDeclenchementDifferentiel essai) async {
                             ],
                           ],
                         ),
+
+                        // Tab DÉPARTS & CIRCUITS
+                        _buildDepartsCircuitsTab(),
 
                         // Tab POINTS DE VÉRIFICATION
                         _coffret.pointsVerification.isEmpty

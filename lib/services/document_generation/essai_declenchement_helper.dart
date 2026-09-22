@@ -19,6 +19,18 @@ class EssaiDeclenchementHelper {
   static const String precisionDepart = 'départ';
   static const String precisionCircuit = 'circuit';
 
+  /// Indique si le type de protection autorise la saisie d'un DDR (réservé aux différentiels)
+  static bool isDdrApplicable(String? typeProtection) {
+    if (typeProtection == null || typeProtection.trim().isEmpty) return false;
+    final norm = typeProtection.trim().toLowerCase();
+    return norm.contains('différentiel') ||
+        norm.contains('differentiel') ||
+        norm.contains('ddr') ||
+        norm.contains('idr') ||
+        norm == 'rd' ||
+        norm.contains('relais diff');
+  }
+
   /// Règle centrale :
   /// Le bouton est visible UNIQUEMENT si :
   /// typeProtection = "Interrupteur différentiel" OU "Disjoncteur différentiel"

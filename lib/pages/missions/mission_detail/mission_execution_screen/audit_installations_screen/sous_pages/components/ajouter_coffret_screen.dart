@@ -2968,7 +2968,21 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
               SizedBox(height: context.spacingS),
               _buildModernTextFieldWithSuffix(context, label: 'Calibre', suffix: 'A', controller: calibreCtrl, onChanged: (v) => onChanged('calibre', v), readOnly: isLocked),
               SizedBox(height: context.spacingS),
-              _buildModernDropdown(context, label: 'DDR IΔn (mA)', value: ddrVal, items: ddrItems, onChanged: (v) => onChanged('ddr', v), readOnly: isLocked),
+              Builder(
+                builder: (context) {
+                  final bool isDdrAllowed = EssaiDeclenchementHelper.isDdrApplicable(a.typeProtection);
+                  return _buildModernDropdown(
+                    context,
+                    label: isDdrAllowed ? 'DDR IΔn (mA)' : 'DDR IΔn (mA) — Non applicable',
+                    value: ddrVal,
+                    items: ddrItems,
+                    onChanged: (v) => onChanged('ddr', v),
+                    readOnly: isLocked,
+                    disabled: !isDdrAllowed,
+                    disabledHint: 'Non applicable (Non différentiel)',
+                  );
+                },
+              ),
               SizedBox(height: context.spacingS),
             ],
           ],
@@ -3386,25 +3400,73 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
     );
   }
 
-  Widget _buildModernDropdown(BuildContext context, {required String label, required String value, required List<String> items, required Function(String) onChanged, bool readOnly = false}) {
+  Widget _buildModernDropdown(
+    BuildContext context, {
+    required String label,
+    required String value,
+    required List<String> items,
+    required Function(String) onChanged,
+    bool readOnly = false,
+    bool disabled = false,
+    String? disabledHint,
+  }) {
+    final bool isEffectivelyDisabled = readOnly || disabled;
+    final Color bgColor = disabled
+        ? Colors.grey.shade100
+        : (readOnly ? Colors.amber.shade50.withOpacity(0.5) : Colors.grey.shade50);
+    final Color borderColor = disabled
+        ? Colors.grey.shade300
+        : (readOnly ? Colors.amber.shade300 : Colors.grey.shade300);
+    final Color labelColor = disabled
+        ? Colors.grey.shade400
+        : (readOnly ? Colors.amber.shade900 : Colors.grey.shade600);
+
     return Container(
-      decoration: BoxDecoration(color: readOnly ? Colors.amber.shade50.withOpacity(0.5) : Colors.grey.shade50, borderRadius: BorderRadius.circular(context.spacingS), border: Border.all(color: readOnly ? Colors.amber.shade300 : Colors.grey.shade300)),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(context.spacingS),
+        border: Border.all(color: borderColor),
+      ),
       child: DropdownButtonFormField<String>(
         value: value.isNotEmpty ? value : null,
         isExpanded: true,
-        icon: Icon(readOnly ? Icons.lock_outline : Icons.arrow_drop_down, size: readOnly ? 16 : 24, color: readOnly ? Colors.amber.shade900 : Colors.grey.shade600),
-        hint: Text('Sélectionnez...', style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade500)),
+        icon: Icon(
+          disabled
+              ? Icons.block
+              : (readOnly ? Icons.lock_outline : Icons.arrow_drop_down),
+          size: isEffectivelyDisabled ? 16 : 24,
+          color: labelColor,
+        ),
+        hint: Text(
+          disabled ? (disabledHint ?? 'Non applicable') : 'Sélectionnez...',
+          style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade400),
+        ),
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: TextStyle(fontSize: context.fontSizeS, color: readOnly ? Colors.amber.shade900 : Colors.grey.shade600),
+          labelStyle: TextStyle(fontSize: context.fontSizeS, color: labelColor),
           border: InputBorder.none,
           contentPadding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingS),
         ),
         items: [
-          DropdownMenuItem<String>(value: '', child: Text('— Aucun —', style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade500, fontStyle: FontStyle.italic))),
-          ...items.map((item) => DropdownMenuItem<String>(value: item, child: Text(item, style: TextStyle(fontSize: context.fontSizeS, color: readOnly ? Colors.amber.shade900 : null, fontWeight: readOnly ? FontWeight.bold : FontWeight.normal)))),
+          DropdownMenuItem<String>(
+            value: '',
+            child: Text('— Aucun —', style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade400, fontStyle: FontStyle.italic)),
+          ),
+          ...items.map(
+            (item) => DropdownMenuItem<String>(
+              value: item,
+              child: Text(
+                item,
+                style: TextStyle(
+                  fontSize: context.fontSizeS,
+                  color: disabled ? Colors.grey.shade600 : (readOnly ? Colors.amber.shade900 : null),
+                  fontWeight: readOnly ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+            ),
+          ),
         ],
-        onChanged: readOnly ? null : (v) => onChanged(v ?? ''),
+        onChanged: isEffectivelyDisabled ? null : (v) => onChanged(v ?? ''),
       ),
     );
   }
@@ -7284,12 +7346,33 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
                   ),
                   const SizedBox(height: 12),
 
-                  DropdownButtonFormField<String>(
-                    value: dep.ddr.isNotEmpty ? dep.ddr : null,
-                    isExpanded: true,
-                    decoration: const InputDecoration(labelText: 'DDR IΔn (mA)', isDense: true, border: OutlineInputBorder()),
-                    items: ddrItems.map((e) => DropdownMenuItem(value: e, child: Text('$e mA', overflow: TextOverflow.ellipsis))).toList(),
-                    onChanged: (v) { setState(() { dep.ddr = v ?? ''; }); widget.onDataChanged(); },
+                  Builder(
+                    builder: (context) {
+                      final bool isDdrAllowed = EssaiDeclenchementHelper.isDdrApplicable(dep.typeProtection);
+                      return DropdownButtonFormField<String>(
+                        value: dep.ddr.isNotEmpty ? dep.ddr : null,
+                        isExpanded: true,
+                        icon: Icon(
+                          isDdrAllowed ? Icons.arrow_drop_down : Icons.block,
+                          color: isDdrAllowed ? Colors.grey.shade700 : Colors.grey.shade400,
+                          size: isDdrAllowed ? 24 : 16,
+                        ),
+                        decoration: InputDecoration(
+                          labelText: isDdrAllowed ? 'DDR IΔn (mA)' : 'DDR IΔn (mA) — Non applicable',
+                          labelStyle: TextStyle(
+                            fontSize: context.fontSizeS,
+                            color: isDdrAllowed ? Colors.grey.shade700 : Colors.grey.shade400,
+                          ),
+                          hintText: !isDdrAllowed ? 'Non applicable (Non différentiel)' : null,
+                          isDense: true,
+                          border: const OutlineInputBorder(),
+                          filled: !isDdrAllowed,
+                          fillColor: !isDdrAllowed ? Colors.grey.shade100 : null,
+                        ),
+                        items: ddrItems.map((e) => DropdownMenuItem(value: e, child: Text('$e mA', overflow: TextOverflow.ellipsis))).toList(),
+                        onChanged: isDdrAllowed ? (v) { setState(() { dep.ddr = v ?? ''; }); widget.onDataChanged(); } : null,
+                      );
+                    },
                   ),
                   const SizedBox(height: 12),
 
@@ -7770,12 +7853,33 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
                   ),
                   const SizedBox(height: 12),
 
-                  DropdownButtonFormField<String>(
-                    value: ct.ddr.isNotEmpty ? ct.ddr : null,
-                    isExpanded: true,
-                    decoration: const InputDecoration(labelText: 'DDR IΔn (mA)', isDense: true, border: OutlineInputBorder()),
-                    items: ddrItems.map((e) => DropdownMenuItem(value: e, child: Text('$e mA', overflow: TextOverflow.ellipsis))).toList(),
-                    onChanged: (v) { setState(() { ct.ddr = v ?? ''; }); widget.onDataChanged(); },
+                  Builder(
+                    builder: (context) {
+                      final bool isDdrAllowed = EssaiDeclenchementHelper.isDdrApplicable(ct.typeProtection);
+                      return DropdownButtonFormField<String>(
+                        value: ct.ddr.isNotEmpty ? ct.ddr : null,
+                        isExpanded: true,
+                        icon: Icon(
+                          isDdrAllowed ? Icons.arrow_drop_down : Icons.block,
+                          color: isDdrAllowed ? Colors.grey.shade700 : Colors.grey.shade400,
+                          size: isDdrAllowed ? 24 : 16,
+                        ),
+                        decoration: InputDecoration(
+                          labelText: isDdrAllowed ? 'DDR IΔn (mA)' : 'DDR IΔn (mA) — Non applicable',
+                          labelStyle: TextStyle(
+                            fontSize: context.fontSizeS,
+                            color: isDdrAllowed ? Colors.grey.shade700 : Colors.grey.shade400,
+                          ),
+                          hintText: !isDdrAllowed ? 'Non applicable (Non différentiel)' : null,
+                          isDense: true,
+                          border: const OutlineInputBorder(),
+                          filled: !isDdrAllowed,
+                          fillColor: !isDdrAllowed ? Colors.grey.shade100 : null,
+                        ),
+                        items: ddrItems.map((e) => DropdownMenuItem(value: e, child: Text('$e mA', overflow: TextOverflow.ellipsis))).toList(),
+                        onChanged: isDdrAllowed ? (v) { setState(() { ct.ddr = v ?? ''; }); widget.onDataChanged(); } : null,
+                      );
+                    },
                   ),
                   const SizedBox(height: 12),
 
