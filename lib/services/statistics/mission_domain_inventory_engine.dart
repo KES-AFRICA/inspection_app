@@ -580,8 +580,11 @@ class MissionDomainInventory {
 /// Responsabilité Unique : Réaliser un parcours unique, déterministe et intelligent
 /// de 100 % des objets métiers d'une mission et construire le registre certifié [MissionDomainInventory].
 class MissionDomainInventoryEngine {
-  static MissionDomainInventory buildInventory(String missionId) {
-    final audit = HiveService.getAuditInstallationsByMissionId(missionId);
+  static MissionDomainInventory buildInventory(
+    String missionId, {
+    AuditInstallationsElectriques? audit,
+  }) {
+    final effectiveAudit = audit ?? HiveService.getAuditInstallationsByMissionId(missionId);
     final foudres = HiveService.getFoudreObservationsByMissionId(missionId);
 
     final instances = <DomainEntityInstance>[];
@@ -602,10 +605,10 @@ class MissionDomainInventoryEngine {
       }
     }
 
-    if (audit != null) {
+    if (effectiveAudit != null) {
       // 1. MOYENNE TENSION : LOCAUX DIRECTS
-      for (var lIdx = 0; lIdx < audit.moyenneTensionLocaux.length; lIdx++) {
-        final local = audit.moyenneTensionLocaux[lIdx];
+      for (var lIdx = 0; lIdx < effectiveAudit.moyenneTensionLocaux.length; lIdx++) {
+        final local = effectiveAudit.moyenneTensionLocaux[lIdx];
         local.migrateFromOldFields();
         _visitMTLocal(
           missionId: missionId,
@@ -622,8 +625,8 @@ class MissionDomainInventoryEngine {
       }
 
       // 2. MOYENNE TENSION : ZONES
-      for (var zIdx = 0; zIdx < audit.moyenneTensionZones.length; zIdx++) {
-        final zone = audit.moyenneTensionZones[zIdx];
+      for (var zIdx = 0; zIdx < effectiveAudit.moyenneTensionZones.length; zIdx++) {
+        final zone = effectiveAudit.moyenneTensionZones[zIdx];
         for (var lIdx = 0; lIdx < zone.locaux.length; lIdx++) {
           final local = zone.locaux[lIdx];
           local.migrateFromOldFields();
@@ -657,8 +660,8 @@ class MissionDomainInventoryEngine {
       }
 
       // 3. BASSE TENSION : ZONES & LOCAUX
-      for (var zIdx = 0; zIdx < audit.basseTensionZones.length; zIdx++) {
-        final zone = audit.basseTensionZones[zIdx];
+      for (var zIdx = 0; zIdx < effectiveAudit.basseTensionZones.length; zIdx++) {
+        final zone = effectiveAudit.basseTensionZones[zIdx];
         for (var lIdx = 0; lIdx < zone.locaux.length; lIdx++) {
           final local = zone.locaux[lIdx];
           _visitBTLocal(
@@ -940,7 +943,6 @@ class MissionDomainInventoryEngine {
         originNom: originNom,
         parentZone: parentZone,
         parentLocal: local.nom,
-        defaultTensionDomain: TensionDomain.mt,
         instances: instances,
         addFinding: addFinding,
         visitedCoffrets: visitedCoffrets,
@@ -1164,9 +1166,7 @@ class MissionDomainInventoryEngine {
       }
     }
 
-    if (instance.totalCheckpoints > 0 || instance.findings.isNotEmpty) {
-      instances.add(instance);
-    }
+    instances.add(instance);
   }
 
   static void _visitTransformateur({
@@ -1227,9 +1227,7 @@ class MissionDomainInventoryEngine {
       }
     }
 
-    if (instance.totalCheckpoints > 0 || instance.findings.isNotEmpty) {
-      instances.add(instance);
-    }
+    instances.add(instance);
   }
 
   // ──────────────────────────────────────────────────────────────
@@ -1242,7 +1240,7 @@ class MissionDomainInventoryEngine {
     required String originNom,
     required String? parentZone,
     required String? parentLocal,
-    TensionDomain defaultTensionDomain = TensionDomain.bt,
+    TensionDomain? defaultTensionDomain,
     required List<DomainEntityInstance> instances,
     required Function(DomainEntityInstance, AuditFinding) addFinding,
     required Set<int> visitedCoffrets,
@@ -1254,12 +1252,18 @@ class MissionDomainInventoryEngine {
     final category = EquipmentClassifier.classify(coffret);
     final coffretRepere = coffret.repere?.isNotEmpty == true ? coffret.repere : coffret.numeroEquipement;
 
+    // RÈGLE MÉTIER ABSOLUE : Le domaine d'un équipement est déterminé par son type technique réel,
+    // jamais par le domaine du local ou de la zone qui l'héberge.
+    final tensionDomain = (category == DomainObjectType.celluleMT || category == DomainObjectType.transformateurMTBT)
+        ? TensionDomain.mt
+        : TensionDomain.bt;
+
     final instance = DomainEntityInstance(
       instanceId: 'eq_$coffretHash',
       category: category,
       name: coffret.nom,
       repere: coffretRepere,
-      tensionDomain: defaultTensionDomain,
+      tensionDomain: tensionDomain,
       originPath: originNom,
       parentZone: parentZone,
       parentLocal: parentLocal,
@@ -1290,7 +1294,7 @@ class MissionDomainInventoryEngine {
               AuditFinding(
                 id: 'eq_${coffretHash}_pv_${i}_obs_$j',
                 missionId: missionId,
-                tensionDomain: defaultTensionDomain,
+                tensionDomain: tensionDomain,
                 origin: originNom,
                 objectType: category.normalizedObjectType,
                 objectName: coffret.nom,
@@ -1313,7 +1317,7 @@ class MissionDomainInventoryEngine {
             AuditFinding(
               id: 'eq_${coffretHash}_pv_$i',
               missionId: missionId,
-              tensionDomain: defaultTensionDomain,
+              tensionDomain: tensionDomain,
               origin: originNom,
               objectType: category.normalizedObjectType,
               objectName: coffret.nom,
@@ -1347,7 +1351,7 @@ class MissionDomainInventoryEngine {
             AuditFinding(
               id: 'eq_${coffretHash}_parafoudre_$i',
               missionId: missionId,
-              tensionDomain: defaultTensionDomain,
+              tensionDomain: tensionDomain,
               origin: originNom,
               objectType: category.normalizedObjectType,
               objectName: '${coffret.nom} (Parafoudre)',

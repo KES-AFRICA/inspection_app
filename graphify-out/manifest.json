@@ -786,9 +786,9 @@
     "semantic_hash": ""
   },
   "lib/models/audit_installations_electriques.dart": {
-    "mtime": 1790083425.752264,
-    "seen": 1790083510.2743866,
-    "ast_hash": "c55921d7cdaa569ea31e942c5f922abe",
+    "mtime": 1790084837.5862057,
+    "seen": 1790093038.3003025,
+    "ast_hash": "18e303554708a4730cb523886cbd88be",
     "semantic_hash": ""
   },
   "lib/models/audit_installations_electriques.g.dart": {
@@ -1110,9 +1110,9 @@
     "semantic_hash": ""
   },
   "lib/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/ajouter_coffret_screen.dart": {
-    "mtime": 1790082622.353398,
-    "seen": 1790083022.3756926,
-    "ast_hash": "e4b3d356516b5947ef67af8588df584f",
+    "mtime": 1790086844.117007,
+    "seen": 1790093038.3003848,
+    "ast_hash": "e68d53a7970b2b2f6ec8d3a1f60acf59",
     "semantic_hash": ""
   },
   "lib/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/ajouter_foudre_screen.dart": {
@@ -1164,9 +1164,9 @@
     "semantic_hash": ""
   },
   "lib/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/detail_coffret_screen.dart": {
-    "mtime": 1788841790.8943043,
-    "seen": 1788842207.314435,
-    "ast_hash": "6bc97d499b01117cb9a4829bfcbcaea5",
+    "mtime": 1790086502.0894718,
+    "seen": 1790093038.3004026,
+    "ast_hash": "b23753d88e451b8b72ce218e13b31922",
     "semantic_hash": ""
   },
   "lib/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/detail_local_screen.dart": {
@@ -1674,9 +1674,9 @@
     "semantic_hash": ""
   },
   "lib/services/hive_service.dart": {
-    "mtime": 1790083443.7062798,
-    "seen": 1790083510.274634,
-    "ast_hash": "483beb1ab6e369ff3afbc84ebc8aeb64",
+    "mtime": 1790085010.6551049,
+    "seen": 1790093038.3005352,
+    "ast_hash": "850e899fd1e3afaadd3b33dd113180a3",
     "semantic_hash": ""
   },
   "lib/services/installation_description_sync_service.dart": {
@@ -1806,9 +1806,9 @@
     "semantic_hash": ""
   },
   "lib/services/pdf/builders/pdf_statistics_builder.dart": {
-    "mtime": 1790078988.0450637,
-    "seen": 1790083022.3758795,
-    "ast_hash": "125021735ab2e1534c5ef448a31af5dd",
+    "mtime": 1790090125.7153308,
+    "seen": 1790093038.30057,
+    "ast_hash": "3d5690a92990086f3bfb54836dc58383",
     "semantic_hash": ""
   },
   "lib/services/pdf/pdf_chunk_merger.dart": {
@@ -1896,21 +1896,21 @@
     "semantic_hash": ""
   },
   "lib/services/statistics/audit_finding.dart": {
-    "mtime": 1790082500.919461,
-    "seen": 1790083022.3759081,
-    "ast_hash": "2bf221f15e1f38bbaa6f4e41145e7bc6",
+    "mtime": 1790088727.907092,
+    "seen": 1790093038.3005986,
+    "ast_hash": "6c6edfb0c22da296b3040b2386086543",
     "semantic_hash": ""
   },
   "lib/services/statistics/audit_finding_inventory_engine.dart": {
-    "mtime": 1789636937.7589054,
-    "seen": 1789653665.4373941,
-    "ast_hash": "47c0d15811233b8d9767a335f1d54521",
+    "mtime": 1790092968.390768,
+    "seen": 1790093038.3005998,
+    "ast_hash": "3f990810ee8fa9f16ebee39528eab96f",
     "semantic_hash": ""
   },
   "lib/services/statistics/canonical_defect_category_registry.dart": {
-    "mtime": 1789487144.9949377,
-    "seen": 1789537796.3362389,
-    "ast_hash": "c8af0caad8761e2975502dabecd56d4e",
+    "mtime": 1790088600.0838375,
+    "seen": 1790093038.3006012,
+    "ast_hash": "4acaaa485315874fa2745b29370c185f",
     "semantic_hash": ""
   },
   "lib/services/statistics/canonical_risk_family_registry.dart": {
@@ -1920,21 +1920,21 @@
     "semantic_hash": ""
   },
   "lib/services/statistics/domain_entity_instance.dart": {
-    "mtime": 1789636591.5332372,
-    "seen": 1789653665.4374006,
-    "ast_hash": "40b1736327ecac2856a03f0e83bcb0cf",
+    "mtime": 1790091292.974357,
+    "seen": 1790093038.3006063,
+    "ast_hash": "7e9a5596d44136bea5c2cff5379fe648",
     "semantic_hash": ""
   },
   "lib/services/statistics/mission_domain_inventory_engine.dart": {
-    "mtime": 1790078988.047715,
-    "seen": 1790083022.3759227,
-    "ast_hash": "27e81f1e8f87f8f60b302301f8531780",
+    "mtime": 1790092082.767987,
+    "seen": 1790093038.3006132,
+    "ast_hash": "77a1a5ce3e816a0afda2c0e12abd9370",
     "semantic_hash": ""
   },
   "lib/services/statistics/mission_statistics.dart": {
-    "mtime": 1790078988.0397422,
-    "seen": 1790083022.3759239,
-    "ast_hash": "241b810a1928af8151e44dfe71221e1a",
+    "mtime": 1790092127.2653534,
+    "seen": 1790093038.3006144,
+    "ast_hash": "d734dd4343fa350660e07d709386b4a5",
     "semantic_hash": ""
   },
   "lib/services/statistics/mission_statistics_collector.dart": {
@@ -3162,9 +3162,9 @@
     "semantic_hash": ""
   },
   "lib/services/document_generation/essai_declenchement_helper.dart": {
-    "mtime": 1788930910.9219332,
-    "seen": 1788931087.2492776,
-    "ast_hash": "08a50cc7343a7ab0153e0d346c0c071c",
+    "mtime": 1790086112.0828679,
+    "seen": 1790093038.3005245,
+    "ast_hash": "aeab4a3440e61c33be397492832a2355",
     "semantic_hash": ""
   },
   "test/features/essai_declenchement_evolution_test.dart": {
@@ -3204,9 +3204,9 @@
     "semantic_hash": ""
   },
   "lib/services/statistics/technical_enrichment_engine.dart": {
-    "mtime": 1790074953.910697,
-    "seen": 1790075068.433847,
-    "ast_hash": "635e0f597cfe2023de9084d26cc02946",
+    "mtime": 1790091391.7876122,
+    "seen": 1790093038.300623,
+    "ast_hash": "b91917cd38ccd047d65921d947a3b6f9",
     "semantic_hash": ""
   },
   "test/features/statistics_enrichment_test.dart": {
@@ -3228,9 +3228,9 @@
     "semantic_hash": ""
   },
   "lib/services/pdf/builders/pdf_statistics_charts.dart": {
-    "mtime": 1790078988.046649,
-    "seen": 1790083022.375881,
-    "ast_hash": "f6391127d8a511c37e4a8127b83e9520",
+    "mtime": 1790088158.4987185,
+    "seen": 1790093038.300572,
+    "ast_hash": "6156e257f3502425af6492c333173918",
     "semantic_hash": ""
   },
   "test/pdf_statistics_test.dart": {
@@ -3696,15 +3696,15 @@
     "semantic_hash": ""
   },
   "test/features/cimencam_reconciliation_e2e_test.dart": {
-    "mtime": 1790074755.8884993,
-    "seen": 1790075068.4339142,
-    "ast_hash": "f242092129e3993e2b3e6ac334615edb",
+    "mtime": 1790092628.4322085,
+    "seen": 1790093038.3006878,
+    "ast_hash": "ff8c6475f9e7c3a0e8cee250137980f6",
     "semantic_hash": ""
   },
   "test/features/statistics_restructuring_forensic_test.dart": {
-    "mtime": 1790074809.5486994,
-    "seen": 1790075068.434078,
-    "ast_hash": "34f482e8af66ccf6cc7b72a1a579b847",
+    "mtime": 1790092252.9166055,
+    "seen": 1790093038.3008513,
+    "ast_hash": "127776cd1139d9154c97a5abcc98413f",
     "semantic_hash": ""
   },
   "lib/services/statistics/ip_ik_evaluator.dart": {
@@ -3807,6 +3807,30 @@
     "mtime": 1790083465.609012,
     "seen": 1790083510.2748022,
     "ast_hash": "fa6b7d9777617855d561f7e56beb0df5",
+    "semantic_hash": ""
+  },
+  "test/features/ddr_restriction_and_detail_tabs_test.dart": {
+    "mtime": 1790086591.075925,
+    "seen": 1790093038.300701,
+    "ast_hash": "ae959388f934eb07d5dab8ed7a4f2f76",
+    "semantic_hash": ""
+  },
+  "test/features/depart_circuit_persistence_forensic_test.dart": {
+    "mtime": 1790085037.7902837,
+    "seen": 1790093038.3007026,
+    "ast_hash": "b06236cf627172fddf5e1fa11c918a21",
+    "semantic_hash": ""
+  },
+  "test/features/mt_bt_equipment_separation_forensic_test.dart": {
+    "mtime": 1790091882.961822,
+    "seen": 1790093038.3007631,
+    "ast_hash": "436c3341e587f93ca28cc309c7c14582",
+    "semantic_hash": ""
+  },
+  "test/features/pareto_forensic_analysis_test.dart": {
+    "mtime": 1790088466.8389611,
+    "seen": 1790093038.3007674,
+    "ast_hash": "c1eff277945ed428ff6b55fecaa17f88",
     "semantic_hash": ""
   }
 }

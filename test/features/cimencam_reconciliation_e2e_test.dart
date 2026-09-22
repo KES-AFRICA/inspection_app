@@ -129,7 +129,7 @@ void main() {
       final mtArmFindings = List.generate(2, (i) => AuditFinding(
         id: 'mt_arm_$i',
         missionId: 'cimencam',
-        tensionDomain: TensionDomain.mt,
+        tensionDomain: TensionDomain.bt, // Armoires are strictly BT even in MT local
         origin: 'Poste MT',
         objectType: 'Armoire',
         objectName: 'Armoire MT 1',
@@ -272,12 +272,12 @@ void main() {
           originPath: 'MT',
           findings: i == 0 ? mtTransFindings : [],
         )),
-        // 74 Armoires (armoire 0 is MT with 2 findings, armoire 1 is BT with 174 findings)
+        // 74 Armoires (all BT, armoire 0 in MT local with 2 findings, armoire 1 with 174 findings)
         ...List.generate(74, (i) => DomainEntityInstance(
           instanceId: 'arm_$i',
           name: 'Armoire $i',
           category: DomainObjectType.armoire,
-          tensionDomain: i == 0 ? TensionDomain.mt : TensionDomain.bt,
+          tensionDomain: TensionDomain.bt,
           originPath: i == 0 ? 'MT' : 'BT',
           findings: i == 0 ? mtArmFindings : (i == 1 ? btArmFindings : []),
         )),
@@ -334,8 +334,8 @@ void main() {
       final mtRowsNcSum = result.mtCategoriesCrossRows.fold<int>(0, (s, r) => s + r.ncCount);
       final btRowsNcSum = result.btCategoriesCrossRows.fold<int>(0, (s, r) => s + r.ncCount);
 
-      expect(mtRowsNcSum, equals(156));
-      expect(btRowsNcSum, equals(340));
+      expect(mtRowsNcSum, equals(154));
+      expect(btRowsNcSum, equals(342));
 
       // Reconciliation to total domain findings
       expect(mtRowsNcSum + btRowsNcSum, equals(496));

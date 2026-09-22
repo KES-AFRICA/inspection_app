@@ -1238,26 +1238,11 @@ class TechnicalEnrichmentEngine {
       ),
     );
 
-    final mtCoffrets = domainInventory.instances
-        .where(
-          (i) =>
-              i.tensionDomain == TensionDomain.mt &&
-              (i.category == DomainObjectType.armoire ||
-                  i.category == DomainObjectType.coffret),
-        )
-        .toList();
-    if (mtCoffrets.isNotEmpty) {
-      mtCatRows.add(
-        buildCategoryRow('Armoires / Coffrets MT', mtCoffrets, totalMissionNc),
-      );
-    }
-
     // Sécurité de couverture absolue MT : aucune occurrence ne peut être omise
     final accountedMtFindingIds = <String>{
       ...mtLocauxFindings.map((f) => f.id),
       ...domainInventory.getInstancesByCategory(DomainObjectType.celluleMT).expand((i) => i.pertinentFindings).map((f) => f.id),
       ...domainInventory.getInstancesByCategory(DomainObjectType.transformateurMTBT).expand((i) => i.pertinentFindings).map((f) => f.id),
-      ...mtCoffrets.expand((i) => i.pertinentFindings).map((f) => f.id),
     };
     final htaFindings = domainInventory.pertinentFindings
         .where((f) => f.tensionDomain == TensionDomain.mt)
@@ -1338,20 +1323,14 @@ class TechnicalEnrichmentEngine {
     btCatRows.add(
       buildCategoryRow(
         'Armoires',
-        domainInventory
-            .getInstancesByCategory(DomainObjectType.armoire)
-            .where((i) => i.tensionDomain == TensionDomain.bt)
-            .toList(),
+        domainInventory.getInstancesByCategory(DomainObjectType.armoire),
         totalMissionNc,
       ),
     );
     btCatRows.add(
       buildCategoryRow(
         'Coffrets',
-        domainInventory
-            .getInstancesByCategory(DomainObjectType.coffret)
-            .where((i) => i.tensionDomain == TensionDomain.bt)
-            .toList(),
+        domainInventory.getInstancesByCategory(DomainObjectType.coffret),
         totalMissionNc,
       ),
     );
@@ -1382,8 +1361,8 @@ class TechnicalEnrichmentEngine {
       ...btLocauxBtFindings.map((f) => f.id),
       ...domainInventory.getInstancesByCategory(DomainObjectType.inverseur).expand((i) => i.pertinentFindings).map((f) => f.id),
       ...domainInventory.getInstancesByCategory(DomainObjectType.tgbt).expand((i) => i.pertinentFindings).map((f) => f.id),
-      ...domainInventory.getInstancesByCategory(DomainObjectType.armoire).where((i) => i.tensionDomain == TensionDomain.bt).expand((i) => i.pertinentFindings).map((f) => f.id),
-      ...domainInventory.getInstancesByCategory(DomainObjectType.coffret).where((i) => i.tensionDomain == TensionDomain.bt).expand((i) => i.pertinentFindings).map((f) => f.id),
+      ...domainInventory.getInstancesByCategory(DomainObjectType.armoire).expand((i) => i.pertinentFindings).map((f) => f.id),
+      ...domainInventory.getInstancesByCategory(DomainObjectType.coffret).expand((i) => i.pertinentFindings).map((f) => f.id),
       ...ptInstances.expand((i) => i.pertinentFindings).map((f) => f.id),
       ...foudreInstances.expand((i) => i.pertinentFindings).map((f) => f.id),
     };

@@ -223,16 +223,16 @@ void main() {
         ));
       }
 
-      // 2 armoires MT
-      for (int i = 0; i < 2; i++) {
+      // 2 transformateurs additionnels (total 6 constats transfos MT)
+      for (int i = 4; i < 6; i++) {
         findings.add(AuditFinding(
-          id: 'hta_arm_$i',
+          id: 'hta_tr_$i',
           missionId: 'test_m',
           tensionDomain: TensionDomain.mt,
           origin: 'Poste MT',
-          objectType: 'Armoire',
-          objectName: 'Armoire MT $i',
-          tableName: 'Armoire',
+          objectType: 'Transformateur',
+          objectName: 'Transfo $i',
+          tableName: 'Transformateur',
           verificationPoint: 'Point $i',
           observationText: 'Obs $i',
           conformity: 'non',
@@ -353,14 +353,6 @@ void main() {
           tensionDomain: TensionDomain.mt,
           originPath: 'MT',
           findings: findings.where((f) => f.objectType == 'Transformateur').toList(),
-        ),
-        DomainEntityInstance(
-          instanceId: 'arm_mt_1',
-          name: 'Armoire MT 1',
-          category: DomainObjectType.armoire,
-          tensionDomain: TensionDomain.mt,
-          originPath: 'MT',
-          findings: findings.where((f) => f.objectType == 'Armoire' && f.tensionDomain == TensionDomain.mt).toList(),
         ),
         DomainEntityInstance(
           instanceId: 'loc_ge_1',

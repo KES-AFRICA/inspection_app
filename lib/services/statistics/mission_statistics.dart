@@ -1,5 +1,6 @@
 // lib/services/statistics/mission_statistics.dart
 
+import 'domain_entity_instance.dart';
 import 'audit_finding.dart';
 import 'unified_observation.dart';
 import 'mission_domain_inventory_engine.dart';
@@ -167,7 +168,12 @@ class MissionStatisticsSummary {
   int get totalEquipments {
     final eqSum = equipmentInventory.fold<int>(0, (sum, e) => sum + e.count);
     if (eqSum > 0) return eqSum;
-    return domainInventory?.instances.length ?? 0;
+    if (domainInventory != null) {
+      final eqCount = domainInventory!.instances.where((i) => i.category.isEquipment).length;
+      if (eqCount > 0) return eqCount;
+      return domainInventory!.instances.length;
+    }
+    return 0;
   }
 
   /// Densité moyenne globale unique certifiée (NC par équipement).
@@ -176,13 +182,13 @@ class MissionStatisticsSummary {
   /// Formatage texte unique certifié de la densité moyenne globale (ex: "3,90").
   String get globalDensityStr => globalDensity.toStringAsFixed(2).replaceAll('.', ',');
 
-  /// Nombre d'équipements et installations inspectés en Moyenne Tension
+  /// Nombre d'équipements inspectés en Moyenne Tension (Strictement Cellules + Transformateurs).
   int get htaEquipmentsCount {
     if (domainInventory != null) {
-      return domainInventory!.instances.where((i) => i.tensionDomain == TensionDomain.mt).length;
+      return domainInventory!.instances.where((i) => i.category.isMTEquipment).length;
     }
     return crossCategoryItems
-        .where((c) => c.categoryKey.contains('mt') || c.categoryKey.contains('transfo'))
+        .where((c) => c.categoryKey.contains('cellule') || c.categoryKey.contains('transfo'))
         .fold(0, (s, e) => s + e.equipmentCount);
   }
 
@@ -190,13 +196,17 @@ class MissionStatisticsSummary {
   double get densityHta => htaEquipmentsCount > 0 ? tensionDomainStats.mtCount / htaEquipmentsCount : 0.0;
   String get densityHtaStr => densityHta.toStringAsFixed(2).replaceAll('.', ',');
 
-  /// Nombre d'équipements et installations inspectés en Basse Tension
+  /// Nombre d'équipements inspectés en Basse Tension (Strictement TGBT + Armoires + Coffrets + Inverseurs).
   int get btEquipmentsCount {
     if (domainInventory != null) {
-      return domainInventory!.instances.where((i) => i.tensionDomain == TensionDomain.bt).length;
+      return domainInventory!.instances.where((i) => i.category.isBTEquipment).length;
     }
     return crossCategoryItems
-        .where((c) => !c.categoryKey.contains('mt') && !c.categoryKey.contains('transfo'))
+        .where((c) =>
+            c.categoryKey.contains('tgbt') ||
+            c.categoryKey.contains('armoire') ||
+            c.categoryKey.contains('coffret') ||
+            c.categoryKey.contains('inverseur'))
         .fold(0, (s, e) => s + e.equipmentCount);
   }
 

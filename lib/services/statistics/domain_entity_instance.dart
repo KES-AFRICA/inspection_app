@@ -129,19 +129,91 @@ extension DomainObjectTypeExtension on DomainObjectType {
         return 'Prise de terre';
     }
   }
+
+  /// Domaine de tension canonique intrinsèque à l'objet.
+  TensionDomain get domain {
+    switch (this) {
+      case DomainObjectType.localMT:
+      case DomainObjectType.celluleMT:
+      case DomainObjectType.transformateurMTBT:
+        return TensionDomain.mt;
+      case DomainObjectType.localBT:
+      case DomainObjectType.localGE:
+      case DomainObjectType.tgbt:
+      case DomainObjectType.armoire:
+      case DomainObjectType.coffret:
+      case DomainObjectType.inverseur:
+      case DomainObjectType.foudre:
+      case DomainObjectType.priseTerre:
+        return TensionDomain.bt;
+    }
+  }
+
+  /// Indique si l'objet est un équipement technique (exclut les locaux et les installations de mesure).
+  bool get isEquipment {
+    switch (this) {
+      case DomainObjectType.celluleMT:
+      case DomainObjectType.transformateurMTBT:
+      case DomainObjectType.tgbt:
+      case DomainObjectType.armoire:
+      case DomainObjectType.coffret:
+      case DomainObjectType.inverseur:
+        return true;
+      case DomainObjectType.localMT:
+      case DomainObjectType.localBT:
+      case DomainObjectType.localGE:
+      case DomainObjectType.foudre:
+      case DomainObjectType.priseTerre:
+        return false;
+    }
+  }
+
+  /// Indique si l'objet est un équipement technique Moyenne Tension (Cellule ou Transformateur).
+  bool get isMTEquipment {
+    return this == DomainObjectType.celluleMT || this == DomainObjectType.transformateurMTBT;
+  }
+
+  /// Indique si l'objet est un équipement technique Basse Tension (TGBT, Armoire, Coffret, Inverseur).
+  bool get isBTEquipment {
+    return this == DomainObjectType.tgbt ||
+        this == DomainObjectType.armoire ||
+        this == DomainObjectType.coffret ||
+        this == DomainObjectType.inverseur;
+  }
+
+  /// Indique si l'objet est un local technique.
+  bool get isLocal {
+    return this == DomainObjectType.localMT ||
+        this == DomainObjectType.localBT ||
+        this == DomainObjectType.localGE;
+  }
 }
 
 /// Classificateur d'Équipements Électriques (`EquipmentClassifier`).
 ///
 /// Résout de façon déterministe la véritable nature d'un [CoffretArmoire]
-/// (TGBT, Armoire, Inverseur, Coffret) en analysant conjointement
-/// son type, son nom, son repère et son domaine de tension.
+/// (TGBT, Armoire, Inverseur, Coffret, ou Cellule/Transfo) en analysant conjointement
+/// son type, son nom et son repère.
 ///
 /// Gère aussi bien les types courts modernes ('TGBT', 'ARMOIRE', 'INVERSEUR')
 /// que les anciens types longs ('Tableau urbain réduit (TUR)', etc.) des missions legacy.
 class EquipmentClassifier {
   static DomainObjectType classify(CoffretArmoire coffret) {
     final typeStr = coffret.type.trim().toLowerCase();
+    final nomStr = coffret.nom.trim().toLowerCase();
+    final repereStr = (coffret.repere ?? '').trim().toLowerCase();
+    final combined = '$typeStr $nomStr $repereStr';
+
+    // 0. Détection prioritaire si le coffret a été qualifié en Cellule ou Transformateur (aligné sur PdfEquipementsSynthesisBuilder)
+    if (typeStr == 'cellule' || combined.contains('cellule')) {
+      return DomainObjectType.celluleMT;
+    }
+    if (typeStr == 'transformateur' ||
+        typeStr == 'transfo' ||
+        combined.contains('transformateur') ||
+        combined.contains('transfo')) {
+      return DomainObjectType.transformateurMTBT;
+    }
 
     // 1. Respect absolu du type explicite sélectionné par l'utilisateur (Source de vérité)
     if (typeStr == 'inverseur' || typeStr == 'inv') {
@@ -158,9 +230,6 @@ class EquipmentClassifier {
     }
 
     // 2. Inférence de secours pour types non renseignés ou legacy ('Autre', vide, etc.)
-    final nomStr = coffret.nom.trim().toLowerCase();
-    final repereStr = (coffret.repere ?? '').trim().toLowerCase();
-
     // A. INVERSEUR (Source Normal/Secours)
     if (_matchesInverseur(typeStr, nomStr, repereStr)) {
       return DomainObjectType.inverseur;
