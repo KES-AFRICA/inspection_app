@@ -149,6 +149,19 @@ void main() {
       expect(res.countShortTerm, 2);
       expect(res.countMediumTerm, 1);
 
+      // Vérifier la nouvelle structure à 3 lignes par tableau MT et BT
+      expect(res.mtTable.rows.length, 3);
+      expect(res.mtTable.critiqueAction.hasActions, isTrue);
+      expect(res.mtTable.majeureAction.hasActions, isTrue);
+      expect(res.mtTable.mineureAction.hasActions, isFalse);
+      expect(res.mtTable.mineureAction.actionBullets, isEmpty);
+
+      expect(res.btTable.rows.length, 3);
+      expect(res.btTable.critiqueAction.hasActions, isTrue);
+      expect(res.btTable.majeureAction.hasActions, isTrue);
+      expect(res.btTable.mineureAction.hasActions, isTrue);
+      expect(res.btTable.mineureAction.actionBullets, isNotEmpty);
+
       // Vérifier l'évaluation globale Section 12
       final summary = createSummaryFromFindings(findings);
       final assess = GlobalAssessmentEngine.analyze(
@@ -176,6 +189,10 @@ void main() {
       expect(res.hasMt, isTrue);
       expect(res.hasBt, isFalse);
       expect(res.btRecommendations, isEmpty);
+      expect(res.mtTable.critiqueAction.hasActions, isTrue);
+      expect(res.mtTable.majeureAction.hasActions, isTrue);
+      expect(res.mtTable.mineureAction.hasActions, isFalse);
+      expect(res.btTable.hasAnyAction, isFalse);
 
       final summary = createSummaryFromFindings(findings, htaEquipments: 5, btEquipments: 0);
       final assess = GlobalAssessmentEngine.analyze(
@@ -200,6 +217,10 @@ void main() {
       expect(res.hasMt, isFalse);
       expect(res.hasBt, isTrue);
       expect(res.mtRecommendations, isEmpty);
+      expect(res.mtTable.hasAnyAction, isFalse);
+      expect(res.btTable.majeureAction.hasActions, isTrue);
+      expect(res.btTable.critiqueAction.hasActions, isFalse);
+      expect(res.btTable.mineureAction.hasActions, isFalse);
 
       final summary = createSummaryFromFindings(findings, htaEquipments: 0, btEquipments: 12);
       final assess = GlobalAssessmentEngine.analyze(
@@ -224,6 +245,13 @@ void main() {
       expect(res.totalMineure, 0);
       expect(res.countMediumTerm, 0);
       expect(res.allRecommendations.any((r) => r.priorityLevel == RecommendationPriorityLevel.priority3MediumTerm), isFalse);
+
+      // Vérification absolue du tableau synthétique : ZÉRO action inventée pour la ligne Mineure
+      expect(res.btTable.mineureAction.hasActions, isFalse);
+      expect(res.btTable.mineureAction.occurrenceCount, 0);
+      expect(res.btTable.mineureAction.actionBullets, isEmpty);
+      expect(res.btTable.critiqueAction.hasActions, isTrue);
+      expect(res.btTable.majeureAction.hasActions, isTrue);
 
       final summary = createSummaryFromFindings(findings);
       final assess = GlobalAssessmentEngine.analyze(
@@ -429,6 +457,14 @@ void main() {
 
       expect(res.isEmpty, isTrue);
       expect(res.allRecommendations, isEmpty);
+      expect(res.mtTable.hasAnyAction, isFalse);
+      expect(res.btTable.hasAnyAction, isFalse);
+      expect(res.mtTable.critiqueAction.actionBullets, isEmpty);
+      expect(res.mtTable.majeureAction.actionBullets, isEmpty);
+      expect(res.mtTable.mineureAction.actionBullets, isEmpty);
+      expect(res.btTable.critiqueAction.actionBullets, isEmpty);
+      expect(res.btTable.majeureAction.actionBullets, isEmpty);
+      expect(res.btTable.mineureAction.actionBullets, isEmpty);
 
       final summary = createSummaryFromFindings(findings, htaEquipments: 2, btEquipments: 5);
       final assess = GlobalAssessmentEngine.analyze(
@@ -468,6 +504,33 @@ void main() {
       expect(res.totalCritique, summary.criticalityStats.critique);
       expect(res.totalMajeure, summary.criticalityStats.majeure);
       expect(res.totalMineure, summary.criticalityStats.mineure);
+    });
+
+    // Cas 17 : Regroupement intelligent par famille technique au sein de la même cellule
+    test('Cas 17 : Regroupement par famille technique dans la même cellule (sans doublon ni invention)', () {
+      final findings = [
+        createFinding(id: '1', domain: TensionDomain.bt, criticality: 'Majeure', verificationPoint: 'Repérage des départs', objectName: 'Armoire TGBT'),
+        createFinding(id: '2', domain: TensionDomain.bt, criticality: 'Majeure', verificationPoint: 'Étiquetage des circuits', objectName: 'Coffret C1'),
+        createFinding(id: '3', domain: TensionDomain.bt, criticality: 'Majeure', verificationPoint: 'Absence de schéma unifilaire', objectName: 'Coffret C2'),
+        createFinding(id: '4', domain: TensionDomain.bt, criticality: 'Majeure', verificationPoint: 'Continuité de terre PE interrompue', objectName: 'Armoire TGBT'),
+      ];
+
+      final res = HierarchicalRecommendationsEngine.analyzeFindings(findings);
+
+      expect(res.btTable.majeureAction.hasActions, isTrue);
+      expect(res.btTable.majeureAction.occurrenceCount, 4);
+
+      // Repérage/étiquetage/schéma unifilaire doivent être regroupés dans une même famille technique
+      // Continuité PE forme sa propre famille distincte
+      // On doit donc avoir 2 puces d'actions pour la cellule Majeure BT
+      expect(res.btTable.majeureAction.actionBullets.length, 2);
+
+      final repBullet = res.btTable.majeureAction.actionBullets.firstWhere((b) => b.toLowerCase().contains('repérage'));
+      final peBullet = res.btTable.majeureAction.actionBullets.firstWhere((b) => b.toLowerCase().contains('continuité'));
+
+      expect(repBullet, isNotEmpty);
+      expect(peBullet, isNotEmpty);
+      expect(repBullet, contains('Concerne'));
     });
   });
 }

@@ -514,10 +514,9 @@ class PdfExecutiveSummaryBuilder {
     final hierarchicalRecos = HierarchicalRecommendationsEngine.analyze(statsSummary);
 
     const recoColWidths = {
-      0: pw.FlexColumnWidth(2.0),
-      1: pw.FlexColumnWidth(2.8),
-      2: pw.FlexColumnWidth(3.8),
-      3: pw.FlexColumnWidth(2.4),
+      0: pw.FlexColumnWidth(1.8),
+      1: pw.FlexColumnWidth(2.6),
+      2: pw.FlexColumnWidth(5.6),
     };
 
     pw.TableRow buildRecoHeaderRow() {
@@ -525,33 +524,25 @@ class PdfExecutiveSummaryBuilder {
         decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
         children: [
           pw.Padding(
-            padding: const pw.EdgeInsets.all(5),
+            padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 5),
             child: pw.Text(
-              'NIVEAU & CRITICITÉ',
+              'CRITICITÉ',
               style: pw.TextStyle(font: fontBold, fontSize: 8, color: PdfColors.white),
               textAlign: pw.TextAlign.center,
             ),
           ),
           pw.Padding(
-            padding: const pw.EdgeInsets.all(5),
+            padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 5),
             child: pw.Text(
-              'CONSTAT & OCCURRENCES',
+              'NIVEAU DE PRIORITÉ',
               style: pw.TextStyle(font: fontBold, fontSize: 8, color: PdfColors.white),
               textAlign: pw.TextAlign.center,
             ),
           ),
           pw.Padding(
-            padding: const pw.EdgeInsets.all(5),
+            padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 5),
             child: pw.Text(
-              'ACTION CORRECTIVE RECOMMANDÉE',
-              style: pw.TextStyle(font: fontBold, fontSize: 8, color: PdfColors.white),
-              textAlign: pw.TextAlign.center,
-            ),
-          ),
-          pw.Padding(
-            padding: const pw.EdgeInsets.all(5),
-            child: pw.Text(
-              'ÉQUIPEMENTS & CONTEXTE',
+              'ACTIONS CORRECTIVES RECOMMANDÉES',
               style: pw.TextStyle(font: fontBold, fontSize: 8, color: PdfColors.white),
               textAlign: pw.TextAlign.center,
             ),
@@ -560,13 +551,13 @@ class PdfExecutiveSummaryBuilder {
       );
     }
 
-    pw.TableRow buildRecoRow(HierarchicalRecommendation reco) {
+    pw.TableRow buildAggregatedRow(DomainCriticalityAggregatedAction action) {
       final PdfColor rowBg;
       final PdfColor tagColor;
-      if (reco.priorityLevel == RecommendationPriorityLevel.priority1Immediate) {
+      if (action.priorityLevel == RecommendationPriorityLevel.priority1Immediate) {
         rowBg = PdfColor.fromHex('#FEF2F2');
         tagColor = PdfColor.fromHex('#B71C1C');
-      } else if (reco.priorityLevel == RecommendationPriorityLevel.priority2ShortTerm) {
+      } else if (action.priorityLevel == RecommendationPriorityLevel.priority2ShortTerm) {
         rowBg = PdfColor.fromHex('#FFF7ED');
         tagColor = PdfColor.fromHex('#C2410C');
       } else {
@@ -574,9 +565,9 @@ class PdfExecutiveSummaryBuilder {
         tagColor = PdfReportStyles.darkGrey;
       }
 
-      final occurrencesStr = reco.occurrenceCount > 1
-          ? '(${reco.occurrenceCount} occurrences)'
-          : '(1 occurrence)';
+      final countLabel = action.occurrenceCount > 0
+          ? '\n(${action.occurrenceCount} ${action.occurrenceCount > 1 ? 'écarts' : 'écart'})'
+          : '';
 
       return pw.TableRow(
         verticalAlignment: pw.TableCellVerticalAlignment.middle,
@@ -584,37 +575,19 @@ class PdfExecutiveSummaryBuilder {
         children: [
           pw.Padding(
             padding: const pw.EdgeInsets.all(5),
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.center,
-              mainAxisAlignment: pw.MainAxisAlignment.center,
-              children: [
-                pw.Text(
-                  reco.priorityLabel,
-                  style: pw.TextStyle(font: fontBold, fontSize: 7.0, color: tagColor),
-                  textAlign: pw.TextAlign.center,
-                ),
-                pw.SizedBox(height: 2),
-                pw.Text(
-                  reco.criticalityLabel,
-                  style: pw.TextStyle(font: fontBold, fontSize: 6.5, color: tagColor),
-                  textAlign: pw.TextAlign.center,
-                ),
-              ],
-            ),
-          ),
-          pw.Padding(
-            padding: const pw.EdgeInsets.all(5),
             child: pw.RichText(
+              textAlign: pw.TextAlign.center,
               text: pw.TextSpan(
                 children: [
                   pw.TextSpan(
-                    text: reco.issueTitle,
-                    style: pw.TextStyle(font: fontBold, fontSize: 7.2, color: PdfReportStyles.darkGrey),
+                    text: action.criticalityLabel,
+                    style: pw.TextStyle(font: fontBold, fontSize: 7.5, color: tagColor),
                   ),
-                  pw.TextSpan(
-                    text: '\n$occurrencesStr',
-                    style: pw.TextStyle(font: fontRegular, fontSize: 6.5, color: PdfReportStyles.accentColor),
-                  ),
+                  if (countLabel.isNotEmpty)
+                    pw.TextSpan(
+                      text: countLabel,
+                      style: pw.TextStyle(font: fontRegular, fontSize: 6.5, color: tagColor),
+                    ),
                 ],
               ),
             ),
@@ -622,17 +595,37 @@ class PdfExecutiveSummaryBuilder {
           pw.Padding(
             padding: const pw.EdgeInsets.all(5),
             child: pw.Text(
-              reco.recommendedAction,
-              style: pw.TextStyle(font: fontRegular, fontSize: 7.0, lineSpacing: 1.8),
-              textAlign: pw.TextAlign.justify,
+              action.priorityLabel,
+              style: pw.TextStyle(font: fontBold, fontSize: 7.2, color: tagColor),
+              textAlign: pw.TextAlign.center,
             ),
           ),
           pw.Padding(
-            padding: const pw.EdgeInsets.all(5),
-            child: pw.Text(
-              reco.contextSummary,
-              style: pw.TextStyle(font: fontRegular, fontSize: 6.8, color: PdfReportStyles.darkGrey, lineSpacing: 1.6),
-            ),
+            padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+            child: action.actionBullets.isEmpty
+                ? pw.Text(
+                    'Néant (aucune non-conformité constatée).',
+                    style: pw.TextStyle(font: fontRegular, fontSize: 7.2, fontStyle: pw.FontStyle.italic, color: PdfColors.grey700),
+                  )
+                : pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: action.actionBullets.map((bullet) => pw.Padding(
+                      padding: const pw.EdgeInsets.only(bottom: 3.5),
+                      child: pw.Row(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text('• ', style: pw.TextStyle(font: fontBold, fontSize: 7.5, color: PdfReportStyles.darkGrey)),
+                          pw.Expanded(
+                            child: pw.Text(
+                              bullet,
+                              style: pw.TextStyle(font: fontRegular, fontSize: 7.0, lineSpacing: 1.8),
+                              textAlign: pw.TextAlign.justify,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )).toList(),
+                  ),
           ),
         ],
       );
@@ -652,6 +645,13 @@ class PdfExecutiveSummaryBuilder {
     );
 
     bool isFirstSection = true;
+
+    final hasMtDomain = hierarchicalRecos.hasMt ||
+        (statsSummary.domainInventory?.instances.any((i) => i.tensionDomain == TensionDomain.mt) ?? false) ||
+        technical.totalLocauxMt > 0 ||
+        technical.mtCategoriesCrossRows.isNotEmpty;
+    final showMt = hasMtDomain;
+    final showBt = hierarchicalRecos.hasBt || hierarchicalRecos.btTable.totalOccurrences > 0 || !hasMtDomain;
 
     if (hierarchicalRecos.isEmpty) {
       widgets.add(recoHeaderWidget);
@@ -673,9 +673,9 @@ class PdfExecutiveSummaryBuilder {
       widgets.add(pw.SizedBox(height: 10));
     } else {
       // ── Actions MT ──
-      if (hierarchicalRecos.hasMt) {
+      if (showMt) {
         final mtHeaderRow = buildRecoHeaderRow();
-        final mtRows = hierarchicalRecos.mtRecommendations.map(buildRecoRow).toList();
+        final mtRows = hierarchicalRecos.mtTable.rows.map(buildAggregatedRow).toList();
         final mtBanner = pw.Container(
           margin: const pw.EdgeInsets.only(top: 8, bottom: 4),
           padding: const pw.EdgeInsets.symmetric(vertical: 4, horizontal: 8),
@@ -712,9 +712,9 @@ class PdfExecutiveSummaryBuilder {
       }
 
       // ── Actions BT ──
-      if (hierarchicalRecos.hasBt) {
+      if (showBt) {
         final btHeaderRow = buildRecoHeaderRow();
-        final btRows = hierarchicalRecos.btRecommendations.map(buildRecoRow).toList();
+        final btRows = hierarchicalRecos.btTable.rows.map(buildAggregatedRow).toList();
         final btBanner = pw.Container(
           margin: const pw.EdgeInsets.only(top: 8, bottom: 4),
           padding: const pw.EdgeInsets.symmetric(vertical: 4, horizontal: 8),
@@ -755,93 +755,79 @@ class PdfExecutiveSummaryBuilder {
     widgets.add(pw.SizedBox(height: 6));
 
     // ── 12. Appréciation globale ──
-    widgets.add(
-      pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          pw.Inseparable(
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                PageTracker(
-                  key: 'resume_executif_1_12',
-                  registry: trackedPages,
-                  offset: offset,
-                  child: _subSectionHeader('12. Appréciation globale'),
-                ),
-                pw.SizedBox(height: 6),
-              ],
-            ),
-          ),
-          _buildAppreciationGlobaleText(statsSummary, snapshot, technical, hierarchicalRecos),
-        ],
-      ),
-    );
-
-    return widgets;
-  }
-
-  static pw.Widget _buildAppreciationGlobaleText(
-    MissionStatisticsSummary stats,
-    ExecutiveSummarySnapshot snapshot,
-    TechnicalEnrichmentResult technical,
-    HierarchicalRecommendationsResult hierarchicalRecos,
-  ) {
-    final result = GlobalAssessmentEngine.analyze(
-      summary: stats,
+    final appreciationResult = GlobalAssessmentEngine.analyze(
+      summary: statsSummary,
       snapshot: snapshot,
       technical: technical,
       recommendationsResult: hierarchicalRecos,
     );
 
-    final children = <pw.Widget>[];
+    final appHeaderWidget = PageTracker(
+      key: 'resume_executif_1_12',
+      registry: trackedPages,
+      offset: offset,
+      child: _subSectionHeader('12. Appréciation globale'),
+    );
 
-    for (int i = 0; i < result.blocks.length; i++) {
-      final block = result.blocks[i];
-      switch (block.type) {
-        case GlobalAssessmentBlockType.paragraph:
-          children.add(_buildFormattedText(block.content));
-          children.add(pw.SizedBox(height: 6));
-          break;
-        case GlobalAssessmentBlockType.bulletsIntro:
-          children.add(_buildFormattedText(block.content));
-          children.add(pw.SizedBox(height: 4));
-          break;
-        case GlobalAssessmentBlockType.bulletItem:
-          children.add(
-            pw.Padding(
-              padding: const pw.EdgeInsets.only(left: 12, bottom: 2.5),
-              child: pw.Row(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                children: [
-                  pw.Text('• ', style: pw.TextStyle(font: fontBold, fontSize: fsBody, color: PdfReportStyles.darkGrey)),
-                  pw.Expanded(
-                    child: pw.Text(
-                      block.content,
-                      style: pw.TextStyle(
-                        font: fontRegular,
-                        fontSize: fsBody,
-                        color: PdfReportStyles.darkGrey,
-                        lineSpacing: 2.2,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-          break;
-        case GlobalAssessmentBlockType.conclusion:
-          children.add(pw.SizedBox(height: 3));
-          children.add(_buildFormattedText(block.content));
-          break;
+    if (appreciationResult.blocks.isNotEmpty) {
+      final firstBlock = appreciationResult.blocks.first;
+      // Bloc 1 : Titre + Premier paragraphe inséparables (anti-orphelin garanti)
+      widgets.add(
+        pw.Inseparable(
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              appHeaderWidget,
+              pw.SizedBox(height: 6),
+              _buildAssessmentBlockWidget(firstBlock),
+              pw.SizedBox(height: 6),
+            ],
+          ),
+        ),
+      );
+
+      // Paragraphes suivants libres dans le flux de MultiPage (pagination naturelle fluide)
+      for (int i = 1; i < appreciationResult.blocks.length; i++) {
+        final block = appreciationResult.blocks[i];
+        widgets.add(_buildAssessmentBlockWidget(block));
+        widgets.add(pw.SizedBox(height: block.type == GlobalAssessmentBlockType.bulletItem ? 2.5 : 6));
       }
+    } else {
+      widgets.add(appHeaderWidget);
+      widgets.add(pw.SizedBox(height: 6));
     }
 
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: children,
-    );
+    return widgets;
+  }
+
+  static pw.Widget _buildAssessmentBlockWidget(GlobalAssessmentBlock block) {
+    switch (block.type) {
+      case GlobalAssessmentBlockType.paragraph:
+      case GlobalAssessmentBlockType.bulletsIntro:
+      case GlobalAssessmentBlockType.conclusion:
+        return _buildFormattedText(block.content);
+      case GlobalAssessmentBlockType.bulletItem:
+        return pw.Padding(
+          padding: const pw.EdgeInsets.only(left: 12, bottom: 2.5),
+          child: pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text('• ', style: pw.TextStyle(font: fontBold, fontSize: fsBody, color: PdfReportStyles.darkGrey)),
+              pw.Expanded(
+                child: pw.Text(
+                  block.content,
+                  style: pw.TextStyle(
+                    font: fontRegular,
+                    fontSize: fsBody,
+                    color: PdfReportStyles.darkGrey,
+                    lineSpacing: 2.2,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+    }
   }
 
   static pw.Widget _buildFormattedText(

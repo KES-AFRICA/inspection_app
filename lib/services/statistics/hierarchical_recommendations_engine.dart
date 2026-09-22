@@ -11,7 +11,7 @@ enum RecommendationPriorityLevel {
   priority3MediumTerm, // Mineure -> Priorité 3 — Moyen Terme
 }
 
-/// Modèle d'une recommandation hiérarchisée et contextualisée
+/// Modèle d'une recommandation élémentaire contextualisée (niveau analytique interne)
 class HierarchicalRecommendation {
   final String id;
   final RecommendationPriorityLevel priorityLevel;
@@ -69,11 +69,59 @@ class HierarchicalRecommendation {
   }
 }
 
+/// Modèle d'une action corrective agrégée par criticité pour la cellule finale du tableau synthétique
+class DomainCriticalityAggregatedAction {
+  final TensionDomain domain;
+  final String criticalityLabel; // "Critique", "Majeure", "Mineure"
+  final RecommendationPriorityLevel priorityLevel;
+  final String priorityLabel; // "Priorité 1 — Action Immédiate", etc.
+  final int occurrenceCount; // Nombre total d'occurrences pour cette criticité
+  final List<String> actionBullets; // Actions intelligemment regroupées et généralisées sans déformation
+  final List<HierarchicalRecommendation> sourceRecommendations; // Traçabilité intermédiaire
+  final List<AuditFinding> sourceFindings; // Traçabilité amont directe
+
+  const DomainCriticalityAggregatedAction({
+    required this.domain,
+    required this.criticalityLabel,
+    required this.priorityLevel,
+    required this.priorityLabel,
+    required this.occurrenceCount,
+    required this.actionBullets,
+    required this.sourceRecommendations,
+    required this.sourceFindings,
+  });
+
+  bool get hasActions => occurrenceCount > 0 && actionBullets.isNotEmpty;
+}
+
+/// Modèle de tableau synthétique d'un domaine (MT ou BT) comportant les 3 lignes de criticité
+class DomainTableData {
+  final TensionDomain domain;
+  final String domainTitle; // "ACTIONS À RÉALISER EN MOYENNE TENSION (HTA)" ou "ACTIONS À RÉALISER EN BASSE TENSION (BT)"
+  final DomainCriticalityAggregatedAction critiqueAction;
+  final DomainCriticalityAggregatedAction majeureAction;
+  final DomainCriticalityAggregatedAction mineureAction;
+
+  const DomainTableData({
+    required this.domain,
+    required this.domainTitle,
+    required this.critiqueAction,
+    required this.majeureAction,
+    required this.mineureAction,
+  });
+
+  List<DomainCriticalityAggregatedAction> get rows => [critiqueAction, majeureAction, mineureAction];
+  bool get hasAnyAction => critiqueAction.hasActions || majeureAction.hasActions || mineureAction.hasActions;
+  int get totalOccurrences => critiqueAction.occurrenceCount + majeureAction.occurrenceCount + mineureAction.occurrenceCount;
+}
+
 /// Résultat complet de l'analyse hiérarchique des recommandations
 class HierarchicalRecommendationsResult {
   final List<HierarchicalRecommendation> mtRecommendations;
   final List<HierarchicalRecommendation> btRecommendations;
   final List<HierarchicalRecommendation> allRecommendations;
+  final DomainTableData mtTable;
+  final DomainTableData btTable;
   final int totalCritique;
   final int totalMajeure;
   final int totalMineure;
@@ -83,13 +131,15 @@ class HierarchicalRecommendationsResult {
     required this.mtRecommendations,
     required this.btRecommendations,
     required this.allRecommendations,
+    required this.mtTable,
+    required this.btTable,
     required this.totalCritique,
     required this.totalMajeure,
     required this.totalMineure,
     required this.totalOccurrences,
   });
 
-  bool get isEmpty => allRecommendations.isEmpty;
+  bool get isEmpty => totalOccurrences == 0;
   bool get hasMt => mtRecommendations.isNotEmpty;
   bool get hasBt => btRecommendations.isNotEmpty;
 
@@ -109,10 +159,27 @@ class HierarchicalRecommendationsEngine {
   /// Analyse une liste brute de constats pertinents
   static HierarchicalRecommendationsResult analyzeFindings(List<AuditFinding> findings) {
     if (findings.isEmpty) {
-      return const HierarchicalRecommendationsResult(
-        mtRecommendations: [],
-        btRecommendations: [],
-        allRecommendations: [],
+      final emptyMtTable = DomainTableData(
+        domain: TensionDomain.mt,
+        domainTitle: 'ACTIONS À RÉALISER EN MOYENNE TENSION (HTA)',
+        critiqueAction: _buildEmptyAction(TensionDomain.mt, RecommendationPriorityLevel.priority1Immediate, 'Critique', 'Priorité 1 — Action Immédiate'),
+        majeureAction: _buildEmptyAction(TensionDomain.mt, RecommendationPriorityLevel.priority2ShortTerm, 'Majeure', 'Priorité 2 — Court Terme'),
+        mineureAction: _buildEmptyAction(TensionDomain.mt, RecommendationPriorityLevel.priority3MediumTerm, 'Mineure', 'Priorité 3 — Moyen Terme'),
+      );
+      final emptyBtTable = DomainTableData(
+        domain: TensionDomain.bt,
+        domainTitle: 'ACTIONS À RÉALISER EN BASSE TENSION (BT)',
+        critiqueAction: _buildEmptyAction(TensionDomain.bt, RecommendationPriorityLevel.priority1Immediate, 'Critique', 'Priorité 1 — Action Immédiate'),
+        majeureAction: _buildEmptyAction(TensionDomain.bt, RecommendationPriorityLevel.priority2ShortTerm, 'Majeure', 'Priorité 2 — Court Terme'),
+        mineureAction: _buildEmptyAction(TensionDomain.bt, RecommendationPriorityLevel.priority3MediumTerm, 'Mineure', 'Priorité 3 — Moyen Terme'),
+      );
+
+      return HierarchicalRecommendationsResult(
+        mtRecommendations: const [],
+        btRecommendations: const [],
+        allRecommendations: const [],
+        mtTable: emptyMtTable,
+        btTable: emptyBtTable,
         totalCritique: 0,
         totalMajeure: 0,
         totalMineure: 0,
@@ -124,13 +191,17 @@ class HierarchicalRecommendationsEngine {
     final mtFindings = findings.where((f) => f.tensionDomain == TensionDomain.mt).toList();
     final btFindings = findings.where((f) => f.tensionDomain == TensionDomain.bt).toList();
 
-    // 2. Traitement des recommandations par domaine
+    // 2. Traitement des recommandations par domaine (niveau analytique élémentaire)
     final mtRecommendations = _buildDomainRecommendations(mtFindings, TensionDomain.mt);
     final btRecommendations = _buildDomainRecommendations(btFindings, TensionDomain.bt);
 
     // 3. Synthèse globale ordonnée
     final allRecommendations = [...mtRecommendations, ...btRecommendations]
       ..sort(_compareRecommendations);
+
+    // 4. Construction des tables synthétiques à 3 lignes (Critique, Majeure, Mineure)
+    final mtTable = _buildDomainTableData(TensionDomain.mt, mtRecommendations, mtFindings);
+    final btTable = _buildDomainTableData(TensionDomain.bt, btRecommendations, btFindings);
 
     int critCount = 0;
     int majCount = 0;
@@ -150,10 +221,108 @@ class HierarchicalRecommendationsEngine {
       mtRecommendations: mtRecommendations,
       btRecommendations: btRecommendations,
       allRecommendations: allRecommendations,
+      mtTable: mtTable,
+      btTable: btTable,
       totalCritique: critCount,
       totalMajeure: majCount,
       totalMineure: minCount,
       totalOccurrences: findings.length,
+    );
+  }
+
+  /// Construit un tableau synthétique pour un domaine de tension donné (3 lignes fixes : Critique, Majeure, Mineure)
+  static DomainTableData _buildDomainTableData(
+    TensionDomain domain,
+    List<HierarchicalRecommendation> domainRecos,
+    List<AuditFinding> domainFindings,
+  ) {
+    final domainTitle = domain == TensionDomain.mt
+        ? 'ACTIONS À RÉALISER EN MOYENNE TENSION (HTA)'
+        : 'ACTIONS À RÉALISER EN BASSE TENSION (BT)';
+
+    final critiqueAction = _buildAggregatedAction(
+      domain: domain,
+      priorityLevel: RecommendationPriorityLevel.priority1Immediate,
+      criticalityLabel: 'Critique',
+      priorityLabel: 'Priorité 1 — Action Immédiate',
+      domainRecos: domainRecos,
+      domainFindings: domainFindings,
+    );
+
+    final majeureAction = _buildAggregatedAction(
+      domain: domain,
+      priorityLevel: RecommendationPriorityLevel.priority2ShortTerm,
+      criticalityLabel: 'Majeure',
+      priorityLabel: 'Priorité 2 — Court Terme',
+      domainRecos: domainRecos,
+      domainFindings: domainFindings,
+    );
+
+    final mineureAction = _buildAggregatedAction(
+      domain: domain,
+      priorityLevel: RecommendationPriorityLevel.priority3MediumTerm,
+      criticalityLabel: 'Mineure',
+      priorityLabel: 'Priorité 3 — Moyen Terme',
+      domainRecos: domainRecos,
+      domainFindings: domainFindings,
+    );
+
+    return DomainTableData(
+      domain: domain,
+      domainTitle: domainTitle,
+      critiqueAction: critiqueAction,
+      majeureAction: majeureAction,
+      mineureAction: mineureAction,
+    );
+  }
+
+  /// Construit une action agrégée pour une criticité donnée.
+  /// RÈGLE ABSOLUE : Si 0 non-conformité constatée pour cette criticité, actionBullets est vide (ZÉRO invention) !
+  static DomainCriticalityAggregatedAction _buildAggregatedAction({
+    required TensionDomain domain,
+    required RecommendationPriorityLevel priorityLevel,
+    required String criticalityLabel,
+    required String priorityLabel,
+    required List<HierarchicalRecommendation> domainRecos,
+    required List<AuditFinding> domainFindings,
+  }) {
+    final critNorm = criticalityLabel.toLowerCase();
+    final critFindings = domainFindings.where((f) => _normalizeCriticality(f.criticality) == critNorm).toList();
+    final critRecos = domainRecos.where((r) => r.priorityLevel == priorityLevel).toList();
+
+    if (critFindings.isEmpty || critRecos.isEmpty) {
+      return _buildEmptyAction(domain, priorityLevel, criticalityLabel, priorityLabel);
+    }
+
+    final bullets = _synthesizeAggregatedBullets(critRecos, domain, critNorm);
+
+    return DomainCriticalityAggregatedAction(
+      domain: domain,
+      criticalityLabel: criticalityLabel,
+      priorityLevel: priorityLevel,
+      priorityLabel: priorityLabel,
+      occurrenceCount: critFindings.length,
+      actionBullets: bullets,
+      sourceRecommendations: critRecos,
+      sourceFindings: critFindings,
+    );
+  }
+
+  static DomainCriticalityAggregatedAction _buildEmptyAction(
+    TensionDomain domain,
+    RecommendationPriorityLevel priorityLevel,
+    String criticalityLabel,
+    String priorityLabel,
+  ) {
+    return DomainCriticalityAggregatedAction(
+      domain: domain,
+      criticalityLabel: criticalityLabel,
+      priorityLevel: priorityLevel,
+      priorityLabel: priorityLabel,
+      occurrenceCount: 0,
+      actionBullets: const [],
+      sourceRecommendations: const [],
+      sourceFindings: const [],
     );
   }
 
@@ -394,6 +563,156 @@ class HierarchicalRecommendationsEngine {
       return 'Planifier à court terme la remise en conformité technique de l\'installation sur le point « $verificationPoint » selon les prescriptions normatives applicables$normRefStr.';
     } else {
       return 'Intégrer la régularisation du point « $verificationPoint » dans le programme de maintenance préventive courante$normRefStr.';
+    }
+  }
+
+  /// Synthétise des puces d'actions pour une criticité donnée en regroupant les constats par famille technique.
+  /// RÈGLE ABSOLUE : ZÉRO invention ! Seuls les écarts réels sont transformés en puces.
+  static List<String> _synthesizeAggregatedBullets(
+    List<HierarchicalRecommendation> recos,
+    TensionDomain domain,
+    String criticality,
+  ) {
+    if (recos.isEmpty) return const [];
+
+    // Regroupement par famille technique
+    final familyGroups = <String, List<HierarchicalRecommendation>>{};
+    for (final r in recos) {
+      final family = _detectTechnicalFamily(r);
+      familyGroups.putIfAbsent(family, () => []).add(r);
+    }
+
+    final bullets = <String>[];
+
+    for (final entry in familyGroups.entries) {
+      final group = entry.value;
+      if (group.isEmpty) continue;
+
+      // Rassembler les équipements et normes concernés
+      final equipmentsSet = <String>{};
+      final normSet = <String>{};
+      for (final r in group) {
+        equipmentsSet.addAll(r.impactedEquipments);
+        normSet.addAll(r.normativeReferences);
+      }
+
+      final normSuffix = normSet.isNotEmpty
+          ? ' (${normSet.first})'
+          : (domain == TensionDomain.mt ? ' (NF C 13-100 / 13-200)' : ' (NF C 15-100)');
+
+      final String actionText;
+      if (group.length == 1) {
+        // Une seule recommandation dans la famille
+        actionText = group.first.recommendedAction;
+      } else {
+        // Plusieurs recommandations dans la même famille : formulation synthétique unifiée
+        actionText = _synthesizeClusterAction(
+          familyKey: entry.key,
+          domain: domain,
+          criticality: criticality,
+          sampleActions: group.map((r) => r.recommendedAction).toList(),
+          sampleTitles: group.map((r) => r.issueTitle).toList(),
+          normSuffix: normSuffix,
+        );
+      }
+
+      // Contexte des équipements si disponible et pertinent
+      String finalBullet = actionText;
+      if (equipmentsSet.isNotEmpty) {
+        final equipSummary = equipmentsSet.length <= 3
+            ? equipmentsSet.join(', ')
+            : '${equipmentsSet.take(3).join(', ')} (+${equipmentsSet.length - 3} autres)';
+        // Vérifier si l'équipement n'est pas déjà mentionné dans le texte
+        if (!actionText.toLowerCase().contains(equipmentsSet.first.toLowerCase())) {
+          finalBullet = '$actionText [Concerne : $equipSummary]';
+        }
+      }
+
+      bullets.add(finalBullet);
+    }
+
+    return bullets;
+  }
+
+  /// Détecte la famille technique d'une recommandation pour regroupement intelligent
+  static String _detectTechnicalFamily(HierarchicalRecommendation reco) {
+    final text = '${reco.issueTitle} ${reco.recommendedAction}'.toLowerCase();
+    if (text.contains('obturation') || text.contains('plastron') || text.contains('ip2x') || text.contains('contact direct') || text.contains('enveloppe')) {
+      return 'ip2x_contacts_directs';
+    }
+    if (text.contains('terre') || text.contains('équipotentielle') || text.contains('continuité') || text.contains('conducteur de protection') || text.contains(' pe')) {
+      return 'pe_terre_equipotentialite';
+    }
+    if (text.contains('différentiel') || text.contains('ddr') || text.contains('isolement') || text.contains('déclenchement')) {
+      return 'ddr_isolement';
+    }
+    if (text.contains('repérage') || text.contains('identification') || text.contains('étiquetage') || text.contains('schéma') || text.contains('unifilaire')) {
+      return 'reperage_schema_documentation';
+    }
+    if (text.contains('serrage') || text.contains('échauffement') || text.contains('connexion') || text.contains('raccordement') || text.contains('câble')) {
+      return 'connexions_serrage_cables';
+    }
+    if (text.contains('calibre') || text.contains('disjoncteur') || text.contains('fusible') || text.contains('surintensité') || text.contains('pouvoir de coupure')) {
+      return 'protections_calibres';
+    }
+    if (text.contains('parafoudre') || text.contains('foudre') || text.contains('surtension')) {
+      return 'parafoudres_foudre';
+    }
+    if (text.contains('coupure d\'urgence') || text.contains('arrêt d\'urgence') || text.contains('organe de coupure')) {
+      return 'coupure_urgence';
+    }
+    if (text.contains('epi') || text.contains('gant') || text.contains('tabouret') || text.contains('visière') || text.contains('perche')) {
+      return 'epi_securite';
+    }
+    if (text.contains('cellule') || text.contains('transfo') || text.contains('verrouillage') || text.contains('poste')) {
+      return 'cellules_transfos_verrouillage';
+    }
+    if (text.contains('éclairage') || text.contains('baes') || text.contains('secours')) {
+      return 'eclairage_securite';
+    }
+    if (text.contains('ventilation') || text.contains('encombrement') || text.contains('dégagement') || text.contains('température')) {
+      return 'locaux_ventilation';
+    }
+    return reco.id;
+  }
+
+  /// Synthétise une action unifiée pour un groupe de recommandations de même famille
+  static String _synthesizeClusterAction({
+    required String familyKey,
+    required TensionDomain domain,
+    required String criticality,
+    required List<String> sampleActions,
+    required List<String> sampleTitles,
+    required String normSuffix,
+  }) {
+    switch (familyKey) {
+      case 'ip2x_contacts_directs':
+        return 'Obturer l\'ensemble des réservations, passages de câbles et alvéoles ouvertes au moyen d\'obturateurs coupe-feu et plastrons conformes pour garantir l\'indice IP2X et prévenir tout risque de contact direct$normSuffix.';
+      case 'pe_terre_equipotentialite':
+        return 'Rétablir la continuité des conducteurs de protection (PE) et des liaisons équipotentielles sur l\'ensemble des masses métalliques avec vérification des seuils de résistance réglementaires$normSuffix.';
+      case 'ddr_isolement':
+        return 'Remplacer ou recalibrer les dispositifs différentiels (DDR) défaillants et remédier aux défauts d\'isolement identifiés pour assurer le déclenchement automatique instantané$normSuffix.';
+      case 'reperage_schema_documentation':
+        return 'Généraliser le repérage normalisé sur l\'ensemble des départs, appareillages et borniers, et afficher les schémas unifilaires conformes à l\'intérieur des enveloppes$normSuffix.';
+      case 'connexions_serrage_cables':
+        return 'Procéder au contrôle du couple de serrage dynamométrique de toutes les connexions électriques, reprendre les raccordements et remplacer les conducteurs présentant des traces d\'échauffement$normSuffix.';
+      case 'protections_calibres':
+        return 'Mettre en conformité les calibres et pouvoirs de coupure des dispositifs de protection amont avec les sections de câbles protégées et les contraintes thermiques présumées$normSuffix.';
+      case 'parafoudres_foudre':
+        return 'Installer ou remplacer les cartouches de parafoudres en tête d\'installation avec leurs déconnecteurs associés et vérifier leur raccordement au collecteur principal de terre$normSuffix.';
+      case 'coupure_urgence':
+        return 'Installer ou remettre en état fonctionnel les organes de coupure d\'urgence identifiés, en assurant leur accessibilité immédiate et leur action directe sur l\'alimentation$normSuffix.';
+      case 'epi_securite':
+        return 'Approvisionner et mettre à disposition immédiate dans les locaux techniques les équipements de protection individuelle et collectifs réglementaires vérifiés et valides$normSuffix.';
+      case 'cellules_transfos_verrouillage':
+        return 'Effectuer la révision complète des cellules HTA et transformateurs : asservissements, verrouillages mécaniques, contrôle diélectrique et dépoussiérage approfondi$normSuffix.';
+      case 'eclairage_securite':
+        return 'Remettre en service les blocs autonomes d\'éclairage de sécurité (BAES) défectueux et tester leur autonomie réglementaire d\'une heure$normSuffix.';
+      case 'locaux_ventilation':
+        return 'Dégager intégralement les allées de circulation et accès aux armoires, et rétablir une ventilation efficace des locaux pour prévenir tout échauffement anormal$normSuffix.';
+      default:
+        if (sampleActions.isNotEmpty) return sampleActions.first;
+        return 'Mettre en conformité l\'ensemble des écarts constatés selon les prescriptions normatives applicables$normSuffix.';
     }
   }
 }
