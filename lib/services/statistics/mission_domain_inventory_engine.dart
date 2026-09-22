@@ -170,71 +170,167 @@ class MissionDomainInventory {
     return getParetoAnalysis(limit: limit).items;
   }
 
-  /// Analyse de Pareto mathématique dynamique sur les points de vérification (réponses "Non").
+  /// Analyse de Pareto mathématique certifiée et déterministe sur les points de vérification non conformes.
+  ///
+  /// Établit la distribution complète, la classification ABC, le croisement avec la criticité,
+  /// la détection des ruptures structurelles de pente, et garantit un bouclage mathématique à 100 %.
   ParetoAnalysisResult getParetoAnalysis({int limit = 10}) {
-    final counts = <String, int>{};
+    // 1. Agrégation par catégorie canonique avec ventilation de la criticité
+    final catCounts = <String, int>{};
+    final catCritiques = <String, int>{};
+    final catMajeures = <String, int>{};
+    final catMineures = <String, int>{};
+
     for (final f in pertinentFindings) {
       final key = CanonicalDefectCategoryRegistry.mapToCanonical(
         f.verificationPoint,
         riskFamily: f.riskFamily,
       );
       if (key.isNotEmpty) {
-        counts[key] = (counts[key] ?? 0) + 1;
+        catCounts[key] = (catCounts[key] ?? 0) + 1;
+        final crit = f.criticality.trim().toLowerCase();
+        if (crit == 'critique') {
+          catCritiques[key] = (catCritiques[key] ?? 0) + 1;
+        } else if (crit == 'majeure') {
+          catMajeures[key] = (catMajeures[key] ?? 0) + 1;
+        } else {
+          catMineures[key] = (catMineures[key] ?? 0) + 1;
+        }
       }
     }
 
     final total = pertinentFindings.length;
-    final sortedEntries = counts.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
+    final totalCrit = pertinentFindings.where((f) => f.criticality.trim().toLowerCase() == 'critique').length;
+    final totalMaj = pertinentFindings.where((f) => f.criticality.trim().toLowerCase() == 'majeure').length;
 
-    // Calcul dynamique de k80 sur la totalité des catégories de défauts
+    // 2. Tri déterministe absolu (Fréquence décroissante -> Criticité décroissante -> Ordre alphabétique)
+    final sortedKeys = catCounts.keys.toList()
+      ..sort((a, b) {
+        final cmpCount = (catCounts[b] ?? 0).compareTo(catCounts[a] ?? 0);
+        if (cmpCount != 0) return cmpCount;
+        final cmpCrit = (catCritiques[b] ?? 0).compareTo(catCritiques[a] ?? 0);
+        if (cmpCrit != 0) return cmpCrit;
+        return a.compareTo(b);
+      });
+
+    // 3. Calcul de la distribution sur la totalité des catégories recensées
     int paretoK = 0;
     double paretoCumulPct = 0.0;
     double runningAll = 0.0;
     bool thresholdReached = false;
-    for (int i = 0; i < sortedEntries.length; i++) {
-      final p = total > 0 ? (sortedEntries[i].value / total) * 100.0 : 0.0;
-      runningAll += p;
+
+    final allItems = <TopDefectItem>[];
+
+    for (int i = 0; i < sortedKeys.length; i++) {
+      final key = sortedKeys[i];
+      final cnt = catCounts[key] ?? 0;
+      final pct = total > 0 ? (cnt / total) * 100.0 : 0.0;
+      runningAll += pct;
+
+      final wasReachedBefore = thresholdReached;
       if (!thresholdReached && (runningAll >= 80.0 || (runningAll - 80.0).abs() < 0.001)) {
         paretoK = i + 1;
         paretoCumulPct = runningAll;
         thresholdReached = true;
       }
+
+      // Classification ABC rigoureuse (Méthode ABC de Pareto) :
+      // Classe A : catégories participant à l'atteinte des 80 % (Zone vitale d'effets de masse)
+      // Classe B : catégories intermédiaires entre 80 % et 95 % (Zone de consolidation)
+      // Classe C : traîne résiduelle au-delà de 95 % (Zone de fond)
+      final String classe;
+      if (!wasReachedBefore) {
+        classe = 'A';
+      } else if (runningAll <= 95.0 || (runningAll - pct <= 95.0 && allItems.where((e) => e.classeAbc == 'B').isEmpty)) {
+        classe = 'B';
+      } else {
+        classe = 'C';
+      }
+
+      allItems.add(TopDefectItem(
+        title: key,
+        count: cnt,
+        percentage: pct,
+        cumulativePercentage: runningAll,
+        critiqueCount: catCritiques[key] ?? 0,
+        majeureCount: catMajeures[key] ?? 0,
+        mineureCount: catMineures[key] ?? 0,
+        classeAbc: classe,
+      ));
     }
-    if (!thresholdReached && sortedEntries.isNotEmpty) {
-      paretoK = sortedEntries.length;
+
+    if (!thresholdReached && sortedKeys.isNotEmpty) {
+      paretoK = sortedKeys.length;
       paretoCumulPct = runningAll;
       thresholdReached = runningAll >= 80.0;
     }
 
-    double runningCumul = 0.0;
-    final topList = <TopDefectItem>[];
-
-    for (int i = 0; i < sortedEntries.length && i < limit; i++) {
-      final entry = sortedEntries[i];
-      final pct = total > 0 ? (entry.value / total) * 100.0 : 0.0;
-      runningCumul += pct;
-
-      topList.add(TopDefectItem(
-        title: entry.key,
-        count: entry.value,
-        percentage: pct,
-        cumulativePercentage: runningCumul,
-      ));
+    // 4. Détection experte de rupture de pente (cassure structurelle 2 causes = fort volume)
+    bool hasBreak = false;
+    int breakCount = 0;
+    double breakPct = 0.0;
+    if (allItems.length >= 2) {
+      final top2Pct = allItems[0].percentage + allItems[1].percentage;
+      if (top2Pct >= 40.0 && (allItems.length > 2 && allItems[1].percentage >= allItems[2].percentage * 1.5)) {
+        hasBreak = true;
+        breakCount = 2;
+        breakPct = top2Pct;
+      }
     }
 
-    final totalDistinctCategories = counts.length;
+    // 5. Partitionnement Top N et constitution de l'agrégat de clôture "Autres" (pour boucler à 100%)
+    final topList = <TopDefectItem>[];
+    TopDefectItem? otherItem;
+
+    if (allItems.length <= limit) {
+      topList.addAll(allItems);
+    } else {
+      topList.addAll(allItems.take(limit));
+
+      final remaining = allItems.skip(limit).toList();
+      final otherCount = remaining.fold<int>(0, (sum, e) => sum + e.count);
+      final otherPct = total > 0 ? (otherCount / total) * 100.0 : 0.0;
+      final otherCrit = remaining.fold<int>(0, (sum, e) => sum + e.critiqueCount);
+      final otherMaj = remaining.fold<int>(0, (sum, e) => sum + e.majeureCount);
+      final otherMin = remaining.fold<int>(0, (sum, e) => sum + e.mineureCount);
+
+      otherItem = TopDefectItem(
+        title: 'Autres anomalies (${remaining.length} typologies)',
+        count: otherCount,
+        percentage: otherPct,
+        cumulativePercentage: 100.0,
+        critiqueCount: otherCrit,
+        majeureCount: otherMaj,
+        mineureCount: otherMin,
+        classeAbc: 'C',
+        isOtherAggregate: true,
+      );
+    }
+
+    // 6. Métriques de synthèse ABC
+    final aItems = allItems.where((e) => e.classeAbc == 'A').toList();
+    final bItems = allItems.where((e) => e.classeAbc == 'B').toList();
+    final cItems = allItems.where((e) => e.classeAbc == 'C').toList();
+
+    final aPct = aItems.fold<double>(0.0, (sum, e) => sum + e.percentage);
+    final bPct = bItems.fold<double>(0.0, (sum, e) => sum + e.percentage);
+    final cPct = cItems.fold<double>(0.0, (sum, e) => sum + e.percentage);
+
+    final totalDistinctCategories = catCounts.length;
     final ratio = totalDistinctCategories > 0 ? (paretoK / totalDistinctCategories) : 0.0;
 
+    // 7. Génération narrative du diagnostic
     final String summary;
     if (total == 0) {
       summary = 'Aucune non-conformité recensée pour l\'analyse de Pareto.';
-    } else if (sortedEntries.length == 1 || (paretoK == 1 && (sortedEntries[0].value / total * 100) >= 80.0)) {
-      summary = 'L\'analyse porte sur l\'intégralité des $total non-conformités relevées sur le site, toutes regroupées sous une unique catégorie prépondérante ("${sortedEntries[0].key}"). Cette seule typologie concentre à elle seule ${paretoCumulPct.toStringAsFixed(1).replaceAll('.', ',')} % du total des anomalies, constituant un monopole critique de défaillance.';
+    } else if (sortedKeys.length == 1 || (paretoK == 1 && (allItems.first.percentage >= 80.0))) {
+      summary = 'L\'analyse porte sur l\'intégralité des $total non-conformités relevées sur le site, toutes regroupées sous une unique catégorie prépondérante ("${allItems.first.title}"). Cette seule typologie concentre à elle seule ${paretoCumulPct.toStringAsFixed(1).replaceAll('.', ',')} % du total des anomalies, constituant un monopole critique de défaillance.';
+    } else if (thresholdReached && (ratio <= 0.25 || (totalDistinctCategories <= 4 && paretoK <= 1))) {
+      summary = 'L\'analyse porte sur l\'intégralité des $total non-conformités relevées sur le site, réparties en $totalDistinctCategories typologies distinctes. Une forte concentration compatible avec la loi de Pareto (80/20) est observée : les $paretoK premières catégories (soit ${(ratio * 100).toStringAsFixed(1).replaceAll('.', ',')} % des typologies) concentrent ${paretoCumulPct.toStringAsFixed(1).replaceAll('.', ',')} % des anomalies.';
+    } else if (hasBreak) {
+      summary = 'L\'analyse porte sur l\'intégralité des $total non-conformités relevées sur le site, réparties en $totalDistinctCategories typologies distinctes. Une forte cassure structurelle est observée : les 2 premières catégories ("${allItems[0].title}" et "${allItems[1].title}") concentrent à elles seules ${breakPct.toStringAsFixed(1).replaceAll('.', ',')} % des écarts du site. Le seuil des 80 % est atteint à la $paretoK${paretoK > 1 ? "e" : ""} catégorie (${paretoCumulPct.toStringAsFixed(1).replaceAll('.', ',')} % du volume).';
     } else if (thresholdReached) {
-      if (ratio <= 0.25 || (totalDistinctCategories <= 4 && paretoK <= 1)) {
-        summary = 'L\'analyse porte sur l\'intégralité des $total non-conformités relevées sur le site, réparties en $totalDistinctCategories typologies distinctes. Une forte concentration compatible avec la loi de Pareto (80/20) est observée : les $paretoK premières catégories (soit ${(ratio * 100).toStringAsFixed(1).replaceAll('.', ',')} % des typologies) concentrent ${paretoCumulPct.toStringAsFixed(1).replaceAll('.', ',')} % des anomalies.';
-      } else if (ratio <= 0.50) {
+      if (ratio <= 0.50) {
         summary = 'L\'analyse porte sur l\'intégralité des $total non-conformités relevées sur le site, réparties en $totalDistinctCategories typologies distinctes. Une concentration modérée est observée : $paretoK catégories (soit ${(ratio * 100).toStringAsFixed(1).replaceAll('.', ',')} % des typologies) sont nécessaires pour atteindre le seuil de 80 % (${paretoCumulPct.toStringAsFixed(1).replaceAll('.', ',')} % des anomalies).';
       } else {
         summary = 'L\'analyse porte sur l\'intégralité des $total non-conformités relevées sur le site, réparties en $totalDistinctCategories typologies distinctes. Contrairement à une distribution de Pareto classique, les anomalies présentent une répartition relativement homogène et dispersée : $paretoK catégories sur $totalDistinctCategories (soit ${(ratio * 100).toStringAsFixed(1).replaceAll('.', ',')} % des typologies) sont nécessaires pour totaliser ${paretoCumulPct.toStringAsFixed(1).replaceAll('.', ',')} % des défaillances.';
@@ -245,12 +341,24 @@ class MissionDomainInventory {
 
     return ParetoAnalysisResult(
       items: topList,
+      otherCategoryItem: otherItem,
       totalOccurrences: total,
       paretoCategoryCount: paretoK,
       paretoCumulativePercentage: paretoCumulPct,
       summaryText: summary,
       totalDistinctCategories: totalDistinctCategories,
       isThresholdReached: thresholdReached,
+      hasBreakPoint: hasBreak,
+      breakPointCategoryCount: breakCount,
+      breakPointPercentage: breakPct,
+      classeACount: aItems.length,
+      classeAPct: aPct,
+      classeBCount: bItems.length,
+      classeBPct: bPct,
+      classeCCount: cItems.length,
+      classeCPct: cPct,
+      totalCritiques: totalCrit,
+      totalMajeures: totalMaj,
     );
   }
 
@@ -832,7 +940,7 @@ class MissionDomainInventoryEngine {
         originNom: originNom,
         parentZone: parentZone,
         parentLocal: local.nom,
-        defaultTensionDomain: TensionDomain.bt,
+        defaultTensionDomain: TensionDomain.mt,
         instances: instances,
         addFinding: addFinding,
         visitedCoffrets: visitedCoffrets,

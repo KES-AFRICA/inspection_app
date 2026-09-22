@@ -34,6 +34,7 @@ class PdfStatisticsBuilder {
   static const double fsH3 = PdfReportStyles.fsH3;
   static const double fsBody = PdfReportStyles.fsBody;
   static const double fsSmall = PdfReportStyles.fsSmall;
+  static const double fsTiny = 6.0;
 
   static List<pw.Widget> buildAnalyseStatistique(
     Mission mission,
@@ -283,10 +284,11 @@ class PdfStatisticsBuilder {
             pw.SizedBox(height: 5),
             PdfReportStyles.bodyText(paretoP1),
             pw.SizedBox(height: 8),
-            // Diagramme de Pareto double axe (occurrences et % cumulé)
+            // Diagramme de Pareto double axe (occurrences et % cumulé avec bouclage 100 %)
             PdfStatisticsCharts.buildParetoDualAxisChart(
               summary.paretoResult.items,
               totalOccur,
+              paretoResult: summary.paretoResult,
             ),
             pw.SizedBox(height: 8),
             // Tableau récapitulatif Top 10 Pareto
@@ -650,19 +652,30 @@ class PdfStatisticsBuilder {
 
   static pw.Widget _buildParetoTop10Table(ParetoAnalysisResult paretoResult, int totalOccurrences) {
     final top10 = paretoResult.items.take(10).toList();
-    final top10Sum = top10.fold<int>(0, (sum, e) => sum + e.count);
-    final top10Pct = totalOccurrences > 0 ? (top10Sum / totalOccurrences * 100) : 0.0;
+    final otherItem = paretoResult.otherCategoryItem;
+    final top10Critiques = top10.fold<int>(0, (sum, e) => sum + e.critiqueCount);
+    final top10Majeures = top10.fold<int>(0, (sum, e) => sum + e.majeureCount);
+
+    final totalCritiques = paretoResult.totalCritiques > 0
+        ? paretoResult.totalCritiques
+        : (top10Critiques + (otherItem?.critiqueCount ?? 0));
+    final totalMajeures = paretoResult.totalMajeures > 0
+        ? paretoResult.totalMajeures
+        : (top10Majeures + (otherItem?.majeureCount ?? 0));
 
     return pw.Column(
       children: [
         pw.Table(
           border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.5),
           columnWidths: const {
-            0: pw.FlexColumnWidth(0.8),
-            1: pw.FlexColumnWidth(4.8),
-            2: pw.FlexColumnWidth(1.4),
-            3: pw.FlexColumnWidth(1.4),
-            4: pw.FlexColumnWidth(1.6),
+            0: pw.FlexColumnWidth(0.6),
+            1: pw.FlexColumnWidth(4.2),
+            2: pw.FlexColumnWidth(1.1),
+            3: pw.FlexColumnWidth(1.1),
+            4: pw.FlexColumnWidth(1.2),
+            5: pw.FlexColumnWidth(1.1),
+            6: pw.FlexColumnWidth(1.1),
+            7: pw.FlexColumnWidth(0.9),
           },
           children: [
             pw.TableRow(
@@ -672,7 +685,10 @@ class PdfStatisticsBuilder {
                 _buildTableHeaderCell('Catégorie de non-conformité'),
                 _buildTableHeaderCell('Constats'),
                 _buildTableHeaderCell('Part (%)'),
-                _buildTableHeaderCell('Part cumulée (%)'),
+                _buildTableHeaderCell('Cumul (%)'),
+                _buildTableHeaderCell('Critiques'),
+                _buildTableHeaderCell('Majeures'),
+                _buildTableHeaderCell('Classe'),
               ],
             ),
             for (int i = 0; i < top10.length; i++)
@@ -682,15 +698,63 @@ class PdfStatisticsBuilder {
                 ),
                 children: [
                   _buildTableCell('${i + 1}', isBold: true),
-                  _buildTableCell(top10[i].title, isBold: false, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
+                  _buildTableCell(
+                    top10[i].title,
+                    isBold: false,
+                    align: pw.TextAlign.left,
+                    alignment: pw.Alignment.centerLeft,
+                  ),
                   _buildTableCell('${top10[i].count}', isBold: true),
                   _buildTableCell('${top10[i].percentage.toStringAsFixed(1).replaceAll('.', ',')} %'),
-                  _buildTableCell('${top10[i].cumulativePercentage.toStringAsFixed(1).replaceAll('.', ',')} %', isBold: true),
+                  _buildTableCell(
+                    '${top10[i].cumulativePercentage.toStringAsFixed(1).replaceAll('.', ',')} %',
+                    isBold: true,
+                  ),
+                  _buildTableCell(
+                    '${top10[i].critiqueCount}',
+                    isBold: top10[i].critiqueCount > 0,
+                    color: top10[i].critiqueCount > 0 ? PdfColor.fromHex('#B71C1C') : null,
+                  ),
+                  _buildTableCell(
+                    '${top10[i].majeureCount}',
+                    isBold: top10[i].majeureCount > 0,
+                    color: top10[i].majeureCount > 0 ? PdfColor.fromHex('#D35400') : null,
+                  ),
+                  _buildAbcBadgeCell(top10[i].classeAbc),
+                ],
+              ),
+            if (otherItem != null)
+              pw.TableRow(
+                decoration: pw.BoxDecoration(
+                  color: PdfColor.fromHex('#F8FAFC'),
+                ),
+                children: [
+                  _buildTableCell('-', isBold: false),
+                  _buildTableCell(
+                    otherItem.title,
+                    isBold: false,
+                    align: pw.TextAlign.left,
+                    alignment: pw.Alignment.centerLeft,
+                  ),
+                  _buildTableCell('${otherItem.count}', isBold: true),
+                  _buildTableCell('${otherItem.percentage.toStringAsFixed(1).replaceAll('.', ',')} %'),
+                  _buildTableCell('100,0 %', isBold: true),
+                  _buildTableCell(
+                    '${otherItem.critiqueCount}',
+                    isBold: otherItem.critiqueCount > 0,
+                    color: otherItem.critiqueCount > 0 ? PdfColor.fromHex('#B71C1C') : null,
+                  ),
+                  _buildTableCell(
+                    '${otherItem.majeureCount}',
+                    isBold: otherItem.majeureCount > 0,
+                    color: otherItem.majeureCount > 0 ? PdfColor.fromHex('#D35400') : null,
+                  ),
+                  _buildAbcBadgeCell(otherItem.classeAbc),
                 ],
               ),
           ],
         ),
-        // Ligne de total avec fusion native des colonnes 0 et 1 (0.8 + 4.8 = 5.6)
+        // Ligne de total avec fusion des colonnes N° et Désignation (0.6 + 4.2 = 4.8)
         pw.Table(
           border: pw.TableBorder(
             left: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
@@ -699,24 +763,83 @@ class PdfStatisticsBuilder {
             verticalInside: pw.BorderSide(color: PdfReportStyles.borderColor, width: 0.5),
           ),
           columnWidths: const {
-            0: pw.FlexColumnWidth(5.6),
-            1: pw.FlexColumnWidth(1.4),
-            2: pw.FlexColumnWidth(1.4),
-            3: pw.FlexColumnWidth(1.6),
+            0: pw.FlexColumnWidth(4.8),
+            1: pw.FlexColumnWidth(1.1),
+            2: pw.FlexColumnWidth(1.1),
+            3: pw.FlexColumnWidth(1.2),
+            4: pw.FlexColumnWidth(1.1),
+            5: pw.FlexColumnWidth(1.1),
+            6: pw.FlexColumnWidth(0.9),
           },
           children: [
             pw.TableRow(
               decoration: pw.BoxDecoration(color: PdfReportStyles.lightBlue),
               children: [
-                _buildTableCell('TOTAL TOP 10', isBold: true, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
-                _buildTableCell('$top10Sum', isBold: true),
-                _buildTableCell('${top10Pct.toStringAsFixed(1).replaceAll('.', ',')} %', isBold: true),
-                _buildTableCell('${top10Pct.toStringAsFixed(1).replaceAll('.', ',')} %', isBold: true),
+                _buildTableCell(
+                  'TOTAL MISSION (BOUCLAGE 100 %)',
+                  isBold: true,
+                  align: pw.TextAlign.left,
+                  alignment: pw.Alignment.centerLeft,
+                ),
+                _buildTableCell('$totalOccurrences', isBold: true),
+                _buildTableCell('100,0 %', isBold: true),
+                _buildTableCell('100,0 %', isBold: true),
+                _buildTableCell(
+                  '$totalCritiques',
+                  isBold: true,
+                  color: totalCritiques > 0 ? PdfColor.fromHex('#B71C1C') : null,
+                ),
+                _buildTableCell(
+                  '$totalMajeures',
+                  isBold: true,
+                  color: totalMajeures > 0 ? PdfColor.fromHex('#D35400') : null,
+                ),
+                _buildTableCell('A+B+C', isBold: true),
               ],
             ),
           ],
         ),
       ],
+    );
+  }
+
+  static pw.Widget _buildAbcBadgeCell(String classe) {
+    final PdfColor bgColor;
+    final PdfColor textColor;
+    switch (classe.toUpperCase()) {
+      case 'A':
+        bgColor = PdfColor.fromHex('#FEE2E2');
+        textColor = PdfColor.fromHex('#991B1B');
+        break;
+      case 'B':
+        bgColor = PdfColor.fromHex('#FEF3C7');
+        textColor = PdfColor.fromHex('#92400E');
+        break;
+      case 'C':
+      default:
+        bgColor = PdfColor.fromHex('#F1F5F9');
+        textColor = PdfColor.fromHex('#475569');
+        break;
+    }
+
+    return pw.Container(
+      alignment: pw.Alignment.center,
+      padding: const pw.EdgeInsets.symmetric(vertical: 2),
+      child: pw.Container(
+        padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+        decoration: pw.BoxDecoration(
+          color: bgColor,
+          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(2)),
+        ),
+        child: pw.Text(
+          classe.isEmpty ? 'C' : classe,
+          style: pw.TextStyle(
+            font: fontBold,
+            fontSize: fsTiny,
+            color: textColor,
+          ),
+        ),
+      ),
     );
   }
 
@@ -744,47 +867,69 @@ class PdfStatisticsBuilder {
     final String seuilText;
     final String porteeText;
 
-    switch (pareto.profile) {
-      case ParetoConcentrationProfile.noData:
-        seuilTitle = '• Seuil critique des 80 % : ';
-        seuilText = 'Aucune non-conformité recensée sur le périmètre analysé. Le seuil de 80 % n\'est pas applicable.\n';
-        porteeText = 'Maintenir la régularité des contrôles périodiques et les protocoles de maintenance préventive.';
-        break;
+    if (pareto.hasBreakPoint && pareto.breakPointCategoryCount > 0) {
+      seuilTitle = '• Seuil d\'inflexion et rupture de pente structurelle : ';
+      seuilText =
+          'Une cassure statistique nette est identifiée dès la ${pareto.breakPointCategoryCount == 1 ? "1ère" : "${pareto.breakPointCategoryCount}e"} catégorie de défaillances, qui concentre à elle seule ${pareto.breakPointPercentage.toStringAsFixed(1).replaceAll('.', ',')} % des non-conformités du site. Par la suite, le seuil conventionnel des 80 % ($paretoCumPctStr %) est franchi à la $pareto80K${pareto80K > 1 ? "e" : ""} catégorie (soit $k80RatioPctStr % des typologies recensées).\n';
+      porteeText =
+          'Le plan d\'action d\'ingénierie doit prioriser immédiatement le traitement des ${pareto.breakPointCategoryCount} premières causes racines pour neutraliser près de la moitié du gisement d\'anomalies avec un ratio coût/efficacité maximal.';
+    } else {
+      switch (pareto.profile) {
+        case ParetoConcentrationProfile.breakPointConcentration:
+          final catCount = pareto.breakPointCategoryCount > 0 ? pareto.breakPointCategoryCount : 1;
+          final catPctStr = pareto.breakPointPercentage.toStringAsFixed(1).replaceAll('.', ',');
+          seuilTitle = '• Seuil d\'inflexion et rupture de pente structurelle : ';
+          seuilText =
+              'Une cassure statistique nette est identifiée dès la ${catCount == 1 ? "1ère" : "${catCount}e"} catégorie de défaillances, qui concentre à elle seule $catPctStr % des non-conformités du site. Par la suite, le seuil conventionnel des 80 % ($paretoCumPctStr %) est franchi à la $pareto80K${pareto80K > 1 ? "e" : ""} catégorie (soit $k80RatioPctStr % des typologies recensées).\n';
+          porteeText =
+              'Le plan d\'action d\'ingénierie doit prioriser immédiatement le traitement des $catCount premières causes racines pour neutraliser près de la moitié du gisement d\'anomalies avec un ratio coût/efficacité maximal.';
+          break;
 
-      case ParetoConcentrationProfile.singleDominant:
-        final catName = pareto.items.isNotEmpty ? pareto.items.first.title : 'Défaut prépondérant';
-        final catPctStr = pareto.items.isNotEmpty
-            ? pareto.items.first.percentage.toStringAsFixed(1).replaceAll('.', ',')
-            : '0,0';
-        seuilTitle = '• Seuil critique des 80 % (monopole de défaillance) : ';
-        seuilText = 'Le seuil des 80 % est franchi dès la toute première catégorie (« $catName »), qui concentre à elle seule $catPctStr % de l\'ensemble des défaillances. Il s\'agit d\'une situation de concentration extrême, bien au-delà de la distribution classique 80/20.\n';
-        porteeText = 'La priorité absolue d\'intervention et d\'investissement doit être focalisée sans délai sur la résolution de cette anomalie majeure (« $catName »), dont la résorption permettra à elle seule d\'assainir immédiatement plus de 80 % du risque global du site.';
-        break;
+        case ParetoConcentrationProfile.noData:
+          seuilTitle = '• Seuil critique des 80 % : ';
+          seuilText = 'Aucune non-conformité recensée sur le périmètre analysé. Le seuil de 80 % n\'est pas applicable.\n';
+          porteeText = 'Maintenir la régularité des contrôles périodiques et les protocoles de maintenance préventive.';
+          break;
 
-      case ParetoConcentrationProfile.highConcentration:
-        seuilTitle = '• Seuil critique des 80 % (règle de Pareto vérifiée) : ';
-        seuilText = 'Le seuil de 80 % du volume global ($paretoCumPctStr %) est atteint dès la ${pareto80K == 1 ? "1ère" : "$pareto80K"}${pareto80K > 1 ? "e" : ""} catégorie de défauts (sur un total de $totalDistinct typologies, soit $k80RatioPctStr % du référentiel). Les constats observés sur le site vérifient fidèlement la loi de Pareto : une forte concentration du risque repose sur un nombre restreint de défaillances récurrentes.\n';
-        porteeText = 'Pour maximiser l\'efficacité des investissements et sécuriser rapidement le site, le plan d\'action prioritaire doit cibler en premier lieu ces $pareto80K typologies (et singulièrement le Top $top10Count ci-dessus), permettant ainsi d\'éliminer l\'immense majorité des risques identifiés sans dispersion d\'efforts.';
-        break;
+        case ParetoConcentrationProfile.singleDominant:
+          final catName = pareto.items.isNotEmpty ? pareto.items.first.title : 'Défaut prépondérant';
+          final catPctStr = pareto.items.isNotEmpty
+              ? pareto.items.first.percentage.toStringAsFixed(1).replaceAll('.', ',')
+              : '0,0';
+          seuilTitle = '• Seuil critique des 80 % (monopole de défaillance) : ';
+          seuilText = 'Le seuil des 80 % est franchi dès la toute première catégorie (« $catName »), qui concentre à elle seule $catPctStr % de l\'ensemble des défaillances. Il s\'agit d\'une situation de concentration extrême, bien au-delà de la distribution classique 80/20.\n';
+          porteeText = 'La priorité absolue d\'intervention et d\'investissement doit être focalisée sans délai sur la résolution de cette anomalie majeure (« $catName »), dont la résorption permettra à elle seule d\'assainir immédiatement plus de 80 % du risque global du site.';
+          break;
 
-      case ParetoConcentrationProfile.moderateConcentration:
-        seuilTitle = '• Seuil critique des 80 % (concentration modérée) : ';
-        seuilText = 'Le seuil de 80 % du volume global ($paretoCumPctStr %) est atteint à la $pareto80K${pareto80K > 1 ? "e" : ""} catégorie (sur un total de $totalDistinct typologies, soit $k80RatioPctStr %). La concentration est modérée : bien que les premières catégories constituent des gisements prioritaires, l\'atteinte des 80 % nécessite d\'englober un spectre plus étendu de typologies réparties sur plusieurs domaines techniques.\n';
-        porteeText = 'Le plan d\'action doit combiner un traitement prioritaire des premières typologies tout en maintenant un programme de maintenance préventive structuré sur l\'ensemble des installations pour éviter la dégradation des anomalies secondaires.';
-        break;
+        case ParetoConcentrationProfile.highConcentration:
+          seuilTitle = '• Seuil critique des 80 % (règle de Pareto vérifiée) : ';
+          seuilText = 'Le seuil de 80 % du volume global ($paretoCumPctStr %) est atteint dès la ${pareto80K == 1 ? "1ère" : "$pareto80K"}${pareto80K > 1 ? "e" : ""} catégorie de défauts (sur un total de $totalDistinct typologies, soit $k80RatioPctStr % du référentiel). Les constats observés sur le site vérifient fidèlement la loi de Pareto : une forte concentration du risque repose sur un nombre restreint de défaillances récurrentes.\n';
+          porteeText = 'Pour maximiser l\'efficacité des investissements et sécuriser rapidement le site, le plan d\'action prioritaire doit cibler en premier lieu ces $pareto80K typologies (et singulièrement le Top $top10Count ci-dessus), permettant ainsi d\'éliminer l\'immense majorité des risques identifiés sans dispersion d\'efforts.';
+          break;
 
-      case ParetoConcentrationProfile.homogeneousOrDispersed:
-        seuilTitle = '• Seuil critique des 80 % (distribution dispersée / homogène) : ';
-        seuilText = 'Le seuil des 80 % ($paretoCumPctStr %) n\'est atteint qu\'au rang $pareto80K (sur $totalDistinct typologies recensées, soit $k80RatioPctStr % du référentiel). Les données observées ne présentent pas de concentration caractéristique de type Pareto (80/20) : les anomalies sont relativement homogènes et dispersées sur un large éventail de défectuosités sans prédominance hégémonique.\n';
-        porteeText = 'En l\'absence de concentration nette, la résorption des risques ne peut se focaliser uniquement sur quelques catégories. Une démarche de remise à niveau globale et un renforcement systématique des procédures de contrôle sur l\'ensemble du parc sont indispensables.';
-        break;
+        case ParetoConcentrationProfile.moderateConcentration:
+          seuilTitle = '• Seuil critique des 80 % (concentration modérée) : ';
+          seuilText = 'Le seuil de 80 % du volume global ($paretoCumPctStr %) est atteint à la $pareto80K${pareto80K > 1 ? "e" : ""} catégorie (sur un total de $totalDistinct typologies, soit $k80RatioPctStr %). La concentration est modérée : bien que les premières catégories constituent des gisements prioritaires, l\'atteinte des 80 % nécessite d\'englober un spectre plus étendu de typologies réparties sur plusieurs domaines techniques.\n';
+          porteeText = 'Le plan d\'action doit combiner un traitement prioritaire des premières typologies tout en maintenant un programme de maintenance préventive structuré sur l\'ensemble des installations pour éviter la dégradation des anomalies secondaires.';
+          break;
 
-      case ParetoConcentrationProfile.thresholdNotReached:
-        seuilTitle = '• Seuil critique des 80 % (seuil non atteint) : ';
-        seuilText = 'Le seuil des 80 % n\'est pas atteint sur la sélection observée (cumul maximal atteint : $paretoCumPctStr %). Les non-conformités sont très réparties sur le site sans concentration dominante sur les premiers rangs.\n';
-        porteeText = 'Les priorités d\'intervention doivent être déterminées en priorité sur la criticité intrinsèque des équipements plutôt que sur la seule récurrence statistique des catégories.';
-        break;
+        case ParetoConcentrationProfile.homogeneousOrDispersed:
+          seuilTitle = '• Seuil critique des 80 % (distribution dispersée / homogène) : ';
+          seuilText = 'Le seuil des 80 % ($paretoCumPctStr %) n\'est atteint qu\'au rang $pareto80K (sur $totalDistinct typologies recensées, soit $k80RatioPctStr % du référentiel). Les données observées ne présentent pas de concentration caractéristique de type Pareto (80/20) : les anomalies sont relativement homogènes et dispersées sur un large éventail de défectuosités sans prédominance hégémonique.\n';
+          porteeText = 'En l\'absence de concentration nette, la résorption des risques ne peut se focaliser uniquement sur quelques catégories. Une démarche de remise à niveau globale et un renforcement systématique des procédures de contrôle sur l\'ensemble du parc sont indispensables.';
+          break;
+
+        case ParetoConcentrationProfile.thresholdNotReached:
+          seuilTitle = '• Seuil critique des 80 % (seuil non atteint) : ';
+          seuilText = 'Le seuil des 80 % n\'est pas atteint sur la sélection observée (cumul maximal atteint : $paretoCumPctStr %). Les non-conformités sont très réparties sur le site sans concentration dominante sur les premiers rangs.\n';
+          porteeText = 'Les priorités d\'intervention doivent être déterminées en priorité sur la criticité intrinsèque des équipements plutôt que sur la seule récurrence statistique des catégories.';
+          break;
+      }
     }
+
+    final classeAPctStr = pareto.classeAPct.toStringAsFixed(1).replaceAll('.', ',');
+    final classeBPctStr = pareto.classeBPct.toStringAsFixed(1).replaceAll('.', ',');
+    final classeCPctStr = pareto.classeCPct.toStringAsFixed(1).replaceAll('.', ',');
 
     return pw.Container(
       margin: const pw.EdgeInsets.symmetric(vertical: 6),
@@ -798,7 +943,7 @@ class PdfStatisticsBuilder {
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
           pw.Text(
-            'Lecture et enseignements du diagramme de Pareto (loi des 80/20)',
+            'Lecture et enseignements de l\'analyse de Pareto (Distribution & Priorisation)',
             style: pw.TextStyle(
               font: fontBold,
               fontSize: fsH3,
@@ -811,19 +956,19 @@ class PdfStatisticsBuilder {
             text: pw.TextSpan(
               children: [
                 pw.TextSpan(
-                  text: '• Principe du diagramme : ',
+                  text: '• Principe méthodologique : ',
                   style: pw.TextStyle(font: fontBold, fontSize: fsBody, color: PdfReportStyles.headerColor),
                 ),
                 pw.TextSpan(
-                  text: 'Le diagramme de Pareto classe les catégories de défaillances par ordre décroissant de fréquence (occurrences unitaires) et superpose la courbe des pourcentages cumulés. Il permet d\'évaluer objectivement si une minorité de causes produit la majorité des effets constatés sur le site.\n',
+                  text: 'L\'analyse de Pareto classe les défaillances par ordre décroissant de fréquence et superpose la courbe des pourcentages cumulés. Elle permet d\'évaluer objectivement si une minorité de causes racines produit la majorité des effets constatés sur les installations du site.\n',
                   style: pw.TextStyle(font: fontRegular, fontSize: fsBody, color: PdfReportStyles.darkGrey, lineSpacing: 1.6),
                 ),
                 pw.TextSpan(
-                  text: '• Périmètre analysé : ',
+                  text: '• Périmètre d\'exhaustivité : ',
                   style: pw.TextStyle(font: fontBold, fontSize: fsBody, color: PdfReportStyles.headerColor),
                 ),
                 pw.TextSpan(
-                  text: 'L\'ensemble des $totalOccurrences occurrences de non-conformités normatives relevées sur les installations ont été classées sous $totalDistinct typologies de défauts ordonnées par fréquence décroissante.\n',
+                  text: 'L\'ensemble des $totalOccurrences occurrences de non-conformités normatives recensées ont été consolidées sous $totalDistinct familles canoniques. Le bouclage mathématique à 100 % garantit l\'intégrité de l\'échantillon audité sans omission de la traîne résiduelle.\n',
                   style: pw.TextStyle(font: fontRegular, fontSize: fsBody, color: PdfReportStyles.darkGrey, lineSpacing: 1.6),
                 ),
                 pw.TextSpan(
@@ -831,7 +976,7 @@ class PdfStatisticsBuilder {
                   style: pw.TextStyle(font: fontBold, fontSize: fsBody, color: PdfReportStyles.headerColor),
                 ),
                 pw.TextSpan(
-                  text: 'Les $top10Count catégories de défauts les plus fréquentes concentrent à elles seules $top10Sum non-conformités, soit $top10PctStr % du volume total des anomalies du site.\n',
+                  text: 'Les $top10Count catégories de tête concentrent $top10Sum non-conformités, représentant $top10PctStr % du volume total des anomalies relevées sur le site.\n',
                   style: pw.TextStyle(font: fontRegular, fontSize: fsBody, color: PdfReportStyles.darkGrey, lineSpacing: 1.6),
                 ),
                 pw.TextSpan(
@@ -840,6 +985,24 @@ class PdfStatisticsBuilder {
                 ),
                 pw.TextSpan(
                   text: seuilText,
+                  style: pw.TextStyle(font: fontRegular, fontSize: fsBody, color: PdfReportStyles.darkGrey, lineSpacing: 1.6),
+                ),
+                pw.TextSpan(
+                  text: '• Fréquence vs Criticité (Règle d\'or de la sécurité) : ',
+                  style: pw.TextStyle(font: fontBold, fontSize: fsBody, color: PdfColor.fromHex('#B71C1C')),
+                ),
+                pw.TextSpan(
+                  text: 'La fréquence d\'apparition ne doit jamais occulter le niveau de gravité. Une non-conformité qualifiée de Critique (risque direct d\'électrocution, d\'incendie ou d\'amorçage) exige une mise en sécurité immédiate, même lorsqu\'elle appartient à une typologie de faible occurrence statistique (Classe B ou C).\n',
+                  style: pw.TextStyle(font: fontRegular, fontSize: fsBody, color: PdfReportStyles.darkGrey, lineSpacing: 1.6),
+                ),
+                pw.TextSpan(
+                  text: '• Structuration ABC du plan d\'action : ',
+                  style: pw.TextStyle(font: fontBold, fontSize: fsBody, color: PdfReportStyles.headerColor),
+                ),
+                pw.TextSpan(
+                  text: 'Classe A ($classeAPctStr % du volume, ${pareto.classeACount} typologies) : gisements prioritaires pour un gain de conformité massif. '
+                      'Classe B ($classeBPctStr % du volume, ${pareto.classeBCount} typologies) : actions correctives de consolidation. '
+                      'Classe C ($classeCPctStr % du volume, ${pareto.classeCCount} typologies) : programme de fond et maintenance courante.\n',
                   style: pw.TextStyle(font: fontRegular, fontSize: fsBody, color: PdfReportStyles.darkGrey, lineSpacing: 1.6),
                 ),
                 pw.TextSpan(

@@ -1,6 +1,5 @@
 // lib/services/statistics/audit_finding.dart
 
-import '../hive_service.dart';
 import 'canonical_defect_category_registry.dart';
 import 'canonical_risk_family_registry.dart';
 import 'mission_domain_inventory_engine.dart';
@@ -66,18 +65,28 @@ class AuditFinding {
       normativeReference != null && normativeReference!.trim().isNotEmpty;
 }
 
-/// Modèle d'item du Top 10 des défauts
+/// Modèle d'item d'analyse de Pareto par catégorie de défaut
 class TopDefectItem {
   final String title;
   final int count;
   final double percentage;
   final double cumulativePercentage;
+  final int critiqueCount;
+  final int majeureCount;
+  final int mineureCount;
+  final String classeAbc; // 'A', 'B', 'C'
+  final bool isOtherAggregate; // true si c'est la ligne/barre récapitulative "Autres"
 
   TopDefectItem({
     required this.title,
     required this.count,
     required this.percentage,
     this.cumulativePercentage = 0.0,
+    this.critiqueCount = 0,
+    this.majeureCount = 0,
+    this.mineureCount = 0,
+    this.classeAbc = 'C',
+    this.isOtherAggregate = false,
   });
 }
 
@@ -108,15 +117,17 @@ class TopNonConformityCategoriesResult {
 enum ParetoConcentrationProfile {
   noData,
   singleDominant,
+  breakPointConcentration, // Cassure nette (ex. 2 catégories font > 40%)
   highConcentration,
   moderateConcentration,
   homogeneousOrDispersed,
   thresholdNotReached,
 }
 
-/// Résultat complet de l'analyse de Pareto (80/20) dynamique sur les points de vérification.
+/// Résultat complet et certifié de l'analyse de Pareto dynamique sur les points de vérification.
 class ParetoAnalysisResult {
   final List<TopDefectItem> items;
+  final TopDefectItem? otherCategoryItem; // Agrégat "Autres typologies (M catégories)"
   final int totalOccurrences;
   final int paretoCategoryCount;
   final double paretoCumulativePercentage;
@@ -124,16 +135,45 @@ class ParetoAnalysisResult {
   final int totalDistinctCategories;
   final bool isThresholdReached;
 
+  // Détection de rupture de distribution et classification ABC
+  final bool hasBreakPoint;
+  final int breakPointCategoryCount;
+  final double breakPointPercentage;
+  final int classeACount;
+  final double classeAPct;
+  final int classeBCount;
+  final double classeBPct;
+  final int classeCCount;
+  final double classeCPct;
+  final int totalCritiques;
+  final int totalMajeures;
+
   ParetoAnalysisResult({
     required this.items,
+    this.otherCategoryItem,
     required this.totalOccurrences,
     required this.paretoCategoryCount,
     required this.paretoCumulativePercentage,
     required this.summaryText,
     int? totalDistinctCategories,
     bool? isThresholdReached,
+    this.hasBreakPoint = false,
+    this.breakPointCategoryCount = 0,
+    this.breakPointPercentage = 0.0,
+    this.classeACount = 0,
+    this.classeAPct = 0.0,
+    this.classeBCount = 0,
+    this.classeBPct = 0.0,
+    this.classeCCount = 0,
+    this.classeCPct = 0.0,
+    this.totalCritiques = 0,
+    this.totalMajeures = 0,
   })  : totalDistinctCategories = totalDistinctCategories ?? items.length,
         isThresholdReached = isThresholdReached ?? (paretoCumulativePercentage >= 80.0);
+
+  /// Liste complète des items à afficher graphiquement (Top catégories + Autres éventuel)
+  List<TopDefectItem> get allDisplayItems =>
+      otherCategoryItem != null ? [...items, otherCategoryItem!] : items;
 
   /// Nombre d'occurrences cumulées concentrées par les 10 premières catégories de défauts.
   int get top10Count => items.take(10).fold(0, (sum, e) => sum + e.count);
@@ -155,11 +195,14 @@ class ParetoAnalysisResult {
     if (items.length == 1 || (paretoCategoryCount == 1 && items.first.percentage >= 80.0)) {
       return ParetoConcentrationProfile.singleDominant;
     }
+    if (isThresholdReached && (k80Ratio <= 0.25 || (totalDistinctCategories <= 4 && paretoCategoryCount <= 1))) {
+      return ParetoConcentrationProfile.highConcentration;
+    }
+    if (hasBreakPoint && breakPointCategoryCount <= 2 && breakPointPercentage >= 40.0) {
+      return ParetoConcentrationProfile.breakPointConcentration;
+    }
     if (!isThresholdReached) {
       return ParetoConcentrationProfile.thresholdNotReached;
-    }
-    if (k80Ratio <= 0.25 || (totalDistinctCategories <= 4 && paretoCategoryCount <= 1)) {
-      return ParetoConcentrationProfile.highConcentration;
     }
     if (k80Ratio <= 0.50) {
       return ParetoConcentrationProfile.moderateConcentration;

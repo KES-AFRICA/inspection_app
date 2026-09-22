@@ -881,27 +881,34 @@ class PdfStatisticsCharts {
   // ──────────────────────────────────────────────────────────────────────────
   static pw.Widget buildParetoDualAxisChart(
     List<TopDefectItem> items,
-    int totalOccurrences,
-  ) {
-    final top10 = items.isNotEmpty
-        ? items.take(10).toList()
-        : [
-            TopDefectItem(title: 'Identification / repérage circuits', count: 0, percentage: 0),
-            TopDefectItem(title: 'Câblages et canalisations', count: 0, percentage: 0),
-            TopDefectItem(title: 'Continuité du conducteur PE', count: 0, percentage: 0),
-            TopDefectItem(title: 'EPI électriques', count: 0, percentage: 0),
-            TopDefectItem(title: 'Plan d\'intervention et consignation', count: 0, percentage: 0),
-            TopDefectItem(title: 'Revêtement diélectrique au sol', count: 0, percentage: 0),
-            TopDefectItem(title: 'Dispositifs de protection', count: 0, percentage: 0),
-            TopDefectItem(title: 'Matériel de consignation', count: 0, percentage: 0),
-            TopDefectItem(title: 'Coupure générale identifiée', count: 0, percentage: 0),
-            TopDefectItem(title: 'Procédure de consignation', count: 0, percentage: 0),
-          ];
+    int totalOccurrences, {
+    ParetoAnalysisResult? paretoResult,
+  }) {
+    final List<TopDefectItem> displayItems;
+    if (paretoResult != null && paretoResult.allDisplayItems.isNotEmpty) {
+      displayItems = paretoResult.allDisplayItems;
+    } else if (items.isNotEmpty) {
+      displayItems = items.take(10).toList();
+    } else {
+      displayItems = [
+        TopDefectItem(title: 'Identification / repérage circuits', count: 0, percentage: 0),
+        TopDefectItem(title: 'Câblages et canalisations', count: 0, percentage: 0),
+        TopDefectItem(title: 'Terre et différentiels', count: 0, percentage: 0),
+        TopDefectItem(title: 'EPI et habilitations', count: 0, percentage: 0),
+        TopDefectItem(title: 'Plans et consignation', count: 0, percentage: 0),
+        TopDefectItem(title: 'Revêtement diélectrique au sol', count: 0, percentage: 0),
+        TopDefectItem(title: 'Protections surintensités', count: 0, percentage: 0),
+        TopDefectItem(title: 'Organes de coupure', count: 0, percentage: 0),
+        TopDefectItem(title: 'Poste et cellules MT', count: 0, percentage: 0),
+        TopDefectItem(title: 'Éclairage de sécurité', count: 0, percentage: 0),
+      ];
+    }
 
-    final maxVal = top10.first.count;
-    final axisMax = ((maxVal / 20).ceil() * 20).clamp(20, 200);
-    const plotHeight = 120.0;
-    const barWidth = 24.0;
+    final maxVal = displayItems.map((e) => e.count).fold<int>(0, math.max);
+    final axisMax = maxVal > 0 ? ((maxVal / 10).ceil() * 10).clamp(10, 500) : 20;
+    const plotHeight = 125.0;
+    final count = displayItems.length;
+    final barWidth = count > 10 ? 20.0 : 24.0;
 
     return pw.Container(
       margin: const pw.EdgeInsets.symmetric(vertical: 6),
@@ -914,7 +921,7 @@ class PdfStatisticsCharts {
       child: pw.Column(
         children: [
           pw.Text(
-            'Analyse de Pareto - 10 principales catégories de défauts (sur $totalOccurrences occurrences)',
+            'Analyse de Pareto - Typologies de défauts (sur $totalOccurrences occurrences - Bouclage 100 %)',
             style: pw.TextStyle(font: fontBold, fontSize: 9.5, color: PdfReportStyles.headerColor),
           ),
           pw.SizedBox(height: 10),
@@ -950,20 +957,33 @@ class PdfStatisticsCharts {
                       child: pw.Row(
                         mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
                         crossAxisAlignment: pw.CrossAxisAlignment.end,
-                        children: top10.map((item) {
+                        children: displayItems.map((item) {
                           final h = axisMax > 0 ? (item.count / axisMax) * plotHeight : 0.0;
+                          final barColor = item.isOtherAggregate
+                              ? PdfColor.fromHex('#94A3B8')
+                              : colorNavy;
                           return pw.Column(
                             mainAxisAlignment: pw.MainAxisAlignment.end,
                             children: [
                               pw.Text(
                                 '${item.count}',
-                                style: pw.TextStyle(font: fontBold, fontSize: 7, color: PdfReportStyles.darkGrey),
+                                style: pw.TextStyle(
+                                  font: fontBold,
+                                  fontSize: 6.5,
+                                  color: item.isOtherAggregate ? PdfColor.fromHex('#64748B') : PdfReportStyles.darkGrey,
+                                ),
                               ),
                               pw.SizedBox(height: 2),
                               pw.Container(
                                 width: barWidth,
                                 height: h.clamp(1.0, plotHeight),
-                                color: colorNavy,
+                                decoration: pw.BoxDecoration(
+                                  color: barColor,
+                                  borderRadius: const pw.BorderRadius.only(
+                                    topLeft: pw.Radius.circular(2),
+                                    topRight: pw.Radius.circular(2),
+                                  ),
+                                ),
                               ),
                             ],
                           );
@@ -974,7 +994,7 @@ class PdfStatisticsCharts {
                     pw.CustomPaint(
                       size: const PdfPoint(400, plotHeight),
                       painter: (PdfGraphics canvas, PdfPoint size) {
-                        // 1. Ligne en pointillés à 80%
+                        // 1. Ligne en pointillés à 80% traversant tout le tracé
                         final y80 = 0.8 * plotHeight;
                         canvas.setStrokeColor(colorCritique);
                         canvas.setLineWidth(0.8);
@@ -983,22 +1003,24 @@ class PdfStatisticsCharts {
                         canvas.strokePath();
                         canvas.setLineDashPattern(); // Reset pointillés
 
-                        // 2. Courbe de Pareto cumulative
-                        canvas.setStrokeColor(colorCritique);
-                        canvas.setLineWidth(1.8);
-
-                        final count = top10.length;
+                        // 2. Points de la courbe cumulative
                         final colWidth = size.x / count;
-
                         final points = <PdfPoint>[];
+                        int? k80Index;
+
                         for (int i = 0; i < count; i++) {
                           final px = (i + 0.5) * colWidth;
-                          final pct = (top10[i].cumulativePercentage / 100.0).clamp(0.0, 1.0);
+                          final pct = (displayItems[i].cumulativePercentage / 100.0).clamp(0.0, 1.0);
                           final py = pct * plotHeight;
                           points.add(PdfPoint(px, py));
+                          if (k80Index == null && displayItems[i].cumulativePercentage >= 80.0) {
+                            k80Index = i;
+                          }
                         }
 
-                        // Ligne reliant les points
+                        // 3. Tracé continu de la courbe
+                        canvas.setStrokeColor(colorCritique);
+                        canvas.setLineWidth(1.8);
                         for (int i = 0; i < points.length; i++) {
                           if (i == 0) {
                             canvas.moveTo(points[i].x, points[i].y);
@@ -1008,21 +1030,45 @@ class PdfStatisticsCharts {
                         }
                         canvas.strokePath();
 
-                        // Points circulaires
-                        canvas.setFillColor(colorCritique);
-                        for (final p in points) {
-                          canvas.drawEllipse(p.x, p.y, 2.5, 2.5);
-                          canvas.fillPath();
+                        // 4. Marqueurs circulaires sur les points
+                        for (int i = 0; i < points.length; i++) {
+                          final p = points[i];
+                          final isK80 = i == k80Index;
+                          if (isK80) {
+                            canvas.setFillColor(PdfColors.white);
+                            canvas.setStrokeColor(colorCritique);
+                            canvas.setLineWidth(1.5);
+                            canvas.drawEllipse(p.x, p.y, 4.0, 4.0);
+                            canvas.fillPath();
+                            canvas.drawEllipse(p.x, p.y, 4.0, 4.0);
+                            canvas.strokePath();
+
+                            canvas.setFillColor(colorCritique);
+                            canvas.drawEllipse(p.x, p.y, 2.2, 2.2);
+                            canvas.fillPath();
+                          } else {
+                            canvas.setFillColor(colorCritique);
+                            canvas.drawEllipse(p.x, p.y, 2.5, 2.5);
+                            canvas.fillPath();
+                          }
                         }
                       },
                     ),
                     // Badge 80 %
                     pw.Positioned(
                       top: plotHeight * 0.2 - 8,
-                      right: 12,
-                      child: pw.Text(
-                        '80 %',
-                        style: pw.TextStyle(font: fontBold, fontSize: 7.5, color: colorCritique),
+                      right: 4,
+                      child: pw.Container(
+                        padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+                        decoration: pw.BoxDecoration(
+                          color: PdfColors.white,
+                          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(2)),
+                          border: pw.Border.all(color: colorCritique, width: 0.5),
+                        ),
+                        child: pw.Text(
+                          'Seuil 80 %',
+                          style: pw.TextStyle(font: fontBold, fontSize: 6.5, color: colorCritique),
+                        ),
                       ),
                     ),
                   ],
@@ -1037,12 +1083,12 @@ class PdfStatisticsCharts {
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    pw.Text('100', style: pw.TextStyle(font: fontRegular, fontSize: 7, color: textGrey)),
-                    pw.Text('80', style: pw.TextStyle(font: fontBold, fontSize: 7, color: colorCritique)),
-                    pw.Text('60', style: pw.TextStyle(font: fontRegular, fontSize: 7, color: textGrey)),
-                    pw.Text('40', style: pw.TextStyle(font: fontRegular, fontSize: 7, color: textGrey)),
-                    pw.Text('20', style: pw.TextStyle(font: fontRegular, fontSize: 7, color: textGrey)),
-                    pw.Text('0', style: pw.TextStyle(font: fontRegular, fontSize: 7, color: textGrey)),
+                    pw.Text('100 %', style: pw.TextStyle(font: fontRegular, fontSize: 6.5, color: textGrey)),
+                    pw.Text('80 %', style: pw.TextStyle(font: fontBold, fontSize: 6.5, color: colorCritique)),
+                    pw.Text('60 %', style: pw.TextStyle(font: fontRegular, fontSize: 6.5, color: textGrey)),
+                    pw.Text('40 %', style: pw.TextStyle(font: fontRegular, fontSize: 6.5, color: textGrey)),
+                    pw.Text('20 %', style: pw.TextStyle(font: fontRegular, fontSize: 6.5, color: textGrey)),
+                    pw.Text('0 %', style: pw.TextStyle(font: fontRegular, fontSize: 6.5, color: textGrey)),
                   ],
                 ),
               ),
@@ -1061,25 +1107,46 @@ class PdfStatisticsCharts {
             child: pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
               crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: top10.map((item) {
-                return pw.SizedBox(
-                  width: 36,
-                  child: pw.Text(
-                    _formatShortParetoLabel(item.title),
-                    textAlign: pw.TextAlign.center,
-                    maxLines: 3,
-                    style: pw.TextStyle(font: fontRegular, fontSize: 5.5, color: PdfReportStyles.darkGrey),
+              children: [
+                for (int i = 0; i < displayItems.length; i++)
+                  pw.SizedBox(
+                    width: count > 10 ? 32 : 36,
+                    child: pw.Column(
+                      children: [
+                        pw.Text(
+                          displayItems[i].isOtherAggregate ? 'Autre' : 'N°${i + 1}',
+                          style: pw.TextStyle(
+                            font: fontBold,
+                            fontSize: 5.5,
+                            color: displayItems[i].isOtherAggregate
+                                ? PdfColor.fromHex('#64748B')
+                                : PdfReportStyles.headerColor,
+                          ),
+                        ),
+                        pw.Text(
+                          _formatShortParetoLabel(displayItems[i].title),
+                          textAlign: pw.TextAlign.center,
+                          maxLines: 3,
+                          style: pw.TextStyle(
+                            font: fontRegular,
+                            fontSize: 5.0,
+                            color: displayItems[i].isOtherAggregate
+                                ? PdfColor.fromHex('#64748B')
+                                : PdfReportStyles.darkGrey,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                );
-              }).toList(),
+              ],
             ),
           ),
           pw.SizedBox(height: 2),
           pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
-              pw.Text('Nombre d\'occurrences', style: pw.TextStyle(font: fontRegular, fontSize: 7, color: textGrey)),
-              pw.Text('% cumulé (base $totalOccurrences)', style: pw.TextStyle(font: fontRegular, fontSize: 7, color: textGrey)),
+              pw.Text('Nombre d\'occurrences (barres)', style: pw.TextStyle(font: fontRegular, fontSize: 6.5, color: textGrey)),
+              pw.Text('Courbe cumulative (axe droit 0-100 %)', style: pw.TextStyle(font: fontRegular, fontSize: 6.5, color: textGrey)),
             ],
           ),
         ],
@@ -1106,16 +1173,22 @@ class PdfStatisticsCharts {
   }
 
   static String _formatShortParetoLabel(String full) {
-    if (full.contains('Identification') || full.contains('repérage')) return 'Repérage\ncircuits';
-    if (full.contains('Câblages') || full.contains('raccordement')) return 'Câblages &\nraccords';
-    if (full.contains('PE') || full.contains('conducteur PE')) return 'Continuité\nPE';
-    if (full.contains('EPI')) return 'EPI\nélectriques';
-    if (full.contains('Plan d\'intervention')) return 'Plans &\nconsignation';
-    if (full.contains('diélectrique')) return 'Revêtement\nsol';
-    if (full.contains('Dispositifs de protection')) return 'Dispositifs\nprotection';
-    if (full.contains('Matériel de consignation')) return 'Matériel\nconsignation';
-    if (full.contains('Coupure générale')) return 'Coupure\ngénérale';
-    if (full.contains('Procédure de consignation')) return 'Procédure\nconsignation';
+    final l = full.toLowerCase();
+    if (l.contains('autre')) return 'Autres\nanomalies';
+    if (l.contains('identification') || l.contains('repérage') || l.contains('reperage')) return 'Repérage\ncircuits';
+    if (l.contains('câblage') || l.contains('canalisation') || l.contains('raccordement')) return 'Câblages &\ncanalisations';
+    if (l.contains('enveloppe') || l.contains('armoire') || l.contains('coffret') || l.contains('ip')) return 'Enveloppes\n& coffrets';
+    if (l.contains('conducteur pe') || l.contains('terre') || l.contains('différentiel') || l.contains('differentiel')) return 'Terre &\nliaisons PE';
+    if (l.contains('disjoncteur') || l.contains('fusible') || l.contains('surintensité') || l.contains('surintensite')) return 'Protections\nsurintensités';
+    if (l.contains('epi') || l.contains('habilitation')) return 'EPI &\nhabilitations';
+    if (l.contains('consignation') || l.contains('intervention') || l.contains('plan')) return 'Plans &\nconsignation';
+    if (l.contains('coupure') || l.contains('sectionnement') || l.contains('arrêt d\'urgence') || l.contains('arret')) return 'Organes de\ncoupure';
+    if (l.contains('diélectrique') || l.contains('dielectrique') || l.contains('tapis') || l.contains('tabouret')) return 'Revêtement\nsol';
+    if (l.contains('moyenne tension') || l.contains('hta') || l.contains('transfo') || l.contains('cellule')) return 'Poste &\ncellules MT';
+    if (l.contains('éclairage') || l.contains('eclairage') || l.contains('baes')) return 'Éclairage de\nsécurité';
+    if (l.contains('répartiteur') || l.contains('repartiteur') || l.contains('borne')) return 'Répartition\n& bornes';
+    if (l.contains('foudre') || l.contains('parafoudre') || l.contains('paratonnerre')) return 'Foudre &\nparafoudres';
+    if (l.contains('ambiance') || l.contains('ventilation') || l.contains('poussière') || l.contains('humidité')) return 'Conditions\nd\'ambiance';
     return full.length > 15 ? '${full.substring(0, 13)}..' : full;
   }
 }
