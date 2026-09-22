@@ -786,9 +786,9 @@
     "semantic_hash": ""
   },
   "lib/models/audit_installations_electriques.dart": {
-    "mtime": 1789529919.6373556,
-    "seen": 1789537796.3357003,
-    "ast_hash": "b973e4dd047cbfd21285e8cdf6bf436d",
+    "mtime": 1790082514.8004816,
+    "seen": 1790083022.3756113,
+    "ast_hash": "962c9dd20900d9d78e6cce7cff85b594",
     "semantic_hash": ""
   },
   "lib/models/audit_installations_electriques.g.dart": {
@@ -1110,9 +1110,9 @@
     "semantic_hash": ""
   },
   "lib/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/ajouter_coffret_screen.dart": {
-    "mtime": 1789604335.1252503,
-    "seen": 1789604645.6547823,
-    "ast_hash": "947039f381ac9caa17031a8be39bfd18",
+    "mtime": 1790082622.353398,
+    "seen": 1790083022.3756926,
+    "ast_hash": "e4b3d356516b5947ef67af8588df584f",
     "semantic_hash": ""
   },
   "lib/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/ajouter_foudre_screen.dart": {
@@ -1170,9 +1170,9 @@
     "semantic_hash": ""
   },
   "lib/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/detail_local_screen.dart": {
-    "mtime": 1789437032.9853718,
-    "seen": 1789442771.861948,
-    "ast_hash": "888fea48ef3fe626272ad67ad4bef70d",
+    "mtime": 1790082270.596905,
+    "seen": 1790083022.3757107,
+    "ast_hash": "93466a93c78ba00ebf13ead3f10c174e",
     "semantic_hash": ""
   },
   "lib/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/detail_zone_screen.dart": {
@@ -1674,9 +1674,9 @@
     "semantic_hash": ""
   },
   "lib/services/hive_service.dart": {
-    "mtime": 1789986663.8908432,
-    "seen": 1789986804.6298294,
-    "ast_hash": "5fa49639cb28f151669312316bf1962b",
+    "mtime": 1790082565.904422,
+    "seen": 1790083022.3758433,
+    "ast_hash": "3ac8bb409c9f518e264c7ad1e5c65e63",
     "semantic_hash": ""
   },
   "lib/services/installation_description_sync_service.dart": {
@@ -1806,8 +1806,8 @@
     "semantic_hash": ""
   },
   "lib/services/pdf/builders/pdf_statistics_builder.dart": {
-    "mtime": 1790073434.7044978,
-    "seen": 1790075068.4337916,
+    "mtime": 1790078988.0450637,
+    "seen": 1790083022.3758795,
     "ast_hash": "125021735ab2e1534c5ef448a31af5dd",
     "semantic_hash": ""
   },
@@ -1896,8 +1896,8 @@
     "semantic_hash": ""
   },
   "lib/services/statistics/audit_finding.dart": {
-    "mtime": 1789485225.8443046,
-    "seen": 1789537796.336235,
+    "mtime": 1790082500.919461,
+    "seen": 1790083022.3759081,
     "ast_hash": "2bf221f15e1f38bbaa6f4e41145e7bc6",
     "semantic_hash": ""
   },
@@ -1926,14 +1926,14 @@
     "semantic_hash": ""
   },
   "lib/services/statistics/mission_domain_inventory_engine.dart": {
-    "mtime": 1789739642.4027407,
-    "seen": 1789740342.4596455,
+    "mtime": 1790078988.047715,
+    "seen": 1790083022.3759227,
     "ast_hash": "27e81f1e8f87f8f60b302301f8531780",
     "semantic_hash": ""
   },
   "lib/services/statistics/mission_statistics.dart": {
-    "mtime": 1789533811.4684494,
-    "seen": 1789537796.3362515,
+    "mtime": 1790078988.0397422,
+    "seen": 1790083022.3759239,
     "ast_hash": "241b810a1928af8151e44dfe71221e1a",
     "semantic_hash": ""
   },
@@ -3228,8 +3228,8 @@
     "semantic_hash": ""
   },
   "lib/services/pdf/builders/pdf_statistics_charts.dart": {
-    "mtime": 1790074723.664663,
-    "seen": 1790075068.4337933,
+    "mtime": 1790078988.046649,
+    "seen": 1790083022.375881,
     "ast_hash": "f6391127d8a511c37e4a8127b83e9520",
     "semantic_hash": ""
   },
@@ -3801,6 +3801,12 @@
     "mtime": 1790073460.7584088,
     "seen": 1790075068.433959,
     "ast_hash": "20c9a8755153b120cd697b9fd8115d9e",
+    "semantic_hash": ""
+  },
+  "test/features/coffret_persistence_forensic_test.dart": {
+    "mtime": 1790082672.4180086,
+    "seen": 1790083022.3760035,
+    "ast_hash": "65e9491fbd85f8b055773b22b161969c",
     "semantic_hash": ""
   }
 }

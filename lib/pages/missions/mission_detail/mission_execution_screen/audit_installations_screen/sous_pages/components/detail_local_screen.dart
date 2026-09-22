@@ -1064,47 +1064,23 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
   }
 
   void _supprimerCoffret(int index) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Confirmer la suppression'),
-        content: Text('Voulez-vous vraiment supprimer cet équipement ?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Annuler'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              final coffretToDelete = (index >= 0 && index < _local.coffrets.length) ? _local.coffrets[index] : null;
-              if (coffretToDelete != null) {
-                await HiveService.deleteCoffret(
-                  missionId: widget.mission.id,
-                  equipmentId: coffretToDelete.equipmentId,
-                  qrCode: coffretToDelete.qrCode.isNotEmpty ? coffretToDelete.qrCode : null,
-                );
-              }
-              setState(() {
-                _local.coffrets.removeAt(index);
-              });
-              await _sauvegarderLocal(preserveExistingCoffrets: false);
-              await _refreshLocal();
-              if (mounted) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text('Équipement supprimé')));
-              }
-            },
-            child: Text('Supprimer', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
+    final coffretToDelete = (index >= 0 && index < _coffrets.length)
+        ? _coffrets[index]
+        : ((index >= 0 && index < _local.coffrets.length) ? _local.coffrets[index] : null);
+    if (coffretToDelete != null) {
+      _supprimerCoffretTarget(coffretToDelete);
+    }
   }
 
-  Future<void> _sauvegarderLocal({bool preserveExistingCoffrets = false}) async {
+  Future<void> _sauvegarderLocal({bool preserveExistingCoffrets = true}) async {
     try {
+      if (_coffrets.isNotEmpty) {
+        final existingMap = {for (var c in _local.coffrets) c.equipmentId: c};
+        for (var c in _coffrets) {
+          existingMap[c.equipmentId] = c;
+        }
+        _local.coffrets = existingMap.values.toList();
+      }
       await HiveService.updateLocalById(
         missionId: widget.mission.id,
         localId: _local.localId,

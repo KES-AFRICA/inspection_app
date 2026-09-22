@@ -117,7 +117,9 @@ class MoyenneTensionLocal {
 
   String get localId {
     if (id != null && id!.trim().isNotEmpty) return id!;
-    id = 'local_${DateTime.now().microsecondsSinceEpoch}_${nom.hashCode.abs()}';
+    final createdTs = createdAt?.millisecondsSinceEpoch ?? 0;
+    final stableHash = nom.trim().hashCode.abs();
+    id = 'local_${createdTs}_$stableHash';
     return id!;
   }
 
@@ -141,7 +143,9 @@ class MoyenneTensionLocal {
     bool? isRiskZone,
   })  : id = (id != null && id.trim().isNotEmpty)
             ? id
-            : 'local_${DateTime.now().microsecondsSinceEpoch}_${nom.hashCode.abs()}',
+            : (createdAt != null)
+                ? 'local_${createdAt.millisecondsSinceEpoch}_${nom.trim().hashCode.abs()}'
+                : 'local_${nom.trim().hashCode.abs()}',
         dispositionsConstructives = dispositionsConstructives ?? [],
         conditionsExploitation = conditionsExploitation ?? [],
         coffrets = coffrets ?? [],
@@ -213,7 +217,9 @@ class MoyenneTensionZone {
 
   String get zoneId {
     if (id != null && id!.trim().isNotEmpty) return id!;
-    id = 'zone_${DateTime.now().microsecondsSinceEpoch}_${nom.hashCode.abs()}';
+    final createdTs = createdAt?.millisecondsSinceEpoch ?? 0;
+    final stableHash = nom.trim().hashCode.abs();
+    id = 'zone_${createdTs}_$stableHash';
     return id!;
   }
 
@@ -231,7 +237,9 @@ class MoyenneTensionZone {
     bool? isRiskZone,
   })  : id = (id != null && id.trim().isNotEmpty)
             ? id
-            : 'zone_${DateTime.now().microsecondsSinceEpoch}_${nom.hashCode.abs()}',
+            : (createdAt != null)
+                ? 'zone_${createdAt.millisecondsSinceEpoch}_${nom.trim().hashCode.abs()}'
+                : 'zone_${nom.trim().hashCode.abs()}',
         coffrets = coffrets ?? [],
         observationsLibres = observationsLibres ?? [],
         photos = photos ?? [],
@@ -278,7 +286,9 @@ class BasseTensionZone {
 
   String get zoneId {
     if (id != null && id!.trim().isNotEmpty) return id!;
-    id = 'zone_${DateTime.now().microsecondsSinceEpoch}_${nom.hashCode.abs()}';
+    final createdTs = createdAt?.millisecondsSinceEpoch ?? 0;
+    final stableHash = nom.trim().hashCode.abs();
+    id = 'zone_${createdTs}_$stableHash';
     return id!;
   }
 
@@ -296,7 +306,9 @@ class BasseTensionZone {
     bool? isRiskZone,
   })  : id = (id != null && id.trim().isNotEmpty)
             ? id
-            : 'zone_${DateTime.now().microsecondsSinceEpoch}_${nom.hashCode.abs()}',
+            : (createdAt != null)
+                ? 'zone_${createdAt.millisecondsSinceEpoch}_${nom.trim().hashCode.abs()}'
+                : 'zone_${nom.trim().hashCode.abs()}',
         locaux = locaux ?? [],
         coffretsDirects = coffretsDirects ?? [],
         observationsLibres = observationsLibres ?? [],
@@ -356,7 +368,9 @@ class BasseTensionLocal {
 
   String get localId {
     if (id != null && id!.trim().isNotEmpty) return id!;
-    id = 'local_${DateTime.now().microsecondsSinceEpoch}_${nom.hashCode.abs()}';
+    final createdTs = createdAt?.millisecondsSinceEpoch ?? 0;
+    final stableHash = nom.trim().hashCode.abs();
+    id = 'local_${createdTs}_$stableHash';
     return id!;
   }
 
@@ -378,7 +392,9 @@ class BasseTensionLocal {
     bool? isRiskZone,
   })  : id = (id != null && id.trim().isNotEmpty)
             ? id
-            : 'local_${DateTime.now().microsecondsSinceEpoch}_${nom.hashCode.abs()}',
+            : (createdAt != null)
+                ? 'local_${createdAt.millisecondsSinceEpoch}_${nom.trim().hashCode.abs()}'
+                : 'local_${nom.trim().hashCode.abs()}',
         dispositionsConstructives = dispositionsConstructives ?? [],
         conditionsExploitation = conditionsExploitation ?? [],
         coffrets = coffrets ?? [],
@@ -1158,7 +1174,7 @@ class CoffretArmoire {
   String get equipmentId {
     if (id != null && id!.trim().isNotEmpty) return id!;
     final createdTs = createdAt?.millisecondsSinceEpoch ?? 0;
-    final stableHash = (nom + (qrCode ?? '')).hashCode.abs();
+    final stableHash = (nom.trim() + (qrCode ?? '').trim() + (numeroEquipement ?? '')).hashCode.abs();
     id = 'equip_${createdTs}_$stableHash';
     return id!;
   }
@@ -1220,7 +1236,11 @@ class CoffretArmoire {
     List<ElementControle>? observationsParafoudreEnrichies,
   })  : id = (id != null && id.trim().isNotEmpty)
             ? id
-            : 'equip_${DateTime.now().microsecondsSinceEpoch}_${nom.hashCode.abs()}',
+            : (createdAt != null)
+                ? 'equip_${createdAt.millisecondsSinceEpoch}_${nom.trim().hashCode.abs()}'
+                : (qrCode.trim().isNotEmpty && !qrCode.startsWith('TEMP_') && !qrCode.startsWith('DRAFT_'))
+                    ? 'equip_${qrCode.trim()}'
+                    : 'equip_${(nom.trim() + (numeroEquipement ?? '')).hashCode.abs()}',
         _accessible = accessible ?? true,
         departures = departures ?? [],
         terminalCircuits = terminalCircuits ?? [],

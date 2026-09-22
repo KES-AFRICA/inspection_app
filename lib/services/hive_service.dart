@@ -1381,6 +1381,67 @@ static Future<bool> removeCarteFromSection({
     return getDescriptionInstallationsByMissionId(missionId) != null;
   }
 
+  static bool _ensureStableIds(AuditInstallationsElectriques audit) {
+    bool changed = false;
+
+    void checkCoffret(CoffretArmoire c) {
+      if (c.id == null || c.id!.trim().isEmpty) {
+        c.id = c.equipmentId;
+        changed = true;
+      }
+    }
+
+    for (var l in audit.moyenneTensionLocaux) {
+      if (l.id == null || l.id!.trim().isEmpty) {
+        l.id = l.localId;
+        changed = true;
+      }
+      for (var c in l.coffrets) {
+        checkCoffret(c);
+      }
+    }
+
+    for (var z in audit.moyenneTensionZones) {
+      if (z.id == null || z.id!.trim().isEmpty) {
+        z.id = z.zoneId;
+        changed = true;
+      }
+      for (var c in z.coffrets) {
+        checkCoffret(c);
+      }
+      for (var l in z.locaux) {
+        if (l.id == null || l.id!.trim().isEmpty) {
+          l.id = l.localId;
+          changed = true;
+        }
+        for (var c in l.coffrets) {
+          checkCoffret(c);
+        }
+      }
+    }
+
+    for (var z in audit.basseTensionZones) {
+      if (z.id == null || z.id!.trim().isEmpty) {
+        z.id = z.zoneId;
+        changed = true;
+      }
+      for (var c in z.coffretsDirects) {
+        checkCoffret(c);
+      }
+      for (var l in z.locaux) {
+        if (l.id == null || l.id!.trim().isEmpty) {
+          l.id = l.localId;
+          changed = true;
+        }
+        for (var c in l.coffrets) {
+          checkCoffret(c);
+        }
+      }
+    }
+
+    return changed;
+  }
+
 /// Créer ou récupérer les données d'audit pour une mission avec cache O(1)
 static Future<AuditInstallationsElectriques> getOrCreateAuditInstallations(String missionId) async {
   final existing = getAuditInstallationsByMissionId(missionId);
@@ -1388,7 +1449,8 @@ static Future<AuditInstallationsElectriques> getOrCreateAuditInstallations(Strin
     if (!_migratedMissions.contains(missionId)) {
       _migratedMissions.add(missionId);
       final report = EquipmentNumberService.auditAndFixMissionNumbers(existing);
-      if (report.hasChanges) {
+      final idsFixed = _ensureStableIds(existing);
+      if (report.hasChanges || idsFixed) {
         await existing.save();
       }
       reconcileQrCodes(missionId);
@@ -1993,6 +2055,58 @@ static Future<bool> addCoffretToMoyenneTensionLocal({
     return false;
   }
 }
+
+  /// Recherche forensique d'un coffret dans toute la mission par son ID d'équipement ou son QR code
+  static CoffretArmoire? findCoffretByIdOrQrCode({
+    required String missionId,
+    required String equipmentId,
+    String? qrCode,
+  }) {
+    try {
+      final audit = getAuditInstallationsByMissionId(missionId);
+      if (audit == null) return null;
+
+      final normQr = qrCode?.trim() ?? '';
+      final hasValidQr = normQr.isNotEmpty && !normQr.startsWith('TEMP_') && !normQr.startsWith('DRAFT_');
+
+      bool matches(CoffretArmoire c) {
+        if (c.id != null && c.id == equipmentId) return true;
+        if (c.equipmentId == equipmentId) return true;
+        if (hasValidQr && c.qrCode.trim() == normQr) return true;
+        return false;
+      }
+
+      for (var local in audit.moyenneTensionLocaux) {
+        for (var coffret in local.coffrets) {
+          if (matches(coffret)) return coffret;
+        }
+      }
+      for (var zone in audit.moyenneTensionZones) {
+        for (var coffret in zone.coffrets) {
+          if (matches(coffret)) return coffret;
+        }
+        for (var local in zone.locaux) {
+          for (var coffret in local.coffrets) {
+            if (matches(coffret)) return coffret;
+          }
+        }
+      }
+      for (var zone in audit.basseTensionZones) {
+        for (var coffret in zone.coffretsDirects) {
+          if (matches(coffret)) return coffret;
+        }
+        for (var local in zone.locaux) {
+          for (var coffret in local.coffrets) {
+            if (matches(coffret)) return coffret;
+          }
+        }
+      }
+      return null;
+    } catch (e) {
+      if (kDebugMode) print('❌ Erreur findCoffretByIdOrQrCode: $e');
+      return null;
+    }
+  }
 
 /// Chercher un coffret par son QR code dans toute la mission
 static CoffretArmoire? findCoffretByQrCode(String missionId, String qrCode) {
@@ -2830,9 +2944,6 @@ static Future<bool> addLocalToBasseTensionZone({
           return true;
         }
         if (normQr.isNotEmpty && !normQr.startsWith('TEMP_') && !normQr.startsWith('DRAFT_') && existing.qrCode.trim() == normQr) {
-          return true;
-        }
-        if (normNom.isNotEmpty && existing.nom.trim().toLowerCase() == normNom) {
           return true;
         }
         return false;

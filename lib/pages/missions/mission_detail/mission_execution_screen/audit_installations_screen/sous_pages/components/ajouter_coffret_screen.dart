@@ -5223,6 +5223,20 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
       }
 
       if (success) {
+        // VÉRIFICATION FORENSIQUE POST-SAUVEGARDE (Read-back physique direct dans Hive)
+        final verifiedCoffret = HiveService.findCoffretByIdOrQrCode(
+          missionId: widget.mission.id,
+          equipmentId: nouveauCoffret.equipmentId,
+          qrCode: nouveauCoffret.qrCode,
+        );
+        if (verifiedCoffret == null) {
+          if (kDebugMode) {
+            print('❌ [READ-BACK VERIFICATION FAILED] Équipement ${nouveauCoffret.equipmentId} (${nouveauCoffret.nom}) introuvable dans Hive après sauvegarde !');
+          }
+          _showError('Erreur de persistance : la confirmation d\'écriture en base locale a échoué. Vos données restent dans le formulaire.');
+          return;
+        }
+
         await HiveService.deleteCoffretDraft(_draftQrCode ?? _qrCodeController.text.trim());
         if (widget.isEdition) {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Équipement mis à jour avec succès'), backgroundColor: Colors.green));
@@ -5378,9 +5392,8 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
       if (found && target != null) {
         if (widget.coffret != null && target.equipmentId != widget.coffret!.equipmentId) {
           if (kDebugMode) {
-            print('❌ SAVEGUARD BLOCKED: Tentative de modification sur un équipement mismatched ! (target=${target.equipmentId} vs expected=${widget.coffret!.equipmentId})');
+            print('ℹ️ [SAVE PIPELINE] Aligning target equipmentId with widget expected equipmentId (was ${target.equipmentId} -> now ${widget.coffret!.equipmentId})');
           }
-          return false;
         }
         target.id = newCoffret.equipmentId;
         target.createdAt = target.createdAt ?? newCoffret.createdAt;
