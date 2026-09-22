@@ -252,7 +252,7 @@ class PdfStatisticsCharts {
     if (mtRows.isEmpty) return pw.SizedBox();
 
     final maxVal = mtRows.fold<int>(0, (m, r) => math.max(m, r.ncCount));
-    final axisMax = ((maxVal / 10).ceil() * 10).clamp(10, 150);
+    final axisMax = math.max(10, ((maxVal * 1.1) / 10).ceil() * 10);
     const plotHeight = 100.0;
 
     return pw.Container(
@@ -380,7 +380,7 @@ class PdfStatisticsCharts {
     if (btRows.isEmpty) return pw.SizedBox();
 
     final maxVal = btRows.fold<int>(0, (m, r) => math.max(m, r.ncCount));
-    final axisMax = ((maxVal / 25).ceil() * 25).clamp(25, 250);
+    final axisMax = math.max(25, ((maxVal * 1.1) / 25).ceil() * 25);
     const plotHeight = 100.0;
 
     return pw.Container(

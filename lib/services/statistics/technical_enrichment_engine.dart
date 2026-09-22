@@ -647,8 +647,8 @@ class TechnicalEnrichmentResult {
   int get btConditionsExploit => locauxBtFindings.conditionsExploitation;
   int get htaDispoConstructives => locauxMtFindings.dispoConstructives;
   int get btDispoConstructives => locauxBtFindings.dispoConstructives;
-  int get totalHtaNc => htaDispoConstructives + mtTotalCrossRow.ncCount;
-  int get totalBtNc => btDispoConstructives + btTotalCrossRow.ncCount;
+  int get totalHtaNc => mtTotalCrossRow.ncCount;
+  int get totalBtNc => btTotalCrossRow.ncCount;
 
   int get globalCoupureTetePresents =>
       coupureTeteStats.values.fold(0, (s, e) => s + e.presents);
@@ -1208,10 +1208,9 @@ class TechnicalEnrichmentEngine {
       );
     }
 
-    final mtLocauxExploitFindings = domainInventory
+    final mtLocauxFindings = domainInventory
         .getInstancesByCategory(DomainObjectType.localMT)
         .expand((i) => i.pertinentFindings)
-        .where((f) => !_isDispositionConstructiveFinding(f))
         .toList();
 
     mtCatRows.add(
@@ -1219,7 +1218,7 @@ class TechnicalEnrichmentEngine {
         'Locaux techniques',
         domainInventory.getInstancesByCategory(DomainObjectType.localMT),
         totalMissionNc,
-        customFindings: mtLocauxExploitFindings,
+        customFindings: mtLocauxFindings,
       ),
     );
     mtCatRows.add(
@@ -1255,15 +1254,15 @@ class TechnicalEnrichmentEngine {
 
     // Sécurité de couverture absolue MT : aucune occurrence ne peut être omise
     final accountedMtFindingIds = <String>{
-      ...mtLocauxExploitFindings.map((f) => f.id),
+      ...mtLocauxFindings.map((f) => f.id),
       ...domainInventory.getInstancesByCategory(DomainObjectType.celluleMT).expand((i) => i.pertinentFindings).map((f) => f.id),
       ...domainInventory.getInstancesByCategory(DomainObjectType.transformateurMTBT).expand((i) => i.pertinentFindings).map((f) => f.id),
       ...mtCoffrets.expand((i) => i.pertinentFindings).map((f) => f.id),
     };
-    final htaExploitFindings = domainInventory.pertinentFindings
-        .where((f) => f.tensionDomain == TensionDomain.mt && !_isDispositionConstructiveFinding(f))
+    final htaFindings = domainInventory.pertinentFindings
+        .where((f) => f.tensionDomain == TensionDomain.mt)
         .toList();
-    final orphanMtFindings = htaExploitFindings
+    final orphanMtFindings = htaFindings
         .where((f) => !accountedMtFindingIds.contains(f.id))
         .toList();
     if (orphanMtFindings.isNotEmpty) {
@@ -1282,7 +1281,7 @@ class TechnicalEnrichmentEngine {
     final mtTotalMaj = mtCatRows.fold(0, (s, r) => s + r.majeuresCount);
     final mtTotalNc = mtCatRows.fold(0, (s, r) => s + r.ncCount);
     final mtTotalCrossRow = CategoryCrossAuditRow(
-      categoryName: 'TOTAL EXPLOITATION ET MAINTENANCE MT',
+      categoryName: 'TOTAL MOYENNE TENSION (HTA)',
       equipementsCount: mtTotalEq,
       ncCount: mtTotalNc,
       critiquesCount: mtTotalCrit,
@@ -1297,15 +1296,13 @@ class TechnicalEnrichmentEngine {
     // 9. Lignes de conformité croisée par catégorie pour Basse Tension
     final btCatRows = <CategoryCrossAuditRow>[];
 
-    final btLocauxGeExploitFindings = domainInventory
+    final btLocauxGeFindings = domainInventory
         .getInstancesByCategory(DomainObjectType.localGE)
         .expand((i) => i.pertinentFindings)
-        .where((f) => !_isDispositionConstructiveFinding(f))
         .toList();
-    final btLocauxBtExploitFindings = domainInventory
+    final btLocauxBtFindings = domainInventory
         .getInstancesByCategory(DomainObjectType.localBT)
         .expand((i) => i.pertinentFindings)
-        .where((f) => !_isDispositionConstructiveFinding(f))
         .toList();
 
     btCatRows.add(
@@ -1313,7 +1310,7 @@ class TechnicalEnrichmentEngine {
         'Locaux techniques GE',
         domainInventory.getInstancesByCategory(DomainObjectType.localGE),
         totalMissionNc,
-        customFindings: btLocauxGeExploitFindings,
+        customFindings: btLocauxGeFindings,
       ),
     );
     btCatRows.add(
@@ -1321,7 +1318,7 @@ class TechnicalEnrichmentEngine {
         'Locaux techniques BT',
         domainInventory.getInstancesByCategory(DomainObjectType.localBT),
         totalMissionNc,
-        customFindings: btLocauxBtExploitFindings,
+        customFindings: btLocauxBtFindings,
       ),
     );
     btCatRows.add(
@@ -1381,8 +1378,8 @@ class TechnicalEnrichmentEngine {
 
     // Sécurité de couverture absolue BT : aucune occurrence ne peut être omise
     final accountedBtFindingIds = <String>{
-      ...btLocauxGeExploitFindings.map((f) => f.id),
-      ...btLocauxBtExploitFindings.map((f) => f.id),
+      ...btLocauxGeFindings.map((f) => f.id),
+      ...btLocauxBtFindings.map((f) => f.id),
       ...domainInventory.getInstancesByCategory(DomainObjectType.inverseur).expand((i) => i.pertinentFindings).map((f) => f.id),
       ...domainInventory.getInstancesByCategory(DomainObjectType.tgbt).expand((i) => i.pertinentFindings).map((f) => f.id),
       ...domainInventory.getInstancesByCategory(DomainObjectType.armoire).where((i) => i.tensionDomain == TensionDomain.bt).expand((i) => i.pertinentFindings).map((f) => f.id),
@@ -1390,10 +1387,10 @@ class TechnicalEnrichmentEngine {
       ...ptInstances.expand((i) => i.pertinentFindings).map((f) => f.id),
       ...foudreInstances.expand((i) => i.pertinentFindings).map((f) => f.id),
     };
-    final btExploitFindings = domainInventory.pertinentFindings
-        .where((f) => f.tensionDomain == TensionDomain.bt && !_isDispositionConstructiveFinding(f))
+    final btFindings = domainInventory.pertinentFindings
+        .where((f) => f.tensionDomain == TensionDomain.bt)
         .toList();
-    final orphanBtFindings = btExploitFindings
+    final orphanBtFindings = btFindings
         .where((f) => !accountedBtFindingIds.contains(f.id))
         .toList();
     if (orphanBtFindings.isNotEmpty) {
@@ -1412,7 +1409,7 @@ class TechnicalEnrichmentEngine {
     final btTotalMaj = btCatRows.fold(0, (s, r) => s + r.majeuresCount);
     final btTotalNc = btCatRows.fold(0, (s, r) => s + r.ncCount);
     final btTotalCrossRow = CategoryCrossAuditRow(
-      categoryName: 'TOTAL EXPLOITATION ET MAINTENANCE BT',
+      categoryName: 'TOTAL BASSE TENSION (BT)',
       equipementsCount: btTotalEq,
       ncCount: btTotalNc,
       critiquesCount: btTotalCrit,

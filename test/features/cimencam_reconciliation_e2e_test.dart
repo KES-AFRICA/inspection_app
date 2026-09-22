@@ -330,20 +330,15 @@ void main() {
       expect(result.locauxBtFindings.dispoConstructives, equals(35));
       expect(result.locauxBtFindings.conditionsExploitation, equals(47));
 
-      // Verify cross rows (Exploitation et maintenance)
+      // Verify cross rows (Locaux techniques = dispo constructives + conditions d'exploitation)
       final mtRowsNcSum = result.mtCategoriesCrossRows.fold<int>(0, (s, r) => s + r.ncCount);
       final btRowsNcSum = result.btCategoriesCrossRows.fold<int>(0, (s, r) => s + r.ncCount);
 
-      expect(mtRowsNcSum, equals(109));
-      expect(btRowsNcSum, equals(305));
+      expect(mtRowsNcSum, equals(156));
+      expect(btRowsNcSum, equals(340));
 
       // Reconciliation to total domain findings
-      final totalMt = result.locauxMtFindings.dispoConstructives + mtRowsNcSum;
-      final totalBt = result.locauxBtFindings.dispoConstructives + btRowsNcSum;
-
-      expect(totalMt, equals(156));
-      expect(totalBt, equals(340));
-      expect(totalMt + totalBt, equals(496));
+      expect(mtRowsNcSum + btRowsNcSum, equals(496));
     });
   });
 }

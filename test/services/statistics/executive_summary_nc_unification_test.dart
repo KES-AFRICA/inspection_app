@@ -157,8 +157,8 @@ void main() {
       expect(technical.locauxMtFindings.conditionsExploitation, equals(3));
       expect(technical.locauxMtFindings.total, equals(5));
 
-      // Vérifications Tableau B (4.1) : 3 (locaux CE) + 4 (cellules) + 5 (transfos) = 12 NC
-      expect(technical.mtTotalCrossRow.ncCount, equals(12));
+      // Vérifications Tableau B : 5 (locaux: 2 dispo + 3 CE) + 4 (cellules) + 5 (transfos) = 14 NC
+      expect(technical.mtTotalCrossRow.ncCount, equals(14));
 
       // Vérifications Section 3 (HTA)
       expect(technical.riskFamilyMatrix.totalHtaDispo, equals(2));
@@ -171,7 +171,7 @@ void main() {
 
       // Égalité stricte : 2.1 == 3 == 4.1
       expect(technical.totalHtaNc, equals(technical.riskFamilyMatrix.totalHtaDispo + technical.riskFamilyMatrix.totalHtaExploit));
-      expect(technical.mtTotalCrossRow.ncCount, equals(technical.riskFamilyMatrix.totalHtaExploit));
+      expect(technical.mtTotalCrossRow.ncCount, equals(technical.totalHtaNc));
       expect(technical.locauxMtFindings.dispoConstructives, equals(technical.riskFamilyMatrix.totalHtaDispo));
     });
 
@@ -278,8 +278,8 @@ void main() {
       expect(technical.locauxBtFindings.conditionsExploitation, equals(4));
       expect(technical.locauxBtFindings.total, equals(7));
 
-      // Tableau B BT (4.2) : 4 (locaux CE) + 6 (tgbt) + 10 (armoires) = 20 NC
-      expect(technical.btTotalCrossRow.ncCount, equals(20));
+      // Tableau B BT : 7 (locaux: 3 dispo + 4 CE) + 6 (tgbt) + 10 (armoires) = 23 NC
+      expect(technical.btTotalCrossRow.ncCount, equals(23));
 
       // Section 3 (BT)
       expect(technical.riskFamilyMatrix.totalBtDispo, equals(3));
@@ -292,7 +292,7 @@ void main() {
 
       // Égalité stricte : 2.1 == 3 == 4.2
       expect(technical.totalBtNc, equals(technical.riskFamilyMatrix.totalBtDispo + technical.riskFamilyMatrix.totalBtExploit));
-      expect(technical.btTotalCrossRow.ncCount, equals(technical.riskFamilyMatrix.totalBtExploit));
+      expect(technical.btTotalCrossRow.ncCount, equals(technical.totalBtNc));
       expect(technical.locauxBtFindings.dispoConstructives, equals(technical.riskFamilyMatrix.totalBtDispo));
     });
 

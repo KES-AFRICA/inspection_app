@@ -462,35 +462,44 @@ void main() {
       );
       expect(matrix.dispositionsConstructives.hta.totalConstats, equals(47));
 
-      // TOTAL EXPLOITATION ET MAINTENANCE MT tableau 3 = tableau 4.1 B
-      final mtExploitTotal = result.mtCategoriesCrossRows.fold<int>(0, (s, r) => s + r.ncCount);
+      // TOTAL DISPOSITIONS CONSTRUCTIVES MT dans la matrice
       expect(
-        matrix.exploitationMaintenance.hta.totalConstats,
-        equals(mtExploitTotal),
+        matrix.dispositionsConstructives.hta.totalConstats,
+        equals(result.locauxMtFindings.dispoConstructives),
       );
+      expect(matrix.dispositionsConstructives.hta.totalConstats, equals(47));
+
+      // TOTAL EXPLOITATION ET MAINTENANCE MT dans la matrice (hors dispo constructives)
       expect(matrix.exploitationMaintenance.hta.totalConstats, equals(109));
 
-      // TOTAL DISPOSITION CONSTRUCTIVE BT tableau 3 = tableau 4.2 A
+      // TOTAL TABLEAU MT (Locaux techniques = dispo constructives + conditions d'exploitation = 47 + 80 = 127)
+      final mtLocauxRow = result.mtCategoriesCrossRows.firstWhere((r) => r.categoryName.contains('Locaux'));
+      expect(mtLocauxRow.ncCount, equals(127));
+      final mtCrossTotal = result.mtCategoriesCrossRows.fold<int>(0, (s, r) => s + r.ncCount);
+      expect(mtCrossTotal, equals(156));
+      expect(result.mtTotalCrossRow.ncCount, equals(156));
+
+      // TOTAL DISPOSITION CONSTRUCTIVE BT dans la matrice
       expect(
         matrix.dispositionsConstructives.bt.totalConstats,
         equals(result.locauxBtFindings.dispoConstructives),
       );
       expect(matrix.dispositionsConstructives.bt.totalConstats, equals(35));
 
-      // TOTAL EXPLOITATION ET MAINTENANCE BT tableau 3 = tableau 4.2 B
-      final btExploitTotal = result.btCategoriesCrossRows.fold<int>(0, (s, r) => s + r.ncCount);
-      expect(
-        matrix.exploitationMaintenance.bt.totalConstats,
-        equals(btExploitTotal),
-      );
+      // TOTAL EXPLOITATION ET MAINTENANCE BT dans la matrice (hors dispo constructives)
       expect(matrix.exploitationMaintenance.bt.totalConstats, equals(305));
 
+      // TOTAL TABLEAU BT (Locaux techniques GE et BT = dispo constructives + conditions d'exploitation)
+      final btLocauxGeRow = result.btCategoriesCrossRows.firstWhere((r) => r.categoryName.contains('GE'));
+      final btLocauxBtRow = result.btCategoriesCrossRows.firstWhere((r) => r.categoryName.contains('BT') && r.categoryName.contains('Locaux'));
+      expect(btLocauxGeRow.ncCount, equals(30)); // 6 dispo + 24 conditions exploitation
+      expect(btLocauxBtRow.ncCount, equals(52)); // 29 dispo + 23 conditions exploitation
+      final btCrossTotal = result.btCategoriesCrossRows.fold<int>(0, (s, r) => s + r.ncCount);
+      expect(btCrossTotal, equals(340));
+      expect(result.btTotalCrossRow.ncCount, equals(340));
+
       // Réconciliation globale des 496 constats
-      final totalMt = result.locauxMtFindings.dispoConstructives + mtExploitTotal;
-      final totalBt = result.locauxBtFindings.dispoConstructives + btExploitTotal;
-      expect(totalMt, equals(156));
-      expect(totalBt, equals(340));
-      expect(totalMt + totalBt, equals(496));
+      expect(mtCrossTotal + btCrossTotal, equals(496));
     });
 
     test('Section 2.1 PDF Indicators Table & Section 3 Risk Blocks Table Render Without Error', () {
