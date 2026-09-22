@@ -54,38 +54,36 @@ class PdfStatisticsCharts {
       required PdfColor barColor,
     }) {
       final clampedWidth = rawWidth.clamp(count > 0 ? 2.0 : 0.0, plotWidth);
-      const minInternalWidth = 45.0;
+      const minInternalWidth = 35.0;
       final fitsInside = count > 0 && clampedWidth >= minInternalWidth;
 
       if (fitsInside) {
-        return pw.Container(
-          width: clampedWidth,
-          height: barHeight,
-          color: barColor,
-          alignment: pw.Alignment.center,
-          child: pw.Column(
-            mainAxisAlignment: pw.MainAxisAlignment.center,
-            crossAxisAlignment: pw.CrossAxisAlignment.center,
-            children: [
-              pw.Text(
-                '$count',
-                style: pw.TextStyle(
-                  font: fontBold,
-                  fontSize: 8.5,
-                  color: PdfColors.white,
-                ),
-              ),
-              pw.SizedBox(height: 1),
-              pw.Text(
+        return pw.Row(
+          children: [
+            pw.Container(
+              width: clampedWidth,
+              height: barHeight,
+              color: barColor,
+              alignment: pw.Alignment.center,
+              child: pw.Text(
                 '$pctStr %',
                 style: pw.TextStyle(
                   font: fontBold,
-                  fontSize: 6.8,
+                  fontSize: 7.8,
                   color: PdfColors.white,
                 ),
               ),
-            ],
-          ),
+            ),
+            pw.SizedBox(width: 6),
+            pw.Text(
+              '$count',
+              style: pw.TextStyle(
+                font: fontBold,
+                fontSize: 9,
+                color: PdfReportStyles.headerColor,
+              ),
+            ),
+          ],
         );
       } else {
         return pw.Row(

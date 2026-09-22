@@ -97,6 +97,7 @@ class PdfStatisticsBuilder {
     widgets.add(pw.SizedBox(height: 6));
 
     // 2.1 Moyenne tension
+    widgets.add(pw.NewPage());
     widgets.add(
       PageTracker(
         key: 'stat_croisee_mt',

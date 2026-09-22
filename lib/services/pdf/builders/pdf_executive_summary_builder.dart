@@ -743,7 +743,9 @@ class PdfExecutiveSummaryBuilder {
           widgets.add(pw.SizedBox(height: 6));
         }
 
-        widgets.add(pw.NewPage(freeSpace: 80));
+        if (!isFirstSection) {
+          widgets.add(pw.NewPage());
+        }
         widgets.add(
           pw.Inseparable(
             child: pw.Column(

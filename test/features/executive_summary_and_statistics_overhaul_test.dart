@@ -333,6 +333,18 @@ void main() {
         isTrue,
         reason: 'Section 3. Sécurité et traçabilité des tableaux Basse Tension must start on a new page',
       );
+
+      // Trouver l'index du PageTracker avec la clé 'stat_croisee_mt' (2.1 Moyenne tension)
+      final mtIndex = widgets.indexWhere(
+        (w) => w is PageTracker && w.key == 'stat_croisee_mt',
+      );
+      expect(mtIndex, greaterThan(0), reason: 'stat_croisee_mt must be found');
+      final precedingMtWidget = widgets[mtIndex - 1];
+      expect(
+        precedingMtWidget is pw.NewPage,
+        isTrue,
+        reason: 'Section 2.1 Moyenne tension must start on a new page',
+      );
     });
   });
 }
