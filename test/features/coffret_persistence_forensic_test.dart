@@ -136,5 +136,55 @@ void main() {
 
       expect(zoneMT1.zoneId, equals(zoneMT2.zoneId), reason: 'L\'ID de zone MT doit être déterministe et stable.');
     });
+
+    test('6. Stabilité des IDs MT : Cellule et TransformateurMTBT ont des syncId stables sans microsecondes aléatoires', () {
+      final fixedDate = DateTime.utc(2025, 4, 20, 14, 0);
+
+      final cellule1 = Cellule(
+        fonction: 'Cellule Arrivée 1',
+        type: 'ARRIVEE',
+        marqueModeleAnnee: 'Schneider 2018',
+        tensionAssignee: '20 kV',
+        pouvoirCoupure: '16 kA',
+        numerotation: '1',
+        parafoudres: 'Non',
+        createdAt: fixedDate,
+      );
+      final cellule2 = Cellule(
+        fonction: 'Cellule Arrivée 1',
+        type: 'ARRIVEE',
+        marqueModeleAnnee: 'Schneider 2018',
+        tensionAssignee: '20 kV',
+        pouvoirCoupure: '16 kA',
+        numerotation: '1',
+        parafoudres: 'Non',
+        createdAt: fixedDate,
+      );
+
+      expect(cellule1.syncId, equals(cellule2.syncId), reason: 'Le syncId de Cellule doit être déterministe et stable.');
+
+      final transfo1 = TransformateurMTBT(
+        typeTransformateur: 'Transformateur Huile',
+        marqueAnnee: 'France Transfo 2015',
+        puissanceAssignee: '630 kVA',
+        tensionPrimaireSecondaire: '20kV / 400V',
+        relaisBuchholz: 'Oui',
+        typeRefroidissement: 'ONAN',
+        regimeNeutre: 'TN-S',
+        createdAt: fixedDate,
+      );
+      final transfo2 = TransformateurMTBT(
+        typeTransformateur: 'Transformateur Huile',
+        marqueAnnee: 'France Transfo 2015',
+        puissanceAssignee: '630 kVA',
+        tensionPrimaireSecondaire: '20kV / 400V',
+        relaisBuchholz: 'Oui',
+        typeRefroidissement: 'ONAN',
+        regimeNeutre: 'TN-S',
+        createdAt: fixedDate,
+      );
+
+      expect(transfo1.syncId, equals(transfo2.syncId), reason: 'Le syncId de TransformateurMTBT doit être déterministe et stable.');
+    });
   });
 }

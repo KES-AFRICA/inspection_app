@@ -1391,6 +1391,24 @@ static Future<bool> removeCarteFromSection({
       }
     }
 
+    void checkCellule(Cellule cell) {
+      if (cell.syncId == null || cell.syncId!.trim().isEmpty) {
+        final createdTs = cell.createdAt?.millisecondsSinceEpoch ?? 0;
+        final stableHash = (cell.fonction.trim() + (cell.nom ?? '')).hashCode.abs();
+        cell.syncId = 'cellule_${createdTs}_$stableHash';
+        changed = true;
+      }
+    }
+
+    void checkTransfo(TransformateurMTBT transfo) {
+      if (transfo.syncId == null || transfo.syncId!.trim().isEmpty) {
+        final createdTs = transfo.createdAt?.millisecondsSinceEpoch ?? 0;
+        final stableHash = (transfo.typeTransformateur.trim() + (transfo.nom ?? '')).hashCode.abs();
+        transfo.syncId = 'transfo_${createdTs}_$stableHash';
+        changed = true;
+      }
+    }
+
     for (var l in audit.moyenneTensionLocaux) {
       if (l.id == null || l.id!.trim().isEmpty) {
         l.id = l.localId;
@@ -1398,6 +1416,12 @@ static Future<bool> removeCarteFromSection({
       }
       for (var c in l.coffrets) {
         checkCoffret(c);
+      }
+      for (var cell in l.cellules) {
+        checkCellule(cell);
+      }
+      for (var transfo in l.transformateurs) {
+        checkTransfo(transfo);
       }
     }
 
@@ -1417,6 +1441,12 @@ static Future<bool> removeCarteFromSection({
         for (var c in l.coffrets) {
           checkCoffret(c);
         }
+        for (var cell in l.cellules) {
+          checkCellule(cell);
+        }
+        for (var transfo in l.transformateurs) {
+          checkTransfo(transfo);
+        }
       }
     }
 
@@ -1435,6 +1465,12 @@ static Future<bool> removeCarteFromSection({
         }
         for (var c in l.coffrets) {
           checkCoffret(c);
+        }
+        for (var cell in l.cellules) {
+          checkCellule(cell);
+        }
+        for (var transfo in l.transformateurs) {
+          checkTransfo(transfo);
         }
       }
     }

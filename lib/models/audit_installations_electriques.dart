@@ -607,7 +607,9 @@ class Cellule {
         observations = observations ?? [],
         syncId = (syncId != null && syncId.isNotEmpty)
             ? syncId
-            : 'cellule_${DateTime.now().microsecondsSinceEpoch}';
+            : (createdAt != null)
+                ? 'cellule_${createdAt.millisecondsSinceEpoch}_${(nom ?? fonction).trim().hashCode.abs()}'
+                : 'cellule_${(fonction.trim() + (nom ?? '')).hashCode.abs()}';
 
   /// Résout le repère effectif de la cellule (nom du local parent s'il est connu, sinon repere stocké)
   String getEffectiveRepere(String? parentLocalNom) {
@@ -877,7 +879,9 @@ class TransformateurMTBT {
         observations = observations ?? [],
         syncId = (syncId != null && syncId.isNotEmpty)
             ? syncId
-            : 'transfo_${DateTime.now().microsecondsSinceEpoch}';
+            : (createdAt != null)
+                ? 'transfo_${createdAt.millisecondsSinceEpoch}_${(nom ?? puissanceAssignee).trim().hashCode.abs()}'
+                : 'transfo_${(typeTransformateur.trim() + (nom ?? '')).hashCode.abs()}';
 
   /// Résout le repère effectif du transformateur (nom du local parent s'il est connu, sinon repere stocké)
   String getEffectiveRepere(String? parentLocalNom) {
