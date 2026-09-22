@@ -37,10 +37,78 @@ class PdfStatisticsCharts {
     const barSlotHeight = 36.0;
     const labelWidth = 115.0;
     const plotWidth = 270.0;
-    const chartInnerWidth = labelWidth + 1 + plotWidth + 45.0;
+    const chartInnerWidth = labelWidth + 1 + plotWidth + 70.0;
 
-    final btWidth = (btCount / axisMax) * plotWidth;
-    final mtWidth = (mtCount / axisMax) * plotWidth;
+    final btPct = total > 0 ? (btCount / total) * 100.0 : 0.0;
+    final mtPct = total > 0 ? (100.0 - btPct) : 0.0;
+    final btPctStr = btPct.toStringAsFixed(1).replaceAll('.', ',');
+    final mtPctStr = mtPct.toStringAsFixed(1).replaceAll('.', ',');
+
+    final btWidth = total > 0 ? (btCount / axisMax) * plotWidth : 0.0;
+    final mtWidth = total > 0 ? (mtCount / axisMax) * plotWidth : 0.0;
+
+    pw.Widget buildDomainBarRow({
+      required int count,
+      required String pctStr,
+      required double rawWidth,
+      required PdfColor barColor,
+    }) {
+      final clampedWidth = rawWidth.clamp(count > 0 ? 2.0 : 0.0, plotWidth);
+      const minInternalWidth = 45.0;
+      final fitsInside = count > 0 && clampedWidth >= minInternalWidth;
+
+      if (fitsInside) {
+        return pw.Container(
+          width: clampedWidth,
+          height: barHeight,
+          color: barColor,
+          alignment: pw.Alignment.center,
+          child: pw.Column(
+            mainAxisAlignment: pw.MainAxisAlignment.center,
+            crossAxisAlignment: pw.CrossAxisAlignment.center,
+            children: [
+              pw.Text(
+                '$count',
+                style: pw.TextStyle(
+                  font: fontBold,
+                  fontSize: 8.5,
+                  color: PdfColors.white,
+                ),
+              ),
+              pw.SizedBox(height: 1),
+              pw.Text(
+                '$pctStr %',
+                style: pw.TextStyle(
+                  font: fontBold,
+                  fontSize: 6.8,
+                  color: PdfColors.white,
+                ),
+              ),
+            ],
+          ),
+        );
+      } else {
+        return pw.Row(
+          children: [
+            if (clampedWidth > 0)
+              pw.Container(
+                width: clampedWidth,
+                height: barHeight,
+                color: barColor,
+              ),
+            pw.SizedBox(width: 6),
+            pw.Text(
+              '$count ($pctStr %)',
+              style: pw.TextStyle(
+                font: fontBold,
+                fontSize: 8.5,
+                color: PdfReportStyles.headerColor,
+              ),
+            ),
+          ],
+        );
+      }
+    }
 
     return pw.Container(
       margin: const pw.EdgeInsets.symmetric(vertical: 6),
@@ -104,45 +172,29 @@ class PdfStatisticsCharts {
                     ),
                     // Barres de données
                     pw.SizedBox(
-                      width: plotWidth + 44,
+                      width: plotWidth + 70,
                       child: pw.Column(
                         crossAxisAlignment: pw.CrossAxisAlignment.start,
                         children: [
                           pw.Container(
                             height: barSlotHeight,
                             alignment: pw.Alignment.centerLeft,
-                            child: pw.Row(
-                              children: [
-                                pw.Container(
-                                  width: btWidth.clamp(2.0, plotWidth),
-                                  height: barHeight,
-                                  color: colorNavy,
-                                ),
-                                pw.SizedBox(width: 6),
-                                pw.Text(
-                                  '$btCount',
-                                  style: pw.TextStyle(font: fontBold, fontSize: 9, color: PdfReportStyles.headerColor),
-                                ),
-                              ],
+                            child: buildDomainBarRow(
+                              count: btCount,
+                              pctStr: btPctStr,
+                              rawWidth: btWidth,
+                              barColor: colorNavy,
                             ),
                           ),
                           pw.SizedBox(height: 6),
                           pw.Container(
                             height: barSlotHeight,
                             alignment: pw.Alignment.centerLeft,
-                            child: pw.Row(
-                              children: [
-                                pw.Container(
-                                  width: mtWidth.clamp(2.0, plotWidth),
-                                  height: barHeight,
-                                  color: colorBlueMT,
-                                ),
-                                pw.SizedBox(width: 6),
-                                pw.Text(
-                                  '$mtCount',
-                                  style: pw.TextStyle(font: fontBold, fontSize: 9, color: PdfReportStyles.headerColor),
-                                ),
-                              ],
+                            child: buildDomainBarRow(
+                              count: mtCount,
+                              pctStr: mtPctStr,
+                              rawWidth: mtWidth,
+                              barColor: colorBlueMT,
                             ),
                           ),
                         ],

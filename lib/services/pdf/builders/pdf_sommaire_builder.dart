@@ -225,30 +225,30 @@ class PdfSommaireBuilder {
     );
     entries.add(
       SommaireEntry(
-        titre: "3. Facteurs de risque prépondérants",
+        titre: "3. Répartition des non-conformités",
         key: 'resume_executif_1_3',
         level: 1,
       ),
     );
     entries.add(
       SommaireEntry(
-        titre: "4. Répartition des non-conformités",
+        titre: "3.1. Analyse Moyenne Tension (HTA)",
+        key: 'resume_executif_1_3_1',
+        level: 2,
+      ),
+    );
+    entries.add(
+      SommaireEntry(
+        titre: "3.2. Analyse Basse Tension (BT)",
+        key: 'resume_executif_1_3_2',
+        level: 2,
+      ),
+    );
+    entries.add(
+      SommaireEntry(
+        titre: "4. Facteurs de risque prépondérants",
         key: 'resume_executif_1_4',
         level: 1,
-      ),
-    );
-    entries.add(
-      SommaireEntry(
-        titre: "4.1. Analyse Moyenne Tension (HTA)",
-        key: 'resume_executif_1_4_1',
-        level: 2,
-      ),
-    );
-    entries.add(
-      SommaireEntry(
-        titre: "4.2. Analyse Basse Tension (BT)",
-        key: 'resume_executif_1_4_2',
-        level: 2,
       ),
     );
     entries.add(

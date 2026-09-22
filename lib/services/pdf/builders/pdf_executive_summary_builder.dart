@@ -186,53 +186,26 @@ class PdfExecutiveSummaryBuilder {
     );
     widgets.add(pw.SizedBox(height: 10));
 
-    // ── 3. Facteurs de risque prépondérants ──
+    // ── 3. Répartition des non-conformités ──
     widgets.add(pw.NewPage());
     widgets.add(
       PageTracker(
         key: 'resume_executif_1_3',
         registry: trackedPages,
         offset: offset,
-        child: _subSectionHeader('3. Facteurs de risque prépondérants'),
-      ),
-    );
-    widgets.add(pw.SizedBox(height: 4));
-    widgets.add(
-      pw.Text(
-        'Au-delà de la répartition par équipement, l\'analyse par nature de risque identifie les facteurs suivants, qui concernent directement la sécurité des personnes et la protection des biens',
-        style: pw.TextStyle(
-          font: fontRegular,
-          fontSize: fsBody,
-          color: PdfReportStyles.darkGrey,
-          lineSpacing: 2.5,
-        ),
-        textAlign: pw.TextAlign.justify,
-      ),
-    );
-    widgets.add(pw.SizedBox(height: 5));
-    widgets.addAll(_buildEnrichedRiskFamilyMatrixWidgets(technical.riskFamilyMatrix));
-    widgets.add(pw.SizedBox(height: 10));
-
-    // ── 4. Répartition des non-conformités ──
-    widgets.add(pw.NewPage());
-    widgets.add(
-      PageTracker(
-        key: 'resume_executif_1_4',
-        registry: trackedPages,
-        offset: offset,
-        child: _subSectionHeader('4. Répartition des non-conformités'),
+        child: _subSectionHeader('3. Répartition des non-conformités'),
       ),
     );
     widgets.add(pw.SizedBox(height: 6));
 
-    // 4.1 Analyse Moyenne Tension (HTA)
+    // 3.1 Analyse Moyenne Tension (HTA)
     widgets.add(
       PageTracker(
-        key: 'resume_executif_1_4_1',
+        key: 'resume_executif_1_3_1',
         registry: trackedPages,
         offset: offset,
         child: pw.Text(
-          '4.1. Analyse Moyenne Tension (HTA)',
+          '3.1. Analyse Moyenne Tension (HTA)',
           style: pw.TextStyle(font: fontBold, fontSize: fsH3, color: PdfReportStyles.headerColor),
         ),
       ),
@@ -281,15 +254,15 @@ class PdfExecutiveSummaryBuilder {
     );
     widgets.add(pw.SizedBox(height: 8));
 
-    // 4.2 Analyse Basse Tension (BT)
+    // 3.2 Analyse Basse Tension (BT)
     widgets.add(pw.NewPage(freeSpace: 120));
     widgets.add(
       PageTracker(
-        key: 'resume_executif_1_4_2',
+        key: 'resume_executif_1_3_2',
         registry: trackedPages,
         offset: offset,
         child: pw.Text(
-          '4.2. Analyse Basse Tension (BT)',
+          '3.2. Analyse Basse Tension (BT)',
           style: pw.TextStyle(font: fontBold, fontSize: fsH3, color: PdfReportStyles.headerColor),
         ),
       ),
@@ -337,6 +310,33 @@ class PdfExecutiveSummaryBuilder {
         globalTotalMissionNc: technical.totalMissionNc,
       ),
     );
+    widgets.add(pw.SizedBox(height: 10));
+
+    // ── 4. Facteurs de risque prépondérants ──
+    widgets.add(pw.NewPage());
+    widgets.add(
+      PageTracker(
+        key: 'resume_executif_1_4',
+        registry: trackedPages,
+        offset: offset,
+        child: _subSectionHeader('4. Facteurs de risque prépondérants'),
+      ),
+    );
+    widgets.add(pw.SizedBox(height: 4));
+    widgets.add(
+      pw.Text(
+        'Au-delà de la répartition par équipement, l\'analyse par nature de risque identifie les facteurs suivants, qui concernent directement la sécurité des personnes et la protection des biens',
+        style: pw.TextStyle(
+          font: fontRegular,
+          fontSize: fsBody,
+          color: PdfReportStyles.darkGrey,
+          lineSpacing: 2.5,
+        ),
+        textAlign: pw.TextAlign.justify,
+      ),
+    );
+    widgets.add(pw.SizedBox(height: 5));
+    widgets.addAll(_buildEnrichedRiskFamilyMatrixWidgets(technical.riskFamilyMatrix));
     widgets.add(pw.SizedBox(height: 10));
 
     // ── 5. Diversification des marques des appareillages de protection ──

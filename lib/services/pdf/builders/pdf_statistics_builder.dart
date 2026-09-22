@@ -41,12 +41,27 @@ class PdfStatisticsBuilder {
     String numeroRapportDoc, {
     int offset = 0,
   }) {
-    final widgets = <pw.Widget>[];
-
-    // Collecte unifiée via le résumé statistique Néo-Natif
     final summary = MissionStatisticsCollector.collectSummary(mission.id);
+    return buildStatisticsWidgets(
+      mission: mission,
+      summary: summary,
+      technical: summary.technical,
+      trackedPages: trackedPages,
+      numeroRapportDoc: numeroRapportDoc,
+      offset: offset,
+    );
+  }
+
+  static List<pw.Widget> buildStatisticsWidgets({
+    required Mission mission,
+    required MissionStatisticsSummary summary,
+    required TechnicalEnrichmentResult technical,
+    required Map<String, int> trackedPages,
+    String numeroRapportDoc = '',
+    int offset = 0,
+  }) {
+    final widgets = <pw.Widget>[];
     final domainStats = summary.tensionDomainStats;
-    final technical = summary.technical;
 
     // Entête de section principale
     widgets.add(
@@ -76,16 +91,7 @@ class PdfStatisticsBuilder {
         key: 'stat_croisee',
         registry: trackedPages,
         offset: offset,
-        child: pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            PdfReportStyles.subTitle('2. Non-conformités croisées par catégorie d\'installation'),
-            pw.SizedBox(height: 4),
-            PdfReportStyles.bodyText(
-              'Analyse granulaire croisant le parc d\'équipements recensés avec les non-conformités détectées, le volume d\'anomalies critiques et la densité par équipement selon le domaine de tension :',
-            ),
-          ],
-        ),
+        child: _buildCrossAuditIntroText(),
       ),
     );
     widgets.add(pw.SizedBox(height: 6));
@@ -116,6 +122,13 @@ class PdfStatisticsBuilder {
     widgets.add(
       PdfStatisticsCharts.buildMtCategoryStackedBarChart(
         technical.mtCategoriesCrossRows,
+      ),
+    );
+    widgets.add(pw.SizedBox(height: 6));
+    widgets.add(
+      _buildMtCrossAuditCommentary(
+        technical.mtCategoriesCrossRows,
+        technical.mtTotalCrossRow,
       ),
     );
     widgets.add(pw.SizedBox(height: 10));
@@ -151,9 +164,17 @@ class PdfStatisticsBuilder {
         technical.btCategoriesCrossRows,
       ),
     );
+    widgets.add(pw.SizedBox(height: 6));
+    widgets.add(
+      _buildBtCrossAuditCommentary(
+        technical.btCategoriesCrossRows,
+        technical.btTotalCrossRow,
+      ),
+    );
     widgets.add(pw.SizedBox(height: 12));
 
     // ── 3. Sécurité et traçabilité des tableaux Basse Tension ──
+    widgets.add(pw.NewPage());
     widgets.add(
       PageTracker(
         key: 'stat_securite_bt',
@@ -888,46 +909,37 @@ class PdfStatisticsBuilder {
     TechnicalEnrichmentResult technical, [
     int? index,
   ]) {
-    final mtPctStr = stats.mtPct.toStringAsFixed(1).replaceAll('.', ',');
-    final btPctStr = stats.btPct.toStringAsFixed(1).replaceAll('.', ',');
     final total = stats.totalCount;
+    final btCount = stats.btCount;
+    final mtCount = stats.mtCount;
+    final btPct = total > 0 ? (btCount / total) * 100.0 : 0.0;
+    final mtPct = total > 0 ? (100.0 - btPct) : 0.0;
+    final btPctStr = btPct.toStringAsFixed(1).replaceAll('.', ',');
+    final mtPctStr = mtPct.toStringAsFixed(1).replaceAll('.', ',');
 
-    final isBtMajority = stats.btCount >= stats.mtCount;
-    final majDomainName = isBtMajority ? 'La Basse Tension' : 'La Moyenne Tension';
-    final majCount = isBtMajority ? stats.btCount : stats.mtCount;
-    final majPctStr = isBtMajority ? btPctStr : mtPctStr;
-    final minDomainName = isBtMajority ? 'la Moyenne Tension' : 'la Basse Tension';
-    final minCount = isBtMajority ? stats.mtCount : stats.btCount;
-    final minPctStr = isBtMajority ? mtPctStr : btPctStr;
-
-    // Catégories à sévérité remarquable (taux critique le plus fort et le plus modéré)
-    final allRows = [...technical.mtCategoriesCrossRows, ...technical.btCategoriesCrossRows];
-    final sortedByCrit = List<CategoryCrossAuditRow>.from(allRows.where((r) => r.ncCount >= 5))
-      ..sort((a, b) => b.tauxCritique.compareTo(a.tauxCritique));
-    final highCrit1 = sortedByCrit.isNotEmpty ? sortedByCrit.first : null;
-    final highCrit2 = sortedByCrit.length > 1 ? sortedByCrit[1] : null;
-    final lowCrit = sortedByCrit.isNotEmpty ? sortedByCrit.last : null;
-
-    final sortedByCount = List<CategoryCrossAuditRow>.from(allRows)
-      ..sort((a, b) => b.ncCount.compareTo(a.ncCount));
-    final topCat1 = sortedByCount.isNotEmpty ? sortedByCount.first : null;
-    final topCat2 = sortedByCount.length > 1 ? sortedByCount[1] : null;
-    final topCatNames = (topCat1 != null && topCat2 != null)
-        ? '${topCat1.categoryName} et ${topCat2.categoryName}'
-        : (topCat1?.categoryName ?? '');
-
-    String severityComparison = '';
-    if (highCrit1 != null && lowCrit != null && highCrit1.categoryName != lowCrit.categoryName) {
-      severityComparison = ' La sévérité par équipement reste néanmoins contrastée : ${highCrit1.categoryName}'
-          '${highCrit2 != null ? " et ${highCrit2.categoryName}" : ""} présentent les taux de criticité les plus élevés '
-          '(${highCrit1.tauxCritiqueStr}${highCrit2 != null ? " et ${highCrit2.tauxCritiqueStr}" : ""}), '
-          'tandis que ${lowCrit.categoryName} affiche un taux de criticité plus modéré (${lowCrit.tauxCritiqueStr}).';
+    String analysisText;
+    if (total == 0) {
+      analysisText =
+          'Aucune non-conformité n\'a été recensée sur l\'ensemble des installations Moyenne Tension (HTA) et Basse Tension (BT) auditées lors de cette mission.';
+    } else if (mtCount == 0 && btCount > 0) {
+      analysisText =
+          'L\'intégralité des non-conformités relevées ($btCount constats, soit 100,0 %) se concentre exclusivement sur le domaine de la Basse Tension (BT), le périmètre Moyenne Tension (HTA) ne présentant aucune anomalie.';
+    } else if (btCount == 0 && mtCount > 0) {
+      analysisText =
+          'L\'intégralité des non-conformités relevées ($mtCount constats, soit 100,0 %) relève exclusivement du domaine de la Moyenne Tension (HTA), le périmètre Basse Tension (BT) ne comportant aucune anomalie.';
+    } else {
+      final diff = (btPct - mtPct).abs();
+      if (diff <= 10.0) {
+        analysisText =
+            'Les non-conformités se répartissent de façon équilibrée entre la Basse Tension ($btCount constats, soit $btPctStr %) et la Moyenne Tension ($mtCount constats, soit $mtPctStr %), traduisant des exigences de mise en conformité réparties de manière homogène sur l\'ensemble des deux domaines de tension.';
+      } else if (btCount > mtCount) {
+        analysisText =
+            'La Basse Tension regroupe la majorité des constats relevés avec $btPctStr % des non-conformités ($btCount sur un total de $total), contre $mtPctStr % pour la Moyenne Tension ($mtCount sur $total). Cette structure d\'écarts situe le principal volume d\'actions correctives sur les installations et tableaux Basse Tension du site.';
+      } else {
+        analysisText =
+            'La Moyenne Tension concentre la majorité des constats relevés avec $mtPctStr % des non-conformités ($mtCount sur un total de $total), contre $btPctStr % pour la Basse Tension ($btCount sur $total), plaçant le foyer principal des écarts constatés sur le périmètre HTA (postes, cellules ou transformateurs).';
+      }
     }
-
-    final dynamicText = '$majDomainName concentre $majPctStr % des non-conformités ($majCount sur $total), '
-        'contre $minPctStr % pour $minDomainName ($minCount sur $total), ce qui reflète pour l\'essentiel '
-        'le poids du parc d\'équipements (${topCatNames.isNotEmpty ? topCatNames : "équipements principaux"}).'
-        '$severityComparison';
 
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -939,12 +951,130 @@ class PdfStatisticsBuilder {
         // Diagramme 1 : Répartition par domaine de tension
         PdfStatisticsCharts.buildTensionDomainChart(stats.btCount, stats.mtCount),
         pw.SizedBox(height: 6),
-        PdfReportStyles.bodyText(dynamicText),
+        PdfReportStyles.bodyText(analysisText),
       ],
     );
   }
 
-  static pw.Widget _buildTrainingRecommendationsSection(
+  static pw.Widget _buildCrossAuditIntroText() {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        PdfReportStyles.subTitle('2. Non-conformités croisées par catégorie d\'installation'),
+        pw.SizedBox(height: 4),
+        PdfReportStyles.bodyText(
+          'L\'analyse croisée met en regard le recensement exhaustif du parc d\'équipements électrotechniques avec la distribution des non-conformités constatées, leur niveau de criticité et leur densité moyenne par unité inspectée. '
+          'Les domaines Moyenne Tension (HTA) et Basse Tension (BT) font l\'objet d\'évaluations distinctes en raison de leurs règles normatives spécifiques (NF C 13-100 / NF C 13-200 pour la MT et NF C 15-100 pour la BT) et de leurs contraintes d\'exploitation propres.\n\n'
+          'Lecture des tableaux :\n'
+          '- Équip. : Nombre total d\'équipements ou de locaux recensés dans la catégorie.\n'
+          '- NC : Volume de non-conformités (constats non conformes) relevées.\n'
+          '- Crit. / Maj. : Nombre d\'anomalies classées en sévérité Critique ou Majeure.\n'
+          '- % du total : Part relative des NC de la catégorie rapportée à l\'ensemble des non-conformités de la mission.\n'
+          '- Taux critique : Proportion de constats critiques parmi les non-conformités de la catégorie.\n'
+          '- Densité : Ratio moyen de non-conformités par équipement de la catégorie.\n\n'
+          'Note méthodologique : Les non-conformités afférentes aux dispositions constructives du génie civil des locaux techniques sont isolées dans le volet bâtiment du résumé exécutif pour garantir la stricte comparabilité de l\'exploitation et de la maintenance des parcs d\'équipements.',
+        ),
+      ],
+    );
+  }
+
+  static pw.Widget _buildMtCrossAuditCommentary(
+    List<CategoryCrossAuditRow> rows,
+    CategoryCrossAuditRow totalRow,
+  ) {
+    if (totalRow.ncCount == 0) {
+      return pw.Padding(
+        padding: const pw.EdgeInsets.only(top: 4, bottom: 6),
+        child: PdfReportStyles.bodyText(
+          'Synthèse MT : Aucun écart de conformité n\'est relevé sur le parc Moyenne Tension recensé (${totalRow.equipementsCount} équipement(s) au total). L\'ensemble des cellules, transformateurs et locaux MT inspectés satisfont aux exigences réglementaires applicables.',
+        ),
+      );
+    }
+
+    final activeRows = rows.where((r) => r.ncCount > 0).toList()
+      ..sort((a, b) => b.ncCount.compareTo(a.ncCount));
+    final dominant = activeRows.isNotEmpty ? activeRows.first : null;
+    final emptyRows = rows.where((r) => r.equipementsCount > 0 && r.ncCount == 0).toList();
+
+    String emptyCatNote = '';
+    if (emptyRows.isNotEmpty) {
+      final names = emptyRows.map((r) => r.categoryName).join(', ');
+      emptyCatNote = ' À l\'inverse, les catégories $names ne présentent aucune non-conformité.';
+    }
+
+    final densiteStr = totalRow.densite.toStringAsFixed(2).replaceAll('.', ',');
+    final critCount = totalRow.critiquesCount;
+    final majCount = totalRow.majeuresCount;
+
+    String text = 'Synthèse MT : Le périmètre Moyenne Tension totalise ${totalRow.ncCount} non-conformité(s) '
+        'sur un parc de ${totalRow.equipementsCount} équipement(s) ou local/locaux inspecté(s), soit une densité moyenne de $densiteStr anomalie(s) par unité. ';
+    if (dominant != null) {
+      text += 'La catégorie « ${dominant.categoryName} » concentre le principal volume d\'écarts avec ${dominant.ncCount} NC (${dominant.pctOfTotalNcStr} de la mission, densité de ${dominant.densiteStr}). ';
+    }
+    if (critCount > 0 || majCount > 0) {
+      text += 'Sur le plan de la sévérité, ce domaine enregistre $critCount anomalie(s) critique(s) et $majCount anomalie(s) majeure(s).';
+    } else {
+      text += 'Aucune anomalie critique ou majeure n\'est relevée sur ce domaine.';
+    }
+    text += emptyCatNote;
+
+    return pw.Padding(
+      padding: const pw.EdgeInsets.only(top: 4, bottom: 6),
+      child: PdfReportStyles.bodyText(text),
+    );
+  }
+
+  static pw.Widget _buildBtCrossAuditCommentary(
+    List<CategoryCrossAuditRow> rows,
+    CategoryCrossAuditRow totalRow,
+  ) {
+    if (totalRow.ncCount == 0) {
+      return pw.Padding(
+        padding: const pw.EdgeInsets.only(top: 4, bottom: 6),
+        child: PdfReportStyles.bodyText(
+          'Synthèse BT : Aucun écart de conformité n\'est relevé sur le parc Basse Tension recensé (${totalRow.equipementsCount} équipement(s) au total). L\'ensemble des armoires, coffrets et tableaux inspectés satisfont aux exigences réglementaires applicables.',
+        ),
+      );
+    }
+
+    final activeRows = rows.where((r) => r.ncCount > 0).toList()
+      ..sort((a, b) => b.ncCount.compareTo(a.ncCount));
+    final dominant = activeRows.isNotEmpty ? activeRows.first : null;
+    final highestDensityRow = List<CategoryCrossAuditRow>.from(rows.where((r) => r.equipementsCount > 0))
+      ..sort((a, b) => b.densite.compareTo(a.densite));
+    final topDensity = highestDensityRow.isNotEmpty && highestDensityRow.first.densite > 0
+        ? highestDensityRow.first
+        : null;
+
+    final critRows = rows.where((r) => r.critiquesCount > 0).toList()
+      ..sort((a, b) => b.critiquesCount.compareTo(a.critiquesCount));
+    final topCrit = critRows.isNotEmpty ? critRows.first : null;
+
+    final densiteStr = totalRow.densite.toStringAsFixed(2).replaceAll('.', ',');
+    final critCount = totalRow.critiquesCount;
+    final majCount = totalRow.majeuresCount;
+
+    String text = 'Synthèse BT : Le domaine Basse Tension regroupe ${totalRow.ncCount} non-conformité(s) '
+        'sur un parc total de ${totalRow.equipementsCount} équipement(s), représentant une densité moyenne de $densiteStr anomalie(s) par équipement. ';
+
+    if (dominant != null) {
+      text += 'En volume brut, la catégorie « ${dominant.categoryName} » réunit la part la plus importante avec ${dominant.ncCount} NC (${dominant.pctOfTotalNcStr} de la mission). ';
+    }
+    if (topDensity != null && topDensity.categoryName != dominant?.categoryName) {
+      text += 'En termes de concentration unitaire, les « ${topDensity.categoryName} » affichent la densité la plus forte (${topDensity.densiteStr} NC/équipement). ';
+    }
+    if (topCrit != null) {
+      text += 'La sévérité la plus marquée concerne les « ${topCrit.categoryName} » avec ${topCrit.critiquesCount} anomalie(s) critique(s) (taux critique de ${topCrit.tauxCritiqueStr}). ';
+    }
+    text += 'Au global, le périmètre BT concentre $critCount anomalie(s) critique(s) et $majCount majeure(s).';
+
+    return pw.Padding(
+      padding: const pw.EdgeInsets.only(top: 4, bottom: 6),
+      child: PdfReportStyles.bodyText(text),
+    );
+  }
+
+  static pw.Widget buildTrainingRecommendationsSection(
     int sectionNum,
     String clientName,
     MissionStatisticsSummary summary,
@@ -1094,5 +1224,26 @@ class PdfStatisticsBuilder {
       text: pw.TextSpan(children: spans),
     );
   }
+
+  static pw.Widget buildTensionDomainSectionForTesting(
+    TensionDomainStats stats,
+    TechnicalEnrichmentResult technical,
+  ) =>
+      _buildTensionDomainSection(stats, technical);
+
+  static pw.Widget buildCrossAuditIntroTextForTesting() =>
+      _buildCrossAuditIntroText();
+
+  static pw.Widget buildMtCrossAuditCommentaryForTesting(
+    List<CategoryCrossAuditRow> rows,
+    CategoryCrossAuditRow totalRow,
+  ) =>
+      _buildMtCrossAuditCommentary(rows, totalRow);
+
+  static pw.Widget buildBtCrossAuditCommentaryForTesting(
+    List<CategoryCrossAuditRow> rows,
+    CategoryCrossAuditRow totalRow,
+  ) =>
+      _buildBtCrossAuditCommentary(rows, totalRow);
 }
 
