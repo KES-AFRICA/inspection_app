@@ -799,6 +799,57 @@ class PdfStatisticsBuilder {
             ),
           ],
         ),
+        _buildAbcLegend(),
+      ],
+    );
+  }
+
+  static pw.Widget _buildAbcLegend() {
+    return pw.Container(
+      margin: const pw.EdgeInsets.only(top: 4, bottom: 2),
+      padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 3.5),
+      decoration: pw.BoxDecoration(
+        color: PdfColor.fromHex('#F8FAFC'),
+        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(3)),
+        border: pw.Border.all(color: PdfColor.fromHex('#E2E8F0'), width: 0.5),
+      ),
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: pw.CrossAxisAlignment.center,
+        children: [
+          pw.Text(
+            'Légende colonne Classe (Méthode ABC de Pareto) :',
+            style: pw.TextStyle(font: fontBold, fontSize: 6.5, color: PdfReportStyles.headerColor),
+          ),
+          _buildLegendBadge('A', 'Classe A (0-80 %) : Priorité vitale', PdfColor.fromHex('#FEE2E2'), PdfColor.fromHex('#991B1B')),
+          _buildLegendBadge('B', 'Classe B (80-95 %) : Consolidation', PdfColor.fromHex('#FEF3C7'), PdfColor.fromHex('#92400E')),
+          _buildLegendBadge('C', 'Classe C (95-100 %) : Traîne / Fond', PdfColor.fromHex('#F1F5F9'), PdfColor.fromHex('#475569')),
+        ],
+      ),
+    );
+  }
+
+  static pw.Widget _buildLegendBadge(String letter, String label, PdfColor bg, PdfColor text) {
+    return pw.Row(
+      mainAxisSize: pw.MainAxisSize.min,
+      crossAxisAlignment: pw.CrossAxisAlignment.center,
+      children: [
+        pw.Container(
+          padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+          decoration: pw.BoxDecoration(
+            color: bg,
+            borderRadius: const pw.BorderRadius.all(pw.Radius.circular(2)),
+          ),
+          child: pw.Text(
+            letter,
+            style: pw.TextStyle(font: fontBold, fontSize: fsTiny, color: text),
+          ),
+        ),
+        pw.SizedBox(width: 3),
+        pw.Text(
+          label,
+          style: pw.TextStyle(font: fontRegular, fontSize: 6.0, color: PdfReportStyles.darkGrey),
+        ),
       ],
     );
   }
