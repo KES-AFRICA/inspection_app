@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:inspec_app/services/pdf/builders/pdf_statistics_charts.dart';
 import 'package:inspec_app/services/statistics/audit_finding.dart';
 import 'package:inspec_app/services/statistics/canonical_defect_category_registry.dart';
 import 'package:inspec_app/services/statistics/mission_domain_inventory_engine.dart';
@@ -315,6 +316,78 @@ void main() {
       expect(pareto.otherCategoryItem, isNull);
       expect(pareto.allDisplayItems, isEmpty);
       expect(pareto.profile, equals(ParetoConcentrationProfile.noData));
+    });
+
+    test('7. Dynamisme de la classe ABC de l\'agrégat "Autres" (B+C et C)', () {
+      // Configuration similaire au cas réel : 15 catégories
+      // Top 7 = Classe A (80%), rangs 8-10 = Classe B (80-95%)
+      // Rangs 11-12 = Classe B (90-95%), rangs 13-15 = Classe C (95-100%)
+      final findings = <AuditFinding>[];
+
+      // 7 catégories à 12 constats = 84 constats (Classe A : 84%)
+      for (int c = 1; c <= 7; c++) {
+        for (int i = 0; i < 12; i++) {
+          findings.add(_makeFinding(
+            id: 'F_A_${c}_$i',
+            verificationPoint: 'Point A $c',
+            observationText: 'NC A $c',
+          ));
+        }
+      }
+
+      // 5 catégories à 2 constats = 10 constats (Classe B : 84% -> 94%)
+      // Rangs 8, 9, 10 iront dans le Top 10.
+      // Rangs 11, 12 seront relégués dans "Autres anomalies".
+      for (int c = 8; c <= 12; c++) {
+        for (int i = 0; i < 2; i++) {
+          findings.add(_makeFinding(
+            id: 'F_B_${c}_$i',
+            verificationPoint: 'Point B $c',
+            observationText: 'NC B $c',
+          ));
+        }
+      }
+
+      // 3 catégories à 2 constats = 6 constats (Classe C : 94% -> 100%)
+      // Rangs 13, 14, 15 seront relégués dans "Autres anomalies".
+      for (int c = 13; c <= 15; c++) {
+        for (int i = 0; i < 2; i++) {
+          findings.add(_makeFinding(
+            id: 'F_C_${c}_$i',
+            verificationPoint: 'Point C $c',
+            observationText: 'NC C $c',
+          ));
+        }
+      }
+
+      final inventory = MissionDomainInventory(
+        missionId: 'mission_test',
+        instances: [],
+        allFindings: findings,
+      );
+
+      final pareto = inventory.getParetoAnalysis(limit: 10);
+      expect(pareto.items.length, equals(10));
+      expect(pareto.otherCategoryItem, isNotNull);
+      // Le reliquat contient 2 typologies B et 3 typologies C -> composite "B+C"
+      expect(pareto.otherCategoryItem!.classeAbc, equals('B+C'));
+    });
+
+    test('8. Libellés courts Pareto : non-collision entre contacts directs et répartition/bornes', () {
+      final labelContactsDirects = PdfStatisticsCharts.formatShortParetoLabel(
+        'Protection contre les contacts directs (capots, caches, bornes protégées)',
+      );
+      expect(labelContactsDirects, equals('Contacts\ndirects'));
+
+      final labelRepartiteurs = PdfStatisticsCharts.formatShortParetoLabel(
+        'Répartition des circuits et répartiteurs',
+      );
+      expect(labelRepartiteurs, equals('Répartition\n& bornes'));
+
+      final labelBornier = PdfStatisticsCharts.formatShortParetoLabel(
+        'Borniers et peignes de répartition',
+      );
+      expect(labelBornier, equals('Répartition\n& bornes'));
     });
   });
 }

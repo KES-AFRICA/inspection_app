@@ -294,6 +294,10 @@ class MissionDomainInventory {
       final otherMaj = remaining.fold<int>(0, (sum, e) => sum + e.majeureCount);
       final otherMin = remaining.fold<int>(0, (sum, e) => sum + e.mineureCount);
 
+      // Calcul dynamique de la classe ABC de l'agrégat "Autres" (ex: C, B+C, A+B+C)
+      final distinctClasses = remaining.map((e) => e.classeAbc).toSet().toList()..sort();
+      final aggregateClasse = distinctClasses.isNotEmpty ? distinctClasses.join('+') : 'C';
+
       otherItem = TopDefectItem(
         title: 'Autres anomalies (${remaining.length} typologies)',
         count: otherCount,
@@ -302,7 +306,7 @@ class MissionDomainInventory {
         critiqueCount: otherCrit,
         majeureCount: otherMaj,
         mineureCount: otherMin,
-        classeAbc: 'C',
+        classeAbc: aggregateClasse,
         isOtherAggregate: true,
       );
     }

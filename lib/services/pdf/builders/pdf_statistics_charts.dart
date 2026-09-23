@@ -1124,7 +1124,7 @@ class PdfStatisticsCharts {
                           ),
                         ),
                         pw.Text(
-                          _formatShortParetoLabel(displayItems[i].title),
+                          formatShortParetoLabel(displayItems[i].title),
                           textAlign: pw.TextAlign.center,
                           maxLines: 3,
                           style: pw.TextStyle(
@@ -1172,9 +1172,17 @@ class PdfStatisticsCharts {
     return full.length > 12 ? '${full.substring(0, 10)}.' : full;
   }
 
-  static String _formatShortParetoLabel(String full) {
+  static String formatShortParetoLabel(String full) {
     final l = full.toLowerCase();
     if (l.contains('autre')) return 'Autres\nanomalies';
+    // Contacts directs & protection des personnes (prioritaire sur 'borne' / 'bornier')
+    if (l.contains('contact direct') ||
+        l.contains('contacts directs') ||
+        l.contains('capot') ||
+        l.contains('cache') ||
+        l.contains('ip2x')) {
+      return 'Contacts\ndirects';
+    }
     if (l.contains('identification') || l.contains('repérage') || l.contains('reperage')) return 'Repérage\ncircuits';
     if (l.contains('câblage') || l.contains('canalisation') || l.contains('raccordement')) return 'Câblages &\ncanalisations';
     if (l.contains('enveloppe') || l.contains('armoire') || l.contains('coffret') || l.contains('ip')) return 'Enveloppes\n& coffrets';
@@ -1186,7 +1194,7 @@ class PdfStatisticsCharts {
     if (l.contains('diélectrique') || l.contains('dielectrique') || l.contains('tapis') || l.contains('tabouret')) return 'Revêtement\nsol';
     if (l.contains('moyenne tension') || l.contains('hta') || l.contains('transfo') || l.contains('cellule')) return 'Poste &\ncellules MT';
     if (l.contains('éclairage') || l.contains('eclairage') || l.contains('baes')) return 'Éclairage de\nsécurité';
-    if (l.contains('répartiteur') || l.contains('repartiteur') || l.contains('borne')) return 'Répartition\n& bornes';
+    if (l.contains('répartiteur') || l.contains('repartiteur') || l.contains('borne') || l.contains('bornier')) return 'Répartition\n& bornes';
     if (l.contains('foudre') || l.contains('parafoudre') || l.contains('paratonnerre')) return 'Foudre &\nparafoudres';
     if (l.contains('ambiance') || l.contains('ventilation') || l.contains('poussière') || l.contains('humidité')) return 'Conditions\nd\'ambiance';
     return full.length > 15 ? '${full.substring(0, 13)}..' : full;
