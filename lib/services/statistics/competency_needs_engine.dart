@@ -258,11 +258,10 @@ class CompetencyNeedsEngine {
     final isConcentrated = isSingleDominant || (top2Share >= 50.0 && totalMajeuresCount >= 6);
     final isDispersed = !isConcentrated && combinedGroups.length >= 4;
 
-    // 8. Génération dynamique des axes A. à J. (Partie 1 — Non-conformités majeures canoniques)
-    final axes = <CompetencyNeed>[];
+    // 8. Génération dynamique des axes dédoublonnés A. à J. (Partie 1)
+    final mergedAxesMap = <String, CompetencyNeed>{};
     for (int i = 0; i < combinedGroups.length; i++) {
       final group = combinedGroups[i];
-      final letter = i < axisLetters.length ? axisLetters[i] : '${i + 1}.';
       final isTopDominant = (i == 0 && isSingleDominant);
 
       final interpretation = _deriveTechnicalCompetency(
@@ -271,15 +270,41 @@ class CompetencyNeedsEngine {
         isTopDominant: isTopDominant,
       );
 
-      final pct = totalMajeuresCount > 0
-          ? (group.findings.length / totalMajeuresCount) * 100.0
-          : 0.0;
+      final cleanTitle = interpretation.title.replaceAll(' (HTA)', '').replaceAll('(HTA)', '').trim();
 
-      axes.add(
-        CompetencyNeed(
+      if (mergedAxesMap.containsKey(cleanTitle)) {
+        final existing = mergedAxesMap[cleanTitle]!;
+        final newCount = existing.occurrenceCount + group.findings.length;
+        final newPct = totalMajeuresCount > 0 ? (newCount / totalMajeuresCount) * 100.0 : 0.0;
+        mergedAxesMap[cleanTitle] = CompetencyNeed(
+          id: existing.id,
+          letter: existing.letter,
+          title: cleanTitle,
+          recommendedSkills: existing.recommendedSkills,
+          rationale: existing.rationale,
+          operationalObjective: existing.operationalObjective,
+          occurrenceCount: newCount,
+          percentage: newPct,
+          critiqueCount: 0,
+          majeureCount: newCount,
+          mineureCount: 0,
+          sourceVerificationPoints: [...existing.sourceVerificationPoints, group.verificationPoint],
+          riskFamilies: {...existing.riskFamilies, ...group.riskFamilies}.toList(),
+          topEquipmentTypes: [...existing.topEquipmentTypes, ...group.topEquipmentTypes],
+          topLocations: [...existing.topLocations, ...group.topLocations],
+          hasMtDomain: existing.hasMtDomain || (group.domain == TensionDomain.mt),
+          hasBtDomain: existing.hasBtDomain || (group.domain == TensionDomain.bt),
+          domain: existing.domain,
+          customNarrative: existing.customNarrative,
+        );
+      } else {
+        final pct = totalMajeuresCount > 0
+            ? (group.findings.length / totalMajeuresCount) * 100.0
+            : 0.0;
+        mergedAxesMap[cleanTitle] = CompetencyNeed(
           id: 'axis_${group.domain.name}_${i + 1}',
-          letter: letter,
-          title: interpretation.title,
+          letter: '',
+          title: cleanTitle,
           recommendedSkills: interpretation.skills,
           rationale: interpretation.rationale,
           operationalObjective: interpretation.objective,
@@ -296,6 +321,38 @@ class CompetencyNeedsEngine {
           hasBtDomain: group.domain == TensionDomain.bt,
           domain: group.domain,
           customNarrative: interpretation.fullNarrative,
+        );
+      }
+    }
+
+    final sortedAxes = mergedAxesMap.values.toList()
+      ..sort((a, b) => b.occurrenceCount.compareTo(a.occurrenceCount));
+
+    final axes = <CompetencyNeed>[];
+    for (int i = 0; i < sortedAxes.length && i < 10; i++) {
+      final a = sortedAxes[i];
+      final letter = i < axisLetters.length ? axisLetters[i] : '${i + 1}.';
+      axes.add(
+        CompetencyNeed(
+          id: a.id,
+          letter: letter,
+          title: a.title,
+          recommendedSkills: a.recommendedSkills,
+          rationale: a.rationale,
+          operationalObjective: a.operationalObjective,
+          occurrenceCount: a.occurrenceCount,
+          percentage: a.percentage,
+          critiqueCount: 0,
+          majeureCount: a.occurrenceCount,
+          mineureCount: 0,
+          sourceVerificationPoints: a.sourceVerificationPoints,
+          riskFamilies: a.riskFamilies,
+          topEquipmentTypes: a.topEquipmentTypes,
+          topLocations: a.topLocations,
+          hasMtDomain: a.hasMtDomain,
+          hasBtDomain: a.hasBtDomain,
+          domain: a.domain,
+          customNarrative: a.customNarrative,
         ),
       );
     }
@@ -547,7 +604,7 @@ class CompetencyNeedsEngine {
          combinedText.contains('sectionneur') ||
          combinedText.contains('gaep') ||
          combinedText.contains('manœuvre'))) {
-      title = 'Exploitation et manœuvres des cellules Moyenne Tension (HTA)';
+      title = 'Exploitation et manœuvres des cellules Moyenne Tension';
       skills = 'Renforcer la stricte application des séquences d’interverrouillage mécanique et de mise à la terre des cellules MT';
       objective = 'afin d’éliminer tout risque d’arc électrique lors des opérations d’exploitation en poste HTA';
     }
@@ -618,17 +675,13 @@ class CompetencyNeedsEngine {
     narrativeBuffer.write(objective);
     narrativeBuffer.write('.');
 
-    if (group.domain == TensionDomain.mt &&
-        !title.toLowerCase().contains('moyenne tension') &&
-        !title.toLowerCase().contains('hta')) {
-      title = '$title (HTA)';
-    }
+    final cleanFinalTitle = title.replaceAll(' (HTA)', '').replaceAll('(HTA)', '').trim();
 
     final rationale = '${group.findings.length} constat${group.findings.length > 1 ? "s" : ""} '
         'relevé${group.findings.length > 1 ? "s" : ""} en ${group.domain == TensionDomain.mt ? "HTA" : "BT"}';
 
     return _DerivedCompetency(
-      title: title,
+      title: cleanFinalTitle,
       skills: skills,
       objective: objective,
       rationale: rationale,

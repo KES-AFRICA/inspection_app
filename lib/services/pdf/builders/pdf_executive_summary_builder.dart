@@ -479,11 +479,11 @@ class PdfExecutiveSummaryBuilder {
     if (compAnalysis.axes.isNotEmpty || compAnalysis.riskFamilyAxes.isNotEmpty) {
       widgets.add(pw.SizedBox(height: 6));
 
-      // ── Partie 1 — Non-conformités majeures constatées ──
+      // ── Partie 1 — Compétences prioritaires à renforcer (Non-conformités majeures) ──
       if (compAnalysis.axes.isNotEmpty) {
         widgets.add(
           pw.Text(
-            'Partie 1 — Non-conformités majeures constatées',
+            'Partie 1 — Compétences prioritaires à renforcer (Non-conformités majeures)',
             style: pw.TextStyle(
               font: fontBold,
               fontSize: fsBody + 0.5,
@@ -516,12 +516,12 @@ class PdfExecutiveSummaryBuilder {
         }
       }
 
-      // ── Partie 2 — Familles de risque prépondérantes ──
+      // ── Partie 2 — Thématiques de prévention ciblées (Familles de risque prépondérantes) ──
       if (compAnalysis.riskFamilyAxes.isNotEmpty) {
         widgets.add(pw.SizedBox(height: 6));
         widgets.add(
           pw.Text(
-            'Partie 2 — Familles de risque prépondérantes',
+            'Partie 2 — Thématiques de prévention ciblées (Familles de risque prépondérantes)',
             style: pw.TextStyle(
               font: fontBold,
               fontSize: fsBody + 0.5,
