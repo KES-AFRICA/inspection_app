@@ -316,6 +316,7 @@ class PdfExecutiveSummaryBuilder {
     widgets.add(pw.SizedBox(height: 10));
 
     // ── 4. Facteurs de risque prépondérants ──
+    widgets.add(pw.NewPage());
     widgets.add(
       PageTracker(
         key: 'resume_executif_1_4',
