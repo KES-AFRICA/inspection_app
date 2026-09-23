@@ -487,7 +487,7 @@ class GlobalAssessmentEngine {
       deficitDetails = '${deficitItems.sublist(0, deficitItems.length - 1).join(', ')} et ${deficitItems.last}';
     }
 
-    return 'L’analyse met également en évidence un **déficit important de données techniques nécessaires à la maîtrise du parc électrique**, notamment concernant $deficitDetails.\n\nCe déficit documentaire limite la capacité des équipes à assurer une maintenance préventive pleinement maîtrisée et à intervenir rapidement et en sécurité.';
+    return 'L’analyse met également en évidence un **déficit important de données techniques nécessaires à la maîtrise du parc électrique**, notamment concernant $deficitDetails.\nCe déficit documentaire limite la capacité des équipes à assurer une maintenance préventive pleinement maîtrisée et à intervenir rapidement et en sécurité.';
   }
 
   /// Paragraphe 4 : Observation Pareto ou Asymétrie HTA/BT

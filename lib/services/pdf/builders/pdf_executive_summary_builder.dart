@@ -131,6 +131,8 @@ class PdfExecutiveSummaryBuilder {
     );
     widgets.add(pw.SizedBox(height: 4));
     widgets.add(_build12IndicateursTable(statsSummary, snapshot, technical));
+    widgets.add(pw.SizedBox(height: 4));
+    widgets.add(_buildExploitationMaintenanceNote());
     widgets.add(pw.SizedBox(height: 8));
 
     // 2.2. Criticité
@@ -1370,6 +1372,94 @@ class PdfExecutiveSummaryBuilder {
           ],
         ),
       ],
+    );
+  }
+
+  /// Note explicative et pédagogique rédigée sous l'angle de l'ingénierie électrotechnique
+  /// pour éclairer la logique d'agrégation de l'indicateur « Exploitation et maintenance ».
+  static pw.Widget _buildExploitationMaintenanceNote() {
+    return pw.Container(
+      margin: const pw.EdgeInsets.only(top: 2, bottom: 4),
+      padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: pw.BoxDecoration(
+        color: PdfColor.fromInt(0xFFF8FAFC),
+        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(3)),
+        border: pw.Border(
+          left: pw.BorderSide(color: PdfReportStyles.accentColor, width: 2.5),
+          top: pw.BorderSide(color: PdfColor.fromInt(0xFFE2E8F0), width: 0.5),
+          right: pw.BorderSide(color: PdfColor.fromInt(0xFFE2E8F0), width: 0.5),
+          bottom: pw.BorderSide(color: PdfColor.fromInt(0xFFE2E8F0), width: 0.5),
+        ),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.RichText(
+            text: pw.TextSpan(
+              children: [
+                pw.TextSpan(
+                  text: 'NB d\'ingénierie — Périmètre « Exploitation et maintenance » : ',
+                  style: pw.TextStyle(
+                    font: fontBold,
+                    fontSize: 7.2,
+                    color: PdfReportStyles.headerColor,
+                  ),
+                ),
+                pw.TextSpan(
+                  text:
+                      'Afin d\'offrir une lecture systémique et cohérente de la sécurité opérationnelle et de la gouvernance des installations, cet indicateur consolide :',
+                  style: pw.TextStyle(
+                    font: fontRegular,
+                    fontSize: 7.0,
+                    color: PdfReportStyles.darkGrey,
+                    lineSpacing: 1.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          pw.SizedBox(height: 3),
+          pw.Padding(
+            padding: const pw.EdgeInsets.only(left: 6),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.RichText(
+                  text: pw.TextSpan(
+                    children: [
+                      pw.TextSpan(
+                        text: '• En Moyenne Tension (HTA) : ',
+                        style: pw.TextStyle(font: fontBold, fontSize: 6.8, color: PdfReportStyles.headerColor),
+                      ),
+                      pw.TextSpan(
+                        text:
+                            'le cumul des non-conformités liées aux conditions d\'exploitation des locaux techniques (LTMT) et des écarts relevés sur les équipements MT (cellules de coupure/manœuvre et transformateurs MT/BT).',
+                        style: pw.TextStyle(font: fontRegular, fontSize: 6.8, color: PdfReportStyles.darkGrey, lineSpacing: 1.4),
+                      ),
+                    ],
+                  ),
+                ),
+                pw.SizedBox(height: 2),
+                pw.RichText(
+                  text: pw.TextSpan(
+                    children: [
+                      pw.TextSpan(
+                        text: '• En Basse Tension (BT) : ',
+                        style: pw.TextStyle(font: fontBold, fontSize: 6.8, color: PdfReportStyles.headerColor),
+                      ),
+                      pw.TextSpan(
+                        text:
+                            'l\'addition des dispositions constructives et conditions d\'exploitation des locaux (LTBT, LTGE), des enveloppes et canalisations BT (inverseurs de sources, TGBT, armoires divisionnaires, coffrets), ainsi que des réseaux de prises de terre et des installations de protection contre la foudre.',
+                        style: pw.TextStyle(font: fontRegular, fontSize: 6.8, color: PdfReportStyles.darkGrey, lineSpacing: 1.4),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
