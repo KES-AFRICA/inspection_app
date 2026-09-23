@@ -929,6 +929,16 @@ Widget _buildClassementTab() {
                             ),
                           ),
                         ),
+                        if (estComplet) ...[
+                          const SizedBox(width: 4),
+                          IconButton(
+                            icon: Icon(Icons.delete_outline, color: Colors.red.shade600, size: 20),
+                            tooltip: 'Supprimer le classement',
+                            constraints: const BoxConstraints(),
+                            padding: const EdgeInsets.all(4),
+                            onPressed: () => _confirmerSuppressionClassementZone(zone),
+                          ),
+                        ],
                       ],
                     ),
                     if (estComplet) ...[
@@ -979,6 +989,65 @@ void _ouvrirClassementZone(ClassementZone classement) async {
   
   if (result == true) {
     _loadData();
+  }
+}
+
+Future<void> _confirmerSuppressionClassementZone(ClassementZone zone) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Supprimer le classement de cette zone ?'),
+      content: const Text(
+        'La zone sera considérée comme non classée. '
+        'Les autres données de la zone seront conservées.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('Annuler'),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(context, true),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red,
+            foregroundColor: Colors.white,
+          ),
+          child: const Text('Supprimer'),
+        ),
+      ],
+    ),
+  );
+
+  if (confirmed == true) {
+    await _supprimerClassementZone(zone);
+  }
+}
+
+Future<void> _supprimerClassementZone(ClassementZone zone) async {
+  await HiveService.deleteClassementZone(
+    missionId: widget.mission.id,
+    nomZone: zone.nomZone,
+  );
+
+  if (_audit != null) {
+    for (final z in _audit!.moyenneTensionZones) {
+      if (z.nom == zone.nomZone) {
+        z.classementZoneId = null;
+        break;
+      }
+    }
+    await HiveService.saveAuditInstallations(_audit!);
+  }
+
+  await _loadData();
+
+  if (mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Classement de la zone supprimé'),
+        backgroundColor: Colors.green,
+      ),
+    );
   }
 }
 

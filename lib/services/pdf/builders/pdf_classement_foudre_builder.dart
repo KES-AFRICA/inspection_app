@@ -221,7 +221,7 @@ class PdfClassementFoudreBuilder {
 
     // 1. Zones classées dans la mission (Règles A et B : Ligne 1 de la Zone avec Repère vide)
     for (var zone in zonesClassement) {
-      if (zone.nomZone.trim().isEmpty) continue;
+      if (zone.nomZone.trim().isEmpty || !zone.estComplet) continue;
       rows.add(
         PdfClassementRow(
           localisation: '', // Repère vide pour l'entrée de Zone elle-même (Règles A et B)

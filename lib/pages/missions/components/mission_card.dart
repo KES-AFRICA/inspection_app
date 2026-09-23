@@ -14,12 +14,14 @@ class MissionCard extends StatefulWidget {
   final Mission mission;
   final Verificateur user;
   final VoidCallback? onDeleted;
+  final String? displayClientName;
 
   const MissionCard({
     super.key,
     required this.mission,
     required this.user,
     this.onDeleted,
+    this.displayClientName,
   });
 
   @override
@@ -464,7 +466,7 @@ class _MissionCardState extends State<MissionCard> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              widget.mission.nomClient,
+                              widget.displayClientName ?? widget.mission.nomClient,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(

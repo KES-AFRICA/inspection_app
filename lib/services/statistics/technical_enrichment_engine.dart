@@ -1288,12 +1288,13 @@ class TechnicalEnrichmentEngine {
         int count = 0;
         for (int i = 0; i < allAuditZoneNames.length; i++) {
           final cId = allAuditZoneClassementIds[i];
-          if (cId != null && cId.trim().isNotEmpty) {
-            count++;
-            continue;
-          }
           final zNom = allAuditZoneNames[i].trim().toLowerCase();
-          if (zonesClassees.any((cz) => cz.nomZone.trim().toLowerCase() == zNom)) {
+          final cz = zonesClassees.where((c) =>
+            (cId != null && cId.trim().isNotEmpty && (c.key?.toString() == cId || c.nomZone.trim().toLowerCase() == zNom)) ||
+            (c.nomZone.trim().toLowerCase() == zNom)
+          ).firstOrNull;
+
+          if (cz != null && cz.estComplet) {
             count++;
           }
         }

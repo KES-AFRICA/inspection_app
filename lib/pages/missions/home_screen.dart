@@ -14,6 +14,7 @@ import 'package:inspec_app/features/backup/presentation/screens/sauvegardes_scre
 import 'package:inspec_app/pages/backup/backup_screen.dart';
 import 'package:inspec_app/pages/trash/corbeille_screen.dart';
 import 'package:inspec_app/services/hive_service.dart';
+import 'package:inspec_app/services/mission_display_helper.dart';
 
 /// Écran principal "Mes Missions"
 /// Refonte visuelle complète avec bannière KPI d'accueil, filtres dynamiques,
@@ -30,6 +31,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   List<Mission> _missions = [];
   List<Mission> _filteredMissions = [];
+  Map<String, String> _displayNames = {};
   bool _showSidebar = false;
   int _currentPageIndex = 0;
 
@@ -91,8 +93,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _loadLocalMissions() {
+    final missions = HiveService.getMissionsByMatricule(widget.user.matricule);
     setState(() {
-      _missions = HiveService.getMissionsByMatricule(widget.user.matricule);
+      _missions = missions;
+      _displayNames = MissionDisplayHelper.computeDisplayNames(missions);
     });
     _applyFilters();
   }
@@ -513,6 +517,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       mission: mission,
                       user: widget.user,
                       onDeleted: _loadLocalMissions,
+                      displayClientName: _displayNames[mission.id],
                     ),
                   );
                 },

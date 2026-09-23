@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/detail_coffret_screen.dart';
 import 'package:inspec_app/services/gallery_photo_service.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/observation_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/qr_scan_coffret_screen.dart';
@@ -11,8 +12,9 @@ import 'package:inspec_app/pages/missions/mission_detail/mission_execution_scree
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/ajouter_local_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/ajouter_zone_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/detail_local_screen.dart';
-import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/detail_coffret_screen.dart';
 import 'package:inspec_app/services/hive_service.dart';
+import 'package:inspec_app/models/classement_zone.dart';
+import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/classement_zone_screen.dart';
 import 'dart:io';
 
 import 'package:path_provider/path_provider.dart';
@@ -2149,7 +2151,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
         ],
       ),
       body: DefaultTabController(
-        length: 4,
+        length: 5,
         child: Column(
           children: [
             _buildZoneHeader(),
@@ -2157,6 +2159,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
             Container(
               color: Colors.white,
               child: TabBar(
+                isScrollable: true,
                 labelColor: AppTheme.primaryBlue,
                 unselectedLabelColor: Colors.grey,
                 indicatorColor: AppTheme.primaryBlue,
@@ -2171,6 +2174,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
                         ? 'ÉQUIPEMENTS (${_coffretsDirects.length})'
                         : 'ÉQUIPEMENTS DIRECTS (${_coffretsDirects.length})',
                   ),
+                  const Tab(text: 'CLASSEMENT'),
                 ],
               ),
             ),
@@ -2301,6 +2305,9 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
                             },
                           ),
                         ),
+
+                  // Tab CLASSEMENT
+                  _buildClassementTab(),
                 ],
               ),
             ),
@@ -2545,6 +2552,356 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
 
     if (result == true) {
       _rechargerZone();
+    }
+  }
+
+  Widget _buildInfluenceChip(String type, String code) {
+    final Map<String, Color> colorMap = {
+      'AF': Colors.blue,
+      'BE': Colors.purple,
+      'AE': Colors.orange,
+      'AD': Colors.teal,
+      'AG': Colors.red,
+    };
+    final color = colorMap[type] ?? AppTheme.primaryBlue;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Text(
+        '$type: $code',
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+          color: color,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildClassementTab() {
+    return FutureBuilder<ClassementZone?>(
+      future: Future.value(
+        HiveService.getClassementZoneByNom(widget.mission.id, _zone.nom),
+      ),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final classement = snapshot.data;
+
+        if (classement == null || !classement.estComplet) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.security_outlined,
+                  size: 64,
+                  color: Colors.grey.shade400,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Aucun classement défini',
+                  style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: _allerAuClassementZone,
+                  icon: const Icon(Icons.add_moderator),
+                  label: const Text('DÉFINIR LE CLASSEMENT'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryBlue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            Card(
+              margin: const EdgeInsets.only(bottom: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              elevation: 2,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // En-tête : Nom zone + Badge Classée
+                    Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.map_outlined,
+                            color: Colors.green,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _zone.nom,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                widget.isMoyenneTension
+                                    ? 'Zone Moyenne Tension'
+                                    : 'Zone Basse Tension',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade100,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            'Classée',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.green.shade800,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Divider(height: 24),
+
+                    // Origine du classement
+                    if (classement.origineClassement.isNotEmpty) ...[
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Origine : ',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey.shade700,
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              classement.origineClassement,
+                              style: const TextStyle(fontWeight: FontWeight.w500),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+
+                    // Influences externes
+                    Text(
+                      'Influences externes :',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _buildInfluenceChip('AF', classement.af!),
+                        _buildInfluenceChip('BE', classement.be!),
+                        _buildInfluenceChip('AE', classement.ae!),
+                        _buildInfluenceChip('AD', classement.ad!),
+                        _buildInfluenceChip('AG', classement.ag!),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    // IP & IK
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.green.shade200),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          Text(
+                            'IP : ${classement.ip ?? "N/A"}',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green.shade800,
+                            ),
+                          ),
+                          Container(
+                            height: 20,
+                            width: 1,
+                            color: Colors.green.shade300,
+                          ),
+                          Text(
+                            'IK : ${classement.ik ?? "N/A"}',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green.shade800,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // Boutons d'action
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: _allerAuClassementZone,
+                            icon: const Icon(Icons.edit, size: 18),
+                            label: const Text('MODIFIER LE CLASSEMENT'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryBlue,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: _confirmerSuppressionClassementZone,
+                            icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                            label: const Text(
+                              'SUPPRIMER LE CLASSEMENT',
+                              style: TextStyle(color: Colors.red),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              side: BorderSide(color: Colors.red.shade300),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _allerAuClassementZone() async {
+    final classement = await HiveService.getOrCreateClassementZone(
+      missionId: widget.mission.id,
+      nomZone: _zone.nom,
+      typeZone: widget.isMoyenneTension ? 'MT' : 'BT',
+    );
+
+    if (!mounted) return;
+
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ClassementZoneScreen(
+          mission: widget.mission,
+          classement: classement,
+        ),
+      ),
+    );
+
+    if (!mounted) return;
+
+    if (result == true) {
+      _zone.classementZoneId = classement.key?.toString();
+      await _sauvegarderZone();
+      if (mounted) setState(() {});
+    }
+  }
+
+  Future<void> _confirmerSuppressionClassementZone() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Supprimer le classement de cette zone ?'),
+        content: const Text(
+          'La zone sera considérée comme non classée. '
+          'Les autres données de la zone seront conservées.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await HiveService.deleteClassementZone(
+        missionId: widget.mission.id,
+        nomZone: _zone.nom,
+      );
+      _zone.classementZoneId = null;
+      await _sauvegarderZone();
+      if (mounted) {
+        setState(() {});
+        _showSuccess('Classement de la zone supprimé');
+      }
     }
   }
 

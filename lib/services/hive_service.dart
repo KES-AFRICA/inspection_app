@@ -8402,6 +8402,27 @@ static Future<void> deleteClassementZone({
       await toDelete.delete();
       if (kDebugMode) print('✅ ClassementZone supprimé: $nomZone');
     }
+
+    // Réinitialiser également le classementZoneId sur la zone dans l'audit
+    final audit = getAuditInstallationsByMissionId(missionId);
+    if (audit != null) {
+      bool modified = false;
+      for (var z in audit.moyenneTensionZones) {
+        if (z.nom == nomZone && z.classementZoneId != null) {
+          z.classementZoneId = null;
+          modified = true;
+        }
+      }
+      for (var z in audit.basseTensionZones) {
+        if (z.nom == nomZone && z.classementZoneId != null) {
+          z.classementZoneId = null;
+          modified = true;
+        }
+      }
+      if (modified) {
+        await saveAuditInstallations(audit);
+      }
+    }
   } catch (e) {
     if (kDebugMode) {
       print('❌ Erreur deleteClassementZone: $e');

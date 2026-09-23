@@ -2349,40 +2349,20 @@ class BackupService {
     );
   }
 
-  // ── HELPER DE RÉSOLUTION DES CONFLITS DE NOMS DE CLIENT ──
 
-  static String _generateUniqueClientName(String baseName, Set<String> existingNames) {
-    final clean = baseName.trim();
-    if (clean.isEmpty) return 'Mission Inconnue';
-    if (!existingNames.contains(clean)) return clean;
-
-    String prefix = clean;
-    final regex = RegExp(r'^(.*?)\s*\(\d+\)$');
-    final match = regex.firstMatch(clean);
-    if (match != null) {
-      prefix = match.group(1)!.trim();
-    }
-
-    int counter = 1;
-    while (true) {
-      final candidate = '$prefix ($counter)';
-      if (!existingNames.contains(candidate)) {
-        return candidate;
-      }
-      counter++;
-    }
-  }
 
   // ── HELPER DE REMAPPAGE DU MISSION_ID ET NOM POUR LES DOUBLONS ──
 
   static Map<String, dynamic> _remapMissionId(
-      Map<String, dynamic> data, String oldId, String newId, String newClientName) {
+      Map<String, dynamic> data, String oldId, String newId, [String? newClientName]) {
     final copy = Map<String, dynamic>.from(data);
 
     if (copy.containsKey('mission') && copy['mission'] is Map) {
       final mj = Map<String, dynamic>.from(copy['mission'] as Map);
       mj['id'] = newId;
-      mj['nom_client'] = newClientName;
+      if (newClientName != null && newClientName.isNotEmpty) {
+        mj['nom_client'] = newClientName;
+      }
       copy['mission'] = mj;
     }
 
@@ -2450,11 +2430,8 @@ class BackupService {
     final originalMissionId = _safeString(mj['id']);
     if (originalMissionId.isEmpty) return 'skipped';
 
-    final originalNomClient = _safeString(mj['nom_client'], 'Mission Sans Nom');
-
     final box = Hive.box<Mission>('missions');
     final existingById = box.get(originalMissionId);
-    final existingNames = box.values.map((m) => m.nomClient.trim()).toSet();
 
     String targetMissionId = originalMissionId;
     Map<String, dynamic> targetData = data;
@@ -2463,15 +2440,12 @@ class BackupService {
     if (ecraser && existingById != null) {
       targetMissionId = originalMissionId;
       targetData = data;
-    } else {
-      final needNewName = existingNames.contains(originalNomClient.trim());
-      final needNewId = existingById != null;
-
-      if (needNewName || needNewId) {
-        final uniqueNomClient = _generateUniqueClientName(originalNomClient, existingNames);
-        targetMissionId = 'm_${DateTime.now().microsecondsSinceEpoch}_${(100 + existingNames.length)}';
-        targetData = _remapMissionId(data, originalMissionId, targetMissionId, uniqueNomClient);
-      }
+    } else if (existingById != null) {
+      // Conflit d'identifiant technique sans écrasement :
+      // On réattribue un nouvel ID technique unique mais on préserve
+      // STRICTEMENT le nomClient métier original sans le modifier
+      targetMissionId = 'm_${DateTime.now().microsecondsSinceEpoch}_${box.length}';
+      targetData = _remapMissionId(data, originalMissionId, targetMissionId);
     }
 
     final targetMj = _safeMap(targetData['mission']);
