@@ -146,8 +146,8 @@ class PdfCoverBuilder {
             if (logoKesImage != null)
               pw.Image(
                 logoKesImage!,
-                width: 140,
-                height: 80,
+                width: 180,
+                height: 68,
                 fit: pw.BoxFit.contain,
               )
             else
