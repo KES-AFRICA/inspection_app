@@ -1383,7 +1383,6 @@ class PdfExecutiveSummaryBuilder {
       padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: pw.BoxDecoration(
         color: PdfColor.fromInt(0xFFF8FAFC),
-        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(3)),
         border: pw.Border(
           left: pw.BorderSide(color: PdfReportStyles.accentColor, width: 2.5),
           top: pw.BorderSide(color: PdfColor.fromInt(0xFFE2E8F0), width: 0.5),
@@ -1398,7 +1397,7 @@ class PdfExecutiveSummaryBuilder {
             text: pw.TextSpan(
               children: [
                 pw.TextSpan(
-                  text: 'NB d\'ingénierie — Périmètre « Exploitation et maintenance » : ',
+                  text: PdfReportStyles.normalizeText('NB d\'ingénierie - Périmètre "Exploitation et maintenance" : '),
                   style: pw.TextStyle(
                     font: fontBold,
                     fontSize: 7.2,
@@ -1406,8 +1405,9 @@ class PdfExecutiveSummaryBuilder {
                   ),
                 ),
                 pw.TextSpan(
-                  text:
-                      'Afin d\'offrir une lecture systémique et cohérente de la sécurité opérationnelle et de la gouvernance des installations, cet indicateur consolide :',
+                  text: PdfReportStyles.normalizeText(
+                    'Afin d\'offrir une lecture systémique et cohérente de la sécurité opérationnelle et de la gouvernance des installations, cet indicateur consolide :',
+                  ),
                   style: pw.TextStyle(
                     font: fontRegular,
                     fontSize: 7.0,
@@ -1428,12 +1428,13 @@ class PdfExecutiveSummaryBuilder {
                   text: pw.TextSpan(
                     children: [
                       pw.TextSpan(
-                        text: '• En Moyenne Tension (HTA) : ',
+                        text: PdfReportStyles.normalizeText('- En Moyenne Tension (HTA) : '),
                         style: pw.TextStyle(font: fontBold, fontSize: 6.8, color: PdfReportStyles.headerColor),
                       ),
                       pw.TextSpan(
-                        text:
-                            'le cumul des non-conformités liées aux conditions d\'exploitation des locaux techniques (LTMT) et des écarts relevés sur les équipements MT (cellules de coupure/manœuvre et transformateurs MT/BT).',
+                        text: PdfReportStyles.normalizeText(
+                          'le cumul des non-conformités liées aux conditions d\'exploitation des locaux techniques (LTMT) et des écarts relevés sur les équipements MT (cellules de coupure/manœuvre et transformateurs MT/BT).',
+                        ),
                         style: pw.TextStyle(font: fontRegular, fontSize: 6.8, color: PdfReportStyles.darkGrey, lineSpacing: 1.4),
                       ),
                     ],
@@ -1444,12 +1445,13 @@ class PdfExecutiveSummaryBuilder {
                   text: pw.TextSpan(
                     children: [
                       pw.TextSpan(
-                        text: '• En Basse Tension (BT) : ',
+                        text: PdfReportStyles.normalizeText('- En Basse Tension (BT) : '),
                         style: pw.TextStyle(font: fontBold, fontSize: 6.8, color: PdfReportStyles.headerColor),
                       ),
                       pw.TextSpan(
-                        text:
-                            'l\'addition des dispositions constructives et conditions d\'exploitation des locaux (LTBT, LTGE), des enveloppes et canalisations BT (inverseurs de sources, TGBT, armoires divisionnaires, coffrets), ainsi que des réseaux de prises de terre et des installations de protection contre la foudre.',
+                        text: PdfReportStyles.normalizeText(
+                          'l\'addition des dispositions constructives et conditions d\'exploitation des locaux (LTBT, LTGE), des enveloppes et canalisations BT (inverseurs de sources, TGBT, armoires divisionnaires, coffrets), ainsi que des réseaux de prises de terre et des installations de protection contre la foudre.',
+                        ),
                         style: pw.TextStyle(font: fontRegular, fontSize: 6.8, color: PdfReportStyles.darkGrey, lineSpacing: 1.4),
                       ),
                     ],

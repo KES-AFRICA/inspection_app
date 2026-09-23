@@ -59,6 +59,7 @@ class PdfReportStyles {
 
     const replacements = <String, String>{
       '«': '"', '»': '"', '“': '"', '”': '"',
+      '•': '-',
       // Note: '’', '‘', '–', '—', 'Ω', 'Δ', '≤', '≥', '±', '°', 'µ', '²', '³', 'ₙ'
       // sont nativement supportés par Roboto (cmap format 12 vérifié).
       // On évite toute dégradation ou substitution inattendue.
