@@ -40,6 +40,7 @@ import 'builders/pdf_sommaire_builder.dart';
 import 'builders/pdf_regulatory_builder.dart';
 import 'builders/pdf_executive_summary_builder.dart';
 import 'builders/pdf_statistics_builder.dart';
+import 'builders/pdf_final_page_builder.dart';
 import 'pdf_page_tracker.dart';
 export 'pdf_page_tracker.dart';
 import 'package:inspec_app/services/pdf/pdf_footer_builder.dart';
@@ -99,6 +100,7 @@ class PdfReportService {
   //  IMAGES (chargees une seule fois)
   // ──────────────────────────────────────────────────────────────
   static pw.MemoryImage? _watermarkImage;
+  static pw.MemoryImage? _watermarkWhiteImage;
   static pw.MemoryImage? _firstPageFooterImage;
   static pw.MemoryImage? _logoKesImage;
   static pw.MemoryImage? _imgHabilitation;
@@ -187,6 +189,7 @@ class PdfReportService {
 
     // Polices et filigranes/logos PNG avec transparence native (0 fond noir/gris)
     _watermarkImage = await tryLoadRaw('assets/images/filigranne_image.png');
+    _watermarkWhiteImage = await tryLoadRaw('assets/images/filigranne_white.png');
     _logoKesImage = await tryLoadRaw('assets/images/logo.png');
     _firstPageFooterImage = await tryLoad(
       'assets/images/firstpage_footer.png',
@@ -217,6 +220,7 @@ class PdfReportService {
     PdfCoverBuilder.logoKesImage = _logoKesImage;
     PdfSommaireBuilder.logoKesImage = _logoKesImage;
     PdfSommaireBuilder.watermarkImage = _watermarkImage;
+    PdfFinalPageBuilder.watermarkWhiteImage = _watermarkWhiteImage;
     _imagesLoaded = true;
   }
 
@@ -276,6 +280,8 @@ class PdfReportService {
     PdfMesuresEssaisBuilder.fontBold = _fontBold;
     PdfPhotosSchemasBuilder.fontRegular = _fontRegular;
     PdfPhotosSchemasBuilder.fontBold = _fontBold;
+    PdfFinalPageBuilder.fontRegular = _fontRegular;
+    PdfFinalPageBuilder.fontBold = _fontBold;
   }
 
   // ──────────────────────────────────────────────────────────────
@@ -3399,6 +3405,21 @@ class PdfReportService {
       }
       currentOffset += pdfSchema.document.pdfPageList.pages.length;
     }
+
+    // ── Sub-chunk Final : Quatrième de couverture (Dernière page absolue du rapport) ──
+    final pdfFinal = pw.Document(
+      title: 'Quatrième de couverture - ${mission.nomClient}',
+      author: 'KES INSPECTIONS AND PROJECTS',
+      compress: saveFilesToDisk,
+    );
+    pdfFinal.addPage(PdfFinalPageBuilder.buildPage());
+    final bytesFinal = await pdfFinal.save();
+    if (saveFilesToDisk) {
+      final chunkFinal = File('${tempDir.path}/pdf_chunk_final_$missionId.pdf');
+      await chunkFinal.writeAsBytes(bytesFinal);
+      allChunkFiles.add(chunkFinal);
+    }
+    currentOffset += pdfFinal.document.pdfPageList.pages.length;
 
     final totalReportPages = currentOffset;
 

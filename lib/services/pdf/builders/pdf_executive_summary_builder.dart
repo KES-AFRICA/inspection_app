@@ -316,7 +316,7 @@ class PdfExecutiveSummaryBuilder {
     widgets.add(pw.SizedBox(height: 10));
 
     // ── 4. Facteurs de risque prépondérants ──
-    widgets.add(pw.NewPage());
+    widgets.add(pw.NewPage(freeSpace: 500));
     widgets.add(
       PageTracker(
         key: 'resume_executif_1_4',
@@ -362,6 +362,19 @@ class PdfExecutiveSummaryBuilder {
     );
     widgets.add(pw.SizedBox(height: 4));
     widgets.add(_buildMarquesTable(technical));
+    widgets.add(pw.SizedBox(height: 5));
+    widgets.add(
+      pw.Text(
+        technical.brandDistribution.generateEditorialSummary(),
+        style: pw.TextStyle(
+          font: fontRegular,
+          fontSize: fsBody,
+          color: PdfReportStyles.darkGrey,
+          lineSpacing: 2.2,
+        ),
+        textAlign: pw.TextAlign.justify,
+      ),
+    );
     widgets.add(pw.SizedBox(height: 10));
 
     // ── 6. Courbes et protections ──
@@ -463,30 +476,32 @@ class PdfExecutiveSummaryBuilder {
       }
     }
 
-    if (compAnalysis.axes.isNotEmpty) {
+    if (compAnalysis.axes.isNotEmpty || compAnalysis.riskFamilyAxes.isNotEmpty) {
       widgets.add(pw.SizedBox(height: 6));
-      widgets.add(
-        pw.Text(
-          'Le programme de renforcement des compétences devra prioritairement porter sur les axes suivants :',
-          style: pw.TextStyle(
-            font: fontBold,
-            fontSize: fsBody,
-            color: PdfReportStyles.headerColor,
-          ),
-        ),
-      );
-      widgets.add(pw.SizedBox(height: 5));
 
-      for (final axis in compAnalysis.axes) {
+      // ── Partie 1 — Non-conformités majeures constatées ──
+      if (compAnalysis.axes.isNotEmpty) {
         widgets.add(
-          pw.Inseparable(
-            child: pw.Padding(
-              padding: const pw.EdgeInsets.only(left: 4, bottom: 6),
+          pw.Text(
+            'Partie 1 — Non-conformités majeures constatées',
+            style: pw.TextStyle(
+              font: fontBold,
+              fontSize: fsBody + 0.5,
+              color: PdfReportStyles.headerColor,
+            ),
+          ),
+        );
+        widgets.add(pw.SizedBox(height: 4));
+
+        for (final axis in compAnalysis.axes) {
+          widgets.add(
+            pw.Padding(
+              padding: const pw.EdgeInsets.only(left: 4, bottom: 3.5),
               child: pw.RichText(
                 text: pw.TextSpan(
                   children: [
                     pw.TextSpan(
-                      text: '${axis.letter}   ${axis.title}\n',
+                      text: '${axis.letter}   ${axis.title} ',
                       style: pw.TextStyle(
                         font: fontBold,
                         fontSize: fsBody,
@@ -494,21 +509,65 @@ class PdfExecutiveSummaryBuilder {
                       ),
                     ),
                     pw.TextSpan(
-                      text: axis.fullNarrative,
+                      text: '(${axis.occurrenceCount} constat${axis.occurrenceCount > 1 ? "s" : ""} — ${axis.percentageStr} %)',
                       style: pw.TextStyle(
                         font: fontRegular,
-                        fontSize: fsBody,
+                        fontSize: fsBody - 0.5,
                         color: PdfReportStyles.darkGrey,
-                        lineSpacing: 2.0,
                       ),
                     ),
                   ],
                 ),
-                textAlign: pw.TextAlign.justify,
               ),
+            ),
+          );
+        }
+      }
+
+      // ── Partie 2 — Familles de risque prépondérantes ──
+      if (compAnalysis.riskFamilyAxes.isNotEmpty) {
+        widgets.add(pw.SizedBox(height: 6));
+        widgets.add(
+          pw.Text(
+            'Partie 2 — Familles de risque prépondérantes',
+            style: pw.TextStyle(
+              font: fontBold,
+              fontSize: fsBody + 0.5,
+              color: PdfReportStyles.headerColor,
             ),
           ),
         );
+        widgets.add(pw.SizedBox(height: 4));
+
+        for (final riskAxis in compAnalysis.riskFamilyAxes) {
+          widgets.add(
+            pw.Padding(
+              padding: const pw.EdgeInsets.only(left: 4, bottom: 3.5),
+              child: pw.RichText(
+                text: pw.TextSpan(
+                  children: [
+                    pw.TextSpan(
+                      text: '${riskAxis.letter}   ${riskAxis.title} ',
+                      style: pw.TextStyle(
+                        font: fontBold,
+                        fontSize: fsBody,
+                        color: PdfReportStyles.headerColor,
+                      ),
+                    ),
+                    pw.TextSpan(
+                      text: '(${riskAxis.occurrenceCount} constat${riskAxis.occurrenceCount > 1 ? "s" : ""} — ${riskAxis.percentageStr} %)',
+                      style: pw.TextStyle(
+                        font: fontRegular,
+                        fontSize: fsBody - 0.5,
+                        color: PdfReportStyles.darkGrey,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
       }
     }
     widgets.add(pw.NewPage());
@@ -1242,7 +1301,7 @@ class PdfExecutiveSummaryBuilder {
           ],
         ),
         buildRichRow(
-          'Part des NC conformité',
+          'Part des non-conformités',
           [
             bSpan('HTA : '), nSpan('$htaTot NC, soit ${summary.tensionDomainStats.mtPercentageStr}\n'),
             bSpan('BT : '), nSpan('$btTot NC, soit ${summary.tensionDomainStats.btPercentageStr}'),

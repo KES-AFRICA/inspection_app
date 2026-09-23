@@ -55,21 +55,7 @@ class GlobalAssessmentResult {
       ));
     }
 
-    // 3. Faiblesses techniques réelles (sous forme de puces)
-    if (technicalWeaknessesBullets.isNotEmpty) {
-      list.add(GlobalAssessmentBlock(
-        type: GlobalAssessmentBlockType.bulletsIntro,
-        content: 'Sur le plan technique, les principales faiblesses concernent notamment :',
-      ));
-      for (final bullet in technicalWeaknessesBullets) {
-        list.add(GlobalAssessmentBlock(
-          type: GlobalAssessmentBlockType.bulletItem,
-          content: bullet,
-        ));
-      }
-    }
-
-    // 4. Déficit documentaire et technique
+    // 3. Déficit documentaire et technique
     if (technicalDeficitText != null && technicalDeficitText!.trim().isNotEmpty) {
       list.add(GlobalAssessmentBlock(
         type: GlobalAssessmentBlockType.paragraph,

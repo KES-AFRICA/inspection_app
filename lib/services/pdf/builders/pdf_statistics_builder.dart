@@ -250,6 +250,33 @@ class PdfStatisticsBuilder {
     widgets.add(PdfStatisticsCharts.buildBtParafoudreStackedBarChart(technical));
     widgets.add(pw.SizedBox(height: 12));
 
+    // 3.4. Proportion des marques
+    widgets.add(pw.NewPage());
+    widgets.add(
+      PageTracker(
+        key: 'stat_proportion_marques',
+        registry: trackedPages,
+        offset: offset,
+        child: pw.Text(
+          '3.4. Proportion des marques',
+          style: pw.TextStyle(font: fontBold, fontSize: fsH3, color: PdfReportStyles.headerColor),
+        ),
+      ),
+    );
+    widgets.add(pw.SizedBox(height: 4));
+    widgets.add(
+      pw.Text(
+        'Cette sous-section présente la répartition globale des constructeurs d\'appareillages de protection recensés sur l\'ensemble des tableaux de l\'installation (organes de tête, départs divisionnaires et circuits terminaux). Les proportions sont calculées sur la population totale de ${technical.brandDistribution.totalProtections} protections identifiées :',
+        style: pw.TextStyle(font: fontRegular, fontSize: fsBody, color: PdfReportStyles.darkGrey, lineSpacing: 2.2),
+        textAlign: pw.TextAlign.justify,
+      ),
+    );
+    widgets.add(pw.SizedBox(height: 6));
+    widgets.add(PdfStatisticsCharts.buildBrandPieChart(technical.brandDistribution));
+    widgets.add(pw.SizedBox(height: 6));
+    widgets.add(_buildBrandProportionTable(technical.brandDistribution));
+    widgets.add(pw.SizedBox(height: 12));
+
     // Saut de page systématique pour regrouper le titre 4, son texte et le diagramme de Pareto
     widgets.add(pw.NewPage());
 
@@ -650,6 +677,61 @@ class PdfStatisticsBuilder {
     );
   }
 
+  static pw.Widget _buildBrandProportionTable(BrandDistributionSnapshot brandDistribution) {
+    final entries = brandDistribution.entries;
+    return pw.Table(
+      border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.5),
+      columnWidths: const {
+        0: pw.FlexColumnWidth(4.5),
+        1: pw.FlexColumnWidth(2.5),
+        2: pw.FlexColumnWidth(2.5),
+        3: pw.FlexColumnWidth(1.5),
+      },
+      children: [
+        pw.TableRow(
+          decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
+          children: [
+            _buildTableHeaderCell('CONSTRUCTEUR / MARQUE'),
+            _buildTableHeaderCell('EFFECTIF (OCCURRENCES)'),
+            _buildTableHeaderCell('PROPORTION (%)'),
+            _buildTableHeaderCell('RANG'),
+          ],
+        ),
+        if (entries.isEmpty)
+          pw.TableRow(
+            children: [
+              _buildTableCell('Aucune marque d\'appareillage recensée', isBold: true, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
+              _buildTableCell('0'),
+              _buildTableCell('0,0 %'),
+              _buildTableCell('-'),
+            ],
+          )
+        else
+          for (int i = 0; i < entries.length; i++)
+            pw.TableRow(
+              decoration: pw.BoxDecoration(
+                color: i % 2 == 1 ? PdfReportStyles.tableRowAlt : PdfColors.white,
+              ),
+              children: [
+                _buildTableCell(entries[i].brand, isBold: true, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
+                _buildTableCell('${entries[i].count}'),
+                _buildTableCell(entries[i].formattedPercentage, isBold: true),
+                _buildTableCell('#${entries[i].rank}'),
+              ],
+            ),
+        pw.TableRow(
+          decoration: pw.BoxDecoration(color: PdfReportStyles.lightBlue),
+          children: [
+            _buildTableCell('TOTAL APPAREILLAGES AUDITÉS', isBold: true, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
+            _buildTableCell('${brandDistribution.totalProtections}', isBold: true),
+            _buildTableCell(entries.isNotEmpty ? '100,0 %' : '0,0 %', isBold: true),
+            _buildTableCell('-', isBold: true),
+          ],
+        ),
+      ],
+    );
+  }
+
   static pw.Widget _buildParetoTop10Table(ParetoAnalysisResult paretoResult, int totalOccurrences) {
     final top10 = paretoResult.items.take(10).toList();
     final otherItem = paretoResult.otherCategoryItem;
@@ -821,9 +903,9 @@ class PdfStatisticsBuilder {
             'Légende colonne Classe (Méthode ABC de Pareto) :',
             style: pw.TextStyle(font: fontBold, fontSize: 6.5, color: PdfReportStyles.headerColor),
           ),
-          _buildLegendBadge('A', 'Classe A (0-80 %) : Priorité vitale', PdfColor.fromHex('#FEE2E2'), PdfColor.fromHex('#991B1B')),
-          _buildLegendBadge('B', 'Classe B (80-95 %) : Consolidation', PdfColor.fromHex('#FEF3C7'), PdfColor.fromHex('#92400E')),
-          _buildLegendBadge('C', 'Classe C (95-100 %) : Traîne / Fond', PdfColor.fromHex('#F1F5F9'), PdfColor.fromHex('#475569')),
+          _buildLegendBadge('A', 'Classe A (0-80 %) : Critique', PdfColor.fromHex('#FEE2E2'), PdfColor.fromHex('#991B1B')),
+          _buildLegendBadge('B', 'Classe B (80-95 %) : Majeure', PdfColor.fromHex('#FEF3C7'), PdfColor.fromHex('#92400E')),
+          _buildLegendBadge('C', 'Classe C (95-100 %) : Mineur', PdfColor.fromHex('#F1F5F9'), PdfColor.fromHex('#475569')),
         ],
       ),
     );

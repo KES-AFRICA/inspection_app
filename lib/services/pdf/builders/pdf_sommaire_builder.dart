@@ -376,6 +376,13 @@ class PdfSommaireBuilder {
     );
     entries.add(
       SommaireEntry(
+        titre: "3.4. Proportion des marques",
+        key: 'stat_proportion_marques',
+        level: 2,
+      ),
+    );
+    entries.add(
+      SommaireEntry(
         titre: "4. Statistique par type de défaut : analyse de Pareto",
         key: 'stat_pareto',
         level: 1,

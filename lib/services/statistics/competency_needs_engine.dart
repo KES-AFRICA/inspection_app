@@ -1,6 +1,8 @@
 // lib/services/statistics/competency_needs_engine.dart
 
 import 'audit_finding.dart';
+import 'canonical_defect_category_registry.dart';
+import 'canonical_risk_family_registry.dart';
 import 'mission_statistics.dart';
 
 /// Modèle d'un axe dynamique de renforcement des compétences.
@@ -138,6 +140,9 @@ class CompetencyNeedsAnalysisResult {
   /// Liste dynamique des axes prioritaires (TOP 5 MT + TOP 5 BT fusionnés, triés par occurrences décroissantes)
   final List<CompetencyNeed> axes;
 
+  /// Axes dérivés des familles de risques observées dans les constats (Partie 2)
+  final List<CompetencyNeed> riskFamilyAxes;
+
   /// Indique si la distribution présente une forte concentration sur 1 ou 2 thématiques majeures
   final bool isConcentrated;
 
@@ -158,6 +163,7 @@ class CompetencyNeedsAnalysisResult {
     required this.totalOccurrences,
     required this.introNarrative,
     required this.axes,
+    this.riskFamilyAxes = const [],
     required this.isConcentrated,
     required this.isDispersed,
     required this.hasNoDefects,
@@ -252,7 +258,7 @@ class CompetencyNeedsEngine {
     final isConcentrated = isSingleDominant || (top2Share >= 50.0 && totalMajeuresCount >= 6);
     final isDispersed = !isConcentrated && combinedGroups.length >= 4;
 
-    // 8. Génération dynamique des axes A. à J.
+    // 8. Génération dynamique des axes A. à J. (Partie 1 — Non-conformités majeures canoniques)
     final axes = <CompetencyNeed>[];
     for (int i = 0; i < combinedGroups.length; i++) {
       final group = combinedGroups[i];
@@ -294,6 +300,50 @@ class CompetencyNeedsEngine {
       );
     }
 
+    // 8b. Génération dynamique des axes de familles de risques (Partie 2)
+    final riskMap = <String, int>{};
+    for (final f in majeures) {
+      final canonicalRisk = CanonicalRiskFamilyRegistry.mapToCanonical(
+        f.riskFamily,
+        verificationPoint: f.verificationPoint,
+      );
+      riskMap[canonicalRisk] = (riskMap[canonicalRisk] ?? 0) + 1;
+    }
+
+    final sortedRiskEntries = riskMap.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    final riskFamilyAxes = <CompetencyNeed>[];
+    for (int i = 0; i < sortedRiskEntries.length && i < 10; i++) {
+      final entry = sortedRiskEntries[i];
+      final letter = i < axisLetters.length ? axisLetters[i] : '${i + 1}.';
+      final count = entry.value;
+      final pct = totalMajeuresCount > 0 ? (count / totalMajeuresCount) * 100.0 : 0.0;
+
+      riskFamilyAxes.add(
+        CompetencyNeed(
+          id: 'risk_family_axis_${i + 1}',
+          letter: letter,
+          title: entry.key,
+          recommendedSkills: '',
+          rationale: '',
+          operationalObjective: '',
+          occurrenceCount: count,
+          percentage: pct,
+          critiqueCount: 0,
+          majeureCount: count,
+          mineureCount: 0,
+          sourceVerificationPoints: const [],
+          riskFamilies: [entry.key],
+          topEquipmentTypes: const [],
+          topLocations: const [],
+          hasMtDomain: false,
+          hasBtDomain: false,
+          domain: TensionDomain.bt,
+        ),
+      );
+    }
+
     // 9. Rédaction de l'introduction narrative structurée en paragraphes
     final introNarrative = _buildStructuredIntroNarrative(
       totalMajeures: totalMajeuresCount,
@@ -310,6 +360,7 @@ class CompetencyNeedsEngine {
       totalOccurrences: totalMajeuresCount,
       introNarrative: introNarrative,
       axes: axes,
+      riskFamilyAxes: riskFamilyAxes,
       isConcentrated: isConcentrated,
       isDispersed: isDispersed,
       hasNoDefects: false,
@@ -326,7 +377,7 @@ class CompetencyNeedsEngine {
     return false;
   }
 
-  /// Regroupe les non-conformités d'un domaine par point de défaillance
+  /// Regroupe les non-conformités d'un domaine par point de défaillance canonique
   static List<_FindingPointGroup> _groupMajeuresByPoint(
     List<AuditFinding> findings,
     TensionDomain domain,
@@ -335,7 +386,10 @@ class CompetencyNeedsEngine {
 
     final map = <String, List<AuditFinding>>{};
     for (final f in findings) {
-      final key = _canonicalizeVerificationPoint(f.verificationPoint);
+      final key = CanonicalDefectCategoryRegistry.mapToCanonical(
+        f.verificationPoint,
+        riskFamily: f.riskFamily,
+      );
       map.putIfAbsent(key, () => []).add(f);
     }
 
@@ -384,13 +438,6 @@ class CompetencyNeedsEngine {
     });
 
     return groups;
-  }
-
-  /// Normalisation propre du point de vérification pour regroupement déterministe
-  static String _canonicalizeVerificationPoint(String raw) {
-    final trimmed = raw.trim();
-    if (trimmed.isEmpty) return 'Anomalie non spécifiée';
-    return trimmed;
   }
 
   /// Moteur d'interprétation technique dynamique
@@ -570,6 +617,12 @@ class CompetencyNeedsEngine {
     narrativeBuffer.write(', ');
     narrativeBuffer.write(objective);
     narrativeBuffer.write('.');
+
+    if (group.domain == TensionDomain.mt &&
+        !title.toLowerCase().contains('moyenne tension') &&
+        !title.toLowerCase().contains('hta')) {
+      title = '$title (HTA)';
+    }
 
     final rationale = '${group.findings.length} constat${group.findings.length > 1 ? "s" : ""} '
         'relevé${group.findings.length > 1 ? "s" : ""} en ${group.domain == TensionDomain.mt ? "HTA" : "BT"}';

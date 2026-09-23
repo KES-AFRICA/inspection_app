@@ -549,6 +549,74 @@ class EquipmentBrandPopulationStats {
   bool get hasProtections => withProtectionCount > 0;
 }
 
+/// Entrée statistique unitaire pour une marque dans la distribution globale.
+class BrandDistributionEntry {
+  final String brand;
+  final int count;
+  final double percentage;
+  final String formattedPercentage;
+  final int rank;
+
+  const BrandDistributionEntry({
+    required this.brand,
+    required this.count,
+    required this.percentage,
+    required this.formattedPercentage,
+    required this.rank,
+  });
+}
+
+/// Cliché analytique centralisé de la distribution des marques pour l'ensemble de la mission.
+/// Source unique de vérité partagée entre la Section 5 du Résumé Exécutif et la Sous-section 3.4 des Statistiques.
+class BrandDistributionSnapshot {
+  final int totalProtections;
+  final int totalEligibles;
+  final List<BrandDistributionEntry> entries;
+
+  const BrandDistributionSnapshot({
+    required this.totalProtections,
+    required this.totalEligibles,
+    required this.entries,
+  });
+
+  const BrandDistributionSnapshot.empty()
+      : totalProtections = 0,
+        totalEligibles = 0,
+        entries = const [];
+
+  bool get hasBrands => entries.isNotEmpty && totalProtections > 0;
+
+  /// Marque dominante si >= 50%
+  BrandDistributionEntry? get dominantBrand =>
+      (entries.isNotEmpty && entries.first.percentage >= 50.0) ? entries.first : null;
+
+  /// Synthèse éditoriale dynamique et professionnelle pour le rapport
+  String generateEditorialSummary() {
+    if (totalProtections == 0 || entries.isEmpty) {
+      return 'Aucun appareillage de protection n\'est actuellement recensé sur le périmètre audité pour établir une analyse de représentativité des marques.';
+    }
+
+    if (entries.length == 1) {
+      final single = entries.first;
+      return 'Le parc d’appareillages de protection recensé est intégralement équipé par le constructeur ${single.brand} (${single.formattedPercentage} des $totalProtections organes de protection identifiés en tête, départs et circuits terminaux). Cette parfaite uniformité technique garantit l’homogénéité du matériel et facilite l’établissement des tables de coordination, de sélectivité et de filiation certifiées constructeur.';
+    }
+
+    final top1 = entries[0];
+
+    if (top1.percentage >= 50.0) {
+      final others = entries.skip(1).take(3).map((e) => '${e.brand} (${e.formattedPercentage})').join(', ');
+      return 'Le parc d’appareillages de protection présente une prédominance marquée du constructeur ${top1.brand}, qui concentre à lui seul ${top1.formattedPercentage} des $totalProtections organes de protection recensés (tête, départs et circuits terminaux). Le solde des installations est équipé par les marques $others. Cette concentration favorable simplifie la coordination amont/aval et la maintenance, sous réserve de vérifier la sélectivité sur les quelques départs hétérogènes.';
+    }
+
+    // Répartition diversifiée
+    final topList = entries.take(3).map((e) => '${e.brand} (${e.formattedPercentage})').join(', ');
+    final remainingCount = entries.length - 3;
+    final remainingText = remainingCount > 0 ? ', complété par $remainingCount autre(s) constructeur(s)' : '';
+
+    return 'La répartition des $totalProtections appareillages de protection identifiés met en évidence une diversification significative du parc : les parts principales sont réparties entre $topList$remainingText. Cette mixité d’équipements et de technologies impose une vigilance rigoureuse lors des opérations de maintenance, de remplacement ou d’extension afin de justifier systématiquement les associations et filiations normatives des protections amont/aval.';
+  }
+}
+
 /// Matrice à 4 quadrants croisant Domaine de tension x Nature de contrôle avec les familles de risques réelles.
 class RiskFamilyCrossMatrix {
   final RiskFamilyQuadrantStats htaDispositionsConstructives;
@@ -702,6 +770,7 @@ class TechnicalEnrichmentResult {
   final EquipmentBrandPopulationStats protectionsTeteBrandStats;
   final EquipmentBrandPopulationStats departsBrandStats;
   final EquipmentBrandPopulationStats circuitsBrandStats;
+  final BrandDistributionSnapshot brandDistribution;
 
   final int totalMissionNc;
   final int totalMissionMajeures;
@@ -770,6 +839,7 @@ class TechnicalEnrichmentResult {
     this.protectionsTeteBrandStats = const EquipmentBrandPopulationStats.empty(populationTitle: 'Protections de tête'),
     this.departsBrandStats = const EquipmentBrandPopulationStats.empty(populationTitle: 'Départs'),
     this.circuitsBrandStats = const EquipmentBrandPopulationStats.empty(populationTitle: 'Circuits'),
+    this.brandDistribution = const BrandDistributionSnapshot.empty(),
     this.totalMissionNc = 0,
     this.totalMissionMajeures = 0,
     this.totalHtaMajeures = 0,
@@ -1938,6 +2008,51 @@ class TechnicalEnrichmentEngine {
         .length;
     final totalMissionMajeures = findingInventory.majeureCount;
 
+    // D. Consolidation globale de la distribution des marques pour la mission
+    final totalMissionProtections = withProtectionCountTete + withProtectionCountDep + withProtectionCountCirc;
+    final totalEligiblesAll = totalEligiblesTete + totalEligiblesDep + totalEligiblesCirc;
+    final overallBrandCounts = <String, int>{};
+    for (final e in sortedBrandCountsTete.entries) {
+      overallBrandCounts[e.key] = (overallBrandCounts[e.key] ?? 0) + e.value;
+    }
+    for (final e in sortedBrandCountsDep.entries) {
+      overallBrandCounts[e.key] = (overallBrandCounts[e.key] ?? 0) + e.value;
+    }
+    for (final e in sortedBrandCountsCirc.entries) {
+      overallBrandCounts[e.key] = (overallBrandCounts[e.key] ?? 0) + e.value;
+    }
+
+    final sortedOverallBrands = overallBrandCounts.entries.toList()
+      ..sort((a, b) {
+        final cmp = b.value.compareTo(a.value);
+        if (cmp != 0) return cmp;
+        return a.key.compareTo(b.key);
+      });
+
+    final overallEntries = <BrandDistributionEntry>[];
+    int rank = 1;
+    for (final e in sortedOverallBrands) {
+      final pct = totalMissionProtections > 0
+          ? (e.value / totalMissionProtections) * 100.0
+          : 0.0;
+      final pctStr = '${pct.toStringAsFixed(1).replaceAll('.', ',')} %';
+      overallEntries.add(
+        BrandDistributionEntry(
+          brand: e.key,
+          count: e.value,
+          percentage: pct,
+          formattedPercentage: pctStr,
+          rank: rank++,
+        ),
+      );
+    }
+
+    final brandDistribution = BrandDistributionSnapshot(
+      totalProtections: totalMissionProtections,
+      totalEligibles: totalEligiblesAll,
+      entries: overallEntries,
+    );
+
     return TechnicalEnrichmentResult(
       missionId: missionId,
       essaisCoverage: essaisCoverage,
@@ -1980,6 +2095,7 @@ class TechnicalEnrichmentEngine {
       protectionsTeteBrandStats: protectionsTeteBrandStats,
       departsBrandStats: departsBrandStats,
       circuitsBrandStats: circuitsBrandStats,
+      brandDistribution: brandDistribution,
       totalEquipementsEligiblesIpIk: totalEquipementsEligiblesIpIk,
       totalEquipementsClassesIpIk: totalEquipementsClassesIpIk,
       totalMissionNc: totalMissionNc,

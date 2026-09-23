@@ -877,6 +877,164 @@ class PdfStatisticsCharts {
   }
 
   // ──────────────────────────────────────────────────────────────────────────
+  // 5.b DIAGRAMME CIRCULAIRE (CAMEMBERT) : RÉPARTITION GLOBALE DES MARQUES
+  // ──────────────────────────────────────────────────────────────────────────
+  static final List<PdfColor> _brandPalette = [
+    PdfColor.fromHex('#1B365D'), // KES Navy
+    PdfColor.fromHex('#D35400'), // Orange chaud
+    PdfColor.fromHex('#2E74B5'), // Bleu KES
+    PdfColor.fromHex('#008080'), // Sarcelle / Teal
+    PdfColor.fromHex('#A91D22'), // Rouge foncé
+    PdfColor.fromHex('#7B1FA2'), // Violet
+    PdfColor.fromHex('#2E7D32'), // Vert
+    PdfColor.fromHex('#E65100'), // Ambre
+    PdfColor.fromHex('#546E7A'), // Ardoise
+    PdfColor.fromHex('#455A64'), // Gris
+  ];
+
+  static pw.Widget buildBrandPieChart(BrandDistributionSnapshot brandDistribution) {
+    final total = brandDistribution.totalProtections;
+    final entries = brandDistribution.entries;
+
+    if (total == 0 || entries.isEmpty) {
+      return pw.Container(
+        margin: const pw.EdgeInsets.symmetric(vertical: 4),
+        padding: const pw.EdgeInsets.all(8),
+        decoration: pw.BoxDecoration(
+          color: PdfColors.white,
+          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+          border: pw.Border.all(color: PdfReportStyles.borderColor, width: 0.5),
+        ),
+        alignment: pw.Alignment.center,
+        child: pw.Text(
+          'Aucune marque d\'appareillage de protection recensée sur le périmètre audité.',
+          style: pw.TextStyle(font: fontRegular, fontSize: 8, fontStyle: pw.FontStyle.italic, color: textGrey),
+        ),
+      );
+    }
+
+    const pieRadius = 38.0;
+    const pieSize = 88.0;
+
+    return pw.Container(
+      margin: const pw.EdgeInsets.symmetric(vertical: 4),
+      padding: const pw.EdgeInsets.all(8),
+      decoration: pw.BoxDecoration(
+        color: PdfColors.white,
+        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+        border: pw.Border.all(color: PdfReportStyles.borderColor, width: 0.5),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text(
+                'Répartition globale des marques d\'appareillages de protection',
+                style: pw.TextStyle(font: fontBold, fontSize: 9.0, color: PdfReportStyles.headerColor),
+              ),
+              pw.Text(
+                'Population totale : $total protections',
+                style: pw.TextStyle(font: fontBold, fontSize: 8.0, color: textGrey),
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 8),
+          pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.center,
+            children: [
+              // Camembert vectoriel calculé rigoureusement à partir des données réelles
+              pw.Container(
+                width: pieSize,
+                height: pieSize,
+                child: pw.CustomPaint(
+                  size: const PdfPoint(pieSize, pieSize),
+                  painter: (PdfGraphics canvas, PdfPoint size) {
+                    final cx = size.x / 2;
+                    final cy = size.y / 2;
+
+                    double currentAngle = -math.pi / 2; // Démarrer en haut (12h)
+
+                    for (int i = 0; i < entries.length; i++) {
+                      final entry = entries[i];
+                      final sweepAngle = (entry.count / total) * 2 * math.pi;
+                      final nextAngle = currentAngle + sweepAngle;
+                      final color = _brandPalette[i % _brandPalette.length];
+
+                      // Secteur circulaire
+                      canvas.setFillColor(color);
+                      canvas.moveTo(cx, cy);
+                      for (double a = currentAngle; a <= nextAngle; a += 0.03) {
+                        canvas.lineTo(cx + pieRadius * math.cos(a), cy + pieRadius * math.sin(a));
+                      }
+                      canvas.lineTo(cx + pieRadius * math.cos(nextAngle), cy + pieRadius * math.sin(nextAngle));
+                      canvas.lineTo(cx, cy);
+                      canvas.fillPath();
+
+                      // Séparateur fin blanc entre secteurs
+                      if (entries.length > 1) {
+                        canvas.setStrokeColor(PdfColors.white);
+                        canvas.setLineWidth(0.8);
+                        canvas.moveTo(cx, cy);
+                        canvas.lineTo(cx + pieRadius * math.cos(currentAngle), cy + pieRadius * math.sin(currentAngle));
+                        canvas.strokePath();
+                      }
+
+                      currentAngle = nextAngle;
+                    }
+                  },
+                ),
+              ),
+              pw.SizedBox(width: 16),
+              // Légende détaillée et proportionnelle
+              pw.Expanded(
+                child: pw.Wrap(
+                  spacing: 12,
+                  runSpacing: 5,
+                  children: List.generate(entries.length, (i) {
+                    final e = entries[i];
+                    final color = _brandPalette[i % _brandPalette.length];
+                    return pw.Row(
+                      mainAxisSize: pw.MainAxisSize.min,
+                      crossAxisAlignment: pw.CrossAxisAlignment.center,
+                      children: [
+                        pw.Container(
+                          width: 8,
+                          height: 8,
+                          decoration: pw.BoxDecoration(
+                            color: color,
+                            borderRadius: const pw.BorderRadius.all(pw.Radius.circular(1.5)),
+                          ),
+                        ),
+                        pw.SizedBox(width: 4),
+                        pw.RichText(
+                          text: pw.TextSpan(
+                            children: [
+                              pw.TextSpan(
+                                text: '${e.brand} : ',
+                                style: pw.TextStyle(font: fontBold, fontSize: 7.5, color: PdfReportStyles.darkGrey),
+                              ),
+                              pw.TextSpan(
+                                text: '${e.count} (${e.formattedPercentage})',
+                                style: pw.TextStyle(font: fontRegular, fontSize: 7.2, color: PdfReportStyles.headerColor),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    );
+                  }),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
   // 6. DIAGRAMME DE PARETO À DOUBLE AXE (OCCURRENCES & % CUMULÉ + SEUIL 80 %)
   // ──────────────────────────────────────────────────────────────────────────
   static pw.Widget buildParetoDualAxisChart(
