@@ -490,6 +490,24 @@ void main() {
       expect(btCrossTotal, equals(340));
       expect(result.btTotalCrossRow.ncCount, equals(340));
 
+      // TOTAL TABLEAUX EXPLOITATION ET MAINTENANCE (Section 3.1 B & Section 3.2 B)
+      // Doivent être en cohérence absolue avec la Section 4
+      expect(result.mtExploitationTotalCrossRow.ncCount, equals(109));
+      expect(result.mtExploitationTotalCrossRow.ncCount, equals(result.htaExploitationMaintenance));
+      expect(result.btExploitationTotalCrossRow.ncCount, equals(305));
+      expect(result.btExploitationTotalCrossRow.ncCount, equals(result.btExploitationMaintenance));
+
+      // Cohérence mathématique stricte Section 2.1 : Dispo constructives + Exploitation = 100%
+      expect(result.htaDispoConstructives + result.htaExploitationMaintenance, equals(result.totalHtaNc));
+      expect(result.btDispoConstructives + result.btExploitationMaintenance, equals(result.totalBtNc));
+      final htaDispoRate = result.htaDispoConstructives / result.totalHtaNc;
+      final htaExploitRate = result.htaExploitationMaintenance / result.totalHtaNc;
+      expect((htaDispoRate + htaExploitRate) * 100, closeTo(100.0, 0.0001));
+
+      final btDispoRate = result.btDispoConstructives / result.totalBtNc;
+      final btExploitRate = result.btExploitationMaintenance / result.totalBtNc;
+      expect((btDispoRate + btExploitRate) * 100, closeTo(100.0, 0.0001));
+
       // Réconciliation globale des 496 constats
       expect(mtCrossTotal + btCrossTotal, equals(496));
     });

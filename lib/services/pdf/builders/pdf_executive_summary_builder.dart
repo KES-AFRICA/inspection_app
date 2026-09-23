@@ -230,8 +230,8 @@ class PdfExecutiveSummaryBuilder {
     widgets.add(pw.SizedBox(height: 2));
     widgets.add(
       _buildCategoryCrossTable(
-        technical.mtCategoriesCrossRows,
-        technical.mtTotalCrossRow,
+        technical.mtExploitationCrossRows,
+        technical.mtExploitationTotalCrossRow,
         'MT',
       ),
     );
@@ -287,8 +287,8 @@ class PdfExecutiveSummaryBuilder {
     widgets.add(pw.SizedBox(height: 2));
     widgets.add(
       _buildCategoryCrossTable(
-        technical.btCategoriesCrossRows,
-        technical.btTotalCrossRow,
+        technical.btExploitationCrossRows,
+        technical.btExploitationTotalCrossRow,
         'BT',
       ),
     );
@@ -1097,14 +1097,14 @@ class PdfExecutiveSummaryBuilder {
     }
 
     final htaDispo = technical.htaDispoConstructives;
-    final htaExploit = technical.mtTotalCrossRow.ncCount;
+    final htaExploit = technical.htaExploitationMaintenance;
     final htaConditionsExploit = technical.htaConditionsExploit;
     final htaDispoPct = htaTot > 0 ? (htaDispo / htaTot * 100).toStringAsFixed(1).replaceAll('.', ',') : '0,0';
     final htaExploitPct = htaTot > 0 ? (htaExploit / htaTot * 100).toStringAsFixed(1).replaceAll('.', ',') : '0,0';
     final htaConditionsExploitPct = htaTot > 0 ? (htaConditionsExploit / htaTot * 100).toStringAsFixed(1).replaceAll('.', ',') : '0,0';
 
     final btDispo = technical.btDispoConstructives;
-    final btExploit = technical.btTotalCrossRow.ncCount;
+    final btExploit = technical.btExploitationMaintenance;
     final btConditionsExploit = technical.btConditionsExploit;
     final btDispoPct = btTot > 0 ? (btDispo / btTot * 100).toStringAsFixed(1).replaceAll('.', ',') : '0,0';
     final btExploitPct = btTot > 0 ? (btExploit / btTot * 100).toStringAsFixed(1).replaceAll('.', ',') : '0,0';

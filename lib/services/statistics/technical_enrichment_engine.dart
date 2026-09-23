@@ -575,6 +575,10 @@ class TechnicalEnrichmentResult {
   final List<CategoryCrossAuditRow> btCategoriesCrossRows;
   final CategoryCrossAuditRow mtTotalCrossRow;
   final CategoryCrossAuditRow btTotalCrossRow;
+  final List<CategoryCrossAuditRow> mtExploitationCrossRows;
+  final List<CategoryCrossAuditRow> btExploitationCrossRows;
+  final CategoryCrossAuditRow mtExploitationTotalCrossRow;
+  final CategoryCrossAuditRow btExploitationTotalCrossRow;
 
   final int totalZonesAudit;
   final int totalZonesClasseesCount;
@@ -623,6 +627,28 @@ class TechnicalEnrichmentResult {
     required this.btCategoriesCrossRows,
     required this.mtTotalCrossRow,
     required this.btTotalCrossRow,
+    this.mtExploitationCrossRows = const [],
+    this.btExploitationCrossRows = const [],
+    this.mtExploitationTotalCrossRow = const CategoryCrossAuditRow(
+      categoryName: 'TOTAL MOYENNE TENSION (HTA)',
+      equipementsCount: 0,
+      ncCount: 0,
+      critiquesCount: 0,
+      majeuresCount: 0,
+      pctOfTotalNc: 0.0,
+      tauxCritique: 0.0,
+      densite: 0.0,
+    ),
+    this.btExploitationTotalCrossRow = const CategoryCrossAuditRow(
+      categoryName: 'TOTAL BASSE TENSION (BT)',
+      equipementsCount: 0,
+      ncCount: 0,
+      critiquesCount: 0,
+      majeuresCount: 0,
+      pctOfTotalNc: 0.0,
+      tauxCritique: 0.0,
+      densite: 0.0,
+    ),
     this.totalZonesAudit = 0,
     this.totalZonesClasseesCount = 0,
     this.totalLocauxAudit = 0,
@@ -647,6 +673,10 @@ class TechnicalEnrichmentResult {
   int get btConditionsExploit => locauxBtFindings.conditionsExploitation;
   int get htaDispoConstructives => locauxMtFindings.dispoConstructives;
   int get btDispoConstructives => locauxBtFindings.dispoConstructives;
+  int get htaExploitationMaintenance =>
+      riskFamilyMatrix.htaExploitationMaintenance.totalConstats;
+  int get btExploitationMaintenance =>
+      riskFamilyMatrix.btExploitationMaintenance.totalConstats;
   int get totalHtaNc => mtTotalCrossRow.ncCount;
   int get totalBtNc => btTotalCrossRow.ncCount;
 
@@ -1278,6 +1308,80 @@ class TechnicalEnrichmentEngine {
       densite: mtTotalEq > 0 ? (mtTotalNc / mtTotalEq) : 0.0,
     );
 
+    // Lignes d'exploitation et maintenance MT (excluant les dispositions constructives)
+    final mtExploitationCatRows = <CategoryCrossAuditRow>[];
+    final mtExploitationLocauxFindings = mtLocauxFindings
+        .where((f) => !_isDispositionConstructiveFinding(f))
+        .toList();
+    mtExploitationCatRows.add(
+      buildCategoryRow(
+        'Locaux techniques',
+        domainInventory.getInstancesByCategory(DomainObjectType.localMT),
+        totalMissionNc,
+        customFindings: mtExploitationLocauxFindings,
+      ),
+    );
+    final cellulesInstances = domainInventory.getInstancesByCategory(DomainObjectType.celluleMT);
+    final cellulesExploitFindings = cellulesInstances
+        .expand((i) => i.pertinentFindings)
+        .where((f) => !_isDispositionConstructiveFinding(f))
+        .toList();
+    mtExploitationCatRows.add(
+      buildCategoryRow(
+        'Cellules',
+        cellulesInstances,
+        totalMissionNc,
+        customFindings: cellulesExploitFindings,
+      ),
+    );
+    final transfoInstances = domainInventory.getInstancesByCategory(DomainObjectType.transformateurMTBT);
+    final transfoExploitFindings = transfoInstances
+        .expand((i) => i.pertinentFindings)
+        .where((f) => !_isDispositionConstructiveFinding(f))
+        .toList();
+    mtExploitationCatRows.add(
+      buildCategoryRow(
+        'Transformateurs',
+        transfoInstances,
+        totalMissionNc,
+        customFindings: transfoExploitFindings,
+      ),
+    );
+    final accountedMtExploitFindingIds = <String>{
+      ...mtExploitationLocauxFindings.map((f) => f.id),
+      ...cellulesExploitFindings.map((f) => f.id),
+      ...transfoExploitFindings.map((f) => f.id),
+    };
+    final orphanMtExploitFindings = htaFindings
+        .where((f) => !_isDispositionConstructiveFinding(f) && !accountedMtExploitFindingIds.contains(f.id))
+        .toList();
+    if (orphanMtExploitFindings.isNotEmpty) {
+      mtExploitationCatRows.add(
+        buildCategoryRow(
+          'Autres équipements MT',
+          const [],
+          totalMissionNc,
+          customFindings: orphanMtExploitFindings,
+        ),
+      );
+    }
+    final mtExploitTotalEq = mtExploitationCatRows.fold(0, (s, r) => s + r.equipementsCount);
+    final mtExploitTotalCrit = mtExploitationCatRows.fold(0, (s, r) => s + r.critiquesCount);
+    final mtExploitTotalMaj = mtExploitationCatRows.fold(0, (s, r) => s + r.majeuresCount);
+    final mtExploitTotalNc = mtExploitationCatRows.fold(0, (s, r) => s + r.ncCount);
+    final mtExploitationTotalCrossRow = CategoryCrossAuditRow(
+      categoryName: 'TOTAL MOYENNE TENSION (HTA)',
+      equipementsCount: mtExploitTotalEq,
+      ncCount: mtExploitTotalNc,
+      critiquesCount: mtExploitTotalCrit,
+      majeuresCount: mtExploitTotalMaj,
+      pctOfTotalNc: totalMissionNc > 0
+          ? (mtExploitTotalNc / totalMissionNc) * 100.0
+          : 0.0,
+      tauxCritique: mtExploitTotalNc > 0 ? (mtExploitTotalCrit / mtExploitTotalNc) * 100.0 : 0.0,
+      densite: mtExploitTotalEq > 0 ? (mtExploitTotalNc / mtExploitTotalEq) : 0.0,
+    );
+
     // 9. Lignes de conformité croisée par catégorie pour Basse Tension
     final btCatRows = <CategoryCrossAuditRow>[];
 
@@ -1398,6 +1502,152 @@ class TechnicalEnrichmentEngine {
           : 0.0,
       tauxCritique: btTotalNc > 0 ? (btTotalCrit / btTotalNc) * 100.0 : 0.0,
       densite: btTotalEq > 0 ? (btTotalNc / btTotalEq) : 0.0,
+    );
+
+    // Lignes d'exploitation et maintenance BT (excluant les dispositions constructives)
+    final btExploitationCatRows = <CategoryCrossAuditRow>[];
+    final btExploitLocauxGeFindings = btLocauxGeFindings
+        .where((f) => !_isDispositionConstructiveFinding(f))
+        .toList();
+    final btExploitLocauxBtFindings = btLocauxBtFindings
+        .where((f) => !_isDispositionConstructiveFinding(f))
+        .toList();
+    btExploitationCatRows.add(
+      buildCategoryRow(
+        'Locaux techniques GE',
+        domainInventory.getInstancesByCategory(DomainObjectType.localGE),
+        totalMissionNc,
+        customFindings: btExploitLocauxGeFindings,
+      ),
+    );
+    btExploitationCatRows.add(
+      buildCategoryRow(
+        'Locaux techniques BT',
+        domainInventory.getInstancesByCategory(DomainObjectType.localBT),
+        totalMissionNc,
+        customFindings: btExploitLocauxBtFindings,
+      ),
+    );
+    final invInstances = domainInventory.getInstancesByCategory(DomainObjectType.inverseur);
+    final invExploitFindings = invInstances
+        .expand((i) => i.pertinentFindings)
+        .where((f) => !_isDispositionConstructiveFinding(f))
+        .toList();
+    btExploitationCatRows.add(
+      buildCategoryRow(
+        'Inverseur',
+        invInstances,
+        totalMissionNc,
+        customFindings: invExploitFindings,
+      ),
+    );
+    final tgbtInstances = domainInventory.getInstancesByCategory(DomainObjectType.tgbt);
+    final tgbtExploitFindings = tgbtInstances
+        .expand((i) => i.pertinentFindings)
+        .where((f) => !_isDispositionConstructiveFinding(f))
+        .toList();
+    btExploitationCatRows.add(
+      buildCategoryRow(
+        'TGBT',
+        tgbtInstances,
+        totalMissionNc,
+        customFindings: tgbtExploitFindings,
+      ),
+    );
+    final armoireInstances = domainInventory.getInstancesByCategory(DomainObjectType.armoire);
+    final armoireExploitFindings = armoireInstances
+        .expand((i) => i.pertinentFindings)
+        .where((f) => !_isDispositionConstructiveFinding(f))
+        .toList();
+    btExploitationCatRows.add(
+      buildCategoryRow(
+        'Armoires',
+        armoireInstances,
+        totalMissionNc,
+        customFindings: armoireExploitFindings,
+      ),
+    );
+    final coffretInstances = domainInventory.getInstancesByCategory(DomainObjectType.coffret);
+    final coffretExploitFindings = coffretInstances
+        .expand((i) => i.pertinentFindings)
+        .where((f) => !_isDispositionConstructiveFinding(f))
+        .toList();
+    btExploitationCatRows.add(
+      buildCategoryRow(
+        'Coffrets',
+        coffretInstances,
+        totalMissionNc,
+        customFindings: coffretExploitFindings,
+      ),
+    );
+    if (ptInstances.isNotEmpty) {
+      final ptExploitFindings = ptInstances
+          .expand((i) => i.pertinentFindings)
+          .where((f) => !_isDispositionConstructiveFinding(f))
+          .toList();
+      btExploitationCatRows.add(
+        buildCategoryRow(
+          'Prises de terre mesurées',
+          ptInstances,
+          totalMissionNc,
+          customFindings: ptExploitFindings,
+        ),
+      );
+    }
+    if (foudreInstances.isNotEmpty) {
+      final foudreExploitFindings = foudreInstances
+          .expand((i) => i.pertinentFindings)
+          .where((f) => !_isDispositionConstructiveFinding(f))
+          .toList();
+      btExploitationCatRows.add(
+        buildCategoryRow(
+          'Installations Foudre',
+          foudreInstances,
+          totalMissionNc,
+          customFindings: foudreExploitFindings,
+        ),
+      );
+    }
+    final accountedBtExploitFindingIds = <String>{
+      ...btExploitLocauxGeFindings.map((f) => f.id),
+      ...btExploitLocauxBtFindings.map((f) => f.id),
+      ...invExploitFindings.map((f) => f.id),
+      ...tgbtExploitFindings.map((f) => f.id),
+      ...armoireExploitFindings.map((f) => f.id),
+      ...coffretExploitFindings.map((f) => f.id),
+      if (ptInstances.isNotEmpty)
+        ...ptInstances.expand((i) => i.pertinentFindings).where((f) => !_isDispositionConstructiveFinding(f)).map((f) => f.id),
+      if (foudreInstances.isNotEmpty)
+        ...foudreInstances.expand((i) => i.pertinentFindings).where((f) => !_isDispositionConstructiveFinding(f)).map((f) => f.id),
+    };
+    final orphanBtExploitFindings = btFindings
+        .where((f) => !_isDispositionConstructiveFinding(f) && !accountedBtExploitFindingIds.contains(f.id))
+        .toList();
+    if (orphanBtExploitFindings.isNotEmpty) {
+      btExploitationCatRows.add(
+        buildCategoryRow(
+          'Autres équipements BT',
+          const [],
+          totalMissionNc,
+          customFindings: orphanBtExploitFindings,
+        ),
+      );
+    }
+    final btExploitTotalEq = btExploitationCatRows.fold(0, (s, r) => s + r.equipementsCount);
+    final btExploitTotalCrit = btExploitationCatRows.fold(0, (s, r) => s + r.critiquesCount);
+    final btExploitTotalMaj = btExploitationCatRows.fold(0, (s, r) => s + r.majeuresCount);
+    final btExploitTotalNc = btExploitationCatRows.fold(0, (s, r) => s + r.ncCount);
+    final btExploitationTotalCrossRow = CategoryCrossAuditRow(
+      categoryName: 'TOTAL BASSE TENSION (BT)',
+      equipementsCount: btExploitTotalEq,
+      ncCount: btExploitTotalNc,
+      critiquesCount: btExploitTotalCrit,
+      majeuresCount: btExploitTotalMaj,
+      pctOfTotalNc: totalMissionNc > 0
+          ? (btExploitTotalNc / totalMissionNc) * 100.0
+          : 0.0,
+      tauxCritique: btExploitTotalNc > 0 ? (btExploitTotalCrit / btExploitTotalNc) * 100.0 : 0.0,
+      densite: btExploitTotalEq > 0 ? (btExploitTotalNc / btExploitTotalEq) : 0.0,
     );
 
     // 10. Populations d'appareillages et diversification de marque
@@ -1605,6 +1855,10 @@ class TechnicalEnrichmentEngine {
       btCategoriesCrossRows: btCatRows,
       mtTotalCrossRow: mtTotalCrossRow,
       btTotalCrossRow: btTotalCrossRow,
+      mtExploitationCrossRows: mtExploitationCatRows,
+      btExploitationCrossRows: btExploitationCatRows,
+      mtExploitationTotalCrossRow: mtExploitationTotalCrossRow,
+      btExploitationTotalCrossRow: btExploitationTotalCrossRow,
       totalZonesAudit: totalZonesAudit,
       totalZonesClasseesCount: totalZonesClasseesCount,
       totalLocauxAudit: totalLocauxAudit,
@@ -2328,6 +2582,13 @@ class TechnicalEnrichmentEngine {
       return true;
     }
     if (tbl.contains('exploitation')) {
+      return false;
+    }
+    final vp = f.verificationPoint.toLowerCase();
+    if (vp.contains('disposition') || vp.contains('constructive')) {
+      return true;
+    }
+    if (vp.contains('exploitation')) {
       return false;
     }
     if (f.objectType.toLowerCase().contains('local')) {
