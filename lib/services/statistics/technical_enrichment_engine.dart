@@ -288,6 +288,112 @@ class IpIkZoneItem {
       pointsVerifies > 0 ? pointsVerifies : (totalEquipements - nonEvaluableCount);
 }
 
+/// Statistiques d'équipements pour une population donnée (zone directe ou local).
+class IpIkEquipmentStats {
+  final int totalEquipements;
+  final int conformes;
+  final int differents;
+  final int absents;
+  final bool isEvaluable;
+
+  const IpIkEquipmentStats({
+    required this.totalEquipements,
+    required this.conformes,
+    required this.differents,
+    required this.absents,
+    required this.isEvaluable,
+  });
+
+  const IpIkEquipmentStats.empty()
+      : totalEquipements = 0,
+        conformes = 0,
+        differents = 0,
+        absents = 0,
+        isEvaluable = false;
+
+  double get complianceRate =>
+      isEvaluable && totalEquipements > 0 ? (conformes / totalEquipements) * 100.0 : 0.0;
+  double get differentsRate =>
+      isEvaluable && totalEquipements > 0 ? (differents / totalEquipements) * 100.0 : 0.0;
+  double get absentsRate =>
+      isEvaluable && totalEquipements > 0 ? (absents / totalEquipements) * 100.0 : 0.0;
+
+  String get formattedEquipmentCount =>
+      totalEquipements <= 1 ? '$totalEquipements équipement' : '$totalEquipements équipements';
+
+  String get formattedComplianceRate =>
+      isEvaluable ? IpIkZoneItem.formatPercent(complianceRate) : "Absence d'indice IP/IK, local non classé.";
+  String get formattedDifferentsPct => IpIkZoneItem.formatPercent(differentsRate);
+  String get formattedAbsentsPct => IpIkZoneItem.formatPercent(absentsRate);
+
+  /// Représentation des trois états :
+  /// "Conformes : Y/X, soit Z %. Différents : Y/X, soit Z %. Absents : Y/X, soit Z %"
+  String get formattedTrioBreakdown =>
+      'Conformes : $conformes/$totalEquipements, soit ${IpIkZoneItem.formatPercent(complianceRate)}. '
+      'Différents : $differents/$totalEquipements, soit ${IpIkZoneItem.formatPercent(differentsRate)}. '
+      'Absents : $absents/$totalEquipements, soit ${IpIkZoneItem.formatPercent(absentsRate)}';
+}
+
+/// Représentation d'un local et de ses équipements pour la sous-section 9.
+class IpIkLocalHierarchyItem {
+  final String localNom;
+  final String? localId;
+  final bool isClasse;
+  final String? ipRequis;
+  final String? ikRequis;
+  final IpIkEquipmentStats stats;
+
+  const IpIkLocalHierarchyItem({
+    required this.localNom,
+    this.localId,
+    required this.isClasse,
+    this.ipRequis,
+    this.ikRequis,
+    required this.stats,
+  });
+
+  String get indiceFormatted {
+    final parts = [ipRequis, ikRequis]
+        .whereType<String>()
+        .where((s) => s.trim().isNotEmpty)
+        .toList();
+    return parts.isNotEmpty ? parts.join(' / ') : "Absence d'indice IP/IK, local non classé";
+  }
+}
+
+/// Représentation d'une ligne de zone (ou local hors zone) dans la sous-section 9.
+class IpIkZoneHierarchyItem {
+  final String? zoneNom;
+  final String? zoneId;
+  final bool isHorsZone;
+  final bool isClasse;
+  final String? classementDescription;
+  final String? ipRequis;
+  final String? ikRequis;
+  final IpIkEquipmentStats directEquipmentStats;
+  final List<IpIkLocalHierarchyItem> locals;
+
+  const IpIkZoneHierarchyItem({
+    this.zoneNom,
+    this.zoneId,
+    this.isHorsZone = false,
+    required this.isClasse,
+    this.classementDescription,
+    this.ipRequis,
+    this.ikRequis,
+    required this.directEquipmentStats,
+    required this.locals,
+  });
+
+  String get indiceZoneFormatted {
+    final parts = [ipRequis, ikRequis]
+        .whereType<String>()
+        .where((s) => s.trim().isNotEmpty)
+        .toList();
+    return parts.isNotEmpty ? parts.join(' / ') : "Absence d'indice IP/IK, zone non classée";
+  }
+}
+
 /// Décompte unitaire exhaustif des essais et mesures métrologiques.
 class EssaisCoverageStats {
   final int prisesTerreCount;
@@ -562,6 +668,7 @@ class TechnicalEnrichmentResult {
   final Map<DomainObjectType, AdequationIccPdcStats> pdcTerminalStats;
   final List<CablesMatrixRow> cablesMatrix;
   final List<IpIkZoneItem> ipIkZoneItems;
+  final List<IpIkZoneHierarchyItem> ipIkHierarchy;
   final RiskFamilyCrossMatrix riskFamilyMatrix;
   final List<TopDefectDomainItem> top5Hta;
   final List<TopDefectDomainItem> top5Bt;
@@ -614,6 +721,7 @@ class TechnicalEnrichmentResult {
     required this.pdcTerminalStats,
     required this.cablesMatrix,
     required this.ipIkZoneItems,
+    this.ipIkHierarchy = const [],
     required this.riskFamilyMatrix,
     required this.top5Hta,
     required this.top5Bt,
@@ -1078,6 +1186,7 @@ class TechnicalEnrichmentEngine {
 
     // 4. Adéquation Classement des zones vs Indice IP/IK des équipements
     final ipIkZones = _computeIpIkZones(missionId, domainInventory);
+    final ipIkHierarchy = _computeIpIkHierarchy(missionId, domainInventory);
 
     // Calcul strict et indépendant des populations de Zones et de Locaux
     int totalZonesAudit = 0;
@@ -1842,6 +1951,7 @@ class TechnicalEnrichmentEngine {
       pdcTerminalStats: pdcTerminalMap,
       cablesMatrix: cablesRows,
       ipIkZoneItems: ipIkZones,
+      ipIkHierarchy: ipIkHierarchy,
       riskFamilyMatrix: riskMatrix,
       top5Hta: top5Hta,
       top5Bt: top5Bt,
@@ -2447,6 +2557,464 @@ class TechnicalEnrichmentEngine {
     );
 
     return result;
+  }
+
+  @visibleForTesting
+  static List<IpIkZoneHierarchyItem> computeIpIkHierarchy(
+    String missionId,
+    MissionDomainInventory domainInventory,
+  ) => _computeIpIkHierarchy(missionId, domainInventory);
+
+  static List<IpIkZoneHierarchyItem> _computeIpIkHierarchy(
+    String missionId,
+    MissionDomainInventory domainInventory,
+  ) {
+    AuditInstallationsElectriques? audit;
+    List<ClassementZone> zones = [];
+    List<ClassementEmplacement> emplacements = [];
+    try {
+      audit = HiveService.getAuditInstallationsByMissionId(missionId);
+      zones = HiveService.getClassementsZonesByMissionId(missionId);
+      emplacements = HiveService.getEmplacementsByMissionId(missionId);
+    } catch (_) {
+      audit = null;
+      zones = [];
+      emplacements = [];
+    }
+
+    const equipmentCategories = {
+      DomainObjectType.celluleMT,
+      DomainObjectType.transformateurMTBT,
+      DomainObjectType.tgbt,
+      DomainObjectType.armoire,
+      DomainObjectType.coffret,
+      DomainObjectType.inverseur,
+    };
+
+    // Filtre brouillons & dédoublonnage strict par instanceId
+    final seenInstanceIds = <String>{};
+    final allEquipmentInstances = <DomainEntityInstance>[];
+    for (final i in domainInventory.instances) {
+      if (!equipmentCategories.contains(i.category)) continue;
+      final raw = i.rawModelRef;
+      if (raw is CoffretArmoire) {
+        final st = raw.statut.trim().toLowerCase();
+        if (st == 'incomplet' || st == 'brouillon') {
+          continue;
+        }
+      }
+      if (seenInstanceIds.add(i.instanceId)) {
+        allEquipmentInstances.add(i);
+      }
+    }
+
+    // 1. Recenser toutes les Zones de la mission
+    final orderedZoneNames = <String>[];
+    final zoneLocalsMap = <String, List<String>>{}; // zoneKey -> list of local names
+    final zoneLocalsOriginalMap = <String, Map<String, String>>{}; // zoneKey -> {localKey: localOriginal}
+
+    if (audit != null) {
+      for (final z in audit.moyenneTensionZones) {
+        final zNom = z.nom.trim();
+        if (zNom.isNotEmpty && !orderedZoneNames.any((name) => name.toLowerCase() == zNom.toLowerCase())) {
+          orderedZoneNames.add(zNom);
+        }
+        final zKey = zNom.toLowerCase();
+        zoneLocalsMap.putIfAbsent(zKey, () => []);
+        zoneLocalsOriginalMap.putIfAbsent(zKey, () => {});
+        for (final l in z.locaux) {
+          final lNom = l.nom.trim();
+          if (lNom.isNotEmpty) {
+            final lKey = lNom.toLowerCase();
+            if (!zoneLocalsOriginalMap[zKey]!.containsKey(lKey)) {
+              zoneLocalsOriginalMap[zKey]![lKey] = lNom;
+              zoneLocalsMap[zKey]!.add(lNom);
+            }
+          }
+        }
+      }
+
+      for (final z in audit.basseTensionZones) {
+        final zNom = z.nom.trim();
+        if (zNom.isNotEmpty && !orderedZoneNames.any((name) => name.toLowerCase() == zNom.toLowerCase())) {
+          orderedZoneNames.add(zNom);
+        }
+        final zKey = zNom.toLowerCase();
+        zoneLocalsMap.putIfAbsent(zKey, () => []);
+        zoneLocalsOriginalMap.putIfAbsent(zKey, () => {});
+        for (final l in z.locaux) {
+          final lNom = l.nom.trim();
+          if (lNom.isNotEmpty) {
+            final lKey = lNom.toLowerCase();
+            if (!zoneLocalsOriginalMap[zKey]!.containsKey(lKey)) {
+              zoneLocalsOriginalMap[zKey]![lKey] = lNom;
+              zoneLocalsMap[zKey]!.add(lNom);
+            }
+          }
+        }
+      }
+    }
+
+    // Intégrer les zones déclarées dans ClassementZone
+    for (final cz in zones) {
+      final czNom = cz.nomZone.trim();
+      if (czNom.isNotEmpty && !orderedZoneNames.any((name) => name.toLowerCase() == czNom.toLowerCase())) {
+        orderedZoneNames.add(czNom);
+        zoneLocalsMap.putIfAbsent(czNom.toLowerCase(), () => []);
+        zoneLocalsOriginalMap.putIfAbsent(czNom.toLowerCase(), () => {});
+      }
+    }
+
+    // Intégrer les zones trouvées dans domainInventory instances
+    for (final inst in allEquipmentInstances) {
+      final pZone = inst.parentZone?.trim();
+      if (pZone != null && pZone.isNotEmpty) {
+        final zKey = pZone.toLowerCase();
+        if (!orderedZoneNames.any((name) => name.toLowerCase() == zKey)) {
+          orderedZoneNames.add(pZone);
+          zoneLocalsMap.putIfAbsent(zKey, () => []);
+          zoneLocalsOriginalMap.putIfAbsent(zKey, () => {});
+        }
+        final pLocal = inst.parentLocal?.trim();
+        if (pLocal != null && pLocal.isNotEmpty) {
+          final lKey = pLocal.toLowerCase();
+          zoneLocalsMap.putIfAbsent(zKey, () => []);
+          zoneLocalsOriginalMap.putIfAbsent(zKey, () => {});
+          if (!zoneLocalsOriginalMap[zKey]!.containsKey(lKey)) {
+            zoneLocalsOriginalMap[zKey]![lKey] = pLocal;
+            zoneLocalsMap[zKey]!.add(pLocal);
+          }
+        }
+      }
+    }
+
+    // Intégrer les locaux déclarés dans ClassementEmplacement rattachés à une zone
+    for (final emp in emplacements) {
+      if (emp.isLocal && emp.zone != null && emp.zone!.trim().isNotEmpty) {
+        final zKey = emp.zone!.trim().toLowerCase();
+        if (zoneLocalsOriginalMap.containsKey(zKey)) {
+          final lNom = emp.localisation.trim();
+          if (lNom.isNotEmpty) {
+            final lKey = lNom.toLowerCase();
+            if (!zoneLocalsOriginalMap[zKey]!.containsKey(lKey)) {
+              zoneLocalsOriginalMap[zKey]![lKey] = lNom;
+              zoneLocalsMap[zKey]!.add(lNom);
+            }
+          }
+        }
+      }
+    }
+
+    // 2. Identifier les locaux autonomes hors zone (standalone locals)
+    final standaloneLocalNames = <String>[];
+    final standaloneLocalOriginalMap = <String, String>{};
+
+    if (audit != null) {
+      for (final l in audit.moyenneTensionLocaux) {
+        final lNom = l.nom.trim();
+        if (lNom.isNotEmpty) {
+          final lKey = lNom.toLowerCase();
+          if (!standaloneLocalOriginalMap.containsKey(lKey)) {
+            standaloneLocalOriginalMap[lKey] = lNom;
+            standaloneLocalNames.add(lNom);
+          }
+        }
+      }
+    }
+
+    for (final inst in allEquipmentInstances) {
+      final pZone = inst.parentZone?.trim();
+      final pLocal = inst.parentLocal?.trim();
+      if ((pZone == null || pZone.isEmpty) && pLocal != null && pLocal.isNotEmpty) {
+        final lKey = pLocal.toLowerCase();
+        if (!standaloneLocalOriginalMap.containsKey(lKey)) {
+          standaloneLocalOriginalMap[lKey] = pLocal;
+          standaloneLocalNames.add(pLocal);
+        }
+      }
+    }
+
+    for (final emp in emplacements) {
+      if (emp.isLocal && (emp.zone == null || emp.zone!.trim().isEmpty)) {
+        final lNom = emp.localisation.trim();
+        if (lNom.isNotEmpty) {
+          final lKey = lNom.toLowerCase();
+          if (!standaloneLocalOriginalMap.containsKey(lKey)) {
+            standaloneLocalOriginalMap[lKey] = lNom;
+            standaloneLocalNames.add(lNom);
+          }
+        }
+      }
+    }
+
+    // Helper d'évaluation d'une population d'équipements
+    IpIkEquipmentStats evaluatePopulation({
+      required List<DomainEntityInstance> population,
+      required String? reqIp,
+      required String? reqIk,
+    }) {
+      final hasReference = (reqIp != null && reqIp.trim().isNotEmpty) ||
+          (reqIk != null && reqIk.trim().isNotEmpty);
+
+      if (population.isEmpty) {
+        return const IpIkEquipmentStats.empty();
+      }
+
+      if (!hasReference) {
+        return IpIkEquipmentStats(
+          totalEquipements: population.length,
+          conformes: 0,
+          differents: 0,
+          absents: 0,
+          isEvaluable: false,
+        );
+      }
+
+      int conformes = 0;
+      int differents = 0;
+      int absents = 0;
+
+      for (final inst in population) {
+        String? obsIpIk;
+        final raw = inst.rawModelRef;
+        if (raw is CoffretArmoire) {
+          final ipVal = raw.indiceIpIk?.trim();
+          obsIpIk = (ipVal != null &&
+                  ipVal.isNotEmpty &&
+                  ipVal != '-' &&
+                  ipVal.toLowerCase() != 'absent')
+              ? ipVal
+              : null;
+        }
+
+        final status = IpIkEvaluator.evaluate(
+          reqIp: reqIp,
+          reqIk: reqIk,
+          obsRaw: obsIpIk,
+        );
+
+        switch (status) {
+          case IpIkAdequationStatus.adequat:
+            conformes++;
+            break;
+          case IpIkAdequationStatus.presentDifferent:
+            differents++;
+            break;
+          case IpIkAdequationStatus.absent:
+            absents++;
+            break;
+          case IpIkAdequationStatus.nonEvaluable:
+            absents++;
+            break;
+        }
+      }
+
+      return IpIkEquipmentStats(
+        totalEquipements: population.length,
+        conformes: conformes,
+        differents: differents,
+        absents: absents,
+        isEvaluable: true,
+      );
+    }
+
+    final hierarchyResults = <IpIkZoneHierarchyItem>[];
+
+    // 3. Traitement des Zones
+    // Tri alphabétique des zones
+    orderedZoneNames.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+
+    for (final zoneNom in orderedZoneNames) {
+      final zKey = zoneNom.toLowerCase();
+
+      // Résolution du classement de la zone (formulaire de classement - influences externes)
+      ClassementZone? matchedCz;
+      for (final cz in zones) {
+        if (cz.nomZone.trim().toLowerCase() == zKey) {
+          matchedCz = cz;
+          break;
+        }
+      }
+
+      ClassementEmplacement? matchedZoneEmp;
+      if (matchedCz == null) {
+        for (final emp in emplacements) {
+          if (emp.isZone && emp.localisation.trim().toLowerCase() == zKey) {
+            matchedZoneEmp = emp;
+            break;
+          }
+        }
+      }
+
+      final List<String> influences;
+      if (matchedCz != null) {
+        influences = [matchedCz.af, matchedCz.be, matchedCz.ae, matchedCz.ad, matchedCz.ag]
+            .whereType<String>()
+            .map((s) => s.trim())
+            .where((s) => s.isNotEmpty)
+            .toList();
+      } else if (matchedZoneEmp != null) {
+        influences = [matchedZoneEmp.af, matchedZoneEmp.be, matchedZoneEmp.ae, matchedZoneEmp.ad, matchedZoneEmp.ag]
+            .whereType<String>()
+            .map((s) => s.trim())
+            .where((s) => s.isNotEmpty)
+            .toList();
+      } else {
+        influences = [];
+      }
+
+      final String? reqZoneIp = matchedCz?.ip ?? matchedZoneEmp?.ipEffective ?? matchedZoneEmp?.ip;
+      final String? reqZoneIk = matchedCz?.ik ?? matchedZoneEmp?.ikEffective ?? matchedZoneEmp?.ik;
+      final bool isZoneClasse = influences.isNotEmpty ||
+          (reqZoneIp != null && reqZoneIp.trim().isNotEmpty) ||
+          (reqZoneIk != null && reqZoneIk.trim().isNotEmpty);
+
+      final String classementDesc = influences.isNotEmpty
+          ? influences.join(', ')
+          : 'Zone non classée';
+
+      // Équipements directement rattachés à la zone (hors local)
+      final directEquipments = allEquipmentInstances.where((inst) {
+        final pz = inst.parentZone?.trim().toLowerCase();
+        final pl = inst.parentLocal?.trim();
+        return pz == zKey && (pl == null || pl.isEmpty);
+      }).toList();
+
+      final directStats = evaluatePopulation(
+        population: directEquipments,
+        reqIp: reqZoneIp,
+        reqIk: reqZoneIk,
+      );
+
+      // Locaux de la zone
+      final localNamesInZone = (zoneLocalsMap[zKey] ?? [])..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+      final localHierarchyItems = <IpIkLocalHierarchyItem>[];
+
+      for (final localNom in localNamesInZone) {
+        final lKey = localNom.toLowerCase();
+
+        // Résolution du classement du local dans ClassementEmplacement
+        ClassementEmplacement? matchedEmp;
+        for (final emp in emplacements) {
+          if (emp.localisation.trim().toLowerCase() == lKey) {
+            if (emp.zone != null && emp.zone!.trim().isNotEmpty) {
+              if (emp.zone!.trim().toLowerCase() == zKey) {
+                matchedEmp = emp;
+                break;
+              }
+            } else {
+              matchedEmp = emp;
+            }
+          }
+        }
+
+        final reqLocalIp = matchedEmp?.ipEffective ?? matchedEmp?.ip;
+        final reqLocalIk = matchedEmp?.ikEffective ?? matchedEmp?.ik;
+        final isLocalClasse = (reqLocalIp != null && reqLocalIp.trim().isNotEmpty) ||
+            (reqLocalIk != null && reqLocalIk.trim().isNotEmpty);
+
+        final localEquipments = allEquipmentInstances.where((inst) {
+          final pl = inst.parentLocal?.trim().toLowerCase();
+          final pz = inst.parentZone?.trim().toLowerCase();
+          if (pl != lKey) return false;
+          if (pz != null && pz.isNotEmpty && pz != zKey) return false;
+          return true;
+        }).toList();
+
+        final localStats = evaluatePopulation(
+          population: localEquipments,
+          reqIp: reqLocalIp,
+          reqIk: reqLocalIk,
+        );
+
+        localHierarchyItems.add(
+          IpIkLocalHierarchyItem(
+            localNom: localNom,
+            isClasse: isLocalClasse,
+            ipRequis: reqLocalIp,
+            ikRequis: reqLocalIk,
+            stats: localStats,
+          ),
+        );
+      }
+
+      hierarchyResults.add(
+        IpIkZoneHierarchyItem(
+          zoneNom: zoneNom,
+          isHorsZone: false,
+          isClasse: isZoneClasse,
+          classementDescription: classementDesc,
+          ipRequis: reqZoneIp,
+          ikRequis: reqZoneIk,
+          directEquipmentStats: directStats,
+          locals: localHierarchyItems,
+        ),
+      );
+    }
+
+    // 4. Traitement des locaux hors zone (standalone locals)
+    standaloneLocalNames.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+
+    for (final localNom in standaloneLocalNames) {
+      final lKey = localNom.toLowerCase();
+
+      ClassementEmplacement? matchedEmp;
+      for (final emp in emplacements) {
+        if (emp.localisation.trim().toLowerCase() == lKey &&
+            (emp.zone == null || emp.zone!.trim().isEmpty)) {
+          matchedEmp = emp;
+          break;
+        }
+      }
+      matchedEmp ??= emplacements.firstWhere(
+        (emp) => emp.localisation.trim().toLowerCase() == lKey,
+        orElse: () => ClassementEmplacement(
+          missionId: missionId,
+          localisation: localNom,
+          updatedAt: DateTime.now(),
+        ),
+      );
+
+      final reqLocalIp = matchedEmp.ipEffective ?? matchedEmp.ip;
+      final reqLocalIk = matchedEmp.ikEffective ?? matchedEmp.ik;
+      final isLocalClasse = (reqLocalIp != null && reqLocalIp.trim().isNotEmpty) ||
+          (reqLocalIk != null && reqLocalIk.trim().isNotEmpty);
+
+      final localEquipments = allEquipmentInstances.where((inst) {
+        final pl = inst.parentLocal?.trim().toLowerCase();
+        final pz = inst.parentZone?.trim();
+        return pl == lKey && (pz == null || pz.isEmpty);
+      }).toList();
+
+      final localStats = evaluatePopulation(
+        population: localEquipments,
+        reqIp: reqLocalIp,
+        reqIk: reqLocalIk,
+      );
+
+      final localItem = IpIkLocalHierarchyItem(
+        localNom: localNom,
+        isClasse: isLocalClasse,
+        ipRequis: reqLocalIp,
+        ikRequis: reqLocalIk,
+        stats: localStats,
+      );
+
+      hierarchyResults.add(
+        IpIkZoneHierarchyItem(
+          zoneNom: null,
+          isHorsZone: true,
+          isClasse: isLocalClasse,
+          classementDescription: null,
+          ipRequis: null,
+          ikRequis: null,
+          directEquipmentStats: const IpIkEquipmentStats.empty(),
+          locals: [localItem],
+        ),
+      );
+    }
+
+    return hierarchyResults;
   }
 
   static RiskFamilyQuadrantStats _computeQuadrantStats({

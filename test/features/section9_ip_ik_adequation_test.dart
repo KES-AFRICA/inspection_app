@@ -494,6 +494,449 @@ void main() {
       // En-tête + 3 lignes pour les 3 repères
       expect(table.children.length, equals(4));
     });
+
+    group('Section 9 — Restructuration complète hiérarchique (Zone -> Équipements directs -> Locaux)', () {
+      test('Cas 1 — Zone + équipements directs (comparaison indice zone)', () {
+        const directStats = IpIkEquipmentStats(
+          totalEquipements: 3,
+          conformes: 1,
+          differents: 1,
+          absents: 1,
+          isEvaluable: true,
+        );
+
+        const item = IpIkZoneHierarchyItem(
+          zoneNom: 'Zone Extérieure Usine',
+          isHorsZone: false,
+          isClasse: true,
+          classementDescription: 'AF1, BE1, AE2, AD2, AG1',
+          ipRequis: 'IP55',
+          ikRequis: 'IK08',
+          directEquipmentStats: directStats,
+          locals: [],
+        );
+
+        expect(item.zoneNom, equals('Zone Extérieure Usine'));
+        expect(item.isHorsZone, isFalse);
+        expect(item.isClasse, isTrue);
+        expect(item.classementDescription, equals('AF1, BE1, AE2, AD2, AG1'));
+        expect(item.indiceZoneFormatted, equals('IP55 / IK08'));
+
+        expect(directStats.totalEquipements, equals(3));
+        expect(directStats.conformes, equals(1));
+        expect(directStats.differents, equals(1));
+        expect(directStats.absents, equals(1));
+        expect(directStats.conformes + directStats.differents + directStats.absents, equals(directStats.totalEquipements));
+
+        expect(directStats.complianceRate, closeTo(33.33, 0.05));
+        expect(directStats.formattedEquipmentCount, equals('3 équipements'));
+        expect(directStats.formattedComplianceRate, equals('33,3 %'));
+        expect(directStats.formattedDifferentsPct, equals('33,3 %'));
+        expect(directStats.formattedAbsentsPct, equals('33,3 %'));
+        expect(
+          directStats.formattedTrioBreakdown,
+          equals('Conformes : 1/3, soit 33,3 %. Différents : 1/3, soit 33,3 %. Absents : 1/3, soit 33,3 %'),
+        );
+      });
+
+      test('Cas 2 — Zone + local classé (comparaison indice local)', () {
+        const localStats = IpIkEquipmentStats(
+          totalEquipements: 4,
+          conformes: 4,
+          differents: 0,
+          absents: 0,
+          isEvaluable: true,
+        );
+
+        const localItem = IpIkLocalHierarchyItem(
+          localNom: 'Local TGBT',
+          isClasse: true,
+          ipRequis: 'IP55',
+          ikRequis: 'IK08',
+          stats: localStats,
+        );
+
+        const zoneItem = IpIkZoneHierarchyItem(
+          zoneNom: 'Zone Usine',
+          isHorsZone: false,
+          isClasse: true,
+          classementDescription: 'AF1, BE1, AE2, AD2, AG1',
+          ipRequis: 'IP20',
+          ikRequis: 'IK02',
+          directEquipmentStats: IpIkEquipmentStats.empty(),
+          locals: [localItem],
+        );
+
+        expect(zoneItem.locals.length, equals(1));
+        expect(localItem.localNom, equals('Local TGBT'));
+        expect(localItem.isClasse, isTrue);
+        expect(localItem.indiceFormatted, equals('IP55 / IK08'));
+        expect(localStats.complianceRate, equals(100.0));
+        expect(localStats.formattedComplianceRate, equals('100 %'));
+        expect(
+          localStats.formattedTrioBreakdown,
+          equals('Conformes : 4/4, soit 100 %. Différents : 0/4, soit 0 %. Absents : 0/4, soit 0 %'),
+        );
+      });
+
+      test('Cas 3 — Zone + équipements directs + locaux (populations strictement séparées)', () {
+        const directStats = IpIkEquipmentStats(
+          totalEquipements: 2,
+          conformes: 2,
+          differents: 0,
+          absents: 0,
+          isEvaluable: true,
+        );
+
+        const local1Stats = IpIkEquipmentStats(
+          totalEquipements: 3,
+          conformes: 1,
+          differents: 2,
+          absents: 0,
+          isEvaluable: true,
+        );
+
+        const local1 = IpIkLocalHierarchyItem(
+          localNom: 'Local Compresseurs',
+          isClasse: true,
+          ipRequis: 'IP54',
+          ikRequis: 'IK08',
+          stats: local1Stats,
+        );
+
+        const zone = IpIkZoneHierarchyItem(
+          zoneNom: 'Zone Technique',
+          isHorsZone: false,
+          isClasse: true,
+          classementDescription: 'BE2, AE3',
+          ipRequis: 'IP44',
+          ikRequis: 'IK07',
+          directEquipmentStats: directStats,
+          locals: [local1],
+        );
+
+        // Les deux populations ont leurs dénominateurs propres
+        expect(zone.directEquipmentStats.totalEquipements, equals(2));
+        expect(zone.locals.first.stats.totalEquipements, equals(3));
+        expect(zone.directEquipmentStats.conformes, equals(2));
+        expect(zone.locals.first.stats.conformes, equals(1));
+
+        // Aucun croisement de décompte
+        expect(zone.directEquipmentStats.complianceRate, equals(100.0));
+        expect(zone.locals.first.stats.complianceRate, closeTo(33.33, 0.05));
+      });
+
+      test('Cas 4 — Local non classé (libellé strict Absence d\'indice IP/IK, local non classé)', () {
+        const localStats = IpIkEquipmentStats(
+          totalEquipements: 3,
+          conformes: 0,
+          differents: 0,
+          absents: 0,
+          isEvaluable: false,
+        );
+
+        const local = IpIkLocalHierarchyItem(
+          localNom: 'Local Stockage Brut',
+          isClasse: false,
+          ipRequis: null,
+          ikRequis: null,
+          stats: localStats,
+        );
+
+        expect(local.isClasse, isFalse);
+        expect(local.stats.isEvaluable, isFalse);
+        expect(local.indiceFormatted, equals("Absence d'indice IP/IK, local non classé"));
+        expect(local.stats.formattedComplianceRate, equals("Absence d'indice IP/IK, local non classé."));
+      });
+
+      test('Cas 5 — Local sans équipement (aucun crash, division par zéro impossible)', () {
+        const localStats = IpIkEquipmentStats.empty();
+        const local = IpIkLocalHierarchyItem(
+          localNom: 'Local Vide',
+          isClasse: true,
+          ipRequis: 'IP55',
+          ikRequis: 'IK08',
+          stats: localStats,
+        );
+
+        expect(local.stats.totalEquipements, equals(0));
+        expect(local.stats.conformes, equals(0));
+        expect(local.stats.differents, equals(0));
+        expect(local.stats.absents, equals(0));
+        expect(local.stats.complianceRate, equals(0.0));
+        expect(local.stats.differentsRate, equals(0.0));
+        expect(local.stats.absentsRate, equals(0.0));
+        expect(local.stats.formattedEquipmentCount, equals('0 équipement'));
+      });
+
+      test('Cas 6 — Zone sans équipement direct (aucun équipement hors local)', () {
+        const zone = IpIkZoneHierarchyItem(
+          zoneNom: 'Zone Entrepôt',
+          isHorsZone: false,
+          isClasse: true,
+          classementDescription: 'AF1, AG1',
+          ipRequis: 'IP20',
+          ikRequis: 'IK02',
+          directEquipmentStats: IpIkEquipmentStats.empty(),
+          locals: [
+            IpIkLocalHierarchyItem(
+              localNom: 'Local Contrôle',
+              isClasse: true,
+              ipRequis: 'IP20',
+              ikRequis: 'IK02',
+              stats: IpIkEquipmentStats(
+                totalEquipements: 2,
+                conformes: 2,
+                differents: 0,
+                absents: 0,
+                isEvaluable: true,
+              ),
+            ),
+          ],
+        );
+
+        expect(zone.directEquipmentStats.totalEquipements, equals(0));
+        expect(zone.locals.length, equals(1));
+        expect(zone.locals.first.stats.totalEquipements, equals(2));
+      });
+
+      test('Cas 7 — Local hors zone (colonne 1 vide, pas d\'indice ou taux de zone)', () {
+        const local = IpIkLocalHierarchyItem(
+          localNom: 'Poste MT Indépendant (Hors Zone)',
+          isClasse: true,
+          ipRequis: 'IP55',
+          ikRequis: 'IK10',
+          stats: IpIkEquipmentStats(
+            totalEquipements: 3,
+            conformes: 3,
+            differents: 0,
+            absents: 0,
+            isEvaluable: true,
+          ),
+        );
+
+        const item = IpIkZoneHierarchyItem(
+          zoneNom: null,
+          isHorsZone: true,
+          isClasse: true,
+          classementDescription: null,
+          ipRequis: null,
+          ikRequis: null,
+          directEquipmentStats: IpIkEquipmentStats.empty(),
+          locals: [local],
+        );
+
+        expect(item.isHorsZone, isTrue);
+        expect(item.zoneNom, isNull);
+        expect(item.locals.first.localNom, equals('Poste MT Indépendant (Hors Zone)'));
+      });
+
+      test('Cas 8 & 9 — Rendu PDF complet : titres officiels et affichage hiérarchique', () {
+        final hierarchy = [
+          const IpIkZoneHierarchyItem(
+            zoneNom: 'Zone Production',
+            isHorsZone: false,
+            isClasse: true,
+            classementDescription: 'AF2, BE2, AE3, AD2, AG2',
+            ipRequis: 'IP55',
+            ikRequis: 'IK08',
+            directEquipmentStats: IpIkEquipmentStats(
+              totalEquipements: 2,
+              conformes: 1,
+              differents: 1,
+              absents: 0,
+              isEvaluable: true,
+            ),
+            locals: [
+              IpIkLocalHierarchyItem(
+                localNom: 'Local Armoires',
+                isClasse: true,
+                ipRequis: 'IP55',
+                ikRequis: 'IK08',
+                stats: IpIkEquipmentStats(
+                  totalEquipements: 5,
+                  conformes: 5,
+                  differents: 0,
+                  absents: 0,
+                  isEvaluable: true,
+                ),
+              ),
+              IpIkLocalHierarchyItem(
+                localNom: 'Local Réserve',
+                isClasse: false,
+                ipRequis: null,
+                ikRequis: null,
+                stats: IpIkEquipmentStats(
+                  totalEquipements: 1,
+                  conformes: 0,
+                  differents: 0,
+                  absents: 0,
+                  isEvaluable: false,
+                ),
+              ),
+              IpIkLocalHierarchyItem(
+                localNom: 'Local Vide',
+                isClasse: true,
+                ipRequis: 'IP44',
+                ikRequis: 'IK07',
+                stats: IpIkEquipmentStats.empty(),
+              ),
+            ],
+          ),
+          const IpIkZoneHierarchyItem(
+            zoneNom: null,
+            isHorsZone: true,
+            isClasse: true,
+            classementDescription: null,
+            ipRequis: null,
+            ikRequis: null,
+            directEquipmentStats: IpIkEquipmentStats.empty(),
+            locals: [
+              IpIkLocalHierarchyItem(
+                localNom: 'Poste MT Autonome',
+                isClasse: true,
+                ipRequis: 'IP55',
+                ikRequis: 'IK10',
+                stats: IpIkEquipmentStats(
+                  totalEquipements: 2,
+                  conformes: 2,
+                  differents: 0,
+                  absents: 0,
+                  isEvaluable: true,
+                ),
+              ),
+            ],
+          ),
+        ];
+
+        final technical = TechnicalEnrichmentResult(
+          missionId: 'm_full_test',
+          essaisCoverage: const EssaisCoverageStats(
+            prisesTerreCount: 0,
+            testDdrCount: 0,
+            mesureIsolementCount: 0,
+            testCpiCount: 0,
+            continuitePeCount: 0,
+            demarrageGeCount: 0,
+            arretUrgenceCount: 0,
+          ),
+          coupureTeteStats: const {},
+          sourceStats: const {},
+          parafoudreStats: const {},
+          adequationIccPdcStats: const {},
+          marquesMatrix: const [],
+          courbesMatrix: const [],
+          pdcDepartStats: const {},
+          pdcTerminalStats: const {},
+          cablesMatrix: const [],
+          ipIkZoneItems: const [],
+          ipIkHierarchy: hierarchy,
+          riskFamilyMatrix: const RiskFamilyCrossMatrix.empty(),
+          top5Hta: const [],
+          top5Bt: const [],
+          totalZonesClassees: 1,
+          totalLocauxMt: 3,
+          totalLocauxBt: 1,
+          totalLocauxGe: 0,
+          locauxMtFindings: const LocauxFindingsStats(dispoConstructives: 0, conditionsExploitation: 0),
+          locauxBtFindings: const LocauxFindingsStats(dispoConstructives: 0, conditionsExploitation: 0),
+          mtCategoriesCrossRows: const [],
+          mtTotalCrossRow: const CategoryCrossAuditRow(categoryName: 'TOTAL MT', equipementsCount: 0, ncCount: 0, critiquesCount: 0, majeuresCount: 0, pctOfTotalNc: 0, tauxCritique: 0, densite: 0),
+          btCategoriesCrossRows: const [],
+          btTotalCrossRow: const CategoryCrossAuditRow(categoryName: 'TOTAL BT', equipementsCount: 0, ncCount: 0, critiquesCount: 0, majeuresCount: 0, pctOfTotalNc: 0, tauxCritique: 0, densite: 0),
+        );
+
+        final widget = PdfExecutiveSummaryBuilder.buildIpIkTableForTesting(technical);
+        expect(widget, isA<pw.Table>());
+        final table = widget as pw.Table;
+
+        // En-tête + 2 lignes de tableau (1 Zone + 1 Local hors zone)
+        expect(table.children.length, equals(3));
+      });
+
+      test('Cas 10 — Grande mission (stabilité et performance sur gros volumes)', () {
+        final bigHierarchy = List.generate(50, (zIdx) {
+          final locals = List.generate(5, (lIdx) {
+            return IpIkLocalHierarchyItem(
+              localNom: 'Local Z$zIdx - L$lIdx',
+              isClasse: (zIdx + lIdx) % 2 == 0,
+              ipRequis: 'IP55',
+              ikRequis: 'IK08',
+              stats: IpIkEquipmentStats(
+                totalEquipements: 10,
+                conformes: (zIdx + lIdx) % 2 == 0 ? 8 : 0,
+                differents: (zIdx + lIdx) % 2 == 0 ? 1 : 0,
+                absents: (zIdx + lIdx) % 2 == 0 ? 1 : 0,
+                isEvaluable: (zIdx + lIdx) % 2 == 0,
+              ),
+            );
+          });
+
+          return IpIkZoneHierarchyItem(
+            zoneNom: 'Zone $zIdx',
+            isHorsZone: false,
+            isClasse: true,
+            classementDescription: 'AF1, BE1, AE2, AD2, AG1',
+            ipRequis: 'IP55',
+            ikRequis: 'IK08',
+            directEquipmentStats: const IpIkEquipmentStats(
+              totalEquipements: 5,
+              conformes: 3,
+              differents: 1,
+              absents: 1,
+              isEvaluable: true,
+            ),
+            locals: locals,
+          );
+        });
+
+        final stopwatch = Stopwatch()..start();
+        final technical = TechnicalEnrichmentResult(
+          missionId: 'm_big',
+          essaisCoverage: const EssaisCoverageStats(
+            prisesTerreCount: 0,
+            testDdrCount: 0,
+            mesureIsolementCount: 0,
+            testCpiCount: 0,
+            continuitePeCount: 0,
+            demarrageGeCount: 0,
+            arretUrgenceCount: 0,
+          ),
+          coupureTeteStats: const {},
+          sourceStats: const {},
+          parafoudreStats: const {},
+          adequationIccPdcStats: const {},
+          marquesMatrix: const [],
+          courbesMatrix: const [],
+          pdcDepartStats: const {},
+          pdcTerminalStats: const {},
+          cablesMatrix: const [],
+          ipIkZoneItems: const [],
+          ipIkHierarchy: bigHierarchy,
+          riskFamilyMatrix: const RiskFamilyCrossMatrix.empty(),
+          top5Hta: const [],
+          top5Bt: const [],
+          totalZonesClassees: 50,
+          totalLocauxMt: 250,
+          totalLocauxBt: 0,
+          totalLocauxGe: 0,
+          locauxMtFindings: const LocauxFindingsStats(dispoConstructives: 0, conditionsExploitation: 0),
+          locauxBtFindings: const LocauxFindingsStats(dispoConstructives: 0, conditionsExploitation: 0),
+          mtCategoriesCrossRows: const [],
+          mtTotalCrossRow: const CategoryCrossAuditRow(categoryName: 'TOTAL MT', equipementsCount: 0, ncCount: 0, critiquesCount: 0, majeuresCount: 0, pctOfTotalNc: 0, tauxCritique: 0, densite: 0),
+          btCategoriesCrossRows: const [],
+          btTotalCrossRow: const CategoryCrossAuditRow(categoryName: 'TOTAL BT', equipementsCount: 0, ncCount: 0, critiquesCount: 0, majeuresCount: 0, pctOfTotalNc: 0, tauxCritique: 0, densite: 0),
+        );
+
+        final widget = PdfExecutiveSummaryBuilder.buildIpIkTableForTesting(technical);
+        stopwatch.stop();
+
+        expect(widget, isA<pw.Table>());
+        final table = widget as pw.Table;
+        expect(table.children.length, equals(51)); // Header + 50 zones
+        expect(stopwatch.elapsedMilliseconds, lessThan(1000)); // Rendu quasi instantané
+      });
+    });
   });
 }
 

@@ -25,6 +25,9 @@ class PdfExecutiveSummaryBuilder {
   static const double fsH3 = PdfReportStyles.fsH3;
   static const double fsBody = PdfReportStyles.fsBody;
   static const double fsSmall = PdfReportStyles.fsSmall;
+  static const double fsTiny = 6.5;
+  static pw.Font fontItalic = pw.Font.helveticaOblique();
+  static final PdfColor greyTextColor = PdfColor.fromInt(0xFF757575);
 
   /// Construit la section « RÉSUMÉ EXÉCUTIF » structurée en 12 sections officielles selon la spécification de référence KES.
   static List<pw.Widget> buildResumeExecutif(
@@ -2168,77 +2171,79 @@ class PdfExecutiveSummaryBuilder {
   }
 
   static (pw.TableRow, List<pw.TableRow>) _buildIpIkRows(TechnicalEnrichmentResult technical) {
-    pw.Widget buildRichStatsCell(IpIkZoneItem item) {
-      final total = item.totalEquipements;
-      final equipLabel = item.formattedEquipmentCount;
+    PdfColor resolveRateColor(double rate) {
+      if (rate <= 50.0) {
+        return PdfColor.fromHex('#B71C1C'); // rouge
+      } else if (rate < 100.0) {
+        return PdfColor.fromHex('#E65100'); // orange
+      } else {
+        return PdfColor.fromHex('#2E7D32'); // vert
+      }
+    }
 
-      // 1. Quand l'indice est absent dans le repère (ou non évaluable), la case affiche :
-      // x équipement(s)
-      // Absence d'indice IP/IK, repère non classé.
-      if (!item.isEvaluable) {
-        return pw.Container(
-          alignment: pw.Alignment.centerLeft,
-          padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
-          child: pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            mainAxisSize: pw.MainAxisSize.min,
-            children: [
-              pw.Text(
-                equipLabel,
-                style: pw.TextStyle(
-                  font: fontBold,
-                  fontSize: fsSmall,
-                  color: PdfReportStyles.headerColor,
-                ),
+    pw.Widget buildTrioBreakdownWidget(IpIkEquipmentStats stats) {
+      return pw.Padding(
+        padding: const pw.EdgeInsets.only(left: 10, top: 1, bottom: 2),
+        child: pw.Text(
+          stats.formattedTrioBreakdown,
+          style: pw.TextStyle(
+            font: fontRegular,
+            fontSize: fsTiny,
+            color: PdfReportStyles.darkGrey,
+          ),
+        ),
+      );
+    }
+
+    pw.Widget buildHierarchicalStatsCell(IpIkZoneHierarchyItem item) {
+      final children = <pw.Widget>[];
+
+      if (!item.isHorsZone) {
+        // --- NIVEAU 1 — ZONE ---
+        // 1.1 Indice de la zone
+        final String indiceZoneText;
+        final bool isIndicePresent = (item.ipRequis != null && item.ipRequis!.trim().isNotEmpty) ||
+            (item.ikRequis != null && item.ikRequis!.trim().isNotEmpty);
+        if (isIndicePresent) {
+          indiceZoneText = item.indiceZoneFormatted;
+        } else {
+          indiceZoneText = "Absence d'indice IP/IK, zone non classée";
+        }
+
+        children.add(
+          pw.RichText(
+            text: pw.TextSpan(
+              style: pw.TextStyle(
+                font: fontRegular,
+                fontSize: fsSmall,
+                color: PdfReportStyles.darkGrey,
               ),
-              pw.SizedBox(height: 2),
-              pw.Text(
-                "Absence d'indice IP/IK, repère non classé.",
-                style: pw.TextStyle(
-                  font: fontRegular,
-                  fontSize: fsSmall,
-                  color: PdfReportStyles.darkGrey,
-                  fontStyle: pw.FontStyle.italic,
+              children: [
+                pw.TextSpan(
+                  text: 'Indice de la zone : ',
+                  style: pw.TextStyle(
+                    font: fontBold,
+                    color: PdfReportStyles.headerColor,
+                  ),
                 ),
-              ),
-            ],
+                pw.TextSpan(
+                  text: indiceZoneText,
+                  style: pw.TextStyle(
+                    font: isIndicePresent ? fontBold : fontItalic,
+                    color: isIndicePresent ? PdfReportStyles.headerColor : greyTextColor,
+                  ),
+                ),
+              ],
+            ),
           ),
         );
-      }
 
-      // Règle stricte de coloration du Taux de conformité :
-      // 0 % à 50 % → rouge (#B71C1C)
-      // strictement supérieur à 50 % et inférieur à 100 % → orange (#E65100)
-      // 100 % → vert (#2E7D32)
-      final rate = item.complianceRate;
-      final PdfColor rateColor;
-      if (rate <= 50.0) {
-        rateColor = PdfColor.fromHex('#B71C1C'); // rouge
-      } else if (rate < 100.0) {
-        rateColor = PdfColor.fromHex('#E65100'); // orange
-      } else {
-        rateColor = PdfColor.fromHex('#2E7D32'); // vert
-      }
+        children.add(pw.SizedBox(height: 2));
 
-      return pw.Container(
-        alignment: pw.Alignment.centerLeft,
-        padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
-        child: pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          mainAxisSize: pw.MainAxisSize.min,
-          children: [
-            // 1. Nombre total d'équipements
-            pw.Text(
-              equipLabel,
-              style: pw.TextStyle(
-                font: fontBold,
-                fontSize: fsSmall,
-                color: PdfReportStyles.headerColor,
-              ),
-            ),
-            pw.SizedBox(height: 2),
-
-            // 2. Taux de conformité
+        // 1.2 Taux de conformité de la zone
+        final directStats = item.directEquipmentStats;
+        if (directStats.totalEquipements == 0) {
+          children.add(
             pw.RichText(
               text: pw.TextSpan(
                 style: pw.TextStyle(
@@ -2248,14 +2253,44 @@ class PdfExecutiveSummaryBuilder {
                 ),
                 children: [
                   pw.TextSpan(
-                    text: 'Taux de conformité : ',
+                    text: 'Taux de conformité de la zone : ',
                     style: pw.TextStyle(
                       font: fontBold,
                       color: PdfReportStyles.headerColor,
                     ),
                   ),
                   pw.TextSpan(
-                    text: item.formattedComplianceRate,
+                    text: 'Aucun équipement',
+                    style: pw.TextStyle(
+                      font: fontItalic,
+                      color: greyTextColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        } else if (item.isClasse && directStats.isEvaluable) {
+          final rate = directStats.complianceRate;
+          final rateColor = resolveRateColor(rate);
+          children.add(
+            pw.RichText(
+              text: pw.TextSpan(
+                style: pw.TextStyle(
+                  font: fontRegular,
+                  fontSize: fsSmall,
+                  color: PdfReportStyles.darkGrey,
+                ),
+                children: [
+                  pw.TextSpan(
+                    text: 'Taux de conformité de la zone : ',
+                    style: pw.TextStyle(
+                      font: fontBold,
+                      color: PdfReportStyles.headerColor,
+                    ),
+                  ),
+                  pw.TextSpan(
+                    text: IpIkZoneItem.formatPercent(rate),
                     style: pw.TextStyle(
                       font: fontBold,
                       color: rateColor,
@@ -2264,20 +2299,45 @@ class PdfExecutiveSummaryBuilder {
                 ],
               ),
             ),
-            pw.SizedBox(height: 3),
-
-            // 3. Adéquation
-            pw.Text(
-              'Adéquation',
-              style: pw.TextStyle(
-                font: fontBold,
-                fontSize: fsSmall,
-                color: PdfReportStyles.headerColor,
+          );
+        } else {
+          children.add(
+            pw.RichText(
+              text: pw.TextSpan(
+                style: pw.TextStyle(
+                  font: fontRegular,
+                  fontSize: fsSmall,
+                  color: PdfReportStyles.darkGrey,
+                ),
+                children: [
+                  pw.TextSpan(
+                    text: 'Taux de conformité de la zone : ',
+                    style: pw.TextStyle(
+                      font: fontBold,
+                      color: PdfReportStyles.headerColor,
+                    ),
+                  ),
+                  pw.TextSpan(
+                    text: "Non évaluable (zone non classée)",
+                    style: pw.TextStyle(
+                      font: fontItalic,
+                      color: greyTextColor,
+                    ),
+                  ),
+                ],
               ),
             ),
-            pw.Padding(
-              padding: const pw.EdgeInsets.only(left: 4, top: 1),
-              child: pw.RichText(
+          );
+        }
+
+        // --- NIVEAU 2 — ÉQUIPEMENTS DIRECTEMENT RATTACHÉS À LA ZONE ---
+        if (directStats.totalEquipements > 0) {
+          children.add(pw.SizedBox(height: 3));
+          if (item.isClasse && directStats.isEvaluable) {
+            final rate = directStats.complianceRate;
+            final rateColor = resolveRateColor(rate);
+            children.add(
+              pw.RichText(
                 text: pw.TextSpan(
                   style: pw.TextStyle(
                     font: fontRegular,
@@ -2286,83 +2346,140 @@ class PdfExecutiveSummaryBuilder {
                   ),
                   children: [
                     pw.TextSpan(
-                      text: '• Indice présent : ',
+                      text: '- Équipements hors local (${directStats.formattedEquipmentCount}). Taux de conformité : ',
                       style: pw.TextStyle(
                         font: fontBold,
                         color: PdfReportStyles.headerColor,
                       ),
                     ),
                     pw.TextSpan(
-                      text: '${item.adequatCount} / $total, soit ${item.formattedAdequatPct}',
+                      text: IpIkZoneItem.formatPercent(rate),
+                      style: pw.TextStyle(
+                        font: fontBold,
+                        color: rateColor,
+                      ),
                     ),
                   ],
                 ),
               ),
-            ),
-            pw.SizedBox(height: 3),
+            );
+            children.add(buildTrioBreakdownWidget(directStats));
+          } else {
+            children.add(
+              pw.Text(
+                "- Équipements hors local (${directStats.formattedEquipmentCount}) : Absence d'indice IP/IK, zone non classée",
+                style: pw.TextStyle(
+                  font: fontRegular,
+                  fontSize: fsSmall,
+                  color: PdfReportStyles.darkGrey,
+                ),
+              ),
+            );
+          }
+        }
+      }
 
-            // 4. Inadéquation
-            pw.Text(
-              'Inadéquation',
-              style: pw.TextStyle(
-                font: fontBold,
-                fontSize: fsSmall,
-                color: PdfReportStyles.headerColor,
-              ),
-            ),
-            pw.Padding(
-              padding: const pw.EdgeInsets.only(left: 4, top: 1),
-              child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                mainAxisSize: pw.MainAxisSize.min,
-                children: [
-                  pw.RichText(
-                    text: pw.TextSpan(
-                      style: pw.TextStyle(
-                        font: fontRegular,
-                        fontSize: fsSmall,
-                        color: PdfReportStyles.darkGrey,
-                      ),
-                      children: [
-                        pw.TextSpan(
-                          text: '• Présent et différent : ',
-                          style: pw.TextStyle(
-                            font: fontBold,
-                            color: PdfReportStyles.headerColor,
-                          ),
-                        ),
-                        pw.TextSpan(
-                          text: '${item.presentDifferentCount} / $total, soit ${item.formattedPresentDifferentPct}',
-                        ),
-                      ],
-                    ),
+      // --- NIVEAU 3 — LOCAUX DE LA ZONE (OU LOCAUX HORS ZONE) ---
+      if (item.locals.isNotEmpty) {
+        if (!item.isHorsZone && children.isNotEmpty) {
+          children.add(pw.SizedBox(height: 3));
+        }
+        for (int i = 0; i < item.locals.length; i++) {
+          final local = item.locals[i];
+          final lStats = local.stats;
+
+          if (i > 0) {
+            children.add(pw.SizedBox(height: 2));
+          }
+
+          if (lStats.totalEquipements == 0) {
+            if (local.isClasse) {
+              children.add(
+                pw.Text(
+                  '- ${local.localNom} (0 équipement) : Indice : ${local.indiceFormatted}. Aucun équipement recensé',
+                  style: pw.TextStyle(
+                    font: fontRegular,
+                    fontSize: fsSmall,
+                    color: PdfReportStyles.darkGrey,
                   ),
-                  pw.SizedBox(height: 1.5),
-                  pw.RichText(
-                    text: pw.TextSpan(
-                      style: pw.TextStyle(
-                        font: fontRegular,
-                        fontSize: fsSmall,
-                        color: PdfReportStyles.darkGrey,
-                      ),
-                      children: [
-                        pw.TextSpan(
-                          text: '• Absent : ',
-                          style: pw.TextStyle(
-                            font: fontBold,
-                            color: PdfReportStyles.headerColor,
-                          ),
-                        ),
-                        pw.TextSpan(
-                          text: '${item.absentCount} / $total, soit ${item.formattedAbsentPct}',
-                        ),
-                      ],
-                    ),
+                ),
+              );
+            } else {
+              children.add(
+                pw.Text(
+                  "- ${local.localNom} (0 équipement) : Absence d'indice IP/IK, local non classé",
+                  style: pw.TextStyle(
+                    font: fontRegular,
+                    fontSize: fsSmall,
+                    color: PdfReportStyles.darkGrey,
                   ),
-                ],
+                ),
+              );
+            }
+          } else if (local.isClasse && lStats.isEvaluable) {
+            final rate = lStats.complianceRate;
+            final rateColor = resolveRateColor(rate);
+            children.add(
+              pw.RichText(
+                text: pw.TextSpan(
+                  style: pw.TextStyle(
+                    font: fontRegular,
+                    fontSize: fsSmall,
+                    color: PdfReportStyles.darkGrey,
+                  ),
+                  children: [
+                    pw.TextSpan(
+                      text: '- ${local.localNom} (${lStats.formattedEquipmentCount}) : Indice : ${local.indiceFormatted}. Taux de conformité : ',
+                      style: pw.TextStyle(
+                        font: fontBold,
+                        color: PdfReportStyles.headerColor,
+                      ),
+                    ),
+                    pw.TextSpan(
+                      text: IpIkZoneItem.formatPercent(rate),
+                      style: pw.TextStyle(
+                        font: fontBold,
+                        color: rateColor,
+                      ),
+                    ),
+                  ],
+                ),
               ),
+            );
+            children.add(buildTrioBreakdownWidget(lStats));
+          } else {
+            children.add(
+              pw.Text(
+                "- ${local.localNom} (${lStats.formattedEquipmentCount}) : Absence d'indice IP/IK, local non classé",
+                style: pw.TextStyle(
+                  font: fontRegular,
+                  fontSize: fsSmall,
+                  color: PdfReportStyles.darkGrey,
+                ),
+              ),
+            );
+          }
+        }
+      } else if (item.isHorsZone) {
+        children.add(
+          pw.Text(
+            "Aucun local recensé",
+            style: pw.TextStyle(
+              font: fontItalic,
+              fontSize: fsSmall,
+              color: greyTextColor,
             ),
-          ],
+          ),
+        );
+      }
+
+      return pw.Container(
+        alignment: pw.Alignment.topLeft,
+        padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          mainAxisSize: pw.MainAxisSize.min,
+          children: children,
         ),
       );
     }
@@ -2370,13 +2487,123 @@ class PdfExecutiveSummaryBuilder {
     final headerRow = pw.TableRow(
       decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
       children: [
-        _buildTableHeaderCell('Classement'),
-        _buildTableHeaderCell('Taux de conformité adéquation des équipements'),
+        _buildTableHeaderCell('Zone et classement'),
+        _buildTableHeaderCell('Taux de conformité adéquation des locaux et équipements'),
       ],
     );
 
     final dataRows = <pw.TableRow>[];
-    if (technical.ipIkZoneItems.isEmpty) {
+
+    if (technical.ipIkHierarchy.isNotEmpty) {
+      for (final item in technical.ipIkHierarchy) {
+        final pw.Widget leftCell;
+        if (item.isHorsZone) {
+          leftCell = _buildTableCell('', align: pw.TextAlign.left, alignment: pw.Alignment.topLeft);
+        } else {
+          leftCell = pw.Container(
+            alignment: pw.Alignment.topLeft,
+            padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              mainAxisSize: pw.MainAxisSize.min,
+              children: [
+                pw.Text(
+                  item.zoneNom ?? '',
+                  style: pw.TextStyle(
+                    font: fontBold,
+                    fontSize: fsSmall,
+                    color: PdfReportStyles.headerColor,
+                  ),
+                ),
+                pw.SizedBox(height: 2),
+                pw.RichText(
+                  text: pw.TextSpan(
+                    style: pw.TextStyle(
+                      font: fontRegular,
+                      fontSize: fsTiny,
+                      color: PdfReportStyles.darkGrey,
+                    ),
+                    children: [
+                      pw.TextSpan(
+                        text: 'Classement : ',
+                        style: pw.TextStyle(
+                          font: fontBold,
+                          color: PdfReportStyles.headerColor,
+                        ),
+                      ),
+                      pw.TextSpan(
+                        text: item.classementDescription ?? (item.isClasse ? 'Classée' : 'Zone non classée'),
+                        style: pw.TextStyle(
+                          font: item.isClasse ? fontRegular : fontItalic,
+                          color: item.isClasse ? PdfReportStyles.darkGrey : greyTextColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        dataRows.add(
+          pw.TableRow(
+            verticalAlignment: pw.TableCellVerticalAlignment.middle,
+            children: [
+              leftCell,
+              buildHierarchicalStatsCell(item),
+            ],
+          ),
+        );
+      }
+    } else if (technical.ipIkZoneItems.isNotEmpty) {
+      // Rétro-compatibilité si ipIkHierarchy n'est pas encore initialisé
+      for (final item in technical.ipIkZoneItems) {
+        final synthItem = IpIkZoneHierarchyItem(
+          zoneNom: item.zoneNom,
+          isHorsZone: false,
+          isClasse: item.isEvaluable,
+          classementDescription: item.isEvaluable ? 'Classée' : 'Zone non classée',
+          ipRequis: item.ipRequis,
+          ikRequis: item.ikRequis,
+          directEquipmentStats: IpIkEquipmentStats(
+            totalEquipements: item.totalEquipements,
+            conformes: item.adequatCount,
+            differents: item.presentDifferentCount,
+            absents: item.absentCount,
+            isEvaluable: item.isEvaluable,
+          ),
+          locals: const [],
+        );
+
+        dataRows.add(
+          pw.TableRow(
+            verticalAlignment: pw.TableCellVerticalAlignment.middle,
+            children: [
+              pw.Container(
+                alignment: pw.Alignment.topLeft,
+                padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  mainAxisSize: pw.MainAxisSize.min,
+                  children: [
+                    pw.Text(
+                      item.zoneNom,
+                      style: pw.TextStyle(
+                        font: fontBold,
+                        fontSize: fsSmall,
+                        color: PdfReportStyles.headerColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              buildHierarchicalStatsCell(synthItem),
+            ],
+          ),
+        );
+      }
+    } else {
       dataRows.add(
         pw.TableRow(
           children: [
@@ -2385,18 +2612,6 @@ class PdfExecutiveSummaryBuilder {
           ],
         ),
       );
-    } else {
-      for (final item in technical.ipIkZoneItems) {
-        dataRows.add(
-          pw.TableRow(
-            verticalAlignment: pw.TableCellVerticalAlignment.middle,
-            children: [
-              _buildTableCell(item.zoneNom, isBold: true, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
-              buildRichStatsCell(item),
-            ],
-          ),
-        );
-      }
     }
 
     return (headerRow, dataRows);
