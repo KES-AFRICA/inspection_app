@@ -161,7 +161,7 @@ class PdfCoverBuilder {
               ),
             pw.Container(
               alignment: pw.Alignment.topRight,
-              margin: const pw.EdgeInsets.only(top: 80),
+              margin: const pw.EdgeInsets.only(top: 4),
               child: pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.center,
                 mainAxisSize: pw.MainAxisSize.min,
@@ -188,7 +188,7 @@ class PdfCoverBuilder {
                       textAlign: pw.TextAlign.center,
                     ),
                   ),
-                  pw.SizedBox(height: 16),
+                  pw.SizedBox(height: 12),
                   pw.Text(
                     "A l'attention de Mme/M.",
                     style: pw.TextStyle(
@@ -219,7 +219,7 @@ class PdfCoverBuilder {
 
         pw.Spacer(flex: 1),
 
-        // ── Titre principal : RAPPORT (Centré, en Bleu KES accentColor) ──
+        // ── Titre principal : RAPPORT (Centré au cœur de la loupe, Bleu KES) ──
         pw.Center(
           child: pw.Text(
             'RAPPORT',
@@ -232,12 +232,12 @@ class PdfCoverBuilder {
           ),
         ),
 
-        pw.SizedBox(height: 18),
+        pw.SizedBox(height: 16),
 
-        // ── Nature de la mission (Centrée, en Bleu KES accentColor) ──
+        // ── Nature de la mission (Centrée, calibrée pour ne pas toucher les recoins) ──
         pw.Center(
           child: pw.ConstrainedBox(
-            constraints: const pw.BoxConstraints(maxWidth: 500),
+            constraints: const pw.BoxConstraints(maxWidth: 460),
             child: pw.Text(
               subTitleOverride ??
                   (() {
@@ -255,6 +255,24 @@ class PdfCoverBuilder {
                   })(),
               style: pw.TextStyle(
                 font: fontBold,
+                fontSize: 15,
+                color: PdfReportStyles.accentColor,
+              ),
+              textAlign: pw.TextAlign.center,
+            ),
+          ),
+        ),
+
+        pw.SizedBox(height: 18),
+
+        // ── Nom du site (Centré, harmonisé avec le centre de la loupe) ──
+        pw.Center(
+          child: pw.ConstrainedBox(
+            constraints: const pw.BoxConstraints(maxWidth: 440),
+            child: pw.Text(
+              siteAffichage,
+              style: pw.TextStyle(
+                font: fontBold,
                 fontSize: 16,
                 color: PdfReportStyles.accentColor,
               ),
@@ -262,27 +280,6 @@ class PdfCoverBuilder {
             ),
           ),
         ),
-
-        pw.SizedBox(height: 22),
-
-        // ── Nom du site (Centré, grand corps, en Bleu KES accentColor, sans "Site :") ──
-        pw.Center(
-          child: pw.ConstrainedBox(
-            constraints: const pw.BoxConstraints(maxWidth: 480),
-            child: pw.Text(
-              siteAffichage,
-              style: pw.TextStyle(
-                font: fontBold,
-                fontSize: 17,
-                color: PdfReportStyles.accentColor,
-              ),
-              textAlign: pw.TextAlign.center,
-            ),
-          ),
-        ),
-
-        // Espace compensatoire agrandi (85pt) pour remonter le bloc central net au centre du cercle de la loupe
-        pw.SizedBox(height: 85),
 
         pw.Spacer(flex: 1),
 

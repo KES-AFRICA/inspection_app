@@ -136,9 +136,9 @@ class PdfReportStyles {
   // ──────────────────────────────────────────────────────────────
 
   // Ratios calculés sur filigranne_image.png (1023 x 887 px) :
-  // Le centre du cercle de la loupe est à cx = 660 px, cy = 372 px
-  static const double kWatermarkCircleCxRatio = 660.0 / 1023.0; // ~0.64516
-  static const double kWatermarkCircleCyRatio = 372.0 / 887.0;  // ~0.41939
+  // Le centre exact du cercle de la loupe est à cx = 650 px, cy = 371.5 px
+  static const double kWatermarkCircleCxRatio = 650.0 / 1023.0; // ~0.63539
+  static const double kWatermarkCircleCyRatio = 371.5 / 887.0;  // ~0.41883
   static const double kWatermarkAspectRatio = 887.0 / 1023.0;   // ~0.86706
 
   static pw.PageTheme buildCoverPageTheme(
@@ -199,15 +199,15 @@ class PdfReportStyles {
 
   /// Filigrane spécifique de la page de couverture :
   /// - Loupe agrandie à width = 680 pt
-  /// - Cercle de la loupe centré horizontalement (+18 pt vers la droite pour centrage absolu)
-  /// - Positionné verticalement pour cadrer au centre le texte 'RAPPORT / NATURE / SITE' (targetCenterY = 405 pt)
+  /// - Cercle de la loupe parfaitement centré horizontalement sur la page (shiftRight = 0.0)
+  /// - Positionné verticalement pour cadrer au centre le texte 'RAPPORT / NATURE / SITE' (targetCenterY = 390.0 pt)
   /// - Le bas de la loupe déborde harmonieusement sans erreur (Stack overflow visible)
   /// - Opacité 0.30
   static pw.Widget buildCoverWatermarkBackground(
     pw.MemoryImage? watermarkImage, {
     double width = 680,
-    double targetCenterY = 405.0,
-    double shiftRight = 18.0,
+    double targetCenterY = 390.0,
+    double shiftRight = 0.0,
     double opacity = 0.30,
   }) {
     if (watermarkImage == null) return pw.SizedBox();
@@ -246,7 +246,7 @@ class PdfReportStyles {
 
   /// Filigrane des pages intérieures :
   /// - Loupe agrandie à width = 680 pt
-  /// - Cercle de la loupe rigoureusement centré horizontalement (+18 pt vers la droite)
+  /// - Cercle de la loupe rigoureusement centré horizontalement
   ///   et verticalement sur la page A4 (targetCenterY = 420.95 pt)
   /// - Le bas de la loupe (manche) déborde sur le côté gauche de la page sans erreur
   /// - Opacité 0.15
@@ -254,7 +254,7 @@ class PdfReportStyles {
     pw.MemoryImage? watermarkImage, {
     double width = 680,
     double? targetCenterY,
-    double shiftRight = 18.0,
+    double shiftRight = 0.0,
     double opacity = 0.15,
   }) {
     if (watermarkImage == null) return pw.SizedBox();
