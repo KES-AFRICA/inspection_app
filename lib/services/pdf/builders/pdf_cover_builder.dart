@@ -139,47 +139,39 @@ class PdfCoverBuilder {
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
         // ── En-tête supérieur : Logo KES (gauche) & Bloc Client (droite) ──
-        pw.Row(
-          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            if (logoKesImage != null)
-              pw.Image(
-                logoKesImage!,
-                width: 180,
-                height: 68,
-                fit: pw.BoxFit.contain,
-              )
-            else
-              pw.Text(
-                'KES INSPECTIONS AND PROJECTS',
-                style: pw.TextStyle(
-                  font: fontBold,
-                  color: PdfReportStyles.headerColor,
-                  fontSize: 11,
-                ),
+        pw.Container(
+          height: 68,
+          child: pw.Stack(
+            overflow: pw.Overflow.visible,
+            children: [
+              pw.Positioned(
+                left: 0,
+                top: 0,
+                child: logoKesImage != null
+                    ? pw.Image(
+                        logoKesImage!,
+                        width: 170,
+                        height: 62,
+                        fit: pw.BoxFit.contain,
+                      )
+                    : pw.Text(
+                        'KES INSPECTIONS AND PROJECTS',
+                        style: pw.TextStyle(
+                          font: fontBold,
+                          color: PdfReportStyles.headerColor,
+                          fontSize: 11,
+                        ),
+                      ),
               ),
-            pw.Container(
-              alignment: pw.Alignment.topRight,
-              margin: const pw.EdgeInsets.only(top: 4),
-              child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.center,
-                mainAxisSize: pw.MainAxisSize.min,
-                children: [
-                  pw.Text(
-                    'CLIENT',
-                    style: pw.TextStyle(
-                      font: fontBold,
-                      fontSize: 12,
-                      color: PdfReportStyles.accentColor,
-                    ),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                  pw.SizedBox(height: 3),
-                  pw.ConstrainedBox(
-                    constraints: const pw.BoxConstraints(maxWidth: 190),
-                    child: pw.Text(
-                      nomClientStr,
+              pw.Positioned(
+                right: 0,
+                top: 52,
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.center,
+                  mainAxisSize: pw.MainAxisSize.min,
+                  children: [
+                    pw.Text(
+                      'CLIENT',
                       style: pw.TextStyle(
                         font: fontBold,
                         fontSize: 12,
@@ -187,22 +179,22 @@ class PdfCoverBuilder {
                       ),
                       textAlign: pw.TextAlign.center,
                     ),
-                  ),
-                  pw.SizedBox(height: 12),
-                  pw.Text(
-                    "A l'attention de Mme/M.",
-                    style: pw.TextStyle(
-                      font: fontBold,
-                      fontSize: 10.5,
-                      color: PdfReportStyles.accentColor,
+                    pw.SizedBox(height: 3),
+                    pw.ConstrainedBox(
+                      constraints: const pw.BoxConstraints(maxWidth: 190),
+                      child: pw.Text(
+                        nomClientStr,
+                        style: pw.TextStyle(
+                          font: fontBold,
+                          fontSize: 12,
+                          color: PdfReportStyles.accentColor,
+                        ),
+                        textAlign: pw.TextAlign.center,
+                      ),
                     ),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                  pw.SizedBox(height: 3),
-                  pw.ConstrainedBox(
-                    constraints: const pw.BoxConstraints(maxWidth: 190),
-                    child: pw.Text(
-                      recepteurStr.isNotEmpty ? recepteurStr : 'XXXXXXXXXXXXXXX',
+                    pw.SizedBox(height: 12),
+                    pw.Text(
+                      "A l'attention de Mme/M.",
                       style: pw.TextStyle(
                         font: fontBold,
                         fontSize: 10.5,
@@ -210,11 +202,24 @@ class PdfCoverBuilder {
                       ),
                       textAlign: pw.TextAlign.center,
                     ),
-                  ),
-                ],
+                    pw.SizedBox(height: 3),
+                    pw.ConstrainedBox(
+                      constraints: const pw.BoxConstraints(maxWidth: 190),
+                      child: pw.Text(
+                        recepteurStr.isNotEmpty ? recepteurStr : 'XXXXXXXXXXXXXXX',
+                        style: pw.TextStyle(
+                          font: fontBold,
+                          fontSize: 10.5,
+                          color: PdfReportStyles.accentColor,
+                        ),
+                        textAlign: pw.TextAlign.center,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
 
         pw.Spacer(flex: 1),
