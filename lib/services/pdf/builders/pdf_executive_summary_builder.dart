@@ -218,7 +218,7 @@ class PdfExecutiveSummaryBuilder {
     widgets.add(pw.SizedBox(height: 4));
     widgets.add(
       pw.Text(
-        'A. Disposition constructive et Conditions d’exploitation des locaux techniques',
+        'A. Disposition constructive des locaux techniques',
         style: pw.TextStyle(font: fontBold, fontSize: 7.5, color: PdfReportStyles.darkGrey),
       ),
     );
@@ -275,7 +275,7 @@ class PdfExecutiveSummaryBuilder {
     widgets.add(pw.SizedBox(height: 4));
     widgets.add(
       pw.Text(
-        'A. Disposition constructive et Conditions d’exploitation des locaux techniques',
+        'A. Disposition constructive des locaux techniques',
         style: pw.TextStyle(font: fontBold, fontSize: 7.5, color: PdfReportStyles.darkGrey),
       ),
     );
@@ -455,106 +455,53 @@ class PdfExecutiveSummaryBuilder {
         child: _subSectionHeader('10. Renforcement des compétences'),
       ),
     );
-    widgets.add(pw.SizedBox(height: 5));
+    widgets.add(pw.SizedBox(height: 6));
 
-    final introParagraphs = compAnalysis.introNarrative.split('\n\n');
-    for (int pIdx = 0; pIdx < introParagraphs.length; pIdx++) {
-      final pText = introParagraphs[pIdx].trim();
-      if (pText.isEmpty) continue;
+    if (compAnalysis.riskFamilyAxes.isNotEmpty) {
       widgets.add(
         pw.Text(
-          pText,
+          'Thématiques de prévention ciblées (Familles de risque prépondérantes) :',
+          style: pw.TextStyle(
+            font: fontBold,
+            fontSize: fsBody + 0.5,
+            color: PdfReportStyles.headerColor,
+          ),
+        ),
+      );
+      widgets.add(pw.SizedBox(height: 5));
+
+      for (final riskAxis in compAnalysis.riskFamilyAxes) {
+        widgets.add(
+          pw.Padding(
+            padding: const pw.EdgeInsets.only(left: 4, bottom: 3.5),
+            child: pw.RichText(
+              text: pw.TextSpan(
+                children: [
+                  pw.TextSpan(
+                    text: '${riskAxis.letter}   ${riskAxis.title} ',
+                    style: pw.TextStyle(
+                      font: fontBold,
+                      fontSize: fsBody,
+                      color: PdfReportStyles.headerColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      }
+    } else {
+      widgets.add(
+        pw.Text(
+          'Aucun besoin prioritaire de renforcement des compétences identifié.',
           style: pw.TextStyle(
             font: fontRegular,
             fontSize: fsBody,
             color: PdfReportStyles.darkGrey,
-            lineSpacing: 2.2,
           ),
-          textAlign: pw.TextAlign.justify,
         ),
       );
-      if (pIdx < introParagraphs.length - 1) {
-        widgets.add(pw.SizedBox(height: 4));
-      }
-    }
-
-    if (compAnalysis.axes.isNotEmpty || compAnalysis.riskFamilyAxes.isNotEmpty) {
-      widgets.add(pw.SizedBox(height: 6));
-
-      // ── Partie 1 — Compétences prioritaires à renforcer (Non-conformités majeures) ──
-      if (compAnalysis.axes.isNotEmpty) {
-        widgets.add(
-          pw.Text(
-            'Partie 1 — Compétences prioritaires à renforcer (Non-conformités majeures)',
-            style: pw.TextStyle(
-              font: fontBold,
-              fontSize: fsBody + 0.5,
-              color: PdfReportStyles.headerColor,
-            ),
-          ),
-        );
-        widgets.add(pw.SizedBox(height: 4));
-
-        for (final axis in compAnalysis.axes) {
-          widgets.add(
-            pw.Padding(
-              padding: const pw.EdgeInsets.only(left: 4, bottom: 3.5),
-              child: pw.RichText(
-                text: pw.TextSpan(
-                  children: [
-                    pw.TextSpan(
-                      text: '${axis.letter}   ${axis.title} ',
-                      style: pw.TextStyle(
-                        font: fontBold,
-                        fontSize: fsBody,
-                        color: PdfReportStyles.headerColor,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        }
-      }
-
-      // ── Partie 2 — Thématiques de prévention ciblées (Familles de risque prépondérantes) ──
-      if (compAnalysis.riskFamilyAxes.isNotEmpty) {
-        widgets.add(pw.SizedBox(height: 6));
-        widgets.add(
-          pw.Text(
-            'Partie 2 — Thématiques de prévention ciblées (Familles de risque prépondérantes)',
-            style: pw.TextStyle(
-              font: fontBold,
-              fontSize: fsBody + 0.5,
-              color: PdfReportStyles.headerColor,
-            ),
-          ),
-        );
-        widgets.add(pw.SizedBox(height: 4));
-
-        for (final riskAxis in compAnalysis.riskFamilyAxes) {
-          widgets.add(
-            pw.Padding(
-              padding: const pw.EdgeInsets.only(left: 4, bottom: 3.5),
-              child: pw.RichText(
-                text: pw.TextSpan(
-                  children: [
-                    pw.TextSpan(
-                      text: '${riskAxis.letter}   ${riskAxis.title} ',
-                      style: pw.TextStyle(
-                        font: fontBold,
-                        fontSize: fsBody,
-                        color: PdfReportStyles.headerColor,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        }
-      }
     }
     widgets.add(pw.NewPage());
 
@@ -1792,42 +1739,88 @@ class PdfExecutiveSummaryBuilder {
     );
   }
 
+  @visibleForTesting
+  static pw.Table buildLocauxStatsTableForTesting(LocauxFindingsStats stats, {required bool isHta}) {
+    return _buildLocauxStatsTable(stats, isHta: isHta) as pw.Table;
+  }
+
   static pw.Widget _buildLocauxStatsTable(LocauxFindingsStats stats, {required bool isHta}) {
+    final rows = <pw.TableRow>[
+      pw.TableRow(
+        decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
+        children: [
+          _buildTableHeaderCell('Domaine'),
+          _buildTableHeaderCell('Nombre d’observations recensées'),
+        ],
+      ),
+    ];
+
+    if (isHta) {
+      rows.add(
+        pw.TableRow(
+          children: [
+            _buildTableCell(
+              'Disposition Constructive (Locaux Techniques MT)',
+              isBold: true,
+              align: pw.TextAlign.left,
+              alignment: pw.Alignment.centerLeft,
+            ),
+            _buildTableCell('${stats.dispoConstructives}'),
+          ],
+        ),
+      );
+    } else {
+      final geCount = stats.dispoConstructivesGe;
+      final btCount = (stats.dispoConstructivesBt == 0 && stats.dispoConstructivesGe == 0 && stats.dispoConstructives > 0)
+          ? stats.dispoConstructives
+          : stats.dispoConstructivesBt;
+
+      rows.add(
+        pw.TableRow(
+          children: [
+            _buildTableCell(
+              'Disposition Constructive (Locaux Techniques GE)',
+              isBold: true,
+              align: pw.TextAlign.left,
+              alignment: pw.Alignment.centerLeft,
+            ),
+            _buildTableCell('$geCount'),
+          ],
+        ),
+      );
+      rows.add(
+        pw.TableRow(
+          decoration: pw.BoxDecoration(color: PdfReportStyles.tableRowAlt),
+          children: [
+            _buildTableCell(
+              'Disposition Constructive (Locaux Techniques BT)',
+              isBold: true,
+              align: pw.TextAlign.left,
+              alignment: pw.Alignment.centerLeft,
+            ),
+            _buildTableCell('$btCount'),
+          ],
+        ),
+      );
+    }
+
+    rows.add(
+      pw.TableRow(
+        decoration: pw.BoxDecoration(color: PdfReportStyles.lightBlue),
+        children: [
+          _buildTableCell('TOTAL', isBold: true, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
+          _buildTableCell('${stats.dispoConstructives}', isBold: true),
+        ],
+      ),
+    );
+
     return pw.Table(
       border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.5),
       columnWidths: const {
         0: pw.FlexColumnWidth(6.5),
         1: pw.FlexColumnWidth(3.5),
       },
-      children: [
-        pw.TableRow(
-          decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
-          children: [
-            _buildTableHeaderCell('Domaine'),
-            _buildTableHeaderCell('Nombre d’observations recensées'),
-          ],
-        ),
-        pw.TableRow(
-          children: [
-            _buildTableCell(isHta ? 'DISPO CONSTRUCTIVES' : 'Dispo constructives', isBold: true, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
-            _buildTableCell('${stats.dispoConstructives}'),
-          ],
-        ),
-        pw.TableRow(
-          decoration: pw.BoxDecoration(color: PdfReportStyles.tableRowAlt),
-          children: [
-            _buildTableCell(isHta ? 'CONDITIONS D’EXPLOITATION' : 'Conditions d’exploitation', isBold: true, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
-            _buildTableCell('${stats.conditionsExploitation}'),
-          ],
-        ),
-        pw.TableRow(
-          decoration: pw.BoxDecoration(color: PdfReportStyles.lightBlue),
-          children: [
-            _buildTableCell('TOTAL', isBold: true, align: pw.TextAlign.left, alignment: pw.Alignment.centerLeft),
-            _buildTableCell('${stats.total}', isBold: true),
-          ],
-        ),
-      ],
+      children: rows,
     );
   }
 

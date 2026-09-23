@@ -2796,7 +2796,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
                           child: ElevatedButton.icon(
                             onPressed: _allerAuClassementZone,
                             icon: const Icon(Icons.edit, size: 18),
-                            label: const Text('MODIFIER LE CLASSEMENT'),
+                            label: const Text('MODIFIER'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppTheme.primaryBlue,
                               foregroundColor: Colors.white,
@@ -2813,7 +2813,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
                             onPressed: _confirmerSuppressionClassementZone,
                             icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
                             label: const Text(
-                              'SUPPRIMER LE CLASSEMENT',
+                              'SUPPRIMER',
                               style: TextStyle(color: Colors.red),
                             ),
                             style: OutlinedButton.styleFrom(

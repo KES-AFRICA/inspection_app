@@ -1416,7 +1416,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
                           foregroundColor: Colors.white,
                           minimumSize: const Size.fromHeight(48),
                         ),
-                        child: const Text('MODIFIER LE CLASSEMENT'),
+                        child: const Text('MODIFIER'),
                       ),
                     ),
                   ],

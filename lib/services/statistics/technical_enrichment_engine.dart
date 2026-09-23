@@ -677,10 +677,14 @@ class TopDefectDomainItem {
 class LocauxFindingsStats {
   final int dispoConstructives;
   final int conditionsExploitation;
+  final int dispoConstructivesGe;
+  final int dispoConstructivesBt;
 
   const LocauxFindingsStats({
     required this.dispoConstructives,
     required this.conditionsExploitation,
+    this.dispoConstructivesGe = 0,
+    this.dispoConstructivesBt = 0,
   });
 
   int get total => dispoConstructives + conditionsExploitation;
@@ -1362,13 +1366,23 @@ class TechnicalEnrichmentEngine {
 
     int btLocauxDispo = 0;
     int btLocauxExploit = 0;
-    final btLocauxInstances = [
-      ...domainInventory.getInstancesByCategory(DomainObjectType.localBT),
-      ...domainInventory.getInstancesByCategory(DomainObjectType.localGE),
-    ];
-    for (final inst in btLocauxInstances) {
+    int btLocauxGeDispo = 0;
+    int btLocauxBtDispo = 0;
+
+    for (final inst in domainInventory.getInstancesByCategory(DomainObjectType.localGE)) {
       for (final f in inst.pertinentFindings) {
         if (_isDispositionConstructiveFinding(f)) {
+          btLocauxGeDispo++;
+          btLocauxDispo++;
+        } else {
+          btLocauxExploit++;
+        }
+      }
+    }
+    for (final inst in domainInventory.getInstancesByCategory(DomainObjectType.localBT)) {
+      for (final f in inst.pertinentFindings) {
+        if (_isDispositionConstructiveFinding(f)) {
+          btLocauxBtDispo++;
           btLocauxDispo++;
         } else {
           btLocauxExploit++;
@@ -1378,6 +1392,8 @@ class TechnicalEnrichmentEngine {
     final locauxBtFindings = LocauxFindingsStats(
       dispoConstructives: btLocauxDispo,
       conditionsExploitation: btLocauxExploit,
+      dispoConstructivesGe: btLocauxGeDispo,
+      dispoConstructivesBt: btLocauxBtDispo,
     );
 
     // 8. Lignes de conformité croisée par catégorie pour Moyenne Tension
@@ -1495,7 +1511,7 @@ class TechnicalEnrichmentEngine {
         .toList();
     mtExploitationCatRows.add(
       buildCategoryRow(
-        'Locaux techniques',
+        'Conditions d\'exploitation (Locaux Techniques MT)',
         domainInventory.getInstancesByCategory(DomainObjectType.localMT),
         totalMissionNc,
         customFindings: mtExploitationLocauxFindings,
@@ -1694,7 +1710,7 @@ class TechnicalEnrichmentEngine {
         .toList();
     btExploitationCatRows.add(
       buildCategoryRow(
-        'Locaux techniques GE',
+        'Conditions d\'exploitation (Locaux Techniques GE)',
         domainInventory.getInstancesByCategory(DomainObjectType.localGE),
         totalMissionNc,
         customFindings: btExploitLocauxGeFindings,
@@ -1702,7 +1718,7 @@ class TechnicalEnrichmentEngine {
     );
     btExploitationCatRows.add(
       buildCategoryRow(
-        'Locaux techniques BT',
+        'Conditions d\'exploitation (Locaux Techniques BT)',
         domainInventory.getInstancesByCategory(DomainObjectType.localBT),
         totalMissionNc,
         customFindings: btExploitLocauxBtFindings,
