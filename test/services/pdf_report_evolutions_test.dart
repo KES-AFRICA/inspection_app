@@ -2,11 +2,9 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:inspec_app/services/statistics/audit_finding.dart';
-import 'package:inspec_app/services/statistics/canonical_defect_category_registry.dart';
 import 'package:inspec_app/services/statistics/canonical_risk_family_registry.dart';
 import 'package:inspec_app/services/statistics/competency_needs_engine.dart';
 import 'package:inspec_app/services/statistics/global_assessment_engine.dart';
-import 'package:inspec_app/services/statistics/mission_statistics.dart';
 import 'package:inspec_app/services/statistics/technical_enrichment_engine.dart';
 import 'package:inspec_app/services/pdf/builders/pdf_final_page_builder.dart';
 import 'package:inspec_app/services/pdf/builders/pdf_statistics_charts.dart';

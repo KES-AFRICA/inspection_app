@@ -508,14 +508,6 @@ class PdfExecutiveSummaryBuilder {
                         color: PdfReportStyles.headerColor,
                       ),
                     ),
-                    pw.TextSpan(
-                      text: '(${axis.occurrenceCount} constat${axis.occurrenceCount > 1 ? "s" : ""} — ${axis.percentageStr} %)',
-                      style: pw.TextStyle(
-                        font: fontRegular,
-                        fontSize: fsBody - 0.5,
-                        color: PdfReportStyles.darkGrey,
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -552,14 +544,6 @@ class PdfExecutiveSummaryBuilder {
                         font: fontBold,
                         fontSize: fsBody,
                         color: PdfReportStyles.headerColor,
-                      ),
-                    ),
-                    pw.TextSpan(
-                      text: '(${riskAxis.occurrenceCount} constat${riskAxis.occurrenceCount > 1 ? "s" : ""} — ${riskAxis.percentageStr} %)',
-                      style: pw.TextStyle(
-                        font: fontRegular,
-                        fontSize: fsBody - 0.5,
-                        color: PdfReportStyles.darkGrey,
                       ),
                     ),
                   ],

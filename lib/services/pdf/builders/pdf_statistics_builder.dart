@@ -272,9 +272,9 @@ class PdfStatisticsBuilder {
       ),
     );
     widgets.add(pw.SizedBox(height: 6));
-    widgets.add(PdfStatisticsCharts.buildBrandPieChart(technical.brandDistribution));
-    widgets.add(pw.SizedBox(height: 6));
     widgets.add(_buildBrandProportionTable(technical.brandDistribution));
+    widgets.add(pw.SizedBox(height: 8));
+    widgets.add(PdfStatisticsCharts.buildBrandPieChart(technical.brandDistribution));
     widgets.add(pw.SizedBox(height: 12));
 
     // Saut de page systématique pour regrouper le titre 4, son texte et le diagramme de Pareto
