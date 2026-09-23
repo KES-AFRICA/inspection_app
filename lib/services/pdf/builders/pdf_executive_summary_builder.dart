@@ -455,9 +455,31 @@ class PdfExecutiveSummaryBuilder {
         child: _subSectionHeader('10. Renforcement des compétences'),
       ),
     );
-    widgets.add(pw.SizedBox(height: 6));
+    widgets.add(pw.SizedBox(height: 5));
+
+    final introParagraphs = compAnalysis.introNarrative.split('\n\n');
+    for (int pIdx = 0; pIdx < introParagraphs.length; pIdx++) {
+      final pText = introParagraphs[pIdx].trim();
+      if (pText.isEmpty) continue;
+      widgets.add(
+        pw.Text(
+          pText,
+          style: pw.TextStyle(
+            font: fontRegular,
+            fontSize: fsBody,
+            color: PdfReportStyles.darkGrey,
+            lineSpacing: 2.2,
+          ),
+          textAlign: pw.TextAlign.justify,
+        ),
+      );
+      if (pIdx < introParagraphs.length - 1) {
+        widgets.add(pw.SizedBox(height: 4));
+      }
+    }
 
     if (compAnalysis.riskFamilyAxes.isNotEmpty) {
+      widgets.add(pw.SizedBox(height: 6));
       widgets.add(
         pw.Text(
           'Thématiques de prévention ciblées (Familles de risque prépondérantes) :',
@@ -468,7 +490,7 @@ class PdfExecutiveSummaryBuilder {
           ),
         ),
       );
-      widgets.add(pw.SizedBox(height: 5));
+      widgets.add(pw.SizedBox(height: 4));
 
       for (final riskAxis in compAnalysis.riskFamilyAxes) {
         widgets.add(
@@ -1832,18 +1854,18 @@ class PdfExecutiveSummaryBuilder {
     return pw.Table(
       border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.5),
       columnWidths: const {
-        0: pw.FlexColumnWidth(3.4),
-        1: pw.FlexColumnWidth(1.2),
-        2: pw.FlexColumnWidth(1.2),
-        3: pw.FlexColumnWidth(1.2),
-        4: pw.FlexColumnWidth(1.4),
-        5: pw.FlexColumnWidth(1.6),
+        0: pw.FlexColumnWidth(5.5),
+        1: pw.FlexColumnWidth(1.1),
+        2: pw.FlexColumnWidth(1.1),
+        3: pw.FlexColumnWidth(1.1),
+        4: pw.FlexColumnWidth(1.1),
+        5: pw.FlexColumnWidth(1.1),
       },
       children: [
         pw.TableRow(
           decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
           children: [
-            _buildTableHeaderCell(domainLabel == 'BT' ? 'Catégorie BT' : 'Catégorie'),
+            _buildTableHeaderCell(domainLabel == 'BT' ? 'Catégorie BT' : 'Catégorie MT'),
             _buildTableHeaderCell(domainLabel == 'BT' ? 'Equipements' : 'Équipements'),
             _buildTableHeaderCell('NC'),
             _buildTableHeaderCell('Critiques'),

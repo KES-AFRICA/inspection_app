@@ -5,6 +5,7 @@ import 'package:inspec_app/services/statistics/competency_needs_engine.dart';
 import 'package:inspec_app/services/statistics/domain_entity_instance.dart';
 import 'package:inspec_app/services/statistics/mission_domain_inventory_engine.dart';
 import 'package:inspec_app/services/statistics/technical_enrichment_engine.dart';
+import 'package:pdf/widgets.dart' as pw;
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -68,7 +69,7 @@ void main() {
       expect(tableBt.children.length, equals(4));
     });
 
-    test('2. Section 3 — Tableau B Catégories d\'exploitation renommées fidèlement', () {
+    test('2. Section 3 — Tableau B Catégories renommées et largeurs de colonnes équilibrées', () {
       final findings = <AuditFinding>[];
       final instances = <DomainEntityInstance>[];
 
@@ -176,9 +177,26 @@ void main() {
         equals('Conditions d\'exploitation (Locaux Techniques BT)'),
       );
       expect(btExploitBtRow.ncCount, equals(1));
+
+      // Vérification des largeurs de colonnes dans _buildCategoryCrossTable
+      final tableMtCross = PdfExecutiveSummaryBuilder.buildCategoryCrossTableForTesting(
+        technical.mtExploitationCrossRows,
+        technical.mtExploitationTotalCrossRow,
+        'MT',
+      ) as pw.Table;
+
+      final colWidths = tableMtCross.columnWidths!;
+      // Colonnes Equipements, NC, Critiques, Majeures, Densité ont la même largeur (1.1)
+      expect((colWidths[1] as pw.FlexColumnWidth).flex, equals(1.1));
+      expect((colWidths[2] as pw.FlexColumnWidth).flex, equals(1.1));
+      expect((colWidths[3] as pw.FlexColumnWidth).flex, equals(1.1));
+      expect((colWidths[4] as pw.FlexColumnWidth).flex, equals(1.1));
+      expect((colWidths[5] as pw.FlexColumnWidth).flex, equals(1.1));
+      // Colonne Catégorie MT / Catégorie BT a été élargie (5.5)
+      expect((colWidths[0] as pw.FlexColumnWidth).flex, equals(5.5));
     });
 
-    test('3. Section 10 — Modèle et Axes Familles de Risque préservés', () {
+    test('3. Section 10 — Texte dynamique introductif et thématiques de prévention', () {
       final findings = [
         createFinding(
           id: 'f1',
@@ -207,6 +225,12 @@ void main() {
         findings: findings,
       );
 
+      // Le texte narratif introductif dynamique est bien présent
+      expect(result.introNarrative, isNotEmpty);
+      expect(result.introNarrative, contains('non-conformité'));
+      expect(result.introNarrative, contains('plan de renforcement des compétences'));
+
+      // Les axes de familles de risque sont bien générés
       expect(result.riskFamilyAxes, isNotEmpty);
       expect(result.riskFamilyAxes.first.letter, equals('A.'));
       expect(result.riskFamilyAxes.length, equals(2));
