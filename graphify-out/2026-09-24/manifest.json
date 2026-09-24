@@ -1770,9 +1770,9 @@
     "semantic_hash": ""
   },
   "lib/services/pdf/builders/pdf_mesures_essais_builder.dart": {
-    "mtime": 1790243991.8598826,
-    "seen": 1790244052.2527065,
-    "ast_hash": "0b16f629915dfcaf93b5d0557e79813a",
+    "mtime": 1789474839.0885339,
+    "seen": 1789537796.3361855,
+    "ast_hash": "e9bea56b22c918b132eefdcff9d371e7",
     "semantic_hash": ""
   },
   "lib/services/pdf/builders/pdf_observations_recap_builder.dart": {
@@ -1782,9 +1782,9 @@
     "semantic_hash": ""
   },
   "lib/services/pdf/builders/pdf_photos_schemas_builder.dart": {
-    "mtime": 1790244001.6380596,
-    "seen": 1790244052.2527108,
-    "ast_hash": "a6b1c58c6ffa4ebf43c5042291ad3c0d",
+    "mtime": 1788700759.4087315,
+    "seen": 1788701184.1408727,
+    "ast_hash": "d19e95c1cda94e878901cedbb504c2c2",
     "semantic_hash": ""
   },
   "lib/services/pdf/builders/pdf_regulatory_builder.dart": {
@@ -1812,9 +1812,9 @@
     "semantic_hash": ""
   },
   "lib/services/pdf/pdf_chunk_merger.dart": {
-    "mtime": 1790243517.1465082,
-    "seen": 1790244052.2527204,
-    "ast_hash": "45b8ee15a9b334893b0cf896e09687fb",
+    "mtime": 1788534823.9814634,
+    "seen": 1788698856.755418,
+    "ast_hash": "b452fca1cae13f95cb9fc17640ba0e5a",
     "semantic_hash": ""
   },
   "lib/services/pdf/pdf_footer_builder.dart": {
@@ -1854,15 +1854,15 @@
     "semantic_hash": ""
   },
   "lib/services/pdf/pdf_report_service.dart": {
-    "mtime": 1790243804.660792,
-    "seen": 1790244052.2527308,
-    "ast_hash": "741b1287b26d54c84be1447d965d0d5f",
+    "mtime": 1790159901.1508029,
+    "seen": 1790169846.3911824,
+    "ast_hash": "45a4190523bc8c4c2477b697fa07bd36",
     "semantic_hash": ""
   },
   "lib/services/pdf/pdf_report_styles.dart": {
-    "mtime": 1790243436.6317213,
-    "seen": 1790244052.2527328,
-    "ast_hash": "df54610f4dd143f20d09c663c063d409",
+    "mtime": 1790166468.8756986,
+    "seen": 1790169846.3911836,
+    "ast_hash": "ae3dd3549a2fc843acbd99e14c5ec9e9",
     "semantic_hash": ""
   },
   "lib/services/secure_password_service.dart": {
@@ -3873,12 +3873,6 @@
     "mtime": 1790181557.565879,
     "seen": 1790241066.7243671,
     "ast_hash": "7dfcd8d64d66d62985b8ce8368399626",
-    "semantic_hash": ""
-  },
-  "test/services/pdf_profiling_and_weight_test.dart": {
-    "mtime": 1790243393.5623858,
-    "seen": 1790244052.2530394,
-    "ast_hash": "7b28b09d0c2b68b2747a489168c8624a",
     "semantic_hash": ""
   }
 }

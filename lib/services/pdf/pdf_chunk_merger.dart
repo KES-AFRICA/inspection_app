@@ -144,6 +144,7 @@ class PdfMergerService {
   /// Maintient l'empreinte mémoire strictly < 10 Mo en libérant chaque document source immédiatement.
   static Future<void> _mergeChunkListToDestination(List<File> files, File destination) async {
     final sf.PdfDocument finalDoc = sf.PdfDocument();
+    finalDoc.compressionLevel = sf.PdfCompressionLevel.best;
     finalDoc.pageSettings.margins.all = 0;
 
     try {

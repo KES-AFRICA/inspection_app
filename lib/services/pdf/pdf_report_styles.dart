@@ -186,7 +186,7 @@ class PdfReportStyles {
         bottom: kBottomMargin + 4,
       ),
       buildBackground: (ctx) =>
-          showWatermark ? buildWatermarkBackground(watermarkImage) : pw.SizedBox(),
+          showWatermark ? buildWatermarkBackground(watermarkImage, pageFormat: ctx.page.pageFormat) : pw.SizedBox(),
       buildForeground: (ctx) => buildFooterAbsolute(
         isFirstPage: false,
         ctx: ctx,
@@ -210,10 +210,11 @@ class PdfReportStyles {
     double targetCenterY = 390.0,
     double shiftRight = 0.0,
     double opacity = 0.30,
+    PdfPageFormat? pageFormat,
   }) {
     if (watermarkImage == null) return pw.SizedBox();
 
-    const double pageWidth = PdfFooterBuilder.kFullPageWidth;
+    final double pageWidth = pageFormat?.width ?? PdfFooterBuilder.kFullPageWidth;
     final double height = width * kWatermarkAspectRatio;
 
     final double circleCenterXInImage = width * kWatermarkCircleCxRatio;
@@ -248,8 +249,8 @@ class PdfReportStyles {
   /// Filigrane des pages intérieures :
   /// - Loupe agrandie à width = 680 pt
   /// - Cercle de la loupe rigoureusement centré horizontalement
-  ///   et verticalement sur la page A4 (targetCenterY = 420.95 pt)
-  /// - Le bas de la loupe (manche) déborde sur le côté gauche de la page sans erreur
+  ///   et verticalement sur la page réelle (Portrait A4: 595.28x841.89 ou Paysage A4: 841.89x595.28)
+  /// - Le bas de la loupe (manche) déborde sans erreur
   /// - Opacité 0.15
   static pw.Widget buildWatermarkBackground(
     pw.MemoryImage? watermarkImage, {
@@ -257,11 +258,12 @@ class PdfReportStyles {
     double? targetCenterY,
     double shiftRight = 0.0,
     double opacity = 0.15,
+    PdfPageFormat? pageFormat,
   }) {
     if (watermarkImage == null) return pw.SizedBox();
 
-    const double pageWidth = PdfFooterBuilder.kFullPageWidth;
-    const double pageHeight = 841.89;
+    final double pageWidth = pageFormat?.width ?? PdfFooterBuilder.kFullPageWidth;
+    final double pageHeight = pageFormat?.height ?? 841.89;
     final double height = width * kWatermarkAspectRatio;
     final double actualTargetCenterY = targetCenterY ?? (pageHeight / 2.0);
 

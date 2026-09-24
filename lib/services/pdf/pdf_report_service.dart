@@ -109,6 +109,15 @@ class PdfReportService {
   static pw.MemoryImage? _imgAccesDroite2;
   static bool _imagesLoaded = false;
 
+  /// Cache d'instances de session en mémoire : garantit qu'une même image partagée
+  /// (ex. équipement apparaissant en tableau ET en galerie, ou photos répétées) n'est instanciée
+  /// et encodée qu'UNE SEULE FOIS comme XObject dans le document PDF.
+  static final Map<String, pw.MemoryImage> _sessionMemoryImageCache = {};
+
+  static void clearSessionCache() {
+    _sessionMemoryImageCache.clear();
+  }
+
   static pw.Font _fontRegular = pw.Font.helvetica();
   static pw.Font _fontBold = pw.Font.helveticaBold();
   static bool _fontsLoaded = false;
@@ -299,7 +308,7 @@ class PdfReportService {
         right: kRightMargin,
         bottom: kBottomMargin + 40,
       ),
-      buildBackground: (ctx) => _buildCoverWatermarkBackground(),
+      buildBackground: (ctx) => _buildCoverWatermarkBackground(pageFormat: ctx.page.pageFormat),
       buildForeground: (ctx) =>
           _buildFooterAbsolute(isFirstPage: true, ctx: ctx),
     );
@@ -322,7 +331,7 @@ class PdfReportService {
         bottom: kBottomMargin + 4,
       ),
       buildBackground: (ctx) =>
-          showWatermark ? _buildWatermarkBackground() : pw.SizedBox(),
+          showWatermark ? _buildWatermarkBackground(pageFormat: ctx.page.pageFormat) : pw.SizedBox(),
       buildForeground: (ctx) => _buildFooterAbsolute(
         isFirstPage: false,
         ctx: ctx,
@@ -333,13 +342,13 @@ class PdfReportService {
   }
 
   // Filigrane seul dans background des pages intérieures
-  static pw.Widget _buildWatermarkBackground() {
-    return PdfReportStyles.buildWatermarkBackground(_watermarkImage);
+  static pw.Widget _buildWatermarkBackground({PdfPageFormat? pageFormat}) {
+    return PdfReportStyles.buildWatermarkBackground(_watermarkImage, pageFormat: pageFormat);
   }
 
   // Filigrane spécifique page de garde (opacité 0.30, centré sur le texte de couverture)
-  static pw.Widget _buildCoverWatermarkBackground() {
-    return PdfReportStyles.buildCoverWatermarkBackground(_watermarkImage);
+  static pw.Widget _buildCoverWatermarkBackground({PdfPageFormat? pageFormat}) {
+    return PdfReportStyles.buildCoverWatermarkBackground(_watermarkImage, pageFormat: pageFormat);
   }
 
   // Footer bord à bord physique vectoriel natif
@@ -1191,6 +1200,20 @@ class PdfReportService {
       final file = File(resolvedPath);
       if (!await file.exists()) return null;
 
+      // ── Cache Session Mémoire (Déduplication d'instance XObject dans le PDF) ──
+      final sessionCacheKey =
+          '${resolvedPath}_${targetWidth}_${targetHeight}_$targetQuality';
+      final inMemoryInstance = _sessionMemoryImageCache[sessionCacheKey];
+      if (inMemoryInstance != null) {
+        return inMemoryInstance;
+      }
+
+      pw.MemoryImage cacheAndReturn(Uint8List imgBytes) {
+        final mem = pw.MemoryImage(imgBytes);
+        _sessionMemoryImageCache[sessionCacheKey] = mem;
+        return mem;
+      }
+
       // ── Cache Disque de la Photo Optimisée (Évite les décodages Skia natifs répétés) ──
       final tempDir = await getTemporaryDirectory();
       final cacheFileName =
@@ -1201,7 +1224,7 @@ class PdfReportService {
         try {
           final cachedBytes = await cacheFile.readAsBytes();
           if (cachedBytes.isNotEmpty) {
-            return pw.MemoryImage(cachedBytes);
+            return cacheAndReturn(cachedBytes);
           }
         } catch (_) {}
       }
@@ -1220,7 +1243,7 @@ class PdfReportService {
           try {
             await cacheFile.writeAsBytes(compressedBytes);
           } catch (_) {}
-          return pw.MemoryImage(compressedBytes);
+          return cacheAndReturn(compressedBytes);
         }
       } catch (e) {
         if (kDebugMode) {
@@ -1245,9 +1268,9 @@ class PdfReportService {
           try {
             await cacheFile.writeAsBytes(compressedBytes);
           } catch (_) {}
-          return pw.MemoryImage(compressedBytes);
+          return cacheAndReturn(compressedBytes);
         }
-        return pw.MemoryImage(rawBytes);
+        return cacheAndReturn(rawBytes);
       } catch (e) {
         if (kDebugMode) {
           print('⚠️ compressWithList échoué pour $resolvedPath: $e.');
@@ -1256,7 +1279,7 @@ class PdfReportService {
 
       final bytes = await file.readAsBytes();
       if (bytes.isEmpty) return null;
-      return pw.MemoryImage(bytes);
+      return cacheAndReturn(bytes);
     } catch (_) {
       return null;
     }
@@ -1524,7 +1547,7 @@ class PdfReportService {
         pageTheme: _buildInnerPageTheme(
           pageOffset: currentOffset,
           overrideTotalPages: overrideTotalPages,
-          showWatermark: false,
+          showWatermark: true,
         ),
         header: (ctx) => _buildPageHeaderWidget(
           nomClient: mission.nomClient,
@@ -1793,7 +1816,7 @@ class PdfReportService {
         pageTheme: _buildInnerPageTheme(
           pageOffset: currentOffset,
           overrideTotalPages: overrideTotalPages,
-          showWatermark: false,
+          showWatermark: true,
         ),
         header: (ctx) => _buildPageHeaderWidget(
           nomSite: nomSite,
@@ -2251,7 +2274,7 @@ class PdfReportService {
         pageTheme: _buildInnerPageTheme(
           pageOffset: currentOffset,
           overrideTotalPages: overrideTotalPages,
-          showWatermark: false,
+          showWatermark: true,
         ),
         header: (ctx) => _buildPageHeaderWidget(
           nomSite: nomSite,
@@ -3294,7 +3317,7 @@ class PdfReportService {
         pageTheme: _buildInnerPageTheme(
           pageOffset: currentOffset,
           overrideTotalPages: overrideTotalPages,
-          showWatermark: false,
+          showWatermark: true,
         ),
         header: (ctx) => _buildPageHeaderWidget(
           nomClient: mission.nomClient,
@@ -3526,6 +3549,7 @@ class PdfReportService {
   }) async {
     List<File> allChunkFiles = [];
     Directory? sessionDir;
+    clearSessionCache();
     try {
       cancellationToken?.throwIfCancelled();
       onProgress?.call(0.02, 'Initialisation des ressources et des polices...');
@@ -3689,6 +3713,7 @@ class PdfReportService {
           }
         } catch (_) {}
       }
+      clearSessionCache();
     }
   }
 

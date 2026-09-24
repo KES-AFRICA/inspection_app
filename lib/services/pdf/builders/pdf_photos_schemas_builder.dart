@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:inspec_app/models/audit_installations_electriques.dart';
@@ -451,7 +450,7 @@ class PdfPhotosSchemasBuilder {
         pageTheme: innerTheme(
           pageOffset: pageOffset,
           overrideTotalPages: overrideTotalPages,
-          showWatermark: false,
+          showWatermark: true,
         ),
         header: (ctx) => pageHeader(
           nomClient: mission.nomClient,
@@ -1216,7 +1215,7 @@ class PdfPhotosSchemasBuilder {
           pageTheme: innerTheme(
             pageOffset: currentOffset,
             overrideTotalPages: overrideTotalPages,
-            showWatermark: false,
+            showWatermark: true,
           ),
           build: (ctx) {
             return pw.Column(

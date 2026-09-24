@@ -7,11 +7,11 @@ import 'package:inspec_app/models/description_installations.dart';
 import 'package:inspec_app/models/mesures_essais.dart';
 import 'package:inspec_app/services/pdf/pdf_page_tracker.dart';
 import 'package:inspec_app/services/pdf/pdf_report_styles.dart';
-import 'package:inspec_app/services/pdf/builders/pdf_audit_installations_builder.dart';
 import 'package:inspec_app/services/pdf/builders/pdf_observations_recap_builder.dart';
 import 'package:inspec_app/services/pdf/pdf_photo_context.dart';
 import 'package:inspec_app/components/safe_file_image.dart';
 import 'package:inspec_app/services/hive_service.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:path_provider/path_provider.dart';
 
 class PdfPriseTerreRowItem {
@@ -363,6 +363,23 @@ class PdfMesuresEssaisBuilder {
         final cachedBytes = await cachedFile.readAsBytes();
         return pw.MemoryImage(cachedBytes);
       }
+
+      try {
+        final compressedBytes = await FlutterImageCompress.compressWithFile(
+          file.path,
+          minWidth: targetWidth,
+          minHeight: targetHeight,
+          quality: targetQuality,
+          format: CompressFormat.jpeg,
+        ).timeout(const Duration(seconds: 10));
+
+        if (compressedBytes != null && compressedBytes.isNotEmpty) {
+          try {
+            await cachedFile.writeAsBytes(compressedBytes);
+          } catch (_) {}
+          return pw.MemoryImage(compressedBytes);
+        }
+      } catch (_) {}
 
       final originalBytes = await file.readAsBytes();
       return pw.MemoryImage(originalBytes);
