@@ -505,19 +505,19 @@ Pour prévenir tout débordement mémoire sur des rapports de 100+ pages :
 
 À chaque intervention sur la base de code, tout agent doit exécuter rigoureusement ce protocole :
 
-1. **Consulter `AGENTS.md`** : S'imprégner des contraintes critiques, règles métier et décisions passées.
-2. **Auditer avant de modifier** : Analyser le code, retracer les dépendances et identifier les risques de régression.
-3. **Appliquer des modifications chirurgicales** : Ne modifier que les lignes nécessaires sans reformater arbitrairement le code environnant.
-4. **Vérification systématique** :
+1. **Consulter `AGENTS.md` et `PROJECT_MEMORY.md`** : S'imprégner des contraintes critiques, règles invariables et de l'état actuel (`CURRENT PROJECT STATE` & `DO NOT BREAK`).
+2. **Consulter le pilier documentaire dédié** : Si l'intervention touche un domaine spécifique (Modèle, Persistance, PDF, Backup), consulter le module correspondant dans `docs/project-memory/`.
+3. **Auditer avant de modifier** : Analyser le code réel, retracer les dépendances et identifier les risques de régression.
+4. **Appliquer des modifications chirurgicales** : Ne modifier que les lignes nécessaires sans reformater arbitrairement le code environnant.
+5. **Vérification systématique** :
    - Lancer l'analyse statique : `dart analyze <fichiers_modifiés>`.
    - Exécuter les suites de tests unitaires concernées : `flutter test <chemins_des_tests>`.
-5. **Mettre à jour le graphe de connaissances** :
+6. **Mettre à jour le graphe de connaissances et la mémoire** :
    - Exécuter `graphify update .` après toute modification de code Dart.
-6. **Livraison du Commit** :
+   - Si la modification change la connaissance durable (nouveau champ, règle métier, format de rapport), mettre à jour `PROJECT_MEMORY.md` et le module associé dans `docs/project-memory/`.
+7. **Livraison du Commit** :
    - Fournir uniquement le texte du message de commit en français au format Markdown avec le préfixe adéquat (`[CREATE]`, `[UPD]`, `[DLT]`).
    - **Ne jamais exécuter `git commit`**.
-7. **Capitalisation continue** :
-   - Si une nouvelle règle, décision ou piège technique durable est découvert, mettre immédiatement à jour `AGENTS.md`.
 
 ---
 
@@ -531,4 +531,5 @@ Avant de considérer une tâche comme finalisée, valider les points suivants :
 - [ ] **Pérennité Hive** : Aucun identifiant `@HiveField` n'a été modifié ou réassigné.
 - [ ] **Pagination & Rendu PDF** : Aucune rupture de pagination, sommaire synchronisé, aucun dépassement ou coupure anormale de tableau.
 - [ ] **Accord Grammatical & Rigueur** : Vocabulaire technique et accords vérifiés (`Source non identifiée / Identifiée`, etc.).
+- [ ] **Mémoire Projet** : `PROJECT_MEMORY.md` et `docs/project-memory/` mis à jour si nécessaire.
 - [ ] **Conformité des Commits** : Message de commit rédigé en français avec pré-syntaxe `[CREATE]`, `[UPD]`, `[DLT]`, sans exécution automatique de `git commit`.
