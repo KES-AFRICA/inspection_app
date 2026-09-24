@@ -186,14 +186,15 @@ void main() {
       ) as pw.Table;
 
       final colWidths = tableMtCross.columnWidths!;
-      // Colonnes Equipements, NC, Critiques, Majeures, Densité ont la même largeur (1.1)
-      expect((colWidths[1] as pw.FlexColumnWidth).flex, equals(1.1));
+      // Colonne Equipements a été élargie vers la gauche (1.5) pour éviter que le 's' ne passe à la ligne
+      expect((colWidths[1] as pw.FlexColumnWidth).flex, equals(1.5));
+      // Colonnes NC, Critiques, Majeures, Densité ont la même largeur (1.1)
       expect((colWidths[2] as pw.FlexColumnWidth).flex, equals(1.1));
       expect((colWidths[3] as pw.FlexColumnWidth).flex, equals(1.1));
       expect((colWidths[4] as pw.FlexColumnWidth).flex, equals(1.1));
       expect((colWidths[5] as pw.FlexColumnWidth).flex, equals(1.1));
-      // Colonne Catégorie MT / Catégorie BT a été élargie (5.5)
-      expect((colWidths[0] as pw.FlexColumnWidth).flex, equals(5.5));
+      // Colonne Catégorie MT / Catégorie BT reste largement dimensionnée (5.1)
+      expect((colWidths[0] as pw.FlexColumnWidth).flex, equals(5.1));
     });
 
     test('3. Section 10 — Texte dynamique introductif et thématiques de prévention', () {

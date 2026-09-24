@@ -1854,8 +1854,8 @@ class PdfExecutiveSummaryBuilder {
     return pw.Table(
       border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.5),
       columnWidths: const {
-        0: pw.FlexColumnWidth(5.5),
-        1: pw.FlexColumnWidth(1.1),
+        0: pw.FlexColumnWidth(5.1),
+        1: pw.FlexColumnWidth(1.5),
         2: pw.FlexColumnWidth(1.1),
         3: pw.FlexColumnWidth(1.1),
         4: pw.FlexColumnWidth(1.1),
@@ -1866,7 +1866,7 @@ class PdfExecutiveSummaryBuilder {
           decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
           children: [
             _buildTableHeaderCell(domainLabel == 'BT' ? 'Catégorie BT' : 'Catégorie MT'),
-            _buildTableHeaderCell(domainLabel == 'BT' ? 'Equipements' : 'Équipements'),
+            _buildTableHeaderCell('Équipements'),
             _buildTableHeaderCell('NC'),
             _buildTableHeaderCell('Critiques'),
             _buildTableHeaderCell('Majeures'),
