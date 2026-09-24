@@ -416,5 +416,41 @@ void main() {
       expect(added4, isTrue);
       expect(list.length, equals(2));
     });
+
+    test('Scénario 11 : Synchronisation JSA vers RG inclut email et prévient les crashs null-safety', () async {
+      await setCurrentUser(userA);
+      const missionId = 'mission_111';
+      final mission = createTestMission(missionId, 'CLIENT EMAIL TEST');
+      await HiveService.saveMission(mission);
+
+      // Créer RG avec vérificateur sans email
+      final rg = createTestRg(missionId, verificateurs: [
+        {'nom': 'ESSAME', 'prenom': 'Patrick', 'matricule': 'KES-001'}
+      ]);
+      await HiveService.saveRenseignementsGeneraux(rg);
+
+      // S'assurer que l'inspecteur dans la JSA a un email
+      final jsa = await HiveService.getOrCreateJSA(missionId);
+      JSAUtils.addInspectorIfAbsent(
+        jsa.inspecteurs,
+        'ESSAME',
+        'Patrick',
+        matricule: 'KES-001',
+        email: 'patrick.essame@kes-africa.com',
+      );
+      await HiveService.saveJSA(jsa);
+
+      // Exécuter la synchronisation
+      await IntervenantsService.ensureCurrentUserInJSA(missionId);
+
+      // Vérifier que le RG a été mis à jour et inclut l'email
+      final updatedRg = HiveService.getRenseignementsGenerauxByMissionId(missionId);
+      expect(updatedRg, isNotNull);
+      expect(updatedRg!.verificateurs.isNotEmpty, isTrue);
+      final syncedVerif = updatedRg.verificateurs.first;
+      expect(syncedVerif.containsKey('email'), isTrue);
+      expect(syncedVerif['email'], equals('patrick.essame@kes-africa.com'));
+    });
   });
 }
+

@@ -252,6 +252,7 @@ class IntervenantsService {
         'prenom': i.prenom,
         'matricule': i.matricule ?? '',
         'role': i.role ?? 'Inspecteur',
+        'email': i.email ?? '',
       }).toList();
 
       // Synchroniser Mission

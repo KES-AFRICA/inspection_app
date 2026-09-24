@@ -804,12 +804,23 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
 
           ..._verificateursPredefinis.map((verif) {
             final isAlreadyAdded = _verificateurs.any(
-              (v) => v['nom'] == verif['nom'] && v['email'] == verif['email'],
+              (v) {
+                final vNom = (v['nom'] ?? '').trim().toLowerCase();
+                final vPrenom = (v['prenom'] ?? '').trim().toLowerCase();
+                final vFullName = vPrenom.isNotEmpty ? '$vPrenom $vNom'.trim() : vNom;
+                final vEmail = (v['email'] ?? '').trim().toLowerCase();
+                final targetNom = (verif['nom'] ?? '').trim().toLowerCase();
+                final targetEmail = (verif['email'] ?? '').trim().toLowerCase();
+                return (vNom == targetNom || vFullName == targetNom) &&
+                    (vEmail.isEmpty || targetEmail.isEmpty || vEmail == targetEmail);
+              },
             );
             final isCurrentUser =
                 currentUser != null &&
-                '${currentUser.prenom} ${currentUser.nom}' == verif['nom'] &&
-                currentUser.email == verif['email'];
+                '${currentUser.prenom} ${currentUser.nom}'.trim().toLowerCase() ==
+                    (verif['nom'] ?? '').trim().toLowerCase() &&
+                currentUser.email.trim().toLowerCase() ==
+                    (verif['email'] ?? '').trim().toLowerCase();
 
             return ListTile(
               leading: Container(
@@ -828,7 +839,7 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
                 ),
               ),
               title: Text(
-                verif['nom']!,
+                verif['nom'] ?? '',
                 style: TextStyle(
                   fontSize: isSmallScreen ? 14 : 15,
                   fontWeight: FontWeight.w500,
@@ -836,7 +847,7 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
                 ),
               ),
               subtitle: Text(
-                verif['email']!,
+                verif['email'] ?? '',
                 style: TextStyle(
                   fontSize: isSmallScreen ? 11 : 12,
                   color: Colors.grey.shade600,
@@ -862,8 +873,8 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
                       Navigator.pop(context);
                       setState(() {
                         _verificateurs.add({
-                          'nom': verif['nom']!,
-                          'email': verif['email']!,
+                          'nom': verif['nom'] ?? '',
+                          'email': verif['email'] ?? '',
                         });
                       });
                       _saveData();
@@ -1308,16 +1319,25 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
         : null;
 
     // Empêcher la suppression du vérificateur courant
-    if (currentUser != null &&
-        verificateurSupprime['nom'] ==
-            '${currentUser.prenom} ${currentUser.nom}') {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Vous ne pouvez pas supprimer le vérificateur courant'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
+    if (currentUser != null) {
+      final currentFullName = '${currentUser.prenom} ${currentUser.nom}'.trim().toLowerCase();
+      final supprimeNom = (verificateurSupprime['nom'] ?? '').trim().toLowerCase();
+      final supprimePrenom = (verificateurSupprime['prenom'] ?? '').trim().toLowerCase();
+      final supprimeFullName = supprimePrenom.isNotEmpty ? '$supprimePrenom $supprimeNom'.trim() : supprimeNom;
+      final supprimeEmail = (verificateurSupprime['email'] ?? '').trim().toLowerCase();
+      final currentEmail = currentUser.email.trim().toLowerCase();
+
+      if (supprimeFullName == currentFullName ||
+          supprimeNom == currentFullName ||
+          (supprimeEmail.isNotEmpty && supprimeEmail == currentEmail)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Vous ne pouvez pas supprimer le vérificateur courant'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
     }
 
     setState(() {
@@ -1696,8 +1716,26 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
               ? data.registreControle
               : null;
           _compteRenduDestinataires = List.from(data.compteRendu);
-          _accompagnateurs = List.from(data.accompagnateurs);
-          _verificateurs = List.from(data.verificateurs);
+          _accompagnateurs = data.accompagnateurs.map((a) => {
+            'nom': (a['nom'] ?? '').trim(),
+            'email': (a['email'] ?? '').trim(),
+            'telephone': (a['telephone'] ?? '').trim(),
+            'poste': (a['poste'] ?? '').trim(),
+          }).toList();
+          _verificateurs = data.verificateurs.map((v) {
+            final nom = (v['nom'] ?? '').trim();
+            final prenom = (v['prenom'] ?? '').trim();
+            final fullName = (prenom.isNotEmpty && !nom.toLowerCase().contains(prenom.toLowerCase()))
+                ? '$prenom $nom'.trim()
+                : (nom.isNotEmpty ? nom : prenom);
+            return {
+              'nom': fullName.isNotEmpty ? fullName : nom,
+              if (prenom.isNotEmpty) 'prenom': prenom,
+              'email': (v['email'] ?? '').trim(),
+              if ((v['matricule'] ?? '').trim().isNotEmpty) 'matricule': (v['matricule'] ?? '').trim(),
+              if ((v['role'] ?? '').trim().isNotEmpty) 'role': (v['role'] ?? '').trim(),
+            };
+          }).toList();
           _formationHabilitationElectrique = data.habilitationElectriqueEffective;
 
           if (_etablissementController.text.isNotEmpty)
@@ -2131,42 +2169,49 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
                     icon: Icons.people,
                     color: Colors.blue,
                     items: _accompagnateurs,
-                    itemBuilder: (accomp) => Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          accomp['nom']!,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: isSmallScreen ? 13 : 14,
-                          ),
-                        ),
-                        if (accomp['email']!.isNotEmpty)
+                    itemBuilder: (accomp) {
+                      final nom = (accomp['nom'] ?? '').trim();
+                      final email = (accomp['email'] ?? '').trim();
+                      final telephone = (accomp['telephone'] ?? '').trim();
+                      final poste = (accomp['poste'] ?? '').trim();
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           Text(
-                            accomp['email']!,
+                            nom.isNotEmpty ? nom : 'Accompagnateur',
                             style: TextStyle(
-                              fontSize: isSmallScreen ? 11 : 12,
-                              color: Colors.grey,
+                              fontWeight: FontWeight.w600,
+                              fontSize: isSmallScreen ? 13 : 14,
                             ),
                           ),
-                        if (accomp['telephone']!.isNotEmpty)
-                          Text(
-                            accomp['telephone']!,
-                            style: TextStyle(
-                              fontSize: isSmallScreen ? 11 : 12,
-                              color: Colors.grey,
+                          if (email.isNotEmpty)
+                            Text(
+                              email,
+                              style: TextStyle(
+                                fontSize: isSmallScreen ? 11 : 12,
+                                color: Colors.grey,
+                              ),
                             ),
-                          ),
-                        if (accomp['poste']!.isNotEmpty)
-                          Text(
-                            accomp['poste']!,
-                            style: TextStyle(
-                              fontSize: isSmallScreen ? 11 : 12,
-                              color: Colors.grey,
+                          if (telephone.isNotEmpty)
+                            Text(
+                              telephone,
+                              style: TextStyle(
+                                fontSize: isSmallScreen ? 11 : 12,
+                                color: Colors.grey,
+                              ),
                             ),
-                          ),
-                      ],
-                    ),
+                          if (poste.isNotEmpty)
+                            Text(
+                              poste,
+                              style: TextStyle(
+                                fontSize: isSmallScreen ? 11 : 12,
+                                color: Colors.grey,
+                              ),
+                            ),
+                        ],
+                      );
+                    },
                     onAdd: _showAccompagnateurBottomSheet,
                     onDelete: _supprimerAccompagnateur,
                     isRequired: true,
@@ -2180,26 +2225,44 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
                     icon: Icons.verified_user,
                     color: Colors.green,
                     items: _verificateurs,
-                    itemBuilder: (verif) => Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          verif['nom']!,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: isSmallScreen ? 13 : 14,
-                          ),
-                        ),
-                        if (verif['email']!.isNotEmpty)
+                    itemBuilder: (verif) {
+                      final nom = (verif['nom'] ?? '').trim();
+                      final prenom = (verif['prenom'] ?? '').trim();
+                      final fullName = (prenom.isNotEmpty && !nom.toLowerCase().contains(prenom.toLowerCase()))
+                          ? '$prenom $nom'.trim()
+                          : (nom.isNotEmpty ? nom : (prenom.isNotEmpty ? prenom : 'Vérificateur'));
+                      final email = (verif['email'] ?? '').trim();
+                      final matricule = (verif['matricule'] ?? '').trim();
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           Text(
-                            verif['email']!,
+                            fullName,
                             style: TextStyle(
-                              fontSize: isSmallScreen ? 11 : 12,
-                              color: Colors.grey,
+                              fontWeight: FontWeight.w600,
+                              fontSize: isSmallScreen ? 13 : 14,
                             ),
                           ),
-                      ],
-                    ),
+                          if (email.isNotEmpty)
+                            Text(
+                              email,
+                              style: TextStyle(
+                                fontSize: isSmallScreen ? 11 : 12,
+                                color: Colors.grey,
+                              ),
+                            )
+                          else if (matricule.isNotEmpty)
+                            Text(
+                              'Matricule : $matricule',
+                              style: TextStyle(
+                                fontSize: isSmallScreen ? 11 : 12,
+                                color: Colors.grey,
+                              ),
+                            ),
+                        ],
+                      );
+                    },
                     onAdd: _showVerificateurBottomSheet,
                     onDelete: _supprimerVerificateur,
                     isRequired: true,

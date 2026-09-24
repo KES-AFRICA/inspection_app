@@ -16,10 +16,14 @@ class RenseignementsGenerauxMapper {
       registreControle: model.registreControle,
       compteRendu: List<String>.from(model.compteRendu),
       accompagnateurs: List<Map<String, String>>.from(
-        model.accompagnateurs.map((m) => Map<String, String>.from(m)),
+        model.accompagnateurs.map(
+          (m) => m.map((k, v) => MapEntry(k.toString(), (v ?? '').toString())),
+        ),
       ),
       verificateurs: List<Map<String, String>>.from(
-        model.verificateurs.map((m) => Map<String, String>.from(m)),
+        model.verificateurs.map(
+          (m) => m.map((k, v) => MapEntry(k.toString(), (v ?? '').toString())),
+        ),
       ),
       updatedAt: model.updatedAt,
       nomSite: model.nomSite,
@@ -47,10 +51,14 @@ class RenseignementsGenerauxMapper {
       registreControle: entity.registreControle,
       compteRendu: List<String>.from(entity.compteRendu),
       accompagnateurs: List<Map<String, String>>.from(
-        entity.accompagnateurs.map((m) => Map<String, String>.from(m)),
+        entity.accompagnateurs.map(
+          (m) => m.map((k, v) => MapEntry(k.toString(), (v ?? '').toString())),
+        ),
       ),
       verificateurs: List<Map<String, String>>.from(
-        entity.verificateurs.map((m) => Map<String, String>.from(m)),
+        entity.verificateurs.map(
+          (m) => m.map((k, v) => MapEntry(k.toString(), (v ?? '').toString())),
+        ),
       ),
       updatedAt: entity.updatedAt,
       nomSite: entity.nomSite,
