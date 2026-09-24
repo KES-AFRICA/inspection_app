@@ -1239,12 +1239,12 @@ class PdfExecutiveSummaryBuilder {
           [
             bSpan('NC HTA : $htaTot NC (${summary.tensionDomainStats.mtPercentageStr})\n'),
             bSpan('  - Disposition constructive : '), nSpan('$htaDispo NC ($htaDispoPct %)\n'),
+            bSpan('  - Conditions d\'exploitation : '), nSpan('$htaConditionsExploit NC ($htaConditionsExploitPct %)\n'),
             bSpan('  - Exploitation et maintenance : '), nSpan('$htaExploit NC ($htaExploitPct %)\n'),
-            bSpan('      - Conditions d\'exploitation : '), nSpan('$htaConditionsExploit NC ($htaConditionsExploitPct %)\n'),
             bSpan('NC BT : $btTot NC (${summary.tensionDomainStats.btPercentageStr})\n'),
             bSpan('  - Disposition constructive : '), nSpan('$btDispo NC ($btDispoPct %)\n'),
-            bSpan('  - Exploitation et maintenance : '), nSpan('$btExploit NC ($btExploitPct %)\n'),
-            bSpan('      - Conditions d\'exploitation : '), nSpan('$btConditionsExploit NC ($btConditionsExploitPct %)'),
+            bSpan('  - Conditions d\'exploitation : '), nSpan('$btConditionsExploit NC ($btConditionsExploitPct %)\n'),
+            bSpan('  - Exploitation et maintenance : '), nSpan('$btExploit NC ($btExploitPct %)'),
           ],
         ),
         buildRichRow(

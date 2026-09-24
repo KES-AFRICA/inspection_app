@@ -27,6 +27,7 @@ import 'package:inspec_app/services/cellule_types_registry.dart';
 import 'package:inspec_app/services/normative_search_service.dart';
 import 'package:inspec_app/components/normative_search_suggestions_widget.dart';
 import 'package:inspec_app/components/safe_file_image.dart';
+import 'package:inspec_app/services/local_type_transition_service.dart';
 
 // Extension pour obtenir la taille de l'écran facilement
 extension ScreenSize on BuildContext {
@@ -5842,11 +5843,18 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     }
   }
 
-  // Créer un local BT avec un type spécifié
+  // Crée un local BT en snapshot avec le type [type] et les données courantes de l'état.
+  // Les cellules et transformateurs sont toujours pris depuis l'état (_cellules, _transformateurs)
+  // car _applyTypeTransition les a déjà mis à jour correctement.
+  // Les coffrets sont préservés de l'existant de façon null-safe.
   BasseTensionLocal _creerBasseTensionLocalAvecType(String type) {
-    final isFlowLong = type == 'LOCAL_MTBT';
     final now = DateTime.now().toUtc();
-    final existingLocal = widget.isEdition && widget.local is BasseTensionLocal ? (widget.local as BasseTensionLocal) : null;
+    final existingLocal = widget.isEdition && widget.local is BasseTensionLocal
+        ? (widget.local as BasseTensionLocal)
+        : null;
+    // Récupération sécurisée des coffrets depuis l'entité existante.
+    // On ne touche jamais aux coffrets lors d'un changement de type.
+    final List<CoffretArmoire> coffrets = existingLocal?.coffrets ?? [];
     return BasseTensionLocal(
       id: existingLocal?.localId,
       createdAt: existingLocal?.createdAt ?? (widget.isEdition ? null : now),
@@ -5857,11 +5865,15 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       conditionsExploitation: _conditionsExploitation,
       observationsLibres: _observationsExistantes,
       photos: _localPhotos,
-      accessible: _accessible ?? (widget.isEdition && existingLocal != null ? (existingLocal.accessible ?? true) : true),
+      accessible: _accessible ?? (widget.isEdition && existingLocal != null
+          ? (existingLocal.accessible ?? true)
+          : true),
       aReverifier: (_accessible == false),
-      cellules: isFlowLong ? _cellules : [],
-      transformateurs: isFlowLong ? _transformateurs : [],
-      coffrets: widget.isEdition && widget.local != null ? (widget.local as BasseTensionLocal).coffrets : [],
+      // _cellules et _transformateurs sont gérés par _applyTypeTransition et _loadDraft.
+      // Pas besoin du flag isFlowLong ici : l'état est déjà cohérent.
+      cellules: _cellules,
+      transformateurs: _transformateurs,
+      coffrets: coffrets,
       isRiskZone: _isRiskZone,
     );
   }
@@ -5953,12 +5965,102 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     _scheduleAutoSave();
   }
   void _onTypeChanged(String? newType) {
+    if (newType == null) return;
     setState(() {
-      _selectedType = newType;
-      _validateType(newType);
-      if (!widget.isEdition) _initializeElementsForType(newType);
+      if (!widget.isEdition) {
+        // Création : réinitialiser les checklists proprement pour le nouveau type.
+        _selectedType = newType;
+        _validateType(newType);
+        _initializeElementsForType(newType);
+      } else {
+        // Édition : appliquer la transition en préservant les données existantes.
+        _applyTypeTransition(newType);
+      }
     });
     _scheduleAutoSave();
+  }
+
+  /// Initialise les checklists pour un type donné lors de la CRÉATION d'un local.
+  /// Tous les points sont vierges (estNA = true, conforme = null).
+  void _initializeElementsForType(String? type) {
+    if (type == null) return;
+    if (widget.isMoyenneTension) {
+      LocalTypeTransitionService.initChecklistsForNewMTLocal(
+        dispositionsConstructives: _dispositionsConstructives,
+        conditionsExploitation: _conditionsExploitation,
+        type: type,
+      );
+    } else {
+      LocalTypeTransitionService.initChecklistsForNewBTLocal(
+        dispositionsConstructives: _dispositionsConstructives,
+        conditionsExploitation: _conditionsExploitation,
+        type: type,
+      );
+    }
+    _conformeSelected.clear();
+    _hasObservation.clear();
+    _validateType(type);
+  }
+
+  /// Applique un changement de type lors de l'EDITION d'un local.
+  /// Préserve les données communes et normalise les checklists.
+  void _applyTypeTransition(String newType) {
+    final oldType = _selectedType ?? '';
+    _selectedType = newType;
+    _validateType(newType);
+
+    if (oldType == newType) return;
+
+    // Mettre à jour cellules/transformateurs selon la transition de flow
+    final oldIsLong = LocalTypeTransitionService.isLongFlow(oldType);
+    final newIsLong = LocalTypeTransitionService.isLongFlow(newType);
+    if (!oldIsLong && newIsLong) {
+      // standard -> long : préparer des listes vides (l'utilisateur les remplira)
+      _cellules = [];
+      _transformateurs = [];
+    } else if (oldIsLong && !newIsLong) {
+      // long -> standard : on vide (incompatibilité structurelle)
+      _cellules = [];
+      _transformateurs = [];
+    }
+    // long -> long ou standard -> standard : on conserve les listes en l'état
+
+    // Normaliser les checklists selon le nouveau type en préservant les réponses existantes
+    if (widget.isMoyenneTension) {
+      DispositionsConstructivesRegistry.ensureCompleteLocalChecklists(
+        dispositionsConstructives: _dispositionsConstructives,
+        conditionsExploitation: _conditionsExploitation,
+      );
+    } else {
+      switch (LocalTypeTransitionService.isLongFlow(newType) ? 'LONG' : _btChecklistFamilyForType(newType)) {
+        case 'GE':
+          DispositionsConstructivesRegistry.ensureCompleteGELocalChecklists(
+            dispositionsConstructives: _dispositionsConstructives,
+            conditionsExploitation: _conditionsExploitation,
+          );
+          break;
+        case 'LONG':
+          DispositionsConstructivesRegistry.ensureCompleteLocalChecklists(
+            dispositionsConstructives: _dispositionsConstructives,
+            conditionsExploitation: _conditionsExploitation,
+          );
+          break;
+        default:
+          DispositionsConstructivesRegistry.ensureCompleteBTLocalChecklists(
+            dispositionsConstructives: _dispositionsConstructives,
+            conditionsExploitation: _conditionsExploitation,
+          );
+          break;
+      }
+    }
+    _reconstructMaps();
+  }
+
+  /// Retourne la famille de checklist BT pour un type donné.
+  static String _btChecklistFamilyForType(String type) {
+    if (type == 'LOCAL_GROUPE_ELECTROGENE') return 'GE';
+    if (type == 'LOCAL_MTBT') return 'LONG';
+    return 'STANDARD';
   }
 
   void _onConformeChanged(ElementControle element) {
@@ -6428,39 +6530,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     );
   }
 
-  void _initializeElementsForType(String? type) {
-    if (type == null) return;
-    
-    // Récupérer les dispositions constructives pour ce type de local
-    final dispositionsList = HiveService.getDispositionsConstructivesForLocal(type);
-    _dispositionsConstructives = dispositionsList.map((element) {
-      final ec = ElementControle(elementControle: element, conforme: null, priorite: 3);
-      _conformeSelected[ec] = false;
-      return ec;
-    }).toList();
-    
-    //  CORRIGÉ : utiliser la variable correcte
-    final conditionsList = HiveService.getConditionsExploitationForLocal(type);
-    _conditionsExploitation = conditionsList.map((element) {
-      final ec = ElementControle(elementControle: element, conforme: null, priorite: 3);
-      _conformeSelected[ec] = false;
-      return ec;
-    }).toList();
-    
-    // Initialiser _hasObservation
-    for (int i = 0; i < _dispositionsConstructives.length; i++) {
-      _hasObservation[i] = false;
-    }
-    for (int i = 0; i < _conditionsExploitation.length; i++) {
-      _hasObservation[_dispositionsConstructives.length + i] = false;
-    }
-    
-    // Pour LOCAL_TRANSFORMATEUR, initialiser les listes vides
-    if (type == 'LOCAL_TRANSFORMATEUR' || type == 'LOCAL_MTBT') {
-      _cellules = [];
-      _transformateurs = [];
-    }
-  }
+
 
   void _onAjouterAutre(String sectionType) async {
     final result = await showDialog<ElementControle>(
