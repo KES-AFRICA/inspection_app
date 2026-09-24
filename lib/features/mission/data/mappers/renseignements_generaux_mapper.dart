@@ -35,6 +35,11 @@ class RenseignementsGenerauxMapper {
       recepteurRapport: model.recepteurRapport,
       lieuIntervention: model.lieuIntervention,
       dateRapport: model.dateRapport,
+      recepteurCivilite: model.recepteurCivilite,
+      recepteurNom: model.recepteurNom,
+      recepteurFonction: model.recepteurFonction,
+      recepteurEmail: model.recepteurEmail,
+      recepteurTelephone: model.recepteurTelephone,
     );
   }
 
@@ -67,9 +72,14 @@ class RenseignementsGenerauxMapper {
       classementReglementaire: entity.classementReglementaire,
       classementReglementaireType: entity.classementReglementaireType,
       classementReglementaireCategorie: entity.classementReglementaireCategorie,
-      recepteurRapport: entity.recepteurRapport,
+      recepteurRapport: entity.recepteurRapport ?? entity.recepteurFonction,
       lieuIntervention: entity.lieuIntervention,
       dateRapport: entity.dateRapport,
+      recepteurCivilite: entity.recepteurCivilite,
+      recepteurNom: entity.recepteurNom,
+      recepteurFonction: entity.recepteurFonction,
+      recepteurEmail: entity.recepteurEmail,
+      recepteurTelephone: entity.recepteurTelephone,
     );
   }
 }

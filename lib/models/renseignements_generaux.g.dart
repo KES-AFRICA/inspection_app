@@ -45,13 +45,18 @@ class RenseignementsGenerauxAdapter
       recepteurRapport: fields[21] as String?,
       lieuIntervention: fields[22] as String?,
       dateRapport: fields[23] as DateTime?,
+      recepteurCivilite: fields[24] as String?,
+      recepteurNom: fields[25] as String?,
+      recepteurFonction: fields[26] as String?,
+      recepteurEmail: fields[27] as String?,
+      recepteurTelephone: fields[28] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, RenseignementsGeneraux obj) {
     writer
-      ..writeByte(23)
+      ..writeByte(28)
       ..writeByte(0)
       ..write(obj.missionId)
       ..writeByte(1)
@@ -97,7 +102,17 @@ class RenseignementsGenerauxAdapter
       ..writeByte(22)
       ..write(obj.lieuIntervention)
       ..writeByte(23)
-      ..write(obj.dateRapport);
+      ..write(obj.dateRapport)
+      ..writeByte(24)
+      ..write(obj.recepteurCivilite)
+      ..writeByte(25)
+      ..write(obj.recepteurNom)
+      ..writeByte(26)
+      ..write(obj.recepteurFonction)
+      ..writeByte(27)
+      ..write(obj.recepteurEmail)
+      ..writeByte(28)
+      ..write(obj.recepteurTelephone);
   }
 
   @override

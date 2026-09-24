@@ -74,6 +74,21 @@ class RenseignementsGeneraux extends HiveObject {
   @HiveField(23)
   DateTime? dateRapport;
 
+  @HiveField(24)
+  String? recepteurCivilite;
+
+  @HiveField(25)
+  String? recepteurNom;
+
+  @HiveField(26)
+  String? recepteurFonction;
+
+  @HiveField(27)
+  String? recepteurEmail;
+
+  @HiveField(28)
+  String? recepteurTelephone;
+
   RenseignementsGeneraux({
     required this.missionId,
     required this.etablissement,
@@ -98,6 +113,11 @@ class RenseignementsGeneraux extends HiveObject {
     this.recepteurRapport,
     this.lieuIntervention,
     this.dateRapport,
+    this.recepteurCivilite,
+    this.recepteurNom,
+    this.recepteurFonction,
+    this.recepteurEmail,
+    this.recepteurTelephone,
   }) : formationHabilitationElectrique = formationHabilitationElectrique ?? 'Inconnu',
        compteRendu = compteRendu ?? [],  
        accompagnateurs = accompagnateurs ?? [],  
@@ -107,6 +127,31 @@ class RenseignementsGeneraux extends HiveObject {
       (formationHabilitationElectrique == null || formationHabilitationElectrique!.trim().isEmpty)
           ? 'Inconnu'
           : formationHabilitationElectrique!;
+
+  /// Fonction effective du récepteur (source de vérité : recepteurFonction, repli historique : recepteurRapport)
+  String get effectiveRecepteurFonction {
+    if (recepteurFonction != null && recepteurFonction!.trim().isNotEmpty) {
+      return recepteurFonction!.trim();
+    }
+    if (recepteurRapport != null && recepteurRapport!.trim().isNotEmpty) {
+      return recepteurRapport!.trim();
+    }
+    return '';
+  }
+
+  /// Civilité effective du récepteur
+  /// Si explicitement définie, renvoyée.
+  /// Si non définie mais qu'une fonction ou un nom existe (ancienne mission), défaut 'Monsieur'.
+  /// Si aucun récepteur n'est présent, renvoie null.
+  String? get effectiveRecepteurCivilite {
+    if (recepteurCivilite != null && recepteurCivilite!.trim().isNotEmpty) {
+      return recepteurCivilite!.trim();
+    }
+    if (effectiveRecepteurFonction.isNotEmpty || (recepteurNom != null && recepteurNom!.trim().isNotEmpty)) {
+      return 'Monsieur';
+    }
+    return null;
+  }
 
   factory RenseignementsGeneraux.create(String missionId) {
     final now = DateTime.now().toUtc();
@@ -129,6 +174,11 @@ class RenseignementsGeneraux extends HiveObject {
       recepteurRapport: null,
       lieuIntervention: null,
       dateRapport: null,
+      recepteurCivilite: null,
+      recepteurNom: null,
+      recepteurFonction: null,
+      recepteurEmail: null,
+      recepteurTelephone: null,
     );
   }
 
@@ -156,6 +206,11 @@ class RenseignementsGeneraux extends HiveObject {
       'recepteurRapport': recepteurRapport,
       'lieuIntervention': lieuIntervention,
       'dateRapport': dateRapport?.toIso8601String(),
+      'recepteurCivilite': recepteurCivilite,
+      'recepteurNom': recepteurNom,
+      'recepteurFonction': recepteurFonction,
+      'recepteurEmail': recepteurEmail,
+      'recepteurTelephone': recepteurTelephone,
     };
   }
 }

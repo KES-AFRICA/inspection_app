@@ -343,6 +343,26 @@ class HiveService {
         existing.recepteurRapport = mission.recepteurRapport;
         changed = true;
       }
+      if (mission.recepteurCivilite != null && mission.recepteurCivilite != existing.recepteurCivilite) {
+        existing.recepteurCivilite = mission.recepteurCivilite;
+        changed = true;
+      }
+      if (mission.recepteurNom != null && mission.recepteurNom != existing.recepteurNom) {
+        existing.recepteurNom = mission.recepteurNom;
+        changed = true;
+      }
+      if (mission.recepteurFonction != null && mission.recepteurFonction != existing.recepteurFonction) {
+        existing.recepteurFonction = mission.recepteurFonction;
+        changed = true;
+      }
+      if (mission.recepteurEmail != null && mission.recepteurEmail != existing.recepteurEmail) {
+        existing.recepteurEmail = mission.recepteurEmail;
+        changed = true;
+      }
+      if (mission.recepteurTelephone != null && mission.recepteurTelephone != existing.recepteurTelephone) {
+        existing.recepteurTelephone = mission.recepteurTelephone;
+        changed = true;
+      }
       if (mission.dateRapport != null && mission.dateRapport != existing.dateRapport) {
         existing.dateRapport = mission.dateRapport;
         changed = true;
@@ -7792,6 +7812,26 @@ static Future<RenseignementsGeneraux> getOrCreateRenseignementsGeneraux(String m
         existing.recepteurRapport = mission.recepteurRapport;
         changed = true;
       }
+      if (existing.recepteurCivilite == null && mission.recepteurCivilite != null) {
+        existing.recepteurCivilite = mission.recepteurCivilite;
+        changed = true;
+      }
+      if (existing.recepteurNom == null && mission.recepteurNom != null) {
+        existing.recepteurNom = mission.recepteurNom;
+        changed = true;
+      }
+      if (existing.recepteurFonction == null && mission.recepteurFonction != null) {
+        existing.recepteurFonction = mission.recepteurFonction;
+        changed = true;
+      }
+      if (existing.recepteurEmail == null && mission.recepteurEmail != null) {
+        existing.recepteurEmail = mission.recepteurEmail;
+        changed = true;
+      }
+      if (existing.recepteurTelephone == null && mission.recepteurTelephone != null) {
+        existing.recepteurTelephone = mission.recepteurTelephone;
+        changed = true;
+      }
       if (existing.dateRapport == null && mission.dateRapport != null) {
         existing.dateRapport = mission.dateRapport;
         changed = true;
@@ -7825,6 +7865,11 @@ static Future<RenseignementsGeneraux> getOrCreateRenseignementsGeneraux(String m
       recepteurRapport: mission?.recepteurRapport,
       lieuIntervention: mission?.lieuIntervention,
       dateRapport: mission?.dateRapport,
+      recepteurCivilite: mission?.recepteurCivilite,
+      recepteurNom: mission?.recepteurNom,
+      recepteurFonction: mission?.recepteurFonction,
+      recepteurEmail: mission?.recepteurEmail,
+      recepteurTelephone: mission?.recepteurTelephone,
       compteRendu: [],
       accompagnateurs: [],
       verificateurs: [],
@@ -7884,6 +7929,26 @@ static Future<void> saveRenseignementsGeneraux(RenseignementsGeneraux data) asyn
     }
     if (data.recepteurRapport != null && data.recepteurRapport != mission.recepteurRapport) {
       mission.recepteurRapport = data.recepteurRapport;
+      missionChanged = true;
+    }
+    if (data.recepteurCivilite != null && data.recepteurCivilite != mission.recepteurCivilite) {
+      mission.recepteurCivilite = data.recepteurCivilite;
+      missionChanged = true;
+    }
+    if (data.recepteurNom != null && data.recepteurNom != mission.recepteurNom) {
+      mission.recepteurNom = data.recepteurNom;
+      missionChanged = true;
+    }
+    if (data.recepteurFonction != null && data.recepteurFonction != mission.recepteurFonction) {
+      mission.recepteurFonction = data.recepteurFonction;
+      missionChanged = true;
+    }
+    if (data.recepteurEmail != null && data.recepteurEmail != mission.recepteurEmail) {
+      mission.recepteurEmail = data.recepteurEmail;
+      missionChanged = true;
+    }
+    if (data.recepteurTelephone != null && data.recepteurTelephone != mission.recepteurTelephone) {
+      mission.recepteurTelephone = data.recepteurTelephone;
       missionChanged = true;
     }
     if (data.dateRapport != null && data.dateRapport != mission.dateRapport) {

@@ -152,6 +152,21 @@ class Mission extends HiveObject {
   @HiveField(48)
   String? lieuIntervention;
 
+  @HiveField(49)
+  String? recepteurCivilite;
+
+  @HiveField(50)
+  String? recepteurNom;
+
+  @HiveField(51)
+  String? recepteurFonction;
+
+  @HiveField(52)
+  String? recepteurEmail;
+
+  @HiveField(53)
+  String? recepteurTelephone;
+
   Mission({
     required this.id,
     required this.nomClient,
@@ -201,7 +216,34 @@ class Mission extends HiveObject {
     this.qrCodeClient,
     this.recepteurRapport,
     this.lieuIntervention,
+    this.recepteurCivilite,
+    this.recepteurNom,
+    this.recepteurFonction,
+    this.recepteurEmail,
+    this.recepteurTelephone,
   }) : autresDocuments = autresDocuments ?? [];
+
+  /// Fonction effective du récepteur (source de vérité : recepteurFonction, repli historique : recepteurRapport)
+  String get effectiveRecepteurFonction {
+    if (recepteurFonction != null && recepteurFonction!.trim().isNotEmpty) {
+      return recepteurFonction!.trim();
+    }
+    if (recepteurRapport != null && recepteurRapport!.trim().isNotEmpty) {
+      return recepteurRapport!.trim();
+    }
+    return '';
+  }
+
+  /// Civilité effective du récepteur
+  String? get effectiveRecepteurCivilite {
+    if (recepteurCivilite != null && recepteurCivilite!.trim().isNotEmpty) {
+      return recepteurCivilite!.trim();
+    }
+    if (effectiveRecepteurFonction.isNotEmpty || (recepteurNom != null && recepteurNom!.trim().isNotEmpty)) {
+      return 'Monsieur';
+    }
+    return null;
+  }
 
   factory Mission.fromJson(Map<String, dynamic> json) {
     return Mission(
@@ -272,6 +314,11 @@ class Mission extends HiveObject {
       afficherTableauFoudre: json['afficher_tableau_foudre'] ?? false,
       recepteurRapport: json['recepteur_rapport'] ?? json['recepteurRapport'],
       lieuIntervention: json['lieu_intervention'] ?? json['lieuIntervention'],
+      recepteurCivilite: json['recepteur_civilite'] ?? json['recepteurCivilite'],
+      recepteurNom: json['recepteur_nom'] ?? json['recepteurNom'],
+      recepteurFonction: json['recepteur_fonction'] ?? json['recepteurFonction'],
+      recepteurEmail: json['recepteur_email'] ?? json['recepteurEmail'],
+      recepteurTelephone: json['recepteur_telephone'] ?? json['recepteurTelephone'],
     );
   }
 
@@ -325,6 +372,11 @@ class Mission extends HiveObject {
       'perimetre_mission': perimetreMission,
       'recepteur_rapport': recepteurRapport,
       'lieu_intervention': lieuIntervention,
+      'recepteur_civilite': recepteurCivilite,
+      'recepteur_nom': recepteurNom,
+      'recepteur_fonction': recepteurFonction,
+      'recepteur_email': recepteurEmail,
+      'recepteur_telephone': recepteurTelephone,
     };
   }
 

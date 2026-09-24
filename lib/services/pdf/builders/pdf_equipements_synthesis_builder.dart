@@ -17,6 +17,7 @@ class PdfEquipementItem {
   final String? presenceParafoudre;
   final String? verificationThermo;
   final String hasObservation;
+  final String departsIssus;
 
   const PdfEquipementItem({
     this.zoneName = '',
@@ -30,6 +31,7 @@ class PdfEquipementItem {
     this.presenceParafoudre,
     this.verificationThermo,
     this.hasObservation = 'Non',
+    this.departsIssus = '-',
   });
 }
 
@@ -624,6 +626,7 @@ class PdfEquipementsSynthesisBuilder {
       required String type,
       bool accessible = true,
       bool isMT = false,
+      String departsIssus = '-',
     }) {
       final hash = identityHashCode(refObj);
       if (!seenHashes.contains(hash)) {
@@ -644,6 +647,7 @@ class PdfEquipementsSynthesisBuilder {
             presenceParafoudre: _extractPresenceParafoudre(refObj),
             verificationThermo: _extractVerificationThermo(refObj),
             hasObservation: _extractHasObservation(refObj) ? 'Oui' : 'Non',
+            departsIssus: departsIssus,
           ),
         );
       }
@@ -665,6 +669,11 @@ class PdfEquipementsSynthesisBuilder {
               ? coffret.nom.trim()
               : (rep.isNotEmpty ? rep : normType);
 
+          // Extraction déterministe des départs issus (source de vérité : coffret.departures)
+          final String departsCountStr = (coffret.departures != null)
+              ? coffret.departures!.length.toString()
+              : '-';
+
           addEquipement(
             refObj: coffret,
             zoneName: zoneName,
@@ -675,6 +684,7 @@ class PdfEquipementsSynthesisBuilder {
             type: normType,
             accessible: coffret.accessible,
             isMT: false,
+            departsIssus: departsCountStr,
           );
         }
       }
@@ -1124,6 +1134,7 @@ class PdfEquipementsSynthesisBuilder {
             'N°',
             'Désignation',
             'Type',
+            'Départs issus',
             'Vérifié',
             'Présence du parafoudre',
             'Vérification thermo',
@@ -1141,15 +1152,16 @@ class PdfEquipementsSynthesisBuilder {
             6: pw.FlexColumnWidth(1.3), // Observation
           }
         : const {
-            0: pw.FlexColumnWidth(1.2), // Zone
-            1: pw.FlexColumnWidth(1.5), // Repère
-            2: pw.FixedColumnWidth(34), // N°
-            3: pw.FlexColumnWidth(2.2), // Équipement (Nom)
-            4: pw.FlexColumnWidth(1.5), // Type
-            5: pw.FlexColumnWidth(1.0), // Vérifié
-            6: pw.FlexColumnWidth(1.3), // Présence du parafoudre
-            7: pw.FlexColumnWidth(1.3), // Vérification thermo
-            8: pw.FlexColumnWidth(1.3), // Observation
+            0: pw.FlexColumnWidth(1.1), // Zone
+            1: pw.FlexColumnWidth(1.4), // Repère
+            2: pw.FixedColumnWidth(32), // N°
+            3: pw.FlexColumnWidth(2.0), // Équipement (Nom)
+            4: pw.FlexColumnWidth(1.4), // Type
+            5: pw.FlexColumnWidth(1.1), // Départs issus
+            6: pw.FlexColumnWidth(0.9), // Vérifié
+            7: pw.FlexColumnWidth(1.2), // Présence du parafoudre
+            8: pw.FlexColumnWidth(1.2), // Vérification thermo
+            9: pw.FlexColumnWidth(1.2), // Observation
           };
 
     final zoneGroups = <PdfEquipementZoneGroup>[];
@@ -1327,7 +1339,23 @@ class PdfEquipementsSynthesisBuilder {
               ),
             ),
 
-            // Cellule 5 : Vérifié
+            if (!isMT)
+              // Cellule Départs issus (BT uniquement, immédiatement après Type)
+              pw.Container(
+                decoration: pw.BoxDecoration(border: itemBorder),
+                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                alignment: pw.Alignment.center,
+                child: pw.Text(
+                  eq.departsIssus.isNotEmpty ? eq.departsIssus : '-',
+                  style: pw.TextStyle(
+                    font: eq.departsIssus != '-' ? fontBold : fontRegular,
+                    fontSize: 8.5,
+                  ),
+                  textAlign: pw.TextAlign.center,
+                ),
+              ),
+
+            // Cellule 5 / 6 : Vérifié
             pw.Container(
               decoration: pw.BoxDecoration(
                 color: eq.accessible ? PdfReportStyles.conformeColor : PdfReportStyles.nonConformeColor,

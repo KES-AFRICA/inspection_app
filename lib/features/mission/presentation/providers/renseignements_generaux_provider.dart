@@ -84,8 +84,19 @@ class RenseignementsGenerauxNotifier
     String? classementReglementaireCategorie,
     bool updateClassementReglementaireCategorie = false,
     String? recepteurRapport,
+    bool updateRecepteurRapport = false,
     String? lieuIntervention,
     DateTime? dateRapport,
+    String? recepteurCivilite,
+    bool updateRecepteurCivilite = false,
+    String? recepteurNom,
+    bool updateRecepteurNom = false,
+    String? recepteurFonction,
+    bool updateRecepteurFonction = false,
+    String? recepteurEmail,
+    bool updateRecepteurEmail = false,
+    String? recepteurTelephone,
+    bool updateRecepteurTelephone = false,
   }) async {
     final currentData = state.value;
     if (currentData == null) return;
@@ -115,9 +126,14 @@ class RenseignementsGenerauxNotifier
     if (updateClassementReglementaireCategorie || classementReglementaireCategorie != null) {
       currentData.classementReglementaireCategorie = classementReglementaireCategorie == '—' ? null : classementReglementaireCategorie;
     }
-    if (recepteurRapport != null) currentData.recepteurRapport = recepteurRapport;
+    if (updateRecepteurRapport || recepteurRapport != null) currentData.recepteurRapport = recepteurRapport;
     if (lieuIntervention != null) currentData.lieuIntervention = lieuIntervention;
     if (dateRapport != null) currentData.dateRapport = dateRapport;
+    if (updateRecepteurCivilite || recepteurCivilite != null) currentData.recepteurCivilite = recepteurCivilite;
+    if (updateRecepteurNom || recepteurNom != null) currentData.recepteurNom = recepteurNom;
+    if (updateRecepteurFonction || recepteurFonction != null) currentData.recepteurFonction = recepteurFonction;
+    if (updateRecepteurEmail || recepteurEmail != null) currentData.recepteurEmail = recepteurEmail;
+    if (updateRecepteurTelephone || recepteurTelephone != null) currentData.recepteurTelephone = recepteurTelephone;
     currentData.updatedAt = DateTime.now();
 
     // Notifier le changement d'état

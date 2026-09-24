@@ -23,6 +23,11 @@ class RenseignementsGenerauxEntity {
   final String? recepteurRapport;
   final String? lieuIntervention;
   final DateTime? dateRapport;
+  final String? recepteurCivilite;
+  final String? recepteurNom;
+  final String? recepteurFonction;
+  final String? recepteurEmail;
+  final String? recepteurTelephone;
 
   const RenseignementsGenerauxEntity({
     required this.missionId,
@@ -47,5 +52,10 @@ class RenseignementsGenerauxEntity {
     this.recepteurRapport,
     this.lieuIntervention,
     this.dateRapport,
+    this.recepteurCivilite,
+    this.recepteurNom,
+    this.recepteurFonction,
+    this.recepteurEmail,
+    this.recepteurTelephone,
   });
 }

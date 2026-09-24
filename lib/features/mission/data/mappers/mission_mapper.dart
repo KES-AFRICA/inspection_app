@@ -54,6 +54,11 @@ class MissionMapper {
       afficherTableauFoudre: model.afficherTableauFoudre,
       recepteurRapport: model.recepteurRapport,
       lieuIntervention: model.lieuIntervention,
+      recepteurCivilite: model.recepteurCivilite,
+      recepteurNom: model.recepteurNom,
+      recepteurFonction: model.recepteurFonction,
+      recepteurEmail: model.recepteurEmail,
+      recepteurTelephone: model.recepteurTelephone,
     );
   }
   static Mission toModel(MissionEntity entity) {
@@ -106,8 +111,13 @@ class MissionMapper {
           ? List<String>.from(entity.perimetreMission!)
           : null,
       afficherTableauFoudre: entity.afficherTableauFoudre,
-      recepteurRapport: entity.recepteurRapport,
+      recepteurRapport: entity.recepteurRapport ?? entity.recepteurFonction,
       lieuIntervention: entity.lieuIntervention,
+      recepteurCivilite: entity.recepteurCivilite,
+      recepteurNom: entity.recepteurNom,
+      recepteurFonction: entity.recepteurFonction,
+      recepteurEmail: entity.recepteurEmail,
+      recepteurTelephone: entity.recepteurTelephone,
     );
     
     // renseignementsGenerauxId n'est pas présent dans le constructeur de Mission

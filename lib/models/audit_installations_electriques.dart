@@ -1246,7 +1246,7 @@ class CoffretArmoire {
                     ? 'equip_${qrCode.trim()}'
                     : 'equip_${(nom.trim() + (numeroEquipement ?? '')).hashCode.abs()}',
         _accessible = accessible ?? true,
-        departures = departures ?? [],
+        departures = departures,
         terminalCircuits = terminalCircuits ?? [],
         alimentations = alimentations ?? [],
         pointsVerification = pointsVerification ?? [],

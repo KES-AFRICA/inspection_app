@@ -126,7 +126,22 @@ class PdfCoverBuilder {
     }
 
     final nomClientStr = mission.nomClient.trim().toUpperCase();
-    final recepteurStr = (mission.recepteurRapport ?? rg?.recepteurRapport ?? '').trim().toUpperCase();
+    
+    // Détermination dynamique du récepteur (civilité + fonction en MAJUSCULES au rendu)
+    final rawFonction = (mission.recepteurFonction ?? rg?.recepteurFonction ?? mission.recepteurRapport ?? rg?.recepteurRapport ?? '').trim();
+    final rawNom = (mission.recepteurNom ?? rg?.recepteurNom ?? '').trim();
+    final rawCivilite = (mission.recepteurCivilite ?? rg?.recepteurCivilite ?? '').trim();
+    final bool hasRecepteur = rawFonction.isNotEmpty || rawNom.isNotEmpty;
+    final String? civiliteEffective = rawCivilite.isNotEmpty
+        ? rawCivilite
+        : (hasRecepteur ? 'Monsieur' : null);
+    final String attentionTitle = civiliteEffective != null
+        ? "A l'attention de $civiliteEffective"
+        : "A l'attention de Mme/M.";
+    final String fonctionAffichee = rawFonction.isNotEmpty
+        ? rawFonction.toUpperCase()
+        : (rawNom.isNotEmpty ? rawNom.toUpperCase() : 'XXXXXXXXXXXXXXX');
+
     final nomSiteStr = (mission.nomSite ?? rg?.nomSite ?? '').trim().toUpperCase();
     final siteAffichage = nomSiteStr.isNotEmpty ? nomSiteStr : nomClientStr;
     final lieuInterventionStr = (mission.lieuIntervention ?? rg?.lieuIntervention ?? (nomSiteStr.isNotEmpty ? nomSiteStr : '')).trim();
@@ -194,7 +209,7 @@ class PdfCoverBuilder {
                     ),
                     pw.SizedBox(height: 12),
                     pw.Text(
-                      "A l'attention de Mme/M.",
+                      attentionTitle,
                       style: pw.TextStyle(
                         font: fontBold,
                         fontSize: 10.5,
@@ -206,7 +221,7 @@ class PdfCoverBuilder {
                     pw.ConstrainedBox(
                       constraints: const pw.BoxConstraints(maxWidth: 190),
                       child: pw.Text(
-                        recepteurStr.isNotEmpty ? recepteurStr : 'XXXXXXXXXXXXXXX',
+                        fonctionAffichee,
                         style: pw.TextStyle(
                           font: fontBold,
                           fontSize: 10.5,

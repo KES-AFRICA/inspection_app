@@ -47,6 +47,13 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
   late TextEditingController _recepteurRapportController;
   late TextEditingController _lieuInterventionController;
 
+  // Récepteur du rapport (Sélecteur complexe)
+  String _recepteurCivilite = 'Monsieur';
+  String _recepteurNom = '';
+  String _recepteurFonction = '';
+  String _recepteurEmail = '';
+  String _recepteurTelephone = '';
+
   // Données
   DateTime? _dateDebut;
   DateTime? _dateFin;
@@ -264,7 +271,18 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
       activite: _activiteController.text,
       nomSite: _nomSiteController.text,
       activiteSurSite: _activiteSurSiteController.text,
-      recepteurRapport: _recepteurRapportController.text,
+      recepteurRapport: _recepteurFonction.trim().isNotEmpty ? _recepteurFonction.trim() : null,
+      updateRecepteurRapport: true,
+      recepteurCivilite: (_recepteurFonction.trim().isNotEmpty || _recepteurNom.trim().isNotEmpty) ? _recepteurCivilite.trim() : null,
+      updateRecepteurCivilite: true,
+      recepteurNom: _recepteurNom.trim().isNotEmpty ? _recepteurNom.trim() : null,
+      updateRecepteurNom: true,
+      recepteurFonction: _recepteurFonction.trim().isNotEmpty ? _recepteurFonction.trim() : null,
+      updateRecepteurFonction: true,
+      recepteurEmail: _recepteurEmail.trim().isNotEmpty ? _recepteurEmail.trim() : null,
+      updateRecepteurEmail: true,
+      recepteurTelephone: _recepteurTelephone.trim().isNotEmpty ? _recepteurTelephone.trim() : null,
+      updateRecepteurTelephone: true,
       lieuIntervention: _lieuInterventionController.text,
       classementReglementaire: _classementReglementaire,
       updateClassementReglementaire: true,
@@ -1022,6 +1040,378 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
     );
   }
 
+  Widget _buildRecepteurField() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 360;
+    final hasData = _recepteurFonction.isNotEmpty || _recepteurNom.isNotEmpty;
+
+    final displayName = _recepteurNom.isNotEmpty
+        ? '$_recepteurCivilite $_recepteurNom'
+        : (_recepteurFonction.isNotEmpty ? _recepteurCivilite : '');
+
+    return InkWell(
+      onTap: _showRecepteurBottomSheet,
+      borderRadius: BorderRadius.circular(isSmallScreen ? 14 : 16),
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: isSmallScreen ? 12 : 16,
+          vertical: isSmallScreen ? 12 : 14,
+        ),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(isSmallScreen ? 14 : 16),
+          border: Border.all(
+            color: hasData ? AppTheme.primaryBlue.withOpacity(0.3) : Colors.grey.shade200,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
+              decoration: BoxDecoration(
+                color: (hasData ? AppTheme.primaryBlue : Colors.grey).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10),
+              ),
+              child: Icon(
+                Icons.assignment_ind_outlined,
+                size: isSmallScreen ? 20 : 24,
+                color: hasData ? AppTheme.primaryBlue : Colors.grey,
+              ),
+            ),
+            SizedBox(width: isSmallScreen ? 12 : 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Récepteur du rapport',
+                        style: TextStyle(
+                          fontSize: isSmallScreen ? 11 : 12,
+                          color: Colors.grey.shade600,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      if (hasData)
+                        GestureDetector(
+                          onTap: _showRecepteurBottomSheet,
+                          child: Icon(
+                            Icons.edit_outlined,
+                            size: isSmallScreen ? 16 : 18,
+                            color: AppTheme.primaryBlue,
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  if (hasData) ...[
+                    if (displayName.isNotEmpty)
+                      Text(
+                        displayName,
+                        style: TextStyle(
+                          fontSize: isSmallScreen ? 13 : 15,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    if (_recepteurFonction.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        _recepteurFonction,
+                        style: TextStyle(
+                          fontSize: isSmallScreen ? 12 : 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.primaryBlue,
+                        ),
+                      ),
+                    ],
+                    if (_recepteurEmail.isNotEmpty || _recepteurTelephone.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          if (_recepteurEmail.isNotEmpty) ...[
+                            Icon(Icons.email_outlined, size: 12, color: Colors.grey.shade600),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                _recepteurEmail,
+                                style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                          if (_recepteurTelephone.isNotEmpty) ...[
+                            if (_recepteurEmail.isNotEmpty) const SizedBox(width: 8),
+                            Icon(Icons.phone_outlined, size: 12, color: Colors.grey.shade600),
+                            const SizedBox(width: 4),
+                            Text(
+                              _recepteurTelephone,
+                              style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ] else ...[
+                    Text(
+                      'Définir le destinataire officiel du rapport (Civilité, Nom, Fonction...)',
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 12 : 13,
+                        color: Colors.grey.shade400,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            if (!hasData)
+              Icon(
+                Icons.arrow_forward_ios,
+                size: isSmallScreen ? 12 : 14,
+                color: Colors.grey.shade400,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showRecepteurBottomSheet() {
+    String selectedCivilite = _recepteurCivilite.isNotEmpty ? _recepteurCivilite : 'Monsieur';
+    final nomController = TextEditingController(text: _recepteurNom);
+    final fonctionController = TextEditingController(text: _recepteurFonction);
+    final emailController = TextEditingController(text: _recepteurEmail);
+    final telephoneController = TextEditingController(text: _recepteurTelephone);
+    final isSmallScreen = MediaQuery.of(context).size.width < 360;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) => Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.85,
+            ),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Handle
+                Container(
+                  margin: EdgeInsets.only(top: isSmallScreen ? 8 : 12),
+                  width: isSmallScreen ? 30 : 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                // Titre
+                Padding(
+                  padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+                  child: Text(
+                    'Récepteur du rapport',
+                    style: TextStyle(
+                      fontSize: isSmallScreen ? 14 : 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                const Divider(height: 0),
+                // Contenu scrollable
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+                    child: Column(
+                      children: [
+                        // 1. Civilité (Select : Madame, Monsieur, défaut Monsieur)
+                        DropdownButtonFormField<String>(
+                          value: selectedCivilite,
+                          decoration: InputDecoration(
+                            labelText: 'Civilité',
+                            prefixIcon: Icon(
+                              Icons.person_pin,
+                              size: isSmallScreen ? 18 : 20,
+                            ),
+                            border: const OutlineInputBorder(),
+                          ),
+                          items: const [
+                            DropdownMenuItem(
+                              value: 'Monsieur',
+                              child: Text('Monsieur'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'Madame',
+                              child: Text('Madame'),
+                            ),
+                          ],
+                          onChanged: (val) {
+                            if (val != null) {
+                              setModalState(() => selectedCivilite = val);
+                            }
+                          },
+                        ),
+                        SizedBox(height: isSmallScreen ? 12 : 14),
+
+                        // 2. Nom complet (Input texte)
+                        TextField(
+                          controller: nomController,
+                          decoration: InputDecoration(
+                            labelText: 'Nom complet',
+                            prefixIcon: Icon(
+                              Icons.person,
+                              size: isSmallScreen ? 18 : 20,
+                            ),
+                            border: const OutlineInputBorder(),
+                            hintText: 'Ex: Jeanne Dupont',
+                          ),
+                          textInputAction: TextInputAction.next,
+                        ),
+                        SizedBox(height: isSmallScreen ? 12 : 14),
+
+                        // 3. Fonction (Input texte)
+                        TextField(
+                          controller: fonctionController,
+                          decoration: InputDecoration(
+                            labelText: 'Fonction',
+                            prefixIcon: Icon(
+                              Icons.work,
+                              size: isSmallScreen ? 18 : 20,
+                            ),
+                            border: const OutlineInputBorder(),
+                            hintText: 'Ex: Directrice Technique, Responsable Maintenance...',
+                          ),
+                          textInputAction: TextInputAction.next,
+                        ),
+                        SizedBox(height: isSmallScreen ? 12 : 14),
+
+                        // 4. Email (Input texte)
+                        TextField(
+                          controller: emailController,
+                          decoration: InputDecoration(
+                            labelText: 'Email',
+                            prefixIcon: Icon(
+                              Icons.email,
+                              size: isSmallScreen ? 18 : 20,
+                            ),
+                            border: const OutlineInputBorder(),
+                            hintText: 'Ex: destinataire@entreprise.com',
+                          ),
+                          keyboardType: TextInputType.emailAddress,
+                          textInputAction: TextInputAction.next,
+                        ),
+                        SizedBox(height: isSmallScreen ? 12 : 14),
+
+                        // 5. Téléphone (Input texte)
+                        TextField(
+                          controller: telephoneController,
+                          decoration: InputDecoration(
+                            labelText: 'Téléphone',
+                            prefixIcon: Icon(
+                              Icons.phone,
+                              size: isSmallScreen ? 18 : 20,
+                            ),
+                            border: const OutlineInputBorder(),
+                            hintText: 'Ex: +237 6 12 34 56 78',
+                          ),
+                          keyboardType: TextInputType.phone,
+                          textInputAction: TextInputAction.done,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                // Actions
+                const Divider(height: 0),
+                Padding(
+                  padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: OutlinedButton.styleFrom(
+                            padding: EdgeInsets.symmetric(
+                              vertical: isSmallScreen ? 12 : 14,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: Text(
+                            'Annuler',
+                            style: TextStyle(fontSize: isSmallScreen ? 14 : 15),
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: isSmallScreen ? 10 : 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            setState(() {
+                              _recepteurCivilite = selectedCivilite;
+                              _recepteurNom = nomController.text.trim();
+                              _recepteurFonction = fonctionController.text.trim();
+                              _recepteurEmail = emailController.text.trim();
+                              _recepteurTelephone = telephoneController.text.trim();
+                              _recepteurRapportController.text = _recepteurFonction;
+                            });
+                            _saveData();
+                            Navigator.pop(context);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primaryBlue,
+                            foregroundColor: Colors.white,
+                            padding: EdgeInsets.symmetric(
+                              vertical: isSmallScreen ? 12 : 14,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: Text(
+                            'Valider',
+                            style: TextStyle(
+                              fontSize: isSmallScreen ? 14 : 15,
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   void _showAccompagnateurBottomSheet() {
     final nomController = TextEditingController();
     final emailController = TextEditingController();
@@ -1694,7 +2084,17 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
           _activiteController.text = data.activite;
           _nomSiteController.text = data.nomSite;
           _activiteSurSiteController.text = data.activiteSurSite ?? widget.mission.activiteSurSite ?? '';
-          _recepteurRapportController.text = data.recepteurRapport ?? widget.mission.recepteurRapport ?? '';
+          
+          // Récepteur du rapport : compatibilité ascendante (si fonction absente, repli sur ancienne chaîne)
+          final rawFonction = (data.recepteurFonction ?? widget.mission.recepteurFonction ?? data.recepteurRapport ?? widget.mission.recepteurRapport ?? '').trim();
+          _recepteurFonction = rawFonction;
+          final rawCivilite = (data.recepteurCivilite ?? widget.mission.recepteurCivilite ?? '').trim();
+          _recepteurCivilite = rawCivilite.isNotEmpty ? rawCivilite : 'Monsieur';
+          _recepteurNom = (data.recepteurNom ?? widget.mission.recepteurNom ?? '').trim();
+          _recepteurEmail = (data.recepteurEmail ?? widget.mission.recepteurEmail ?? '').trim();
+          _recepteurTelephone = (data.recepteurTelephone ?? widget.mission.recepteurTelephone ?? '').trim();
+          _recepteurRapportController.text = _recepteurFonction;
+
           _lieuInterventionController.text = data.lieuIntervention ?? widget.mission.lieuIntervention ?? '';
           _classementReglementaire = data.classementReglementaire ?? widget.mission.classementReglementaire;
           _classementReglementaireType = data.classementReglementaireType ?? widget.mission.classementReglementaireType;
@@ -1829,18 +2229,7 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
                     ),
                   ),
 
-                  SizedBox(height: isSmallScreen ? 12 : 16),
 
-                  // Récepteur du rapport
-                  _buildTextField(
-                    controller: _recepteurRapportController,
-                    label: 'Récepteur du rapport',
-                    icon: Icons.person_outline,
-                    hint: 'Ex: M. le Directeur Général, M. Dupont...',
-                    focusNode: _recepteurRapportFocus,
-                    isRequired: false,
-                    showError: false,
-                  ),
 
                   SizedBox(height: isSmallScreen ? 12 : 16),
 
@@ -2161,6 +2550,11 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
                       ],
                     ),
                   ),
+                  SizedBox(height: isSmallScreen ? 20 : 24),
+
+                  // Récepteur du rapport (Sélecteur complexe avant Accompagnateurs)
+                  _buildRecepteurField(),
+
                   SizedBox(height: isSmallScreen ? 20 : 24),
 
                   // Accompagnateurs

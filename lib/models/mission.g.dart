@@ -67,13 +67,18 @@ class MissionAdapter extends TypeAdapter<Mission> {
       qrCodeClient: fields[41] as String?,
       recepteurRapport: fields[47] as String?,
       lieuIntervention: fields[48] as String?,
+      recepteurCivilite: fields[49] as String?,
+      recepteurNom: fields[50] as String?,
+      recepteurFonction: fields[51] as String?,
+      recepteurEmail: fields[52] as String?,
+      recepteurTelephone: fields[53] as String?,
     )..renseignementsGenerauxId = fields[34] as String?;
   }
 
   @override
   void write(BinaryWriter writer, Mission obj) {
     writer
-      ..writeByte(49)
+      ..writeByte(54)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -171,7 +176,17 @@ class MissionAdapter extends TypeAdapter<Mission> {
       ..writeByte(47)
       ..write(obj.recepteurRapport)
       ..writeByte(48)
-      ..write(obj.lieuIntervention);
+      ..write(obj.lieuIntervention)
+      ..writeByte(49)
+      ..write(obj.recepteurCivilite)
+      ..writeByte(50)
+      ..write(obj.recepteurNom)
+      ..writeByte(51)
+      ..write(obj.recepteurFonction)
+      ..writeByte(52)
+      ..write(obj.recepteurEmail)
+      ..writeByte(53)
+      ..write(obj.recepteurTelephone);
   }
 
   @override

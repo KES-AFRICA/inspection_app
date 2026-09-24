@@ -131,14 +131,26 @@ class WordReportService {
     doc.addParagraph(Paragraph.text(''));
 
     final nomSite = (rg?.nomSite.isNotEmpty == true ? rg!.nomSite : (mission.nomSite ?? '')).trim().toUpperCase();
-    final recepteur = (mission.recepteurRapport ?? rg?.recepteurRapport ?? '').trim().toUpperCase();
+    final rawFonction = (mission.recepteurFonction ?? rg?.recepteurFonction ?? mission.recepteurRapport ?? rg?.recepteurRapport ?? '').trim();
+    final rawNom = (mission.recepteurNom ?? rg?.recepteurNom ?? '').trim();
+    final rawCivilite = (mission.recepteurCivilite ?? rg?.recepteurCivilite ?? '').trim();
+    final bool hasRecepteur = rawFonction.isNotEmpty || rawNom.isNotEmpty;
+    final String? civiliteEffective = rawCivilite.isNotEmpty
+        ? rawCivilite
+        : (hasRecepteur ? 'Monsieur' : null);
+    final String attentionTitle = civiliteEffective != null
+        ? "À l'attention de $civiliteEffective"
+        : "À l'attention de Mme/M.";
+    final String fonctionAffichee = rawFonction.isNotEmpty
+        ? rawFonction.toUpperCase()
+        : (rawNom.isNotEmpty ? rawNom.toUpperCase() : '');
     final lieu = (mission.lieuIntervention ?? rg?.lieuIntervention ?? nomSite).trim();
     final effectiveDate = mission.dateRapport ?? DateTime.now();
 
     final rows = <TableRow>[
       _headerRow(['Informations', '']),
       _dataRow(['Client', mission.nomClient.toUpperCase()]),
-      if (recepteur.isNotEmpty) _dataRow(['À l\'attention de Mme/M.', recepteur]),
+      if (fonctionAffichee.isNotEmpty) _dataRow([attentionTitle, fonctionAffichee]),
       if (nomSite.isNotEmpty) _dataRow(['Site', nomSite]),
       if (lieu.isNotEmpty) _dataRow(['Lieu d\'intervention', lieu]),
       if (mission.adresseClient != null) _dataRow(['Adresse', mission.adresseClient!]),

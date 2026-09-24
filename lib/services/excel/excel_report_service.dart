@@ -134,14 +134,15 @@ class ExcelReportService {
     DescriptionInstallations? description,
     required String reportDateStr,
   }) {
-    // 11 colonnes unifiées pour MT et BT (répliquées et complétées par les 2 colonnes de réserves) :
-    // Zone | Repère | N° | Désignation | Type | Vérifié | Présence du parafoudre | Vérification thermo | Observation | Date de réserve | Date de rapport
+    // 12 colonnes unifiées pour MT et BT (répliquées et complétées par les 2 colonnes de réserves) :
+    // Zone | Repère | N° | Désignation | Type | Départs issus | Vérifié | Présence du parafoudre | Vérification thermo | Observation | Date de réserve | Date de rapport
     final headersEquipements = [
       'Zone',
       'Repère',
       'N°',
       'Désignation',
       'Type',
+      'Départs issus',
       'Vérifié',
       'Présence du parafoudre',
       'Vérification thermo',
@@ -150,19 +151,20 @@ class ExcelReportService {
       'Date de rapport',
     ];
 
-    // Largeurs de colonnes optimisées (en caractères) pour les 11 colonnes de la feuille
+    // Largeurs de colonnes optimisées (en caractères) pour les 12 colonnes de la feuille
     final colWidths = [
       18.0, // Col 1 : Zone
       22.0, // Col 2 : Repère
       8.0,  // Col 3 : N°
       30.0, // Col 4 : Désignation
       16.0, // Col 5 : Type
-      14.0, // Col 6 : Vérifié
-      22.0, // Col 7 : Présence du parafoudre
-      20.0, // Col 8 : Vérification thermo
-      18.0, // Col 9 : Observation
-      18.0, // Col 10 : Date de réserve
-      18.0, // Col 11 : Date de rapport
+      14.0, // Col 6 : Départs issus
+      14.0, // Col 7 : Vérifié
+      22.0, // Col 8 : Présence du parafoudre
+      20.0, // Col 9 : Vérification thermo
+      18.0, // Col 10 : Observation
+      18.0, // Col 11 : Date de réserve
+      18.0, // Col 12 : Date de rapport
     ];
     for (int i = 0; i < colWidths.length; i++) {
       sheet.getRangeByIndex(1, i + 1).columnWidth = colWidths[i];
@@ -170,8 +172,8 @@ class ExcelReportService {
 
     int currentRow = 1;
 
-    // 1. Grand bandeau de titre KES (fusionné sur la largeur maximale de 11 colonnes)
-    final titleRange = sheet.getRangeByIndex(currentRow, 1, currentRow, 11);
+    // 1. Grand bandeau de titre KES (fusionné sur la largeur maximale de 12 colonnes)
+    final titleRange = sheet.getRangeByIndex(currentRow, 1, currentRow, 12);
     titleRange.merge();
     titleRange.setText(
       'SYNTHÈSE RÉCAPITULATIVE DES ÉQUIPEMENTS — ${mission.nomClient.toUpperCase()}${mission.nomSite != null && mission.nomSite!.isNotEmpty ? ' (${mission.nomSite})' : ''}',
@@ -241,9 +243,9 @@ class ExcelReportService {
     required String reportDateStr,
   }) {
     int currentRow = startRow;
-    const int totalCols = 11; // 11 colonnes unifiées pour une largeur et un alignement parfaits
+    const int totalCols = 12; // 12 colonnes unifiées pour une largeur et un alignement parfaits
 
-    // Titre de section (MT ou BT - pleine largeur 11 colonnes)
+    // Titre de section (MT ou BT - pleine largeur 12 colonnes)
     final sectionRange = sheet.getRangeByIndex(currentRow, 1, currentRow, totalCols);
     sectionRange.merge();
     sectionRange.setText(sectionTitle);
@@ -354,38 +356,49 @@ class ExcelReportService {
           _styleDataCell(cellType,
               bgColor: bgColor, hAlign: xlsio.HAlignType.center);
 
-          // Col 6 : Vérifié
-          final cellVerifie = sheet.getRangeByIndex(currentRow, 6);
+          // Col 6 : Départs issus
+          final cellDeparts = sheet.getRangeByIndex(currentRow, 6);
+          final parsedDeparts = int.tryParse(item.departsIssus);
+          if (parsedDeparts != null) {
+            cellDeparts.setNumber(parsedDeparts.toDouble());
+          } else {
+            cellDeparts.setText(item.departsIssus.isNotEmpty ? item.departsIssus : '-');
+          }
+          _styleDataCell(cellDeparts,
+              bgColor: bgColor, hAlign: xlsio.HAlignType.center, bold: (parsedDeparts != null));
+
+          // Col 7 : Vérifié
+          final cellVerifie = sheet.getRangeByIndex(currentRow, 7);
           cellVerifie.setText(item.accessible ? 'Oui' : 'Non');
           _styleDataCell(cellVerifie,
               bgColor: bgColor, hAlign: xlsio.HAlignType.center);
 
-          // Col 7 : Présence du parafoudre
-          final cellPara = sheet.getRangeByIndex(currentRow, 7);
+          // Col 8 : Présence du parafoudre
+          final cellPara = sheet.getRangeByIndex(currentRow, 8);
           cellPara.setText(item.presenceParafoudre ?? '-');
           _styleDataCell(cellPara,
               bgColor: bgColor, hAlign: xlsio.HAlignType.center);
 
-          // Col 8 : Vérification thermo
-          final cellThermo = sheet.getRangeByIndex(currentRow, 8);
+          // Col 9 : Vérification thermo
+          final cellThermo = sheet.getRangeByIndex(currentRow, 9);
           cellThermo.setText(item.verificationThermo ?? '-');
           _styleDataCell(cellThermo,
               bgColor: bgColor, hAlign: xlsio.HAlignType.center);
 
-          // Col 9 : Observation
-          final cellObs = sheet.getRangeByIndex(currentRow, 9);
+          // Col 10 : Observation
+          final cellObs = sheet.getRangeByIndex(currentRow, 10);
           cellObs.setText(item.hasObservation);
           _styleDataCell(cellObs,
               bgColor: bgColor, hAlign: xlsio.HAlignType.center);
 
-          // Col 10 : Date de réserve (laisser strictement vide pour saisie chantier)
-          final cellDateRes = sheet.getRangeByIndex(currentRow, 10);
+          // Col 11 : Date de réserve (laisser strictement vide pour saisie chantier)
+          final cellDateRes = sheet.getRangeByIndex(currentRow, 11);
           cellDateRes.setText('');
           _styleDataCell(cellDateRes,
               bgColor: bgColor, hAlign: xlsio.HAlignType.center);
 
-          // Col 11 : Date de rapport (date réelle de génération)
-          final cellDateRap = sheet.getRangeByIndex(currentRow, 11);
+          // Col 12 : Date de rapport (date réelle de génération)
+          final cellDateRap = sheet.getRangeByIndex(currentRow, 12);
           cellDateRap.setText(reportDateStr);
           _styleDataCell(cellDateRap,
               bgColor: bgColor, hAlign: xlsio.HAlignType.center);
