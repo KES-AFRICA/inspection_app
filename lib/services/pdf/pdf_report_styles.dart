@@ -254,7 +254,7 @@ class PdfReportStyles {
   /// - Opacité 0.15
   static pw.Widget buildWatermarkBackground(
     pw.MemoryImage? watermarkImage, {
-    double width = 680,
+    double? width,
     double? targetCenterY,
     double shiftRight = 0.0,
     double opacity = 0.15,
@@ -264,10 +264,15 @@ class PdfReportStyles {
 
     final double pageWidth = pageFormat?.width ?? PdfFooterBuilder.kFullPageWidth;
     final double pageHeight = pageFormat?.height ?? 841.89;
-    final double height = width * kWatermarkAspectRatio;
+    final bool isLandscape = pageWidth > pageHeight;
+
+    // En mode paysage (hauteur 595 pt vs 842 pt en portrait), on réduit la largeur de la loupe
+    // de 680 pt à 460 pt pour éviter qu'elle ne déborde et vienne chevaucher l'en-tête de page.
+    final double effectiveWidth = width ?? (isLandscape ? 460.0 : 680.0);
+    final double height = effectiveWidth * kWatermarkAspectRatio;
     final double actualTargetCenterY = targetCenterY ?? (pageHeight / 2.0);
 
-    final double circleCenterXInImage = width * kWatermarkCircleCxRatio;
+    final double circleCenterXInImage = effectiveWidth * kWatermarkCircleCxRatio;
     final double circleCenterYInImage = height * kWatermarkCircleCyRatio;
 
     final double imagePageX = (pageWidth / 2.0) - circleCenterXInImage + shiftRight;
@@ -286,7 +291,7 @@ class PdfReportStyles {
             opacity: opacity,
             child: pw.Image(
               watermarkImage,
-              width: width,
+              width: effectiveWidth,
               height: height,
               fit: pw.BoxFit.contain,
             ),

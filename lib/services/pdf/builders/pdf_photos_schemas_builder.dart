@@ -458,7 +458,7 @@ class PdfPhotosSchemasBuilder {
           numeroRapport: numeroRapport,
         ),
         build: (ctx) => [
-          pw.SizedBox(height: 220),
+          pw.SizedBox(height: 295),
           pw.Center(
             child: pw.Column(
               mainAxisAlignment: pw.MainAxisAlignment.center,

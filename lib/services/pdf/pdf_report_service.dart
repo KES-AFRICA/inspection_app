@@ -1555,7 +1555,7 @@ class PdfReportService {
           numeroRapport: numeroRapport,
         ),
         build: (ctx) => [
-          pw.SizedBox(height: 220),
+          pw.SizedBox(height: 295),
           pw.Center(
             child: pw.Column(
               mainAxisAlignment: pw.MainAxisAlignment.center,
@@ -1823,7 +1823,7 @@ class PdfReportService {
           numeroRapport: numeroRapport,
         ),
         build: (ctx) => [
-          pw.SizedBox(height: 220),
+          pw.SizedBox(height: 295),
           pw.Center(
             child: pw.Column(
               mainAxisAlignment: pw.MainAxisAlignment.center,
@@ -2281,7 +2281,7 @@ class PdfReportService {
           numeroRapport: numeroRapport,
         ),
         build: (ctx) => [
-          pw.SizedBox(height: 220),
+          pw.SizedBox(height: 295),
           pw.Center(
             child: pw.Column(
               mainAxisAlignment: pw.MainAxisAlignment.center,
@@ -3281,7 +3281,7 @@ class PdfReportService {
           numeroRapport: numeroRapportDoc,
         ),
         build: (ctx) => [
-          pw.SizedBox(height: 180),
+          pw.SizedBox(height: 283),
           _buildSignaturePage(
             renseignements,
             currentUser?.fullName,
@@ -3325,7 +3325,7 @@ class PdfReportService {
           numeroRapport: numeroRapportDoc,
         ),
         build: (ctx) => [
-          pw.SizedBox(height: 220),
+          pw.SizedBox(height: 295),
           pw.Center(
             child: pw.Column(
               mainAxisAlignment: pw.MainAxisAlignment.center,
