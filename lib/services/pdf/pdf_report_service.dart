@@ -2415,7 +2415,7 @@ class PdfReportService {
               nomSite: nomSite,
               numeroRapport: numeroRapport,
             ),
-            build: (ctx) => widgets,
+            build: (ctx) => _sanitizeChunkWidgets(widgets),
           ),
         );
         final mtBytes = await mtDoc.save();
@@ -2489,7 +2489,7 @@ class PdfReportService {
             nomSite: nomSite,
             numeroRapport: numeroRapport,
           ),
-          build: (ctx) => widgets,
+          build: (ctx) => _sanitizeChunkWidgets(widgets),
         ),
       );
       final zoneBytes = await zoneDoc.save();
@@ -2561,7 +2561,7 @@ class PdfReportService {
             nomSite: nomSite,
             numeroRapport: numeroRapport,
           ),
-          build: (ctx) => widgets,
+          build: (ctx) => _sanitizeChunkWidgets(widgets),
         ),
       );
       final zoneBytes = await zoneDoc.save();
@@ -2580,6 +2580,30 @@ class PdfReportService {
       files: chunkFiles,
       totalPages: currentOffset - pageOffset,
     );
+  }
+
+  static List<pw.Widget> _sanitizeChunkWidgets(List<pw.Widget> input) {
+    final result = <pw.Widget>[];
+    for (final w in input) {
+      if (w is pw.NewPage) {
+        if (result.isEmpty) continue;
+        if (result.last is pw.NewPage) continue;
+        if (result.last is pw.SizedBox) {
+          result.removeLast();
+          if (result.isNotEmpty && result.last is pw.NewPage) continue;
+        }
+        result.add(w);
+      } else if (w is pw.SizedBox) {
+        if (result.isEmpty || result.last is pw.NewPage) continue;
+        result.add(w);
+      } else {
+        result.add(w);
+      }
+    }
+    while (result.isNotEmpty && (result.last is pw.NewPage || result.last is pw.SizedBox)) {
+      result.removeLast();
+    }
+    return result;
   }
 
   static Future<_GeneratedReportResult> _generateReportPass({

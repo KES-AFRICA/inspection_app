@@ -13,6 +13,7 @@ import 'package:inspec_app/services/pdf/pdf_page_tracker.dart';
 import 'package:inspec_app/services/pdf/pdf_report_styles.dart';
 import 'package:inspec_app/services/pdf/builders/pdf_description_builder.dart';
 import 'package:inspec_app/services/ip_ik_evaluator_service.dart';
+import 'package:inspec_app/services/equipment_type_transition_service.dart';
 import 'package:inspec_app/utils/normative_reference_cleaner.dart';
 
 /// Builder responsable de l'Audit des Installations Électriques (Moyenne Tension et Basse Tension)
@@ -72,6 +73,23 @@ class PdfAuditInstallationsBuilder {
     if (t == 'COFFRET') return "Indice IP/IK du Coffret";
     if (t == 'TGBT') return "Indice IP/IK du TGBT";
     return "Indice IP/IK de l'équipement";
+  }
+
+  static String getIdentificationLabel(String? type) {
+    final t = (type ?? '').trim().toUpperCase();
+    if (t == 'INVERSEUR') return "Identification de l'inverseur";
+    if (t == 'TGBT') return "Identification du TGBT";
+    if (t == 'COFFRET') return "Identification du coffret";
+    if (t == 'ARMOIRE') return "Identification de l'armoire";
+    return "Identification de l'équipement";
+  }
+
+  static String getProtectionTeteLabel(String? type) {
+    final t = (type ?? '').trim().toUpperCase();
+    if (t == 'TGBT') return "Protection de tête du TGBT";
+    if (t == 'COFFRET') return "Protection de tête du coffret";
+    if (t == 'ARMOIRE') return "Protection de tête de l'armoire";
+    return "Protection de tête de coffret/Armoire";
   }
 
   static pw.Widget _resultBox(String text) {
@@ -2884,7 +2902,7 @@ class PdfAuditInstallationsBuilder {
     Map<dynamic, pw.MemoryImage?>? photoCache,
     Map<String, int>? photoRegistry,
   }) {
-    final widgets = <pw.Widget>[pw.SizedBox(height: 6)];
+    final widgets = <pw.Widget>[];
     String safe(String v) => v.trim().isEmpty ? 'Non renseigné' : v;
     pw.MemoryImage? photoInterne = photoCache?[coffret];
     if (photoInterne == null && photoCache == null) {
@@ -3143,7 +3161,7 @@ class PdfAuditInstallationsBuilder {
         tableRowCharBool('Zone ATEX', coffret.zoneAtex),
         tableRowChar('Domaine de tension', safe(coffret.domaineTension)),
         tableRowCharBool(
-          "Identification de l'armoire",
+          getIdentificationLabel(coffret.type),
           coffret.identificationArmoire,
         ),
         tableRowCharBool(
@@ -3159,11 +3177,6 @@ class PdfAuditInstallationsBuilder {
           'Vérification par thermographie infrarouge',
           coffret.verificationThermographie,
         ),
-        if (coffret.verificationThermographie)
-          tableRowThermoDefect(
-            'Présence de défaut thermo',
-            coffret.effectivePresenceDefautThermo,
-          ),
         tableRowCustomColor(
           'Indice IP/IK du repère',
           repereDisplay,
@@ -3174,6 +3187,12 @@ class PdfAuditInstallationsBuilder {
           equipDisplay,
           equipBgColor,
         ),
+        if (coffret.type == 'INVERSEUR') ...[
+          tableRowChar(
+            'Nombre de sorties inverseur',
+            '${coffret.sortiesInverseur.length}',
+          ),
+        ],
         if (coffret.type != 'INVERSEUR') ...[
           tableRowChar(
             'Récapitulatif nombre de départ',
@@ -3392,6 +3411,9 @@ class PdfAuditInstallationsBuilder {
     if (coffret.alimentations.isNotEmpty || coffret.protectionTete != null || !coffret.isDepartPrisAvecProtection) {
       widgets.add(pw.SizedBox(height: 3));
       final grammar = _getEquipmentGrammar(coffret.type);
+      final String sourceBannerTitle = coffret.type == 'INVERSEUR'
+          ? "IDENTIFICATION DES SOURCES D'ALIMENTATION ET DES SORTIES DE L'INVERSEUR"
+          : "IDENTIFICATION DE LA SOURCE D'ALIMENTATION ET DU DISPOSITIF DE TETE ${grammar.du}";
       widgets.add(
         pw.Container(
           width: double.infinity,
@@ -3401,7 +3423,7 @@ class PdfAuditInstallationsBuilder {
             color: PdfReportStyles.accentColor,
           ),
           child: pw.Text(
-            'IDENTIFICATION DE LA SOURCE D\'ALIMENTATION ET DU DISPOSITIF DE TETE ${grammar.du}',
+            sourceBannerTitle,
             textAlign: pw.TextAlign.center,
             style: pw.TextStyle(
               font: fontBold,
@@ -3596,7 +3618,11 @@ class PdfAuditInstallationsBuilder {
             ),
           );
 
-          for (final a in coffret.alimentations) {
+          final alimsToDisplay = EquipmentTypeTransitionService.filterAlimentationsForDisplay(
+            coffret.alimentations,
+            coffret.type,
+          );
+          for (final a in alimsToDisplay) {
             final String rawSource = a.source.trim().isNotEmpty
                 ? a.source.trim()
                 : (coffret.sourceNomComplet ?? '').trim();
@@ -3650,7 +3676,7 @@ class PdfAuditInstallationsBuilder {
         }
       }
 
-      if (coffret.protectionTete != null || !coffret.isDepartPrisAvecProtection) {
+      if (coffret.type != 'INVERSEUR' && (coffret.protectionTete != null || !coffret.isDepartPrisAvecProtection)) {
         final pt = coffret.protectionTete ?? Alimentation(typeProtection: '', pdcKA: '', calibre: '', sectionCable: '');
         final bool isAvecProtection = coffret.isDepartPrisAvecProtection;
 
@@ -3684,7 +3710,7 @@ class PdfAuditInstallationsBuilder {
                 color: PdfColor.fromInt(0xFFE8F0FB),
               ),
               children: [
-                _thCell('Protection de tête de coffret/Armoire'),
+                _thCell(getProtectionTeteLabel(coffret.type)),
                 _thCell('Type protection'),
                 _thCell('Courbe'),
                 _thCell('PDC (kA)'),
@@ -3951,9 +3977,13 @@ class PdfAuditInstallationsBuilder {
           ),
         ),
       );
+      final pointsToDisplay = EquipmentTypeTransitionService.filterPointsForDisplay(
+        coffret.pointsVerification,
+        coffret.type,
+      );
       widgets.add(
         _buildPointsVerificationTable(
-          coffret.pointsVerification,
+          pointsToDisplay,
           coffretType: coffret.type,
           photoRegistry: photoRegistry,
         ),
@@ -3974,7 +4004,6 @@ class PdfAuditInstallationsBuilder {
       );
     }
 
-    widgets.add(pw.SizedBox(height: 10));
     return widgets;
   }
 

@@ -1,12 +1,10 @@
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 import 'package:inspec_app/models/audit_installations_electriques.dart';
-import 'package:inspec_app/models/description_installations.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/renseignements_generaux.dart';
 import 'package:inspec_app/features/mission/data/mappers/renseignements_generaux_mapper.dart';
