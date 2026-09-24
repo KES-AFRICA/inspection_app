@@ -3,6 +3,7 @@ library;
 
 import '../models/audit_installations_electriques.dart';
 import '../utils/normative_reference_cleaner.dart';
+import 'equipment_type_transition_service.dart';
 
 class DispositionMetadata {
   final String referenceNormative;
@@ -2274,9 +2275,10 @@ class DispositionsConstructivesRegistry {
       }
     }
 
-    // Conservation garantie de tous les points utilisateur orphelins
+    // Conservation garantie de tous les points utilisateur orphelins (en excluant les points exclusifs de coffret)
     for (final entry in existingMap.entries) {
-      if (!usedKeys.contains(entry.key)) {
+      if (!usedKeys.contains(entry.key) &&
+          !EquipmentTypeTransitionService.isCoffretExclusivePoint(entry.value.pointVerification)) {
         points.add(entry.value);
       }
     }
@@ -2351,9 +2353,10 @@ class DispositionsConstructivesRegistry {
       }
     }
 
-    // Conservation garantie de tous les points utilisateur orphelins
+    // Conservation garantie de tous les points utilisateur orphelins (en excluant les points exclusifs d'inverseur)
     for (final entry in existingMap.entries) {
-      if (!usedKeys.contains(entry.key)) {
+      if (!usedKeys.contains(entry.key) &&
+          !EquipmentTypeTransitionService.isInverseurExclusivePoint(entry.value.pointVerification)) {
         points.add(entry.value);
       }
     }

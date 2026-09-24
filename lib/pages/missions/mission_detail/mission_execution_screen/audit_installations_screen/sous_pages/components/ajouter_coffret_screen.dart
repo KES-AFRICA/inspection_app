@@ -29,6 +29,7 @@ import 'package:inspec_app/components/normative_search_suggestions_widget.dart';
 import 'package:inspec_app/services/normative_search_service.dart';
 import 'package:inspec_app/services/equipment_source_search_service.dart';
 import 'package:inspec_app/services/ip_ik_evaluator_service.dart';
+import 'package:inspec_app/services/equipment_type_transition_service.dart';
 import 'package:inspec_app/services/document_generation/essai_declenchement_helper.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/essai_declenchement_modal.dart';
 
@@ -5143,7 +5144,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
 
   void _initializeForCoffretType(String? type) {
     if (type == null) return;
-    if (!widget.isEdition) {
+    if (!widget.isEdition && _pointsVerification.isEmpty) {
       final points = HiveService.getPointsVerificationForCoffret(type);
       _pointsVerification = points.map((point) {
         final meta = DispositionsConstructivesRegistry.getCoffretMetadata(point, coffretType: type);
@@ -5152,6 +5153,8 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
           conformite: '',
           observation: null,
           referenceNormative: meta?.referenceNormative,
+          familleRisque: meta?.familleRisque,
+          criticite: meta?.criticite,
           priorite: null,
         );
       }).toList();
@@ -5168,12 +5171,58 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
 
       _hasObservation.clear();
       for (int i = 0; i < _pointsVerification.length; i++) _hasObservation[i] = false;
-      _alimentations.clear(); _protectionTete = null;
+      _alimentations.clear();
+      _protectionTete = null;
       if (type == 'INVERSEUR') {
-        _alimentations.addAll([Alimentation(typeProtection: '', pdcKA: '', calibre: '', sectionCable: ''), Alimentation(typeProtection: '', pdcKA: '', calibre: '', sectionCable: ''), Alimentation(typeProtection: '', pdcKA: '', calibre: '', sectionCable: '')]);
+        _alimentations.addAll([
+          Alimentation(typeProtection: '', pdcKA: '', calibre: '', sectionCable: ''),
+          Alimentation(typeProtection: '', pdcKA: '', calibre: '', sectionCable: ''),
+          Alimentation(typeProtection: '', pdcKA: '', calibre: '', sectionCable: ''),
+        ]);
       } else {
         _alimentations.add(Alimentation(typeProtection: '', pdcKA: '', calibre: '', sectionCable: ''));
         _protectionTete = Alimentation(typeProtection: '', pdcKA: '', calibre: '', sectionCable: '');
+      }
+    } else {
+      // Transition dynamique de type (en création ou en édition)
+      final dummy = CoffretArmoire(
+        qrCode: _qrCodeController.text.trim(),
+        nom: _nomController.text,
+        repere: _repereController.text,
+        type: type,
+        statut: 'en_cours',
+        pointsVerification: _pointsVerification,
+        alimentations: _alimentations,
+        protectionTete: _protectionTete,
+        departures: _departures,
+        terminalCircuits: _terminalCircuits,
+        presenceCPI: _presenceCPI,
+      );
+
+      EquipmentTypeTransitionService.normalizeEquipmentForType(dummy, type);
+
+      _pointsVerification = dummy.pointsVerification;
+      _alimentations = dummy.alimentations;
+      _protectionTete = dummy.protectionTete;
+      _departures = dummy.departures ?? [];
+      _terminalCircuits = dummy.terminalCircuits ?? [];
+      _presenceCPI = dummy.presenceCPI;
+
+      for (var p in _pointsVerification) {
+        final meta = DispositionsConstructivesRegistry.getCoffretMetadata(
+          p.pointVerification,
+          coffretType: type,
+        );
+        if (meta != null) {
+          p.referenceNormative ??= meta.referenceNormative;
+          p.familleRisque ??= meta.familleRisque;
+          p.criticite ??= meta.criticite;
+        }
+      }
+
+      _hasObservation.clear();
+      for (int i = 0; i < _pointsVerification.length; i++) {
+        _hasObservation[i] = _pointsVerification[i].observation?.trim().isNotEmpty == true;
       }
     }
   }

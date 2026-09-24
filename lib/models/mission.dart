@@ -234,6 +234,9 @@ class Mission extends HiveObject {
     return '';
   }
 
+  /// Nom effectif du récepteur
+  String get effectiveRecepteurNom => recepteurNom?.trim() ?? '';
+
   /// Civilité effective du récepteur
   String? get effectiveRecepteurCivilite {
     if (recepteurCivilite != null && recepteurCivilite!.trim().isNotEmpty) {

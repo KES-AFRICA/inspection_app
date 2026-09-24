@@ -139,6 +139,9 @@ class RenseignementsGeneraux extends HiveObject {
     return '';
   }
 
+  /// Nom effectif du récepteur
+  String get effectiveRecepteurNom => recepteurNom?.trim() ?? '';
+
   /// Civilité effective du récepteur
   /// Si explicitement définie, renvoyée.
   /// Si non définie mais qu'une fonction ou un nom existe (ancienne mission), défaut 'Monsieur'.
