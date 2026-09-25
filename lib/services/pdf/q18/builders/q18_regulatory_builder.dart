@@ -11,7 +11,7 @@ import 'package:inspec_app/services/pdf/pdf_report_styles.dart';
 /// - Section 8 : Échelle de classification des dangers
 /// - Section 9 : Typologie des dangers les plus courants
 class Q18RegulatoryBuilder {
-  /// Section 2 : Objet et cadre de la mission
+  /// Section 2 : Objet et cadre de la mission (2 paragraphes stricts de référence)
   static List<pw.Widget> buildSection2ObjetCadre({
     required pw.Font fontBold,
     required pw.Font fontRegular,
@@ -20,110 +20,70 @@ class Q18RegulatoryBuilder {
       PdfReportStyles.sectionBox('2. OBJET ET CADRE DE LA MISSION', fontBold: fontBold),
       pw.SizedBox(height: 6),
       pw.Paragraph(
-        text: 'La présente mission a pour objet la vérification des installations électriques au regard des risques d\'incendie et d\'explosion, conformément aux prescriptions du Traité d\'évaluation du risque APSAD D18 et aux référentiels réglementaires en vigueur.',
+        text: 'Le présent rapport constitue le compte rendu de la mission de vérification périodique Q18 réalisée conformément au référentiel APSAD D18. Cette mission a pour objectif d\'identifier les dangers d\'incendie ou d\'explosion susceptibles d\'être liés à l\'installation électrique du site, en complément des vérifications réglementaires en vigueur.',
         style: pw.TextStyle(font: fontRegular, fontSize: 8.5, color: PdfColors.black, lineSpacing: 1.2),
       ),
-      pw.SizedBox(height: 2),
+      pw.SizedBox(height: 4),
       pw.Paragraph(
-        text: 'Elle s\'inscrit dans le cadre de la prévention des risques professionnels et de la préservation du patrimoine industriel et tertiaire contre les sinistres d\'origine électrique. Le présent compte-rendu Q18 rend compte des constats relevés lors de la visite sur site et permet aux exploitants ainsi qu\'aux assureurs d\'apprécier le niveau de sécurité réel des installations examinées.',
+        text: 'Cette vérification ne se substitue pas aux vérifications réglementaires obligatoires ni aux contrôles requis par d\'autres réglementations applicables (sécurité incendie ERP/ICPE, etc.). Elle constitue une démarche complémentaire de prévention destinée notamment à l\'information de l\'assureur du site.',
         style: pw.TextStyle(font: fontRegular, fontSize: 8.5, color: PdfColors.black, lineSpacing: 1.2),
       ),
-      pw.SizedBox(height: 6),
-      pw.Container(
-        padding: const pw.EdgeInsets.all(6),
-        decoration: pw.BoxDecoration(
-          color: PdfReportStyles.priorite1Color,
-          border: pw.TableBorder.all(color: PdfColors.orange800, width: 0.5),
-          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(2)),
-        ),
-        child: pw.RichText(
-          text: pw.TextSpan(
-            style: pw.TextStyle(font: fontRegular, fontSize: 7.8, color: PdfColors.black),
-            children: [
-              pw.TextSpan(
-                text: 'NOTE LIMINAIRE IMPORTANTE : ',
-                style: pw.TextStyle(font: fontBold, color: PdfColors.brown900),
-              ),
-              const pw.TextSpan(
-                text: 'La vérification Q18 est une inspection visuelle accompagnée d\'investigations par échantillonnage. Elle ne constitue ni une réception technique de conformité de fin de travaux, ni un audit exhaustif de dimensionnement d\'ingénierie. Elle cible prioritairement les anomalies et dégradations susceptibles d\'engendrer un échauffement excessif, un arc électrique, une inflammation de matériaux ou une explosion.',
-              ),
-            ],
-          ),
-        ),
-      ),
-      pw.SizedBox(height: 12),
+      pw.SizedBox(height: 14),
     ];
   }
 
-  /// Section 3 : Cadre réglementaire et normatif
+  /// Section 3 : Cadre réglementaire et normatif (8 textes de référence)
   static List<pw.Widget> buildSection3CadreReglementaire({
     required pw.Font fontBold,
     required pw.Font fontRegular,
   }) {
     final textes = [
-      [
-        'Traité APSAD D18',
-        'Vérification des installations électriques - Déclaration de conformité aux règles d\'assurances contre l\'incendie et l\'explosion.',
-      ],
-      [
-        'Loi n° 2011/022 du 14 décembre 2011',
-        'Loi régissant le secteur de l\'électricité en République du Cameroun.',
-      ],
-      [
-        'Arrêté n° 002164/MINIMDT/MINEE du 20 juin 2012',
-        'Rendant obligatoire la norme camerounaise NC 244 C 15 100 relative aux installations électriques à basse tension.',
-      ],
-      [
-        'Norme NC 244 C 15 100 / NF C 15-100',
-        'Règles d\'installation électrique à basse tension - Conception, mise en œuvre, vérification et entretien.',
-      ],
-      [
-        'Norme NF C 13-100 & NF C 13-200',
-        'Postes de livraison HTA et installations électriques à haute tension.',
-      ],
-      [
-        'Décret n° 2018/1969/PM du 15 mars 2018',
-        'Règles de base de sécurité incendie dans les bâtiments en République du Cameroun.',
-      ],
-      [
-        'Arrêté n° 039/MTPS/IMT du 26 novembre 1984',
-        'Mesures générales d\'hygiène et de sécurité sur les lieux de travail.',
-      ],
-      [
-        'Norme NF C 17-102',
-        'Protection contre la foudre - Systèmes de protection contre la foudre à dispositif d\'amorçage.',
-      ],
+      'Référentiel APSAD D18 (CNPP) — prévention des risques d\'incendie et d\'explosion',
+      'Articles 6, 112, 113 - Arrêté 039/MTPS/IMT du 26 novembre 1984 fixant les mesures générales d\'hygiène et de sécurité sur les lieux de travail',
+      'Cahier de prescription technique applicable au Décret N° 20181969/PM du 15 mars 2018, fixant les règles de base de sécurité incendie dans les bâtiments',
+      'Arrêté conjoint 002164 du 21 juin 2012 MNIMIDT/MINEE',
+      'Loi N° 896/PJL/AN du 15/11/2011',
+      'NC 244 C 15 100 - Installation électrique à basse tension',
+      'NF C 15 100 - Installation électrique à basse tension',
+      'Norme NF C 13 100 - Poste de livraison établi à l\'intérieur d\'un bâtiment et alimenté par un réseau de distribution publique de deuxième catégorie',
     ];
 
     return [
       PdfReportStyles.sectionBox('3. CADRE RÉGLEMENTAIRE ET NORMATIF', fontBold: fontBold),
       pw.SizedBox(height: 6),
+      pw.Paragraph(
+        text: 'La mission s\'inscrit, sans s\'y substituer, dans le prolongement des textes et normes suivants, à rappeler ou compléter selon le contexte du site :',
+        style: pw.TextStyle(font: fontRegular, fontSize: 8.5, color: PdfColors.black),
+      ),
+      pw.SizedBox(height: 6),
       pw.Table(
         border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.4),
         columnWidths: const {
-          0: pw.FlexColumnWidth(3.8),
-          1: pw.FlexColumnWidth(6.2),
+          0: pw.FixedColumnWidth(24),
+          1: pw.FlexColumnWidth(1),
         },
         children: [
           pw.TableRow(
             decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
             children: [
-              PdfReportStyles.cell('Référence réglementaire / normative', isHeader: true, centered: false),
-              PdfReportStyles.cell('Libellé et portée d\'application', isHeader: true, centered: false),
+              PdfReportStyles.cell('N°', isHeader: true, centered: true),
+              PdfReportStyles.cell('Textes réglementaires et normes applicables', isHeader: true, centered: false),
             ],
           ),
           ...textes.asMap().entries.map((entry) {
             final idx = entry.key;
-            final item = entry.value;
+            final text = entry.value;
+            final isAlt = idx.isOdd;
             return pw.TableRow(
               decoration: pw.BoxDecoration(
-                color: idx.isOdd ? PdfReportStyles.tableRowAlt : PdfColors.white,
+                color: isAlt ? PdfReportStyles.tableRowAlt : PdfColors.white,
               ),
               children: [
                 pw.Container(
-                  padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 5),
+                  alignment: pw.Alignment.center,
                   child: pw.Text(
-                    item[0],
+                    '${idx + 1}',
                     style: pw.TextStyle(
                       font: fontBold,
                       fontSize: 8.0,
@@ -132,9 +92,9 @@ class Q18RegulatoryBuilder {
                   ),
                 ),
                 pw.Container(
-                  padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
                   child: pw.Text(
-                    item[1],
+                    text,
                     style: pw.TextStyle(
                       font: fontRegular,
                       fontSize: 8.0,
@@ -147,92 +107,145 @@ class Q18RegulatoryBuilder {
           }),
         ],
       ),
-      pw.SizedBox(height: 12),
+      pw.SizedBox(height: 14),
     ];
   }
 
-  /// Section 7 : Méthodologie et points de contrôle
+  /// Section 7 : Méthodologie et points de contrôle (Tableau 9 éléments de référence)
   static List<pw.Widget> buildSection7Methodologie({
     required pw.Font fontBold,
     required pw.Font fontRegular,
   }) {
-    final points = [
-      '1. État général des matériels électriques (détérioration, vieillissement, propreté, traces de corrosion ou d\'humidité).',
-      '2. Protection contre les contacts directs (maintien des indices IP/IK, intégrité des plastrons, enveloppes et presse-étoupes).',
-      '3. Protection contre les contacts indirects (continuité des conducteurs de protection PE, schéma de liaison à la terre, DDR).',
-      '4. Adéquation et calibrage des dispositifs de protection contre les surintensités (calibre disjoncteurs/fusibles vs section câbles).',
-      '5. Échauffements anormaux et connexions défectueuses (serrage des borniers, traces de brûlures, absence de jeux de barres protégés).',
-      '6. Protection contre les surtensions d\'origine atmosphérique (état et coordination des parafoudres, prise de terre des paratonnerres).',
-      '7. Confinement du feu et coupe-feu (étanchéité des traversées de câbles, calfeutrement coupe-feu des parois, sas postes HTA).',
-      '8. Exploitation en locaux à risques particuliers (locaux BE2 à risque d\'incendie, stockage de matières inflammables, conformité ATEX).',
-      '9. Organes de sécurité d\'urgence (accessibilité et efficacité des arrêts d\'urgence coupure générale, éclairage de sécurité d\'évacuation).',
+    final methodologieRows = [
+      [
+        'Tableaux électriques (TGBT, armoires, coffret, inverseur)',
+        'État général, propreté, encombrement, repérage des circuits, accessibilité, échauffements anormaux',
+      ],
+      [
+        'Dispositifs de protection',
+        'Présence et calibrage des disjoncteurs et fusibles, fonctionnement des différentiels, sélectivité',
+      ],
+      [
+        'Continuité des mises à la terre et liaisons équipotentielles',
+        'Vérification de la continuité, état des connexions, résistance de terre',
+      ],
+      [
+        'État des conducteurs et raccordements',
+        'Absence d\'échauffement, de desserrage, d\'oxydation, de dénudage ou de surcharge apparente',
+      ],
+      [
+        'Contrôle thermographique (le cas échéant)',
+        'Détection des points chauds sur tableaux et connexions sous tension par caméra infrarouge',
+      ],
+      [
+        'Environnement des installations',
+        'Présence de poussières, d\'humidité, de produits inflammables ou corrosifs à proximité des équipements électriques',
+      ],
+      [
+        'Zones à risque particulier / ATEX',
+        'Adéquation du matériel installé (indices IP/IK, matériel ATEX) avec le classement de la zone',
+      ],
+      [
+        'Éclairage de sécurité et signalisation',
+        'Présence et bon fonctionnement des blocs autonomes, accessibilité des tableaux',
+      ],
+      [
+        'Documentation associée',
+        'Disponibilité des schémas électriques, du carnet de bord, des rapports de vérifications réglementaires antérieures',
+      ],
     ];
 
     return [
       PdfReportStyles.sectionBox('7. MÉTHODOLOGIE ET POINTS DE CONTRÔLE', fontBold: fontBold),
       pw.SizedBox(height: 6),
       pw.Paragraph(
-        text: 'Les vérifications portent sur l\'examen méthodique visuel et instrumenté des installations, articulé autour de 9 thématiques majeures d\'investigation :',
+        text: 'La vérification a été réalisée par examen visuel des installations, complété le cas échéant par des mesures et un contrôle thermographique, portant notamment sur les points suivants :',
         style: pw.TextStyle(font: fontRegular, fontSize: 8.5, color: PdfColors.black),
       ),
-      pw.SizedBox(height: 4),
-      pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: points.map((p) {
-          return pw.Padding(
-            padding: const pw.EdgeInsets.only(bottom: 3),
-            child: pw.Row(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
+      pw.SizedBox(height: 6),
+      pw.Table(
+        border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.4),
+        columnWidths: const {
+          0: pw.FlexColumnWidth(3.8),
+          1: pw.FlexColumnWidth(6.2),
+        },
+        children: [
+          pw.TableRow(
+            decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
+            children: [
+              PdfReportStyles.cell('Éléments à vérifier', isHeader: true, centered: false),
+              PdfReportStyles.cell('Point de contrôle', isHeader: true, centered: false),
+            ],
+          ),
+          ...methodologieRows.asMap().entries.map((entry) {
+            final idx = entry.key;
+            final row = entry.value;
+            final isAlt = idx.isOdd;
+            return pw.TableRow(
+              decoration: pw.BoxDecoration(
+                color: isAlt ? PdfReportStyles.tableRowAlt : PdfColors.white,
+              ),
               children: [
                 pw.Container(
-                  width: 6,
-                  height: 6,
-                  margin: const pw.EdgeInsets.only(top: 3, right: 6),
-                  decoration: pw.BoxDecoration(
-                    color: PdfReportStyles.accentColor,
-                    shape: pw.BoxShape.circle,
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+                  child: pw.Text(
+                    row[0],
+                    style: pw.TextStyle(
+                      font: fontBold,
+                      fontSize: 8.0,
+                      color: PdfReportStyles.headerColor,
+                    ),
                   ),
                 ),
-                pw.Expanded(
+                pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
                   child: pw.Text(
-                    p,
-                    style: pw.TextStyle(font: fontRegular, fontSize: 8.0, color: PdfColors.black),
+                    row[1],
+                    style: pw.TextStyle(
+                      font: fontRegular,
+                      fontSize: 8.0,
+                      color: PdfColors.black,
+                    ),
                   ),
                 ),
               ],
-            ),
-          );
-        }).toList(),
+            );
+          }),
+        ],
       ),
-      pw.SizedBox(height: 12),
+      pw.SizedBox(height: 14),
     ];
   }
 
-  /// Section 8 : Échelle de classification des dangers
+  /// Section 8 : Échelle de classification des dangers (Tableau 4 niveaux de référence)
   static List<pw.Widget> buildSection8ClassificationDangers({
     required pw.Font fontBold,
     required pw.Font fontRegular,
   }) {
     final echelles = [
       [
-        'Danger avéré',
-        'Anomalie présentant un risque direct, grave et immédiat d\'inflammation, d\'arc électrique ou d\'explosion (ex: connexion surchauffée, conducteur sous tension nu accessible, protection shuntée ou surcalibrée, calfeutrement absent en zone inflammable).',
+        'Danger avéré (Critique)',
+        'Anomalie présentant un risque direct et significatif d\'incendie ou d\'explosion (échauffement anormal constaté, protection différentielle absente ou hors service, conducteur dénudé sous tension, etc.)',
+        'Action corrective immédiate ou à très court terme (délai à préciser par le vérificateur)',
         PdfColor.fromInt(0xFFC00000), // Rouge
       ],
       [
-        'Dégradation',
-        'Détérioration ou défaut d\'entretien ne présentant pas un risque immédiat mais susceptible d\'évoluer à court/moyen terme vers un danger avéré s\'il n\'est pas corrigé (ex: vieillissement d\'isolant, desserrage modéré, corrosion d\'enveloppe).',
+        'Dégradation (Majeure)',
+        'Anomalie ou état de vieillissement constaté ne présentant pas de danger immédiat, mais susceptible d\'évoluer vers un danger avéré en l\'absence de correction',
+        'Action corrective à programmer à moyen terme, à surveiller lors de la prochaine visite',
         PdfColor.fromInt(0xFFED7D31), // Orange
       ],
       [
         'Non-conformité hors périmètre APSAD',
-        'Écart par rapport aux normes ou décrets d\'hygiène et sécurité ne constituant pas directement une cause potentielle de départ de feu ou d\'explosion (ex: repérage incomplet, absence de schéma unifilaire, absence d\'affichage réglementaire).',
-        PdfColor.fromInt(0xFF70AD47), // Vert olive / gris vert
+        'Écart constaté par rapport à une exigence réglementaire / normative mais ne relevant pas directement du risque incendie/explosion visé par le D18',
+        'Signalé pour information ; relève des vérifications réglementaires périodiques',
+        PdfColor.fromInt(0xFF70AD47), // Vert
       ],
       [
-        'Point sensible / Observation',
-        'Situation constatée méritant une vigilance particulière de l\'exploitant, ou bonne pratique recommandée pour préserver la sécurité globale de l\'installation dans le temps.',
-        PdfColor.fromInt(0xFF41719C), // Bleu KES
+        'Point sensible / observation',
+        'Élément non classé comme danger mais méritant une vigilance particulière ou une bonne pratique à renforcer',
+        'Recommandation, sans obligation de levée',
+        PdfColor.fromInt(0xFF41719C), // Bleu
       ],
     ];
 
@@ -240,38 +253,49 @@ class Q18RegulatoryBuilder {
       PdfReportStyles.sectionBox('8. ÉCHELLE DE CLASSIFICATION DES DANGERS', fontBold: fontBold),
       pw.SizedBox(height: 6),
       pw.Paragraph(
-        text: 'Conformément au référentiel APSAD D18, chaque constat relevé est classé selon une hiérarchie normalisée à 4 niveaux d\'appréciation du risque :',
+        text: 'Chaque anomalie constatée est classée selon l\'échelle suivante, qui détermine le traitement attendu :',
         style: pw.TextStyle(font: fontRegular, fontSize: 8.5, color: PdfColors.black),
       ),
-      pw.SizedBox(height: 4),
+      pw.SizedBox(height: 6),
       pw.Table(
         border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.4),
         columnWidths: const {
-          0: pw.FlexColumnWidth(3.0),
-          1: pw.FlexColumnWidth(7.0),
+          0: pw.FlexColumnWidth(2.6),
+          1: pw.FlexColumnWidth(4.4),
+          2: pw.FlexColumnWidth(3.0),
         },
         children: [
           pw.TableRow(
             decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
             children: [
-              PdfReportStyles.cell('Niveau de gravité', isHeader: true, centered: false),
-              PdfReportStyles.cell('Critères d\'attribution et portée du risque', isHeader: true, centered: false),
+              PdfReportStyles.cell('Niveau', isHeader: true, centered: false),
+              PdfReportStyles.cell('Critères de qualification', isHeader: true, centered: false),
+              PdfReportStyles.cell('Traitement attendu', isHeader: true, centered: false),
             ],
           ),
-          ...echelles.map((item) {
+          ...echelles.asMap().entries.map((entry) {
+            final idx = entry.key;
+            final item = entry.value;
             final label = item[0] as String;
-            final desc = item[1] as String;
-            final color = item[2] as PdfColor;
+            final critere = item[1] as String;
+            final traitement = item[2] as String;
+            final color = item[3] as PdfColor;
+            final isAlt = idx.isOdd;
+
             return pw.TableRow(
+              decoration: pw.BoxDecoration(
+                color: isAlt ? PdfReportStyles.tableRowAlt : PdfColors.white,
+              ),
               children: [
                 pw.Container(
-                  padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 5),
                   child: pw.Row(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
                       pw.Container(
-                        width: 8,
-                        height: 8,
-                        margin: const pw.EdgeInsets.only(right: 5),
+                        width: 7,
+                        height: 7,
+                        margin: const pw.EdgeInsets.only(top: 2, right: 4),
                         decoration: pw.BoxDecoration(
                           color: color,
                           borderRadius: const pw.BorderRadius.all(pw.Radius.circular(2)),
@@ -282,7 +306,7 @@ class Q18RegulatoryBuilder {
                           label,
                           style: pw.TextStyle(
                             font: fontBold,
-                            fontSize: 8.0,
+                            fontSize: 7.8,
                             color: PdfReportStyles.headerColor,
                           ),
                         ),
@@ -291,12 +315,23 @@ class Q18RegulatoryBuilder {
                   ),
                 ),
                 pw.Container(
-                  padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 5),
                   child: pw.Text(
-                    desc,
+                    critere,
                     style: pw.TextStyle(
                       font: fontRegular,
-                      fontSize: 8.0,
+                      fontSize: 7.5,
+                      color: PdfColors.black,
+                    ),
+                  ),
+                ),
+                pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+                  child: pw.Text(
+                    traitement,
+                    style: pw.TextStyle(
+                      font: fontRegular,
+                      fontSize: 7.5,
                       color: PdfColors.black,
                     ),
                   ),
@@ -306,77 +341,129 @@ class Q18RegulatoryBuilder {
           }),
         ],
       ),
-      pw.SizedBox(height: 12),
+      pw.SizedBox(height: 14),
     ];
   }
 
-  /// Section 9 : Typologie des dangers les plus courants
+  /// Section 9 : Typologie des dangers les plus courants (Tableau 9 dangers types)
   static List<pw.Widget> buildSection9TypologieDangers({
     required pw.Font fontBold,
     required pw.Font fontRegular,
   }) {
     final dangersTypes = [
-      ['Échauffement / Surcharge', 'Effet Joule excessif sur câbles sous-dimensionnés ou borniers desserrés.'],
-      ['Défaut d\'isolement', 'Courant de fuite permanent à la terre, dégradation des gaines isolantes.'],
-      ['Absence de coupure d\'urgence', 'Impossibilité d\'isoler rapidement l\'installation en cas de sinistre ou d\'amorce d\'arc.'],
-      ['Mauvais état des canalisations', 'Gaines arrachées, câbles pincés ou exposés à des agressions mécaniques.'],
-      ['Obturation / Calfeutrement absent', 'Propagation facilitée des gaz chauds et flammes à travers les parois coupe-feu.'],
-      ['Protection inadaptée ou shuntée', 'Disjoncteur surcalibré par rapport au câble, fusible remplacé par du fil de cuivre.'],
-      ['Défaut de liaison des masses / PE', 'Tension dangereuse sur enveloppes métalliques, non-déclenchement des DDR.'],
-      ['Matières combustibles au voisinage', 'Stockage de cartons, bois ou solvants au contact immédiat de tableaux électriques.'],
-      ['Non-conformité en zone ATEX / BE2', 'Matériels non antidéflagrants installés dans des locaux contenant des vapeurs inflammables.'],
+      [
+        'Échauffement anormal',
+        'Point chaud détecté visuellement ou par thermographie sur un tableau, une connexion ou un câble',
+        'Danger avéré (en général)',
+      ],
+      [
+        'Protection différentielle absente ou défaillante',
+        'Absence de dispositif différentiel adapté, ou déclenchement lors du test manuel non conforme',
+        'Danger avéré',
+      ],
+      [
+        'Conducteurs endommagés ou dénudés',
+        'Gaine détériorée, conducteur apparent, épissures non protégées',
+        'Danger avéré',
+      ],
+      [
+        'Connexions desserrées ou oxydées',
+        'Bornes non serrées, oxydation visible sur les connexions de puissance',
+        'Dégradation à Danger avéré selon gravité',
+      ],
+      [
+        'Encombrement des tableaux électriques',
+        'Stockage de matériel combustible à proximité ou devant les tableaux, accès entravé',
+        'Dégradation',
+      ],
+      [
+        'Matériel non adapté à la zone (IP/IK/ATEX) à l’environnement',
+        'Présence de poussières, d\'humidité ou de produits inflammables au contact d\'équipements non prévus pour cet usage (indice IP insuffisant)',
+        'Danger avéré ou Dégradation selon exposition',
+      ],
+      [
+        'Absence ou insuffisance de repérage',
+        'Circuits, disjoncteurs ou câbles non identifiés, schémas absents ou obsolètes',
+        'Point sensible / observation',
+      ],
+      [
+        'Défaut de mise à la terre / liaison équipotentielle',
+        'Continuité de terre non assurée, liaison manquante',
+        'Danger avéré',
+      ],
+      [
+        'Surcharge de circuit apparente',
+        'Section de câble a priori insuffisante au regard des équipements raccordés, multiprises en cascade',
+        'Dégradation à Danger avéré selon gravité',
+      ],
     ];
 
     return [
       PdfReportStyles.sectionBox('9. TYPOLOGIE DES DANGERS LES PLUS COURANTS', fontBold: fontBold),
       pw.SizedBox(height: 6),
       pw.Paragraph(
-        text: 'Les défaillances électriques génératrices de sinistres majeurs se concentrent principalement sur les 9 mécanismes typiques suivants :',
+        text: 'À titre de repère pour la rédaction du rapport, le tableau ci-dessous recense les types de dangers les plus fréquemment rencontrés lors des missions Q18 et leur niveau de classement habituel (à ajuster au cas par cas selon le contexte réel) :',
         style: pw.TextStyle(font: fontRegular, fontSize: 8.5, color: PdfColors.black),
       ),
-      pw.SizedBox(height: 4),
+      pw.SizedBox(height: 6),
       pw.Table(
         border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.4),
         columnWidths: const {
-          0: pw.FlexColumnWidth(3.8),
-          1: pw.FlexColumnWidth(6.2),
+          0: pw.FlexColumnWidth(2.8),
+          1: pw.FlexColumnWidth(4.8),
+          2: pw.FlexColumnWidth(2.4),
         },
         children: [
           pw.TableRow(
             decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
             children: [
-              PdfReportStyles.cell('Nature du danger type', isHeader: true, centered: false),
-              PdfReportStyles.cell('Mécanisme de génération du sinistre incendie / explosion', isHeader: true, centered: false),
+              PdfReportStyles.cell('Type de danger', isHeader: true, centered: false),
+              PdfReportStyles.cell('Description type', isHeader: true, centered: false),
+              PdfReportStyles.cell('Niveau habituel', isHeader: true, centered: true),
             ],
           ),
           ...dangersTypes.asMap().entries.map((entry) {
             final idx = entry.key;
             final item = entry.value;
+            final isAlt = idx.isOdd;
             return pw.TableRow(
               decoration: pw.BoxDecoration(
-                color: idx.isOdd ? PdfReportStyles.tableRowAlt : PdfColors.white,
+                color: isAlt ? PdfReportStyles.tableRowAlt : PdfColors.white,
               ),
               children: [
                 pw.Container(
-                  padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 5),
                   child: pw.Text(
                     item[0],
                     style: pw.TextStyle(
                       font: fontBold,
-                      fontSize: 8.0,
+                      fontSize: 7.8,
                       color: PdfReportStyles.headerColor,
                     ),
                   ),
                 ),
                 pw.Container(
-                  padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 5),
                   child: pw.Text(
                     item[1],
                     style: pw.TextStyle(
                       font: fontRegular,
-                      fontSize: 8.0,
+                      fontSize: 7.5,
                       color: PdfColors.black,
                     ),
+                  ),
+                ),
+                pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+                  alignment: pw.Alignment.center,
+                  child: pw.Text(
+                    item[2],
+                    style: pw.TextStyle(
+                      font: fontBold,
+                      fontSize: 7.5,
+                      color: PdfColors.black,
+                    ),
+                    textAlign: pw.TextAlign.center,
                   ),
                 ),
               ],
@@ -384,7 +471,7 @@ class Q18RegulatoryBuilder {
           }),
         ],
       ),
-      pw.SizedBox(height: 12),
+      pw.SizedBox(height: 14),
     ];
   }
 }

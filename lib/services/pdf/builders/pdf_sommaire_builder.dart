@@ -817,6 +817,7 @@ class PdfSommaireBuilder {
     String? numeroRapport,
     int pageOffset = 0,
     int? overrideTotalPages,
+    String? titreRapport,
     pw.Font? fontRegular,
     pw.Font? fontBold,
     pw.MemoryImage? logoKesImage,
@@ -844,6 +845,7 @@ class PdfSommaireBuilder {
           nomClient: nomClient,
           nomSite: nomSite,
           numeroRapport: numeroRapport,
+          titreRapport: titreRapport ?? 'RAPPORT DE VÉRIFICATION DES INSTALLATIONS ÉLECTRIQUES',
         ),
         build: (ctx) => [
           PageTracker(

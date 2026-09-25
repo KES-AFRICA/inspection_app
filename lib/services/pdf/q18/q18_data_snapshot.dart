@@ -77,13 +77,16 @@ class Q18DocumentConsulteItem {
   final int index;
   final String titre;
   final bool isDisponible;
+  final String? statutCustom;
 
   const Q18DocumentConsulteItem({
     required this.index,
     required this.titre,
     required this.isDisponible,
+    this.statutCustom,
   });
 }
+
 
 /// Données quantitatives de la présentation des installations (Section 4)
 class Q18InstallationsQuantities {
@@ -144,6 +147,14 @@ class Q18DataSnapshot {
   final DateTime dateRapportEffective;
   final DateTime dateProchaineVisite;
   final String lieuIntervention;
+  // Identification & Métadonnées d'intervention normalisées
+  final List<String> intervenantsNoms;
+  final String dateVisiteLabel;
+  final String dateVisiteValue;
+  final String clientName;
+  final String siteName;
+  final String adresseSite;
+  final String typeMission;
 
   // Données de sections
   final Q18InstallationsQuantities quantities;
@@ -179,6 +190,13 @@ class Q18DataSnapshot {
     required this.dateRapportEffective,
     required this.dateProchaineVisite,
     required this.lieuIntervention,
+    this.intervenantsNoms = const [],
+    this.dateVisiteLabel = 'Date de la visite de vérification',
+    this.dateVisiteValue = '',
+    this.clientName = '',
+    this.siteName = '',
+    this.adresseSite = '',
+    this.typeMission = 'Vérification périodique',
     required this.quantities,
     required this.perimetreCouverts,
     required this.exclusionsPerimetre,
@@ -194,3 +212,4 @@ class Q18DataSnapshot {
     required this.photoEntries,
   });
 }
+

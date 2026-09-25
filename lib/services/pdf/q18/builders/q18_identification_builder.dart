@@ -3,12 +3,14 @@
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:inspec_app/services/pdf/pdf_page_tracker.dart';
 import 'package:inspec_app/services/pdf/pdf_report_styles.dart';
 import 'package:inspec_app/services/pdf/q18/q18_data_snapshot.dart';
 
+
 /// Builder responsable de la construction des Sections 1 et 4 du Rapport Q18 :
-/// - Section 1 : Identification de la mission
-/// - Section 4 : Présentation du site et des installations vérifiées
+/// - Section 1 : Identification de la mission (10 lignes normalisées selon référence)
+/// - Section 4 : Présentation du site et des installations vérifiées (4.1 & 4.2)
 class Q18IdentificationBuilder {
   /// Construit la Section 1 : Identification de la mission
   static List<pw.Widget> buildSection1Identification(
@@ -16,68 +18,51 @@ class Q18IdentificationBuilder {
     required pw.Font fontBold,
     required pw.Font fontRegular,
   }) {
-    final mission = data.mission;
-    final rg = data.renseignements;
-    final verificateur = data.currentUser;
-
-    final clientName = mission.nomClient.trim().isNotEmpty
-        ? mission.nomClient.trim()
-        : (rg != null && rg.etablissement.trim().isNotEmpty
-            ? rg.etablissement.trim()
-            : 'Non renseigné');
-
-    final signataire = (mission.dgResponsable != null && mission.dgResponsable!.trim().isNotEmpty)
-        ? mission.dgResponsable!.trim()
-        : 'Direction / Responsable technique du site';
-
-    final adresse = (mission.adresseClient != null && mission.adresseClient!.trim().isNotEmpty)
-        ? mission.adresseClient!.trim()
-        : (data.lieuIntervention.isNotEmpty ? data.lieuIntervention : 'Non renseigné');
-
-    final activite = (mission.activiteClient != null && mission.activiteClient!.trim().isNotEmpty)
-        ? mission.activiteClient!.trim()
-        : (rg != null && rg.activiteSurSite != null && rg.activiteSurSite!.trim().isNotEmpty
-            ? rg.activiteSurSite!.trim()
-            : (rg != null && rg.activite.trim().isNotEmpty
-                ? rg.activite.trim()
-                : 'Non renseigné'));
-
     final dateFormat = DateFormat('dd/MM/yyyy');
-    final String datesVerification;
-    if (rg?.dateDebut != null && rg?.dateFin != null) {
-      if (rg!.dateDebut == rg.dateFin) {
-        datesVerification = 'Le ${dateFormat.format(rg.dateDebut!)}';
-      } else {
-        datesVerification =
-            'Du ${dateFormat.format(rg.dateDebut!)} au ${dateFormat.format(rg.dateFin!)}';
-      }
-    } else if (mission.dateIntervention != null) {
-      datesVerification = 'Le ${dateFormat.format(mission.dateIntervention!)}';
-    } else {
-      datesVerification = dateFormat.format(data.dateRapportEffective);
-    }
+    final dateEmission = dateFormat.format(data.dateRapportEffective);
 
-    final nomVerificateur = (verificateur != null &&
-            '${verificateur.prenom} ${verificateur.nom}'.trim().isNotEmpty)
-        ? '${verificateur.prenom} ${verificateur.nom}'.trim()
-        : 'Ingénieur Contrôleur Technique Agréé';
+    // Détermination de l'intitulé et des noms d'inspecteurs (Source JSA)
+    final bool multiInspecteurs = data.intervenantsNoms.length > 1;
+    final String labelInspecteur = multiInspecteurs ? 'Nom des vérificateurs' : 'Nom du vérificateur';
+    final List<String> inspecteursList = data.intervenantsNoms.isNotEmpty
+        ? data.intervenantsNoms
+        : ['Ingénieur Contrôleur Technique'];
 
-    const qualiteVerificateur = 'Inspecteur / Contrôleur Technique Électrique';
-
-    final rows = [
-      ['Raison sociale de l\'établissement', clientName],
-      ['Nom et qualité du signataire', signataire],
-      ['Adresse de l\'établissement', adresse],
-      ['Activité principale', activite],
-      ['Date(s) de la vérification', datesVerification],
-      ['Nom et qualité du vérificateur', '$nomVerificateur - $qualiteVerificateur'],
-      ['Raison sociale du vérificateur', 'KES INSPECTIONS AND PROJECTS'],
-      ['Adresse du vérificateur', 'B.P. 12564 Douala - Cameroun'],
-      ['N° du présent compte-rendu', data.numeroRapportQ18],
-      [
-        'N° du rapport de vérification périodique des installations électriques',
-        data.numeroRapportVerifElec,
-      ],
+    final rows = <_IdentificationRowData>[
+      _IdentificationRowData(
+        label: labelInspecteur,
+        widgetValue: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          mainAxisAlignment: pw.MainAxisAlignment.center,
+          children: inspecteursList
+              .map(
+                (nom) => pw.Padding(
+                  padding: const pw.EdgeInsets.symmetric(vertical: 1.5),
+                  child: pw.Text(
+                    nom,
+                    style: pw.TextStyle(
+                      font: fontRegular,
+                      fontSize: 8.5,
+                      color: PdfColors.black,
+                    ),
+                  ),
+                ),
+              )
+              .toList(),
+        ),
+      ),
+      _IdentificationRowData(label: 'Client / exploitant', value: data.clientName),
+      _IdentificationRowData(label: 'Site / établissement', value: data.siteName),
+      _IdentificationRowData(label: 'Adresse du site', value: data.adresseSite),
+      _IdentificationRowData(label: 'N° du rapport Q18', value: data.numeroRapportQ18),
+      _IdentificationRowData(label: data.dateVisiteLabel, value: data.dateVisiteValue),
+      _IdentificationRowData(label: 'Date d\'émission du rapport', value: dateEmission),
+      _IdentificationRowData(label: 'Type de mission', value: data.typeMission),
+      _IdentificationRowData(label: 'N° du rapport Q18 précédent', value: 'Non applicable'),
+      _IdentificationRowData(
+        label: 'N° du rapport de vérification de conformité des installations électriques',
+        value: data.numeroRapportVerifElec,
+      ),
     ];
 
     return [
@@ -86,31 +71,33 @@ class Q18IdentificationBuilder {
       pw.Table(
         border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.4),
         columnWidths: const {
-          0: pw.FlexColumnWidth(3.8),
-          1: pw.FlexColumnWidth(6.2),
+          0: pw.FlexColumnWidth(4.0),
+          1: pw.FlexColumnWidth(6.0),
         },
         children: [
           pw.TableRow(
             decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
             children: [
-              PdfReportStyles.cell('Désignation', isHeader: true, centered: false),
-              PdfReportStyles.cell('Informations', isHeader: true, centered: false),
+              PdfReportStyles.cell('Information', isHeader: true, centered: false),
+              PdfReportStyles.cell('Valeur', isHeader: true, centered: false),
             ],
           ),
           ...rows.asMap().entries.map((entry) {
             final idx = entry.key;
-            final label = entry.value[0];
-            final val = entry.value[1];
+            final item = entry.value;
             final isAlt = idx.isOdd;
+
             return pw.TableRow(
+              verticalAlignment: pw.TableCellVerticalAlignment.middle,
               decoration: pw.BoxDecoration(
                 color: isAlt ? PdfReportStyles.tableRowAlt : PdfColors.white,
               ),
               children: [
                 pw.Container(
                   padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+                  alignment: pw.Alignment.centerLeft,
                   child: pw.Text(
-                    label,
+                    item.label,
                     style: pw.TextStyle(
                       font: fontBold,
                       fontSize: 8.5,
@@ -120,14 +107,16 @@ class Q18IdentificationBuilder {
                 ),
                 pw.Container(
                   padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
-                  child: pw.Text(
-                    val,
-                    style: pw.TextStyle(
-                      font: fontRegular,
-                      fontSize: 8.5,
-                      color: PdfColors.black,
-                    ),
-                  ),
+                  alignment: pw.Alignment.centerLeft,
+                  child: item.widgetValue ??
+                      pw.Text(
+                        item.value ?? '',
+                        style: pw.TextStyle(
+                          font: fontRegular,
+                          fontSize: 8.5,
+                          color: PdfColors.black,
+                        ),
+                      ),
                 ),
               ],
             );
@@ -143,94 +132,136 @@ class Q18IdentificationBuilder {
     Q18DataSnapshot data, {
     required pw.Font fontBold,
     required pw.Font fontRegular,
+    Map<String, int>? trackedPages,
+    int pageOffset = 2,
   }) {
     final q = data.quantities;
     final mission = data.mission;
     final rg = data.renseignements;
 
-    final clientName = mission.nomClient.trim().isNotEmpty
-        ? mission.nomClient.trim()
-        : 'Non renseigné';
-    final siteName = (mission.nomSite != null && mission.nomSite!.trim().isNotEmpty)
-        ? mission.nomSite!.trim()
-        : (rg != null && rg.nomSite.trim().isNotEmpty ? rg.nomSite.trim() : clientName);
-    final localisation = (mission.adresseClient != null && mission.adresseClient!.trim().isNotEmpty)
-        ? mission.adresseClient!.trim()
-        : data.lieuIntervention;
-    final activite = (mission.activiteClient != null && mission.activiteClient!.trim().isNotEmpty)
-        ? mission.activiteClient!.trim()
+    final activite = (mission.activiteSurSite != null && mission.activiteSurSite!.trim().isNotEmpty)
+        ? mission.activiteSurSite!.trim()
         : (rg != null && rg.activiteSurSite != null && rg.activiteSurSite!.trim().isNotEmpty
             ? rg.activiteSurSite!.trim()
-            : (rg != null && rg.activite.trim().isNotEmpty ? rg.activite.trim() : 'Non renseigné'));
+            : (mission.activiteClient != null && mission.activiteClient!.trim().isNotEmpty
+                ? mission.activiteClient!.trim()
+                : (rg != null && rg.activite.trim().isNotEmpty ? rg.activite.trim() : 'Non renseigné')));
+
+    final siteRows = [
+      ['Établissement', data.clientName],
+      ['Site', data.siteName],
+      ['Localisation', data.adresseSite],
+      ['Activité exercée', activite],
+    ];
 
     final quantitesRows = [
       // 1. Moyenne Tension (HTA)
-      ['Moyenne Tension (HTA)', 'Postes / Locaux techniques HTA', '${q.nbLocauxTechniquesHTA}'],
-      ['Moyenne Tension (HTA)', 'Transformateurs HTA/BT', '${q.nbTransformateurs} (${q.transformateursPuissanceText})'],
-      ['Moyenne Tension (HTA)', 'Cellules MT', '${q.nbCellules}'],
-      // 2. Groupes Électrogènes
-      ['Alimentation de remplacement', 'Locaux GE', '${q.nbLocauxGE}'],
-      ['Alimentation de remplacement', 'Groupes électrogènes', '${q.nbGroupesElectrogenes} (${q.groupesPuissanceText})'],
-      ['Alimentation de remplacement', 'Inverseurs normal / secours', '${q.nbInverseurs}'],
-      // 3. Basse Tension (BT)
-      ['Basse Tension (BT)', 'Postes / Locaux techniques BT', '${q.nbLocauxTechniquesBT}'],
-      ['Basse Tension (BT)', 'Tableaux Généraux Basse Tension (TGBT)', '${q.nbTGBT}'],
-      ['Basse Tension (BT)', 'Armoires de distribution', '${q.nbArmoires}'],
-      ['Basse Tension (BT)', 'Coffrets divisionnaires', '${q.nbCoffrets}'],
-      // 4. Protection Foudre & Surtensions
+      ['Moyenne Tension (HTA)', 'Nombre de locaux techniques HTA', '${q.nbLocauxTechniquesHTA}'],
       [
-        'Protection Foudre & Surtensions',
-        'Installation extérieure contre la foudre (Paratonnerre)',
-        q.presenceParatonnerre ? 'Présente' : 'Absente',
+        'Moyenne Tension (HTA)',
+        'Nombre de transformateurs et puissance',
+        '${q.nbTransformateurs} (${q.transformateursPuissanceText})',
       ],
-      ['Protection Foudre & Surtensions', 'Parafoudres Inverseurs N/S', q.presenceParafoudreInverseur],
-      ['Protection Foudre & Surtensions', 'Parafoudres TGBT', q.presenceParafoudreTGBT],
-      ['Protection Foudre & Surtensions', 'Parafoudres Armoires', q.presenceParafoudreArmoire],
-      ['Protection Foudre & Surtensions', 'Parafoudres Coffrets', q.presenceParafoudreCoffret],
-      // 5. Centrale Photovoltaïque
-      ['Énergies renouvelables', 'Centrale photovoltaïque', q.presenceCentralePhotovoltaique],
+      ['Moyenne Tension (HTA)', 'Nombre de cellule(s)', '${q.nbCellules}'],
+      // 2. Groupes Électrogènes (Section 4 Description)
+      ['Alimentation de remplacement', 'Nombre de locaux groupe électrogène', '${q.nbLocauxGE}'],
+      [
+        'Alimentation de remplacement',
+        'Nombre de Groupe électrogène et puissance',
+        '${q.nbGroupesElectrogenes} (${q.groupesPuissanceText})',
+      ],
+      ['Alimentation de remplacement', 'Nombre d’inverseur', '${q.nbInverseurs}'],
+      // 3. Basse Tension (BT)
+      ['Basse Tension (BT)', 'Nombre de locaux techniques BT', '${q.nbLocauxTechniquesBT}'],
+      ['Basse Tension (BT)', 'Nombre de TGBT', '${q.nbTGBT}'],
+      ['Basse Tension (BT)', 'Nombre d’armoire', '${q.nbArmoires}'],
+      ['Basse Tension (BT)', 'Nombre de coffret', '${q.nbCoffrets}'],
+      // 4. Protection Foudre & Parafoudres
+      [
+        'Protection Foudre & Parafoudres',
+        'Présence de paratonnerre',
+        q.presenceParatonnerre ? 'Présent' : 'Absent',
+      ],
+      ['Protection Foudre & Parafoudres', 'Parafoudre - Inverseur', q.presenceParafoudreInverseur],
+      ['Protection Foudre & Parafoudres', 'Parafoudre - TGBT', q.presenceParafoudreTGBT],
+      ['Protection Foudre & Parafoudres', 'Parafoudre - Armoire', q.presenceParafoudreArmoire],
+      ['Protection Foudre & Parafoudres', 'Parafoudre - Coffret', q.presenceParafoudreCoffret],
+      // 5. Centrale Photovoltaïque (intacte)
+      ['Énergies renouvelables', 'Présence d\'une centrale photovoltaïque', q.presenceCentralePhotovoltaique],
     ];
+
+    final subTitle41 = PdfReportStyles.subTitle('4.1 Présentation générale du site', fontBold: fontBold);
+    final subTitle42 = PdfReportStyles.subTitle('4.2 Récapitulatif quantitatif des installations contrôlées', fontBold: fontBold);
 
     return [
       PdfReportStyles.sectionBox('4. PRÉSENTATION DU SITE ET DES INSTALLATIONS VÉRIFIÉES', fontBold: fontBold),
       pw.SizedBox(height: 6),
-      PdfReportStyles.subTitle('4.1 Présentation générale du site', fontBold: fontBold),
-      pw.SizedBox(height: 4),
-      pw.Container(
-        padding: const pw.EdgeInsets.all(8),
-        decoration: pw.BoxDecoration(
-          color: PdfReportStyles.tableRowAlt,
-          border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.4),
-          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(3)),
-        ),
-        child: pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.RichText(
-              text: pw.TextSpan(
-                style: pw.TextStyle(font: fontRegular, fontSize: 8.5, color: PdfColors.black),
-                children: [
-                  pw.TextSpan(text: 'Établissement : ', style: pw.TextStyle(font: fontBold)),
-                  pw.TextSpan(text: '$clientName - Site de $siteName\n'),
-                  pw.TextSpan(text: 'Localisation : ', style: pw.TextStyle(font: fontBold)),
-                  pw.TextSpan(text: '$localisation\n'),
-                  pw.TextSpan(text: 'Activité exercée : ', style: pw.TextStyle(font: fontBold)),
-                  pw.TextSpan(text: activite),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-      pw.SizedBox(height: 10),
-      PdfReportStyles.subTitle('4.2 Récapitulatif quantitatif des installations contrôlées', fontBold: fontBold),
+      trackedPages != null
+          ? PageTracker(key: 'q18_s4_1', registry: trackedPages, offset: pageOffset, child: subTitle41)
+          : subTitle41,
       pw.SizedBox(height: 4),
       pw.Table(
         border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.4),
         columnWidths: const {
           0: pw.FlexColumnWidth(3.0),
+          1: pw.FlexColumnWidth(7.0),
+        },
+        children: [
+          pw.TableRow(
+            decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
+            children: [
+              PdfReportStyles.cell('Rubrique', isHeader: true, centered: false),
+              PdfReportStyles.cell('Informations', isHeader: true, centered: false),
+            ],
+          ),
+          ...siteRows.asMap().entries.map((entry) {
+            final idx = entry.key;
+            final row = entry.value;
+            final isAlt = idx.isOdd;
+            return pw.TableRow(
+              decoration: pw.BoxDecoration(
+                color: isAlt ? PdfReportStyles.tableRowAlt : PdfColors.white,
+              ),
+              children: [
+                pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+                  child: pw.Text(
+                    row[0],
+                    style: pw.TextStyle(
+                      font: fontBold,
+                      fontSize: 8.5,
+                      color: PdfReportStyles.headerColor,
+                    ),
+                  ),
+                ),
+                pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+                  child: pw.Text(
+                    row[1],
+                    style: pw.TextStyle(
+                      font: fontRegular,
+                      fontSize: 8.5,
+                      color: PdfColors.black,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          }),
+        ],
+      ),
+      pw.SizedBox(height: 10),
+      trackedPages != null
+          ? PageTracker(key: 'q18_s4_2', registry: trackedPages, offset: pageOffset, child: subTitle42)
+          : subTitle42,
+      pw.SizedBox(height: 4),
+
+      pw.Table(
+        border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.4),
+        columnWidths: const {
+          0: pw.FlexColumnWidth(3.2),
           1: pw.FlexColumnWidth(4.5),
-          2: pw.FlexColumnWidth(2.5),
+          2: pw.FlexColumnWidth(2.3),
         },
         children: [
           pw.TableRow(
@@ -293,4 +324,16 @@ class Q18IdentificationBuilder {
       pw.SizedBox(height: 14),
     ];
   }
+}
+
+class _IdentificationRowData {
+  final String label;
+  final String? value;
+  final pw.Widget? widgetValue;
+
+  const _IdentificationRowData({
+    required this.label,
+    this.value,
+    this.widgetValue,
+  });
 }

@@ -3,9 +3,11 @@
 import 'package:inspec_app/models/audit_installations_electriques.dart';
 import 'package:inspec_app/models/description_installations.dart';
 import 'package:inspec_app/models/foudre.dart';
+import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/renseignements_generaux.dart';
 import 'package:inspec_app/services/ai/executive_summary_snapshot.dart';
 import 'package:inspec_app/services/hive_service.dart';
+import 'package:inspec_app/services/intervenants_service.dart';
 import 'package:inspec_app/services/pdf/builders/pdf_photos_schemas_builder.dart';
 import 'package:inspec_app/services/pdf/q18/q18_data_snapshot.dart';
 import 'package:inspec_app/services/statistics/audit_finding.dart';
@@ -13,6 +15,7 @@ import 'package:inspec_app/services/statistics/canonical_risk_family_registry.da
 import 'package:inspec_app/services/statistics/global_assessment_engine.dart';
 import 'package:inspec_app/services/statistics/mission_domain_inventory_engine.dart';
 import 'package:inspec_app/services/statistics/mission_statistics_collector.dart';
+import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 
 /// Collecteur et préparateur certifié des données du rapport Q18 (APSAD D18).
@@ -49,6 +52,61 @@ class Q18DataCollector {
         ? renseignements!.lieuIntervention!.trim()
         : (mission.nomSite?.trim().isNotEmpty == true ? mission.nomSite!.trim() : 'Douala');
 
+    // 1.1 Inspecteurs JSA (SSOT)
+    final intervenantsNoms = IntervenantsService.getMissionIntervenantsNoms(
+      missionId,
+      mission: mission,
+      rg: renseignements,
+      uppercase: true,
+    );
+
+    // 1.2 Résolution temporelle de la visite de vérification
+    final dateFormat = DateFormat('dd/MM/yyyy');
+    final String dateVisiteLabel;
+    final String dateVisiteValue;
+    if (renseignements?.dateDebut != null && renseignements?.dateFin != null) {
+      final dDebut = renseignements!.dateDebut!;
+      final dFin = renseignements.dateFin!;
+      final bool isSameDay = dDebut.year == dFin.year && dDebut.month == dFin.month && dDebut.day == dFin.day;
+      if (isSameDay) {
+        dateVisiteLabel = 'Date de la visite de vérification';
+        dateVisiteValue = 'Le ${dateFormat.format(dDebut)}';
+      } else {
+        dateVisiteLabel = 'Dates des visites de vérification';
+        dateVisiteValue = 'Du ${dateFormat.format(dDebut)} au ${dateFormat.format(dFin)}';
+      }
+    } else if (mission.dateIntervention != null) {
+      dateVisiteLabel = 'Date de la visite de vérification';
+      dateVisiteValue = 'Le ${dateFormat.format(mission.dateIntervention!)}';
+    } else {
+      dateVisiteLabel = 'Date de la visite de vérification';
+      dateVisiteValue = 'Le ${dateFormat.format(effectiveReportDate)}';
+    }
+
+    final clientName = mission.nomClient.trim().isNotEmpty
+        ? mission.nomClient.trim()
+        : (renseignements != null && renseignements.etablissement.trim().isNotEmpty
+            ? renseignements.etablissement.trim()
+            : 'Non renseigné');
+
+    final siteName = mission.nomSite?.trim().isNotEmpty == true
+        ? mission.nomSite!.trim()
+        : (renseignements != null && renseignements.nomSite.trim().isNotEmpty
+            ? renseignements.nomSite.trim()
+            : (renseignements != null && renseignements.etablissement.trim().isNotEmpty
+                ? renseignements.etablissement.trim()
+                : 'Non renseigné'));
+
+    final adresseSite = mission.adresseClient?.trim().isNotEmpty == true
+        ? mission.adresseClient!.trim()
+        : (lieuIntervention.isNotEmpty ? lieuIntervention : 'Non renseigné');
+
+    final typeMission = mission.natureMission?.trim().isNotEmpty == true
+        ? mission.natureMission!.trim()
+        : (renseignements?.verificationType?.trim().isNotEmpty == true
+            ? renseignements!.verificationType!.trim()
+            : 'Vérification périodique');
+
     // 2. Inventaire des installations pour la Section 4
     final quantities = _collectQuantities(audit, description, foudre);
 
@@ -56,7 +114,8 @@ class Q18DataCollector {
     final perimetreData = _collectPerimetre(audit);
 
     // 4. Documents consultés pour la Section 6
-    final documentsConsultes = _collectDocumentsConsultes(renseignements, description);
+    final documentsConsultes = _collectDocumentsConsultes(mission, renseignements, description);
+
 
     // 5. Synthèse des dangers constatés pour la Section 10 & 11
     final inventory = MissionDomainInventoryEngine.buildInventory(missionId);
@@ -168,6 +227,13 @@ class Q18DataCollector {
       dateRapportEffective: effectiveReportDate,
       dateProchaineVisite: dateProchaineVisite,
       lieuIntervention: lieuIntervention,
+      intervenantsNoms: intervenantsNoms,
+      dateVisiteLabel: dateVisiteLabel,
+      dateVisiteValue: dateVisiteValue,
+      clientName: clientName,
+      siteName: siteName,
+      adresseSite: adresseSite,
+      typeMission: typeMission,
       quantities: quantities,
       perimetreCouverts: perimetreData.couverts,
       exclusionsPerimetre: perimetreData.exclusions,
@@ -182,6 +248,7 @@ class Q18DataCollector {
       avisSyntheseText: avisSynthese,
       photoEntries: photoEntries,
     );
+
   }
 
   /// Détermine le niveau APSAD D18 d'un constat d'audit.
@@ -440,14 +507,27 @@ class Q18DataCollector {
       // 1. Moyenne tension locaux
       for (final l in audit.moyenneTensionLocaux) {
         final eqList = <String>[];
-        if (l.cellules.isNotEmpty) eqList.add('${l.cellules.length} cellule(s) MT');
-        if (l.transformateurs.isNotEmpty) eqList.add('${l.transformateurs.length} transfo(s)');
-        if (l.coffrets.isNotEmpty) eqList.add('${l.coffrets.length} coffret(s)');
+        for (final c in l.cellules) {
+          final cName = (c.nom != null && c.nom!.trim().isNotEmpty)
+              ? c.nom!.trim()
+              : (c.fonction.trim().isNotEmpty ? c.fonction.trim() : 'Cellule MT');
+          eqList.add(cName);
+        }
+        for (final t in l.transformateurs) {
+          final puiss = t.puissanceAssignee.trim().isNotEmpty ? ' (${t.puissanceAssignee.trim()} kVA)' : '';
+          final tName = (t.nom != null && t.nom!.trim().isNotEmpty)
+              ? t.nom!.trim()
+              : (t.typeTransformateur.trim().isNotEmpty ? t.typeTransformateur.trim() : 'Transformateur');
+          eqList.add('$tName$puiss');
+        }
+        for (final c in l.coffrets) {
+          eqList.add(c.nom.trim().isNotEmpty ? c.nom.trim() : 'Coffret MT');
+        }
 
         couverts.add(
           Q18PerimetreItem(
             zone: 'Poste MT',
-            repere: l.nom,
+            repere: l.nom.trim().isNotEmpty ? l.nom.trim() : 'Local MT',
             equipements: eqList.isNotEmpty ? eqList.join(', ') : 'Installations MT',
             isCouvert: true,
           ),
@@ -458,8 +538,8 @@ class Q18DataCollector {
             exclusions.add(
               Q18PerimetreItem(
                 zone: 'Poste MT',
-                repere: c.repere ?? c.nom,
-                equipements: c.nom,
+                repere: c.repere?.trim().isNotEmpty == true ? c.repere!.trim() : l.nom.trim(),
+                equipements: c.nom.trim().isNotEmpty ? c.nom.trim() : 'Coffret MT',
                 isCouvert: false,
                 motifExclusion: 'Inaccessible lors de la visite',
               ),
@@ -470,13 +550,27 @@ class Q18DataCollector {
 
       // 2. Basse tension zones
       for (final z in audit.basseTensionZones) {
+        final zName = z.nom.trim().isNotEmpty ? z.nom.trim() : 'Zone BT';
+
         for (final c in z.coffretsDirects) {
-          if (!c.accessible) {
+          final cName = c.nom.trim().isNotEmpty ? c.nom.trim() : 'Armoire / Coffret BT';
+          final cRep = c.repere?.trim().isNotEmpty == true ? c.repere!.trim() : 'Général';
+
+          if (c.accessible) {
+            couverts.add(
+              Q18PerimetreItem(
+                zone: zName,
+                repere: cRep,
+                equipements: cName,
+                isCouvert: true,
+              ),
+            );
+          } else {
             exclusions.add(
               Q18PerimetreItem(
-                zone: z.nom,
-                repere: c.repere ?? c.nom,
-                equipements: c.nom,
+                zone: zName,
+                repere: cRep,
+                equipements: cName,
                 isCouvert: false,
                 motifExclusion: 'Inaccessible lors de la visite',
               ),
@@ -485,31 +579,32 @@ class Q18DataCollector {
         }
 
         for (final l in z.locaux) {
+          final lName = l.nom.trim().isNotEmpty ? l.nom.trim() : 'Local BT';
           final eqList = <String>[];
-          if (l.coffrets.isNotEmpty) eqList.add('${l.coffrets.length} équipement(s)');
-
-          couverts.add(
-            Q18PerimetreItem(
-              zone: z.nom,
-              repere: l.nom,
-              equipements: eqList.isNotEmpty ? eqList.join(', ') : 'Installations BT',
-              isCouvert: true,
-            ),
-          );
-
           for (final c in l.coffrets) {
-            if (!c.accessible) {
+            if (c.accessible) {
+              eqList.add(c.nom.trim().isNotEmpty ? c.nom.trim() : 'Équipement BT');
+            } else {
               exclusions.add(
                 Q18PerimetreItem(
-                  zone: z.nom,
-                  repere: c.repere ?? c.nom,
-                  equipements: c.nom,
+                  zone: zName,
+                  repere: c.repere?.trim().isNotEmpty == true ? c.repere!.trim() : lName,
+                  equipements: c.nom.trim().isNotEmpty ? c.nom.trim() : 'Équipement BT',
                   isCouvert: false,
                   motifExclusion: 'Inaccessible lors de la visite',
                 ),
               );
             }
           }
+
+          couverts.add(
+            Q18PerimetreItem(
+              zone: zName,
+              repere: lName,
+              equipements: eqList.isNotEmpty ? eqList.join(', ') : 'Installations BT',
+              isCouvert: true,
+            ),
+          );
         }
       }
     }
@@ -519,30 +614,27 @@ class Q18DataCollector {
 
   /// Détermine la disponibilité des 6 documents de la Section 6.
   static List<Q18DocumentConsulteItem> _collectDocumentsConsultes(
+    Mission mission,
     RenseignementsGeneraux? rens,
     DescriptionInstallations? desc,
   ) {
-    // 1. Schémas unifilaires
-    final bool hasSchemas = desc?.noteCalcul?.trim().isNotEmpty == true &&
-        desc!.noteCalcul!.trim().toLowerCase() != 'non' &&
-        desc.noteCalcul!.trim().toLowerCase() != 'absent';
+    // 1. Schémas unifilaires et de distribution de l'installation électrique
+    final bool hasSchemas = mission.docSchemasUnifilaires;
 
-    // 2. Carnet de bord / registre
-    final bool hasCarnet = rens?.registreControle.trim().isNotEmpty == true &&
-        rens!.registreControle.trim().toLowerCase() != 'non';
+    // 2. Carnet de bord / registre de maintenance électrique (Initialisé à Non)
+    const bool hasCarnet = false;
 
     // 3. Rapport de la dernière vérification réglementaire
-    final bool hasDernierRapport = rens?.compteRendu != null && rens!.compteRendu.isNotEmpty;
+    final bool hasDernierRapport = mission.docRapportDerniereVerif;
 
-    // 4. Rapport Q18 précédent
-    const bool hasQ18Precedent = false; // Non persisté dans KES
+    // 4. Rapport Q18 précédent, le cas échéant (Non applicable)
+    const bool hasQ18Precedent = false;
 
-    // 5. Plans des locaux avec classement ATEX / risques
-    final bool hasPlansAtex = desc?.registreSecurite?.trim().isNotEmpty == true &&
-        desc!.registreSecurite!.trim().toLowerCase() != 'non';
+    // 5. Plans des locaux avec classement des zones à risque (ATEX, poussières, etc.)
+    final bool hasPlansAtex = mission.docPlanLocauxRisques;
 
-    // 6. Fiches techniques
-    final bool hasFiches = hasSchemas;
+    // 6. Fiches techniques du matériel électrique sensible (Initialisé à Non)
+    const bool hasFiches = false;
 
     return [
       Q18DocumentConsulteItem(
@@ -564,6 +656,7 @@ class Q18DataCollector {
         index: 4,
         titre: 'Rapport Q18 précédent, le cas échéant',
         isDisponible: hasQ18Precedent,
+        statutCustom: 'Non applicable',
       ),
       Q18DocumentConsulteItem(
         index: 5,
@@ -578,3 +671,4 @@ class Q18DataCollector {
     ];
   }
 }
+

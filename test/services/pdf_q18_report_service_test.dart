@@ -142,6 +142,13 @@ void main() {
         dateRapportEffective: DateTime(2026, 2, 15),
         dateProchaineVisite: DateTime(2027, 2, 12),
         lieuIntervention: 'Nomayos (Yaoundé)',
+        intervenantsNoms: ['André FOUDA (KES - Vérificateur)', 'Jean ETOUNDI (KES - Ingénieur)'],
+        dateVisiteLabel: 'Dates des visites de vérification',
+        dateVisiteValue: 'Du 10/02/2026 au 12/02/2026',
+        clientName: 'CIMENCAM',
+        siteName: 'Usine de Nomayos',
+        adresseSite: 'Nomayos (Yaoundé)',
+        typeMission: 'Vérification périodique',
         quantities: quantities,
         perimetreCouverts: perimetreCouverts,
         exclusionsPerimetre: exclusions,
@@ -182,7 +189,8 @@ void main() {
       expect(Q18DangerLevel.pointSensible.label, equals('Point sensible / observation'));
     });
 
-    test('3. Q18IdentificationBuilder - Sections 1 et 4', () {
+    test('3. Q18IdentificationBuilder - Sections 1 (10 lignes) et 4 (4.1 & 4.2)', () {
+      final tracked = <String, int>{};
       final s1Widgets = Q18IdentificationBuilder.buildSection1Identification(
         sampleSnapshot,
         fontBold: pw.Font.helveticaBold(),
@@ -190,53 +198,117 @@ void main() {
       );
       expect(s1Widgets.isNotEmpty, isTrue);
 
+      // Vérification des 10 lignes de données du tableau de la Section 1 (1 en-tête + 10 données = 11)
+      final s1Table = s1Widgets.whereType<pw.Table>().first;
+      expect(s1Table.children.length, equals(11));
+
       final s4Widgets = Q18IdentificationBuilder.buildSection4Presentation(
         sampleSnapshot,
         fontBold: pw.Font.helveticaBold(),
         fontRegular: pw.Font.helvetica(),
+        trackedPages: tracked,
+        pageOffset: 0,
       );
       expect(s4Widgets.isNotEmpty, isTrue);
+
+      // Section 4 contient les tableaux pour 4.1 et 4.2
+      final s4Tables = s4Widgets.whereType<pw.Table>().toList();
+      expect(s4Tables.length, equals(2));
+      // Tableau 4.1 : 5 lignes (en-tête + 4 rubriques)
+      expect(s4Tables[0].children.length, equals(5));
+      // Tableau 4.2 : 17 lignes (en-tête + 16 postes)
+      expect(s4Tables[1].children.length, equals(17));
     });
 
-    test('4. Q18RegulatoryBuilder - Sections 2, 3, 7, 8, 9', () {
+    test('4. Q18RegulatoryBuilder - Sections 2, 3 (8 textes), 7 (9 points), 8 (4 niveaux), 9 (9 typologies)', () {
       final s2 = Q18RegulatoryBuilder.buildSection2ObjetCadre(
         fontBold: pw.Font.helveticaBold(),
         fontRegular: pw.Font.helvetica(),
       );
       expect(s2.isNotEmpty, isTrue);
+      // Section 2 est épurée aux 2 paragraphes de référence (pas de pavé d'alerte orange)
+      expect(s2.whereType<pw.Paragraph>().length, equals(2));
 
       final s3 = Q18RegulatoryBuilder.buildSection3CadreReglementaire(
         fontBold: pw.Font.helveticaBold(),
         fontRegular: pw.Font.helvetica(),
       );
       expect(s3.isNotEmpty, isTrue);
+      final s3Table = s3.whereType<pw.Table>().first;
+      // 1 en-tête + 8 textes de référence = 9 lignes
+      expect(s3Table.children.length, equals(9));
 
       final s7 = Q18RegulatoryBuilder.buildSection7Methodologie(
         fontBold: pw.Font.helveticaBold(),
         fontRegular: pw.Font.helvetica(),
       );
       expect(s7.isNotEmpty, isTrue);
+      final s7Table = s7.whereType<pw.Table>().first;
+      // 1 en-tête + 9 points de contrôle = 10 lignes
+      expect(s7Table.children.length, equals(10));
 
       final s8 = Q18RegulatoryBuilder.buildSection8ClassificationDangers(
         fontBold: pw.Font.helveticaBold(),
         fontRegular: pw.Font.helvetica(),
       );
       expect(s8.isNotEmpty, isTrue);
+      final s8Table = s8.whereType<pw.Table>().first;
+      // 1 en-tête + 4 niveaux de danger = 5 lignes
+      expect(s8Table.children.length, equals(5));
 
       final s9 = Q18RegulatoryBuilder.buildSection9TypologieDangers(
         fontBold: pw.Font.helveticaBold(),
         fontRegular: pw.Font.helvetica(),
       );
       expect(s9.isNotEmpty, isTrue);
+      final s9Table = s9.whereType<pw.Table>().first;
+      // 1 en-tête + 9 typologies de danger = 10 lignes
+      expect(s9Table.children.length, equals(10));
     });
 
-    test('5. Q18PerimetreBuilder - Sections 5 et 6', () {
+    test('5. Q18PerimetreBuilder - Section 5 (4 colonnes & Sans Objet) et Section 6 (6 documents)', () {
+      final tracked = <String, int>{};
       final s5 = Q18PerimetreBuilder.buildSection5Perimetre(
         sampleSnapshot,
         fontBold: pw.Font.helveticaBold(),
         fontRegular: pw.Font.helvetica(),
+        trackedPages: tracked,
+        pageOffset: 2,
       );
       expect(s5.isNotEmpty, isTrue);
+      // Section 5.1 a un tableau avec 4 colonnes
+      final s51Table = s5.whereType<pw.Table>().first;
+      expect(s51Table.children.length, equals(3)); // En-tête + 2 items
+
+      // Test de Section 5.2 avec liste d'exclusions vide => Affiche "Sans Objet"
+      final emptyExclusionsSnapshot = Q18DataSnapshot(
+        mission: sampleMission,
+        renseignements: sampleRg,
+        numeroRapportQ18: 'KES/IP/Q18/2026/001',
+        numeroRapportVerifElec: 'KES/IP/VE/2026/001',
+        dateRapportEffective: DateTime(2026, 2, 15),
+        dateProchaineVisite: DateTime(2027, 2, 12),
+        lieuIntervention: 'Nomayos (Yaoundé)',
+        quantities: sampleSnapshot.quantities,
+        perimetreCouverts: sampleSnapshot.perimetreCouverts,
+        exclusionsPerimetre: const [], // Vide !
+        documentsConsultes: sampleSnapshot.documentsConsultes,
+        dangers: sampleSnapshot.dangers,
+        countDangerAvere: 0,
+        countDegradation: 0,
+        countHorsPerimetre: 0,
+        countPointSensible: 0,
+        hasDangerAvere: false,
+        appreciationGlobale: 'Satisfaisant',
+        avisSyntheseText: '',
+        photoEntries: const [],
+      );
+      final s5Empty = Q18PerimetreBuilder.buildSection5Perimetre(
+        emptyExclusionsSnapshot,
+        fontBold: pw.Font.helveticaBold(),
+        fontRegular: pw.Font.helvetica(),
+      );
+      expect(s5Empty.isNotEmpty, isTrue);
 
       final s6 = Q18PerimetreBuilder.buildSection6DocumentsConsultes(
         sampleSnapshot,
@@ -244,6 +316,9 @@ void main() {
         fontRegular: pw.Font.helvetica(),
       );
       expect(s6.isNotEmpty, isTrue);
+      final s6Table = s6.whereType<pw.Table>().first;
+      // 1 en-tête + 6 documents consultés = 7 lignes
+      expect(s6Table.children.length, equals(7));
     });
 
     test('6. Q18DangersSynthesisBuilder - Sections 10 et 11', () {
@@ -445,6 +520,68 @@ void main() {
       final bytes = await pdf.save();
       expect(pdf.document.pdfPageList.pages.length, equals(30));
       expect(bytes.isNotEmpty, isTrue);
+    });
+
+    test('11. Intégration complète : buildDocumentForTesting avec Sommaire en page 2 et PageTracker', () async {
+      final trackedPages = <String, int>{};
+      final fonts = (
+        regular: pw.Font.helvetica(),
+        bold: pw.Font.helveticaBold(),
+      );
+      final assets = (
+        logoKes: null as pw.MemoryImage?,
+        watermark: null as pw.MemoryImage?,
+      );
+
+      // Passe 1 : peuplement de trackedPages
+      final doc1 = PdfQ18ReportService.buildDocumentForTesting(
+        data: sampleSnapshot,
+        fonts: fonts,
+        assets: assets,
+        overrideTotalPages: null,
+        trackedPages: trackedPages,
+      );
+      final bytes1 = await doc1.save();
+      expect(bytes1.isNotEmpty, isTrue);
+
+      // Vérifie la présence des clés de traçage de pages
+      expect(trackedPages.containsKey('q18_s1'), isTrue);
+      expect(trackedPages.containsKey('q18_s2'), isTrue);
+      expect(trackedPages.containsKey('q18_s3'), isTrue);
+      expect(trackedPages.containsKey('q18_s4'), isTrue);
+      expect(trackedPages.containsKey('q18_s4_1'), isTrue);
+      expect(trackedPages.containsKey('q18_s4_2'), isTrue);
+      expect(trackedPages.containsKey('q18_s5'), isTrue);
+      expect(trackedPages.containsKey('q18_s5_1'), isTrue);
+      expect(trackedPages.containsKey('q18_s6'), isTrue);
+      expect(trackedPages.containsKey('q18_s7'), isTrue);
+      expect(trackedPages.containsKey('q18_s8'), isTrue);
+      expect(trackedPages.containsKey('q18_s9'), isTrue);
+      expect(trackedPages.containsKey('q18_s10'), isTrue);
+      expect(trackedPages.containsKey('q18_s11'), isTrue);
+      expect(trackedPages.containsKey('q18_s12'), isTrue);
+      expect(trackedPages.containsKey('q18_s13'), isTrue);
+      expect(trackedPages.containsKey('q18_s14'), isTrue);
+      expect(trackedPages.containsKey('q18_s15'), isTrue);
+      expect(trackedPages.containsKey('q18_s16'), isTrue);
+
+      // Section 1 démarre en page 3 (Page 1 = Couverture, Page 2 = Sommaire)
+      expect(trackedPages['q18_s1'], equals(3));
+
+      // Passe 2 : document final avec totalPages et trackedPages résolu
+      final totalPages = doc1.document.pdfPageList.pages.length;
+      expect(totalPages, greaterThanOrEqualTo(5));
+
+      final doc2 = PdfQ18ReportService.buildDocumentForTesting(
+        data: sampleSnapshot,
+        fonts: fonts,
+        assets: assets,
+        overrideTotalPages: totalPages,
+        trackedPages: trackedPages,
+      );
+      final bytes2 = await doc2.save();
+      expect(bytes2.isNotEmpty, isTrue);
+      expect(bytes2.length, greaterThan(2000));
     });
   });
 }

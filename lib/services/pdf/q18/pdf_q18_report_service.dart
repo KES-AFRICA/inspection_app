@@ -13,6 +13,7 @@ import 'package:inspec_app/services/cancellation_token.dart';
 import 'package:inspec_app/services/hive_service.dart';
 import 'package:inspec_app/services/pdf/pdf_report_service.dart';
 import 'package:inspec_app/services/pdf/builders/pdf_cover_builder.dart';
+import 'package:inspec_app/services/pdf/builders/pdf_sommaire_builder.dart';
 import 'package:inspec_app/services/pdf/q18/builders/q18_conclusion_builder.dart';
 import 'package:inspec_app/services/pdf/q18/builders/q18_dangers_synthesis_builder.dart';
 import 'package:inspec_app/services/pdf/q18/builders/q18_identification_builder.dart';
@@ -21,6 +22,7 @@ import 'package:inspec_app/services/pdf/q18/builders/q18_photos_builder.dart';
 import 'package:inspec_app/services/pdf/q18/builders/q18_regulatory_builder.dart';
 import 'package:inspec_app/services/pdf/q18/q18_data_collector.dart';
 import 'package:inspec_app/services/pdf/q18/q18_data_snapshot.dart';
+
 
 typedef PdfProgressCallback = void Function(double progress, String statusMessage);
 
@@ -78,24 +80,27 @@ class PdfQ18ReportService {
 
     // 3. Passe 1 : Calcul de la pagination exacte (nombre total de pages)
     onProgress?.call(0.40, 'Mise en page préliminaire (Passe 1)...');
+    final trackedPages = <String, int>{};
     final pass1Doc = _buildDocument(
       data: data,
       fonts: fonts,
       assets: assets,
       overrideTotalPages: null,
+      trackedPages: trackedPages,
     );
     await pass1Doc.save();
     cancellationToken?.throwIfCancelled();
 
     final totalPages = pass1Doc.document.pdfPageList.pages.length;
 
-    // 4. Passe 2 : Rendu final avec numérotation absolue (Page X / N)
+    // 4. Passe 2 : Rendu final avec numérotation absolue (Page X / N) et Sommaire résolu
     onProgress?.call(0.70, 'Génération du livrable définitif (Passe 2 : $totalPages pages)...');
     final pass2Doc = _buildDocument(
       data: data,
       fonts: fonts,
       assets: assets,
       overrideTotalPages: totalPages,
+      trackedPages: trackedPages,
     );
     final finalPdfBytes = await pass2Doc.save();
     cancellationToken?.throwIfCancelled();
@@ -111,11 +116,191 @@ class PdfQ18ReportService {
     return outputFile;
   }
 
+  /// Collecte la liste exhaustive et ordonnée des entrées du Sommaire Q18.
+  static List<SommaireEntry> _buildSommaireEntries(Q18DataSnapshot data) {
+    final entries = <SommaireEntry>[
+      SommaireEntry(
+        titre: "1. IDENTIFICATION DE LA MISSION",
+        key: 'q18_s1',
+        level: 0,
+        isBold: true,
+        isUppercase: true,
+      ),
+      SommaireEntry(
+        titre: "2. OBJET ET CADRE DE LA MISSION",
+        key: 'q18_s2',
+        level: 0,
+        isBold: true,
+        isUppercase: true,
+      ),
+      SommaireEntry(
+        titre: "3. CADRE RÉGLEMENTAIRE ET NORMATIF",
+        key: 'q18_s3',
+        level: 0,
+        isBold: true,
+        isUppercase: true,
+      ),
+      SommaireEntry(
+        titre: "4. PRÉSENTATION DU SITE ET DES INSTALLATIONS",
+        key: 'q18_s4',
+        level: 0,
+        isBold: true,
+        isUppercase: true,
+      ),
+      SommaireEntry(
+        titre: "4.1 Renseignements généraux",
+        key: 'q18_s4_1',
+        level: 1,
+      ),
+      SommaireEntry(
+        titre: "4.2 Synthèse quantitative des installations",
+        key: 'q18_s4_2',
+        level: 1,
+      ),
+      SommaireEntry(
+        titre: "5. PÉRIMÈTRE DE LA VÉRIFICATION ET EXCLUSIONS",
+        key: 'q18_s5',
+        level: 0,
+        isBold: true,
+        isUppercase: true,
+      ),
+      SommaireEntry(
+        titre: "5.1 Périmètre vérifié",
+        key: 'q18_s5_1',
+        level: 1,
+      ),
+      SommaireEntry(
+        titre: "5.2 Parties exclues ou non visitées",
+        key: 'q18_s5_2',
+        level: 1,
+      ),
+      SommaireEntry(
+        titre: "6. DOCUMENTS ET ÉLÉMENTS CONSULTÉS",
+        key: 'q18_s6',
+        level: 0,
+        isBold: true,
+        isUppercase: true,
+      ),
+      SommaireEntry(
+        titre: "7. MÉTHODOLOGIE ET POINTS DE CONTRÔLE",
+        key: 'q18_s7',
+        level: 0,
+        isBold: true,
+        isUppercase: true,
+      ),
+      SommaireEntry(
+        titre: "8. ÉCHELLE DE CLASSIFICATION DES DANGERS",
+        key: 'q18_s8',
+        level: 0,
+        isBold: true,
+        isUppercase: true,
+      ),
+      SommaireEntry(
+        titre: "9. TYPOLOGIE DES DANGERS LES PLUS COURANTS",
+        key: 'q18_s9',
+        level: 0,
+        isBold: true,
+        isUppercase: true,
+      ),
+      SommaireEntry(
+        titre: "10. SYNTHÈSE DES DANGERS CONSTATÉS",
+        key: 'q18_s10',
+        level: 0,
+        isBold: true,
+        isUppercase: true,
+      ),
+      SommaireEntry(
+        titre: "11. RÉCAPITULATIF STATISTIQUE",
+        key: 'q18_s11',
+        level: 0,
+        isBold: true,
+        isUppercase: true,
+      ),
+      SommaireEntry(
+        titre: "12. AVIS GLOBAL ET CONCLUSION",
+        key: 'q18_s12',
+        level: 0,
+        isBold: true,
+        isUppercase: true,
+      ),
+      SommaireEntry(
+        titre: "13. COMPTE RENDU DE LEVÉE DES DANGERS",
+        key: 'q18_s13',
+        level: 0,
+        isBold: true,
+        isUppercase: true,
+      ),
+      SommaireEntry(
+        titre: "14. PROCHAINE ÉCHÉANCE",
+        key: 'q18_s14',
+        level: 0,
+        isBold: true,
+        isUppercase: true,
+      ),
+      SommaireEntry(
+        titre: "15. SIGNATURE DU VÉRIFICATEUR",
+        key: 'q18_s15',
+        level: 0,
+        isBold: true,
+        isUppercase: true,
+      ),
+    ];
+
+    if (data.photoEntries.isNotEmpty) {
+      entries.add(
+        SommaireEntry(
+          titre: "16. PLANCHE PHOTOGRAPHIQUE",
+          key: 'q18_s16',
+          level: 0,
+          isBold: true,
+          isUppercase: true,
+        ),
+      );
+    }
+
+    return entries;
+  }
+
+  /// Associe le marqueur PageTracker au premier widget de la section pour la résolution du Sommaire.
+  static List<pw.Widget> _trackList(
+    List<pw.Widget> widgets,
+    String key,
+    Map<String, int>? trackedPages,
+    int pageOffset,
+  ) {
+    if (widgets.isEmpty || trackedPages == null) return widgets;
+    return [
+      PageTracker(
+        key: key,
+        registry: trackedPages,
+        offset: pageOffset,
+        child: widgets.first,
+      ),
+      ...widgets.sublist(1),
+    ];
+  }
+
+  @visibleForTesting
+  static pw.Document buildDocumentForTesting({
+    required Q18DataSnapshot data,
+    required ({pw.Font regular, pw.Font bold}) fonts,
+    required ({pw.MemoryImage? logoKes, pw.MemoryImage? watermark}) assets,
+    required int? overrideTotalPages,
+    Map<String, int>? trackedPages,
+  }) => _buildDocument(
+    data: data,
+    fonts: fonts,
+    assets: assets,
+    overrideTotalPages: overrideTotalPages,
+    trackedPages: trackedPages,
+  );
+
   static pw.Document _buildDocument({
     required Q18DataSnapshot data,
     required ({pw.Font regular, pw.Font bold}) fonts,
     required ({pw.MemoryImage? logoKes, pw.MemoryImage? watermark}) assets,
     required int? overrideTotalPages,
+    Map<String, int>? trackedPages,
   }) {
     final pdf = pw.Document(
       title: 'Rapport Q18 - ${data.mission.nomClient}',
@@ -123,7 +308,7 @@ class PdfQ18ReportService {
       creator: 'KES Inspection App',
     );
 
-    // ── PAGE DE COUVERTURE ──
+    // ── PAGE 1 : PAGE DE COUVERTURE ──
     pdf.addPage(
       pw.Page(
         pageTheme: PdfReportStyles.buildCoverPageTheme(
@@ -140,11 +325,30 @@ class PdfQ18ReportService {
       ),
     );
 
-    // ── CORPS DU RAPPORT (SECTIONS 1 À 16) ──
+    // ── PAGE 2 : SOMMAIRE DYNAMIQUE (PAGINATION 2 PASSES) ──
+    final sommaireEntries = _buildSommaireEntries(data);
+    PdfSommaireBuilder.addSommairePages(
+      pdf,
+      sommaireEntries,
+      trackedPages ?? {},
+      nomClient: data.mission.nomClient,
+      nomSite: data.mission.nomSite,
+      numeroRapport: data.numeroRapportQ18,
+      titreRapport: 'RAPPORT Q18 - VÉRIFICATION DES INSTALLATIONS ÉLECTRIQUES (APSAD D18)',
+      pageOffset: 0,
+      overrideTotalPages: overrideTotalPages,
+      fontRegular: fonts.regular,
+      fontBold: fonts.bold,
+      logoKesImage: assets.logoKes,
+      watermarkImage: assets.watermark,
+    );
+
+    // ── CORPS DU RAPPORT (SECTIONS 1 À 16, À PARTIR DE LA PAGE 3) ──
     final innerPageTheme = PdfReportStyles.buildInnerPageTheme(
       fontRegular: fonts.regular,
       fontBold: fonts.bold,
       watermarkImage: assets.watermark,
+      pageOffset: 0,
       overrideTotalPages: overrideTotalPages,
       showWatermark: true,
     );
@@ -167,10 +371,15 @@ class PdfQ18ReportService {
 
           // Section 1 : Identification de la mission
           widgets.addAll(
-            Q18IdentificationBuilder.buildSection1Identification(
-              data,
-              fontBold: fonts.bold,
-              fontRegular: fonts.regular,
+            _trackList(
+              Q18IdentificationBuilder.buildSection1Identification(
+                data,
+                fontBold: fonts.bold,
+                fontRegular: fonts.regular,
+              ),
+              'q18_s1',
+              trackedPages,
+              0,
             ),
           );
 
@@ -178,17 +387,27 @@ class PdfQ18ReportService {
 
           // Section 2 : Objet et cadre de la mission
           widgets.addAll(
-            Q18RegulatoryBuilder.buildSection2ObjetCadre(
-              fontBold: fonts.bold,
-              fontRegular: fonts.regular,
+            _trackList(
+              Q18RegulatoryBuilder.buildSection2ObjetCadre(
+                fontBold: fonts.bold,
+                fontRegular: fonts.regular,
+              ),
+              'q18_s2',
+              trackedPages,
+              0,
             ),
           );
 
           // Section 3 : Cadre réglementaire et normatif
           widgets.addAll(
-            Q18RegulatoryBuilder.buildSection3CadreReglementaire(
-              fontBold: fonts.bold,
-              fontRegular: fonts.regular,
+            _trackList(
+              Q18RegulatoryBuilder.buildSection3CadreReglementaire(
+                fontBold: fonts.bold,
+                fontRegular: fonts.regular,
+              ),
+              'q18_s3',
+              trackedPages,
+              0,
             ),
           );
 
@@ -196,10 +415,17 @@ class PdfQ18ReportService {
 
           // Section 4 : Présentation du site et des installations
           widgets.addAll(
-            Q18IdentificationBuilder.buildSection4Presentation(
-              data,
-              fontBold: fonts.bold,
-              fontRegular: fonts.regular,
+            _trackList(
+              Q18IdentificationBuilder.buildSection4Presentation(
+                data,
+                fontBold: fonts.bold,
+                fontRegular: fonts.regular,
+                trackedPages: trackedPages,
+                pageOffset: 0,
+              ),
+              'q18_s4',
+              trackedPages,
+              0,
             ),
           );
 
@@ -207,19 +433,31 @@ class PdfQ18ReportService {
 
           // Section 5 : Périmètre de la vérification et exclusions
           widgets.addAll(
-            Q18PerimetreBuilder.buildSection5Perimetre(
-              data,
-              fontBold: fonts.bold,
-              fontRegular: fonts.regular,
+            _trackList(
+              Q18PerimetreBuilder.buildSection5Perimetre(
+                data,
+                fontBold: fonts.bold,
+                fontRegular: fonts.regular,
+                trackedPages: trackedPages,
+                pageOffset: 0,
+              ),
+              'q18_s5',
+              trackedPages,
+              0,
             ),
           );
 
           // Section 6 : Documents et éléments consultés
           widgets.addAll(
-            Q18PerimetreBuilder.buildSection6DocumentsConsultes(
-              data,
-              fontBold: fonts.bold,
-              fontRegular: fonts.regular,
+            _trackList(
+              Q18PerimetreBuilder.buildSection6DocumentsConsultes(
+                data,
+                fontBold: fonts.bold,
+                fontRegular: fonts.regular,
+              ),
+              'q18_s6',
+              trackedPages,
+              0,
             ),
           );
 
@@ -227,25 +465,40 @@ class PdfQ18ReportService {
 
           // Section 7 : Méthodologie et points de contrôle
           widgets.addAll(
-            Q18RegulatoryBuilder.buildSection7Methodologie(
-              fontBold: fonts.bold,
-              fontRegular: fonts.regular,
+            _trackList(
+              Q18RegulatoryBuilder.buildSection7Methodologie(
+                fontBold: fonts.bold,
+                fontRegular: fonts.regular,
+              ),
+              'q18_s7',
+              trackedPages,
+              0,
             ),
           );
 
           // Section 8 : Échelle de classification des dangers
           widgets.addAll(
-            Q18RegulatoryBuilder.buildSection8ClassificationDangers(
-              fontBold: fonts.bold,
-              fontRegular: fonts.regular,
+            _trackList(
+              Q18RegulatoryBuilder.buildSection8ClassificationDangers(
+                fontBold: fonts.bold,
+                fontRegular: fonts.regular,
+              ),
+              'q18_s8',
+              trackedPages,
+              0,
             ),
           );
 
           // Section 9 : Typologie des dangers les plus courants
           widgets.addAll(
-            Q18RegulatoryBuilder.buildSection9TypologieDangers(
-              fontBold: fonts.bold,
-              fontRegular: fonts.regular,
+            _trackList(
+              Q18RegulatoryBuilder.buildSection9TypologieDangers(
+                fontBold: fonts.bold,
+                fontRegular: fonts.regular,
+              ),
+              'q18_s9',
+              trackedPages,
+              0,
             ),
           );
 
@@ -253,19 +506,29 @@ class PdfQ18ReportService {
 
           // Section 10 : Synthèse des dangers constatés
           widgets.addAll(
-            Q18DangersSynthesisBuilder.buildSection10Dangers(
-              data,
-              fontBold: fonts.bold,
-              fontRegular: fonts.regular,
+            _trackList(
+              Q18DangersSynthesisBuilder.buildSection10Dangers(
+                data,
+                fontBold: fonts.bold,
+                fontRegular: fonts.regular,
+              ),
+              'q18_s10',
+              trackedPages,
+              0,
             ),
           );
 
           // Section 11 : Récapitulatif statistique
           widgets.addAll(
-            Q18DangersSynthesisBuilder.buildSection11Statistiques(
-              data,
-              fontBold: fonts.bold,
-              fontRegular: fonts.regular,
+            _trackList(
+              Q18DangersSynthesisBuilder.buildSection11Statistiques(
+                data,
+                fontBold: fonts.bold,
+                fontRegular: fonts.regular,
+              ),
+              'q18_s11',
+              trackedPages,
+              0,
             ),
           );
 
@@ -273,36 +536,56 @@ class PdfQ18ReportService {
 
           // Section 12 : Avis global et conclusion
           widgets.addAll(
-            Q18ConclusionBuilder.buildSection12AvisGlobal(
-              data,
-              fontBold: fonts.bold,
-              fontRegular: fonts.regular,
+            _trackList(
+              Q18ConclusionBuilder.buildSection12AvisGlobal(
+                data,
+                fontBold: fonts.bold,
+                fontRegular: fonts.regular,
+              ),
+              'q18_s12',
+              trackedPages,
+              0,
             ),
           );
 
           // Section 13 : Compte rendu de levée des dangers
           widgets.addAll(
-            Q18ConclusionBuilder.buildSection13LeveeDangers(
-              fontBold: fonts.bold,
-              fontRegular: fonts.regular,
+            _trackList(
+              Q18ConclusionBuilder.buildSection13LeveeDangers(
+                fontBold: fonts.bold,
+                fontRegular: fonts.regular,
+              ),
+              'q18_s13',
+              trackedPages,
+              0,
             ),
           );
 
           // Section 14 : Prochaine échéance
           widgets.addAll(
-            Q18ConclusionBuilder.buildSection14ProchaineEcheance(
-              data,
-              fontBold: fonts.bold,
-              fontRegular: fonts.regular,
+            _trackList(
+              Q18ConclusionBuilder.buildSection14ProchaineEcheance(
+                data,
+                fontBold: fonts.bold,
+                fontRegular: fonts.regular,
+              ),
+              'q18_s14',
+              trackedPages,
+              0,
             ),
           );
 
           // Section 15 : Signature du vérificateur
           widgets.addAll(
-            Q18ConclusionBuilder.buildSection15Signature(
-              data,
-              fontBold: fonts.bold,
-              fontRegular: fonts.regular,
+            _trackList(
+              Q18ConclusionBuilder.buildSection15Signature(
+                data,
+                fontBold: fonts.bold,
+                fontRegular: fonts.regular,
+              ),
+              'q18_s15',
+              trackedPages,
+              0,
             ),
           );
 
@@ -310,10 +593,15 @@ class PdfQ18ReportService {
           if (data.photoEntries.isNotEmpty) {
             widgets.add(pw.NewPage());
             widgets.addAll(
-              Q18PhotosBuilder.buildSection16Photos(
-                data.photoEntries,
-                fontBold: fonts.bold,
-                fontRegular: fonts.regular,
+              _trackList(
+                Q18PhotosBuilder.buildSection16Photos(
+                  data.photoEntries,
+                  fontBold: fonts.bold,
+                  fontRegular: fonts.regular,
+                ),
+                'q18_s16',
+                trackedPages,
+                0,
               ),
             );
           }
