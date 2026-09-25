@@ -144,7 +144,7 @@ void main() {
       expect(fileName.endsWith('.xlsx'), isTrue);
     });
 
-    test('generateWorkbookBytes produit un fichier Excel valide avec exactement 2 feuilles', () {
+    test('generateWorkbookBytes produit un fichier Excel valide avec exactement 4 feuilles', () {
       final genDate = DateTime(2026, 9, 10);
       final bytes = ExcelReportService.generateWorkbookBytes(
         mission: sampleMission,
@@ -187,15 +187,17 @@ void main() {
       final wbFile = archive.files.firstWhere((f) => f.name == 'xl/workbook.xml');
       final wbXml = utf8.decode(wbFile.content as List<int>);
 
-      // Exactement les 2 feuilles spécifiées
+      // Exactement les 4 feuilles spécifiées
       expect(wbXml.contains('Annexe des équipements'), isTrue);
       expect(wbXml.contains('Annexe des observations'), isTrue);
+      expect(wbXml.contains('Source non identifiees'), isTrue);
+      expect(wbXml.contains('Parafoudre'), isTrue);
 
       // 2. Vérification des chaînes partagées (sharedStrings.xml)
       final ssFile = archive.files.firstWhere((f) => f.name == 'xl/sharedStrings.xml');
       final ssXml = utf8.decode(ssFile.content as List<int>);
 
-      // Colonnes feuille 1 (MT: 9 cols, BT: 11 cols avec parafoudre et thermo)
+      // Colonnes feuille 1 (13 colonnes unifiées avec alimentation identifie)
       expect(ssXml.contains('Zone'), isTrue);
       expect(ssXml.contains('Repère'), isTrue);
       expect(ssXml.contains('Désignation'), isTrue);
@@ -204,6 +206,7 @@ void main() {
       expect(ssXml.contains('Présence du parafoudre'), isTrue);
       expect(ssXml.contains('Vérification thermo'), isTrue);
       expect(ssXml.contains('Observation'), isTrue);
+      expect(ssXml.contains('alimentation identifie'), isTrue);
       expect(ssXml.contains('Date de réserve'), isTrue);
       expect(ssXml.contains('Date de rapport'), isTrue);
 
@@ -436,7 +439,7 @@ void main() {
       expect(sheet2Xml.contains('mergeCells'), isTrue);
     });
 
-    test('Validation du Tableau 3 et du numéro réel d\'équipement dans l\'export Excel', () {
+    test('Validation de la feuille dédiée Source non identifiees', () {
       final coffretSansSource = CoffretArmoire(
         qrCode: 'QR-EX-01',
         nom: 'Armoire Climatisation',
@@ -477,16 +480,88 @@ void main() {
       expect(bytes, isNotEmpty);
 
       final archive = ZipDecoder().decodeBytes(bytes);
-      final sheet1File = archive.files.firstWhere((f) => f.name == 'xl/worksheets/sheet1.xml');
-      final sheet1Xml = utf8.decode(sheet1File.content as List<int>);
+      final wbFile = archive.files.firstWhere((f) => f.name == 'xl/workbook.xml');
+      final wbXml = utf8.decode(wbFile.content as List<int>);
+      expect(wbXml.contains('Source non identifiees'), isTrue);
 
-      // Vérification de la présence du Tableau 3 avec statut Non identifiée
       final sharedStringsFile = archive.files.firstWhere((f) => f.name == 'xl/sharedStrings.xml');
       final sharedStringsXml = utf8.decode(sharedStringsFile.content as List<int>);
 
+      final sheet3File = archive.files.firstWhere((f) => f.name == 'xl/worksheets/sheet3.xml');
+      final sheet3Xml = utf8.decode(sheet3File.content as List<int>);
+
       expect(sharedStringsXml.contains("ÉQUIPEMENTS AUX SOURCES D'ALIMENTATION NON IDENTIFIÉES"), isTrue);
       expect(sharedStringsXml.contains('Non identifiée'), isTrue);
-      expect(sharedStringsXml.contains('99') || sheet1Xml.contains('99'), isTrue);
+      expect(sharedStringsXml.contains('99') || sheet3Xml.contains('99'), isTrue);
+    });
+
+    test('Validation de la colonne alimentation identifie et de la feuille Parafoudre', () {
+      final coffretAvecSource = CoffretArmoire(
+        qrCode: 'QR-EX-02',
+        nom: 'Armoire Éclairage',
+        type: 'Armoire',
+        repere: 'ARM-ECL',
+        numeroEquipement: '10',
+        sourceNomComplet: 'TGBT Général',
+        presenceParafoudre: true,
+        alimentations: [
+          Alimentation(
+            typeProtection: 'Disjoncteur',
+            source: 'TGBT Général',
+            sourceKnown: 'Connue',
+            pdcKA: '25',
+            calibre: '63A',
+            sectionCable: '16mm²',
+          ),
+        ],
+      );
+
+      final coffretSansSource = CoffretArmoire(
+        qrCode: 'QR-EX-03',
+        nom: 'Coffret Prises',
+        type: 'Coffret',
+        repere: 'COF-PC',
+        numeroEquipement: '11',
+        sourceNomComplet: '',
+        presenceParafoudre: false,
+        alimentations: [],
+      );
+
+      final audit = AuditInstallationsElectriques(
+        missionId: 'm_excel_sources_and_para',
+        updatedAt: DateTime.now(),
+        basseTensionZones: [
+          BasseTensionZone(
+            nom: 'Zone Bureaux',
+            coffretsDirects: [coffretAvecSource, coffretSansSource],
+          ),
+        ],
+      );
+
+      final bytes = ExcelReportService.generateWorkbookBytes(
+        mission: sampleMission,
+        audit: audit,
+        description: sampleDesc,
+        generationDate: DateTime(2026, 9, 25),
+      );
+
+      expect(bytes, isNotEmpty);
+
+      final archive = ZipDecoder().decodeBytes(bytes);
+      final sharedStringsFile = archive.files.firstWhere((f) => f.name == 'xl/sharedStrings.xml');
+      final sharedStringsXml = utf8.decode(sharedStringsFile.content as List<int>);
+
+      // 1. La source identifiée doit être présente dans les chaînes partagées
+      expect(sharedStringsXml.contains('TGBT Général'), isTrue);
+
+      // 2. Colonne alimentation identifie présente
+      expect(sharedStringsXml.contains('alimentation identifie'), isTrue);
+
+      // 3. Feuille Parafoudre avec ses en-têtes et valeurs
+      expect(sharedStringsXml.contains('Presence du parafoudre'), isTrue);
+      expect(sharedStringsXml.contains('SYNTHÈSE DES ÉQUIPEMENTS ET PRÉSENCE DU PARAFOUDRE'), isTrue);
+      expect(sharedStringsXml.contains('Oui'), isTrue);
+      expect(sharedStringsXml.contains('Non'), isTrue);
     });
   });
 }

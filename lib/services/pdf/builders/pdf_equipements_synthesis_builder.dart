@@ -18,6 +18,7 @@ class PdfEquipementItem {
   final String? verificationThermo;
   final String hasObservation;
   final String departsIssus;
+  final String? sourceAlimentation;
 
   const PdfEquipementItem({
     this.zoneName = '',
@@ -32,6 +33,7 @@ class PdfEquipementItem {
     this.verificationThermo,
     this.hasObservation = 'Non',
     this.departsIssus = '-',
+    this.sourceAlimentation,
   });
 }
 
@@ -415,6 +417,30 @@ class PdfEquipementsSynthesisBuilder {
         final equipNom = nom.trim().isNotEmpty
             ? nom.trim()
             : (repere.trim().isNotEmpty ? repere.trim() : type);
+
+        String? resolvedSourceAlim;
+        if (refObj is CoffretArmoire) {
+          if (refObj.type == 'INVERSEUR') {
+            final identifiedSources = <String>[];
+            for (final alim in refObj.alimentations) {
+              final s = alim.source.trim();
+              if (isSourceIdentified(s)) {
+                identifiedSources.add(s);
+              }
+            }
+            if (identifiedSources.isNotEmpty) {
+              resolvedSourceAlim = identifiedSources.join(' / ');
+            }
+          } else {
+            final rawSource = (refObj.sourceNomComplet?.trim().isNotEmpty == true)
+                ? refObj.sourceNomComplet!.trim()
+                : (refObj.alimentations.isNotEmpty ? refObj.alimentations.first.source.trim() : '');
+            if (isSourceIdentified(rawSource)) {
+              resolvedSourceAlim = rawSource;
+            }
+          }
+        }
+
         list.add(
           PdfEquipementItem(
             zoneName: zoneName.trim(),
@@ -428,6 +454,7 @@ class PdfEquipementsSynthesisBuilder {
             presenceParafoudre: _extractPresenceParafoudre(refObj),
             verificationThermo: _extractVerificationThermo(refObj),
             hasObservation: _extractHasObservation(refObj) ? 'Oui' : 'Non',
+            sourceAlimentation: resolvedSourceAlim,
           ),
         );
       }
@@ -634,6 +661,30 @@ class PdfEquipementsSynthesisBuilder {
         final equipNom = nom.trim().isNotEmpty
             ? nom.trim()
             : (repere.trim().isNotEmpty ? repere.trim() : type);
+
+        String? resolvedSourceAlim;
+        if (refObj is CoffretArmoire) {
+          if (refObj.type == 'INVERSEUR') {
+            final identifiedSources = <String>[];
+            for (final alim in refObj.alimentations) {
+              final s = alim.source.trim();
+              if (isSourceIdentified(s)) {
+                identifiedSources.add(s);
+              }
+            }
+            if (identifiedSources.isNotEmpty) {
+              resolvedSourceAlim = identifiedSources.join(' / ');
+            }
+          } else {
+            final rawSource = (refObj.sourceNomComplet?.trim().isNotEmpty == true)
+                ? refObj.sourceNomComplet!.trim()
+                : (refObj.alimentations.isNotEmpty ? refObj.alimentations.first.source.trim() : '');
+            if (isSourceIdentified(rawSource)) {
+              resolvedSourceAlim = rawSource;
+            }
+          }
+        }
+
         list.add(
           PdfEquipementItem(
             zoneName: zoneName.trim(),
@@ -648,6 +699,7 @@ class PdfEquipementsSynthesisBuilder {
             verificationThermo: _extractVerificationThermo(refObj),
             hasObservation: _extractHasObservation(refObj) ? 'Oui' : 'Non',
             departsIssus: departsIssus,
+            sourceAlimentation: resolvedSourceAlim,
           ),
         );
       }
