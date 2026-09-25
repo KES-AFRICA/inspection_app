@@ -276,11 +276,12 @@ void main() {
         pageOffset: 2,
       );
       expect(s5.isNotEmpty, isTrue);
-      // Section 5.1 a un tableau avec 4 colonnes
+      // Section 5.1 a un tableau avec 4 colonnes et alignement vertical complet
       final s51Table = s5.whereType<pw.Table>().first;
       expect(s51Table.children.length, equals(3)); // En-tête + 2 items
+      expect(s51Table.defaultVerticalAlignment, equals(pw.TableCellVerticalAlignment.full));
 
-      // Test de Section 5.2 avec liste d'exclusions vide => Affiche "Sans Objet"
+      // Test de Section 5.2 avec liste d'exclusions vide => Affiche simplement "- Sans Objet"
       final emptyExclusionsSnapshot = Q18DataSnapshot(
         mission: sampleMission,
         renseignements: sampleRg,
@@ -309,6 +310,10 @@ void main() {
         fontRegular: pw.Font.helvetica(),
       );
       expect(s5Empty.isNotEmpty, isTrue);
+      final hasSansObjet = s5Empty.any(
+        (w) => w is pw.Padding && w.child is pw.Text && (w.child as pw.Text).text.toPlainText().contains('- Sans Objet'),
+      );
+      expect(hasSansObjet, isTrue);
 
       final s6 = Q18PerimetreBuilder.buildSection6DocumentsConsultes(
         sampleSnapshot,
@@ -319,6 +324,7 @@ void main() {
       final s6Table = s6.whereType<pw.Table>().first;
       // 1 en-tête + 6 documents consultés = 7 lignes
       expect(s6Table.children.length, equals(7));
+      expect(s6Table.defaultVerticalAlignment, equals(pw.TableCellVerticalAlignment.full));
     });
 
     test('6. Q18DangersSynthesisBuilder - Sections 10 et 11', () {

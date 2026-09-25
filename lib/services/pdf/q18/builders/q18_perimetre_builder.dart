@@ -51,93 +51,196 @@ class Q18PerimetreBuilder {
             style: pw.TextStyle(font: fontRegular, fontSize: 8.0, color: PdfColors.grey700),
           ),
         )
-      else
-        pw.Table(
-          border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.4),
-          columnWidths: const {
-            0: pw.FlexColumnWidth(2.6),
-            1: pw.FlexColumnWidth(2.6),
-            2: pw.FlexColumnWidth(3.4),
-            3: pw.FlexColumnWidth(1.4),
-          },
-          children: [
+      else ...[
+        () {
+          final zoneGroups = <_Q18PerimetreZoneGroup>[];
+          for (final item in couverts) {
+            final normZone = item.zone.trim().isNotEmpty ? item.zone.trim() : 'Non précisée';
+            final normRep = item.repere.trim().isNotEmpty ? item.repere.trim() : '-';
+
+            var zGroup = zoneGroups.firstWhere(
+              (zg) => zg.zone.toLowerCase() == normZone.toLowerCase(),
+              orElse: () {
+                final zg = _Q18PerimetreZoneGroup(zone: normZone, repereGroups: []);
+                zoneGroups.add(zg);
+                return zg;
+              },
+            );
+
+            var rGroup = zGroup.repereGroups.firstWhere(
+              (rg) => rg.repere.toLowerCase() == normRep.toLowerCase(),
+              orElse: () {
+                final rg = _Q18PerimetreRepereGroup(repere: normRep, items: []);
+                zGroup.repereGroups.add(rg);
+                return rg;
+              },
+            );
+
+            rGroup.items.add(item);
+          }
+
+          final allTableRows = <pw.TableRow>[];
+
+          allTableRows.add(
             pw.TableRow(
+              repeat: true,
               decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
               children: [
-                PdfReportStyles.cell('Zone', isHeader: true, centered: false),
-                PdfReportStyles.cell('Repère', isHeader: true, centered: false),
-                PdfReportStyles.cell('Équipements', isHeader: true, centered: false),
+                PdfReportStyles.cell('Zone', isHeader: true, centered: true),
+                PdfReportStyles.cell('Repère', isHeader: true, centered: true),
+                PdfReportStyles.cell('Équipements', isHeader: true, centered: true),
                 PdfReportStyles.cell('Couvert par la mission', isHeader: true, centered: true),
               ],
             ),
-            ...couverts.asMap().entries.map((entry) {
-              final idx = entry.key;
-              final item = entry.value;
-              final isAlt = idx.isOdd;
+          );
 
-              return pw.TableRow(
-                decoration: pw.BoxDecoration(
-                  color: isAlt ? PdfReportStyles.tableRowAlt : PdfColors.white,
-                ),
-                children: [
-                  pw.Container(
-                    padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
-                    child: pw.Text(
-                      item.zone,
-                      style: pw.TextStyle(
-                        font: fontBold,
-                        fontSize: 8.0,
-                        color: PdfReportStyles.headerColor,
+          int globalRowIndex = 0;
+
+          for (final zoneGroup in zoneGroups) {
+            final totalZoneItems =
+                zoneGroup.repereGroups.fold<int>(0, (sum, g) => sum + g.items.length);
+
+            int zoneItemIndex = 0;
+
+            for (int rIdx = 0; rIdx < zoneGroup.repereGroups.length; rIdx++) {
+              final repereGroup = zoneGroup.repereGroups[rIdx];
+              final repereCount = repereGroup.items.length;
+
+              for (int i = 0; i < repereCount; i++) {
+                final item = repereGroup.items[i];
+                final currentZoneItemIdx = zoneItemIndex++;
+                final currentRepereItemIdx = i;
+
+                final idx = globalRowIndex++;
+                final isEven = idx % 2 == 0;
+                final bg = isEven ? PdfColors.white : PdfColor.fromInt(0xFFF9FAFB);
+
+                final isStartOfZone = (currentZoneItemIdx == 0 && idx > 0);
+                final isStartOfRepere = (currentRepereItemIdx == 0 && currentZoneItemIdx > 0);
+
+                final isEndOfZone = (currentZoneItemIdx == totalZoneItems - 1);
+                final isEndOfRepere = (currentRepereItemIdx == repereCount - 1);
+
+                final zoneBorder = pw.Border(
+                  top: isStartOfZone
+                      ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                      : pw.BorderSide.none,
+                  bottom: isEndOfZone
+                      ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                      : pw.BorderSide.none,
+                );
+
+                final repereBorder = pw.Border(
+                  top: isStartOfZone
+                      ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                      : (isStartOfRepere
+                          ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 0.8)
+                          : pw.BorderSide.none),
+                  bottom: isEndOfZone
+                      ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                      : (isEndOfRepere
+                          ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 0.8)
+                          : pw.BorderSide.none),
+                );
+
+                final itemBorder = pw.Border(
+                  top: isStartOfZone
+                      ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                      : (isStartOfRepere
+                          ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 0.8)
+                          : pw.BorderSide.none),
+                  bottom: isEndOfZone
+                      ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                      : (isEndOfRepere
+                          ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 0.8)
+                          : const pw.BorderSide(color: PdfColor.fromInt(0xFFCBD5E1), width: 0.4)),
+                );
+
+                allTableRows.add(
+                  pw.TableRow(
+                    decoration: pw.BoxDecoration(color: bg),
+                    children: [
+                      // Cellule 0 : Zone
+                      PdfReportStyles.buildGroupedCellWidget(
+                        currentIndex: currentZoneItemIdx,
+                        totalRows: totalZoneItems,
+                        text: zoneGroup.zone,
+                        style: pw.TextStyle(font: fontBold, fontSize: 8.5),
+                        border: zoneBorder,
+                        padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                       ),
-                    ),
-                  ),
-                  pw.Container(
-                    padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
-                    child: pw.Text(
-                      item.repere,
-                      style: pw.TextStyle(
-                        font: fontRegular,
-                        fontSize: 8.0,
-                        color: PdfColors.black,
+
+                      // Cellule 1 : Repère
+                      PdfReportStyles.buildGroupedCellWidget(
+                        currentIndex: currentRepereItemIdx,
+                        totalRows: repereCount,
+                        text: repereGroup.repere,
+                        style: pw.TextStyle(font: fontBold, fontSize: 8.5),
+                        border: repereBorder,
+                        padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                       ),
-                    ),
-                  ),
-                  pw.Container(
-                    padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
-                    child: pw.Text(
-                      item.equipements,
-                      style: pw.TextStyle(
-                        font: fontRegular,
-                        fontSize: 8.0,
-                        color: PdfColors.black,
-                      ),
-                    ),
-                  ),
-                  pw.Container(
-                    padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                    alignment: pw.Alignment.center,
-                    child: pw.Container(
-                      padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: pw.BoxDecoration(
-                        color: const PdfColor.fromInt(0xFFDCFCE7),
-                        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(3)),
-                        border: pw.Border.all(color: const PdfColor.fromInt(0xFF86EFAC), width: 0.5),
-                      ),
-                      child: pw.Text(
-                        'Oui',
-                        style: pw.TextStyle(
-                          font: fontBold,
-                          fontSize: 7.5,
-                          color: const PdfColor.fromInt(0xFF15803D),
+
+                      // Cellule 2 : Équipements
+                      pw.Container(
+                        decoration: pw.BoxDecoration(
+                          color: bg,
+                          border: itemBorder,
+                        ),
+                        padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+                        alignment: pw.Alignment.centerLeft,
+                        child: pw.Text(
+                          item.equipements.isNotEmpty ? item.equipements : '-',
+                          style: pw.TextStyle(font: fontRegular, fontSize: 8.0, color: PdfColors.black),
                         ),
                       ),
-                    ),
+
+                      // Cellule 3 : Couvert par la mission (coloration sur toute la case)
+                      pw.Container(
+                        decoration: pw.BoxDecoration(
+                          color: item.isCouvert
+                              ? PdfReportStyles.conformeColor
+                              : PdfReportStyles.nonConformeColor,
+                          border: itemBorder,
+                        ),
+                        padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                        alignment: pw.Alignment.center,
+                        child: pw.Text(
+                          item.isCouvert ? 'Oui' : 'Non',
+                          style: pw.TextStyle(
+                            font: fontBold,
+                            fontSize: 8.0,
+                            color: PdfColors.black,
+                          ),
+                          textAlign: pw.TextAlign.center,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              );
-            }),
-          ],
-        ),
+                );
+              }
+            }
+          }
+
+          return pw.Table(
+            defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
+            border: const pw.TableBorder(
+              left: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+              right: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+              top: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+              bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+              verticalInside: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+              horizontalInside: pw.BorderSide.none,
+            ),
+            columnWidths: const {
+              0: pw.FlexColumnWidth(2.6),
+              1: pw.FlexColumnWidth(2.6),
+              2: pw.FlexColumnWidth(3.4),
+              3: pw.FlexColumnWidth(1.4),
+            },
+            children: allTableRows,
+          );
+        }(),
+      ],
       pw.SizedBox(height: 10),
       trackedPages != null
           ? PageTracker(key: 'q18_s5_2', registry: trackedPages, offset: pageOffset, child: subTitle52)
@@ -150,23 +253,11 @@ class Q18PerimetreBuilder {
       ),
       pw.SizedBox(height: 4),
       if (exclusions.isEmpty)
-        pw.Container(
-          width: double.infinity,
-          padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          decoration: pw.BoxDecoration(
-            color: PdfReportStyles.tableRowAlt,
-            border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.4),
-            borderRadius: const pw.BorderRadius.all(pw.Radius.circular(3)),
-          ),
-          child: pw.Center(
-            child: pw.Text(
-              'Sans Objet',
-              style: pw.TextStyle(
-                font: fontBold,
-                fontSize: 9.0,
-                color: PdfReportStyles.headerColor,
-              ),
-            ),
+        pw.Padding(
+          padding: const pw.EdgeInsets.only(left: 4, top: 2),
+          child: pw.Text(
+            '- Sans Objet',
+            style: pw.TextStyle(font: fontRegular, fontSize: 8.5, color: PdfColors.black),
           ),
         )
       else
@@ -182,10 +273,10 @@ class Q18PerimetreBuilder {
             pw.TableRow(
               decoration: pw.BoxDecoration(color: PdfColor.fromInt(0xFFC00000)),
               children: [
-                PdfReportStyles.cell('Zone', isHeader: true, centered: false),
-                PdfReportStyles.cell('Repère', isHeader: true, centered: false),
-                PdfReportStyles.cell('Équipements non vérifiés', isHeader: true, centered: false),
-                PdfReportStyles.cell('Motif d\'inaccessibilité', isHeader: true, centered: false),
+                PdfReportStyles.cell('Zone', isHeader: true, centered: true),
+                PdfReportStyles.cell('Repère', isHeader: true, centered: true),
+                PdfReportStyles.cell('Équipements non vérifiés', isHeader: true, centered: true),
+                PdfReportStyles.cell('Motif d\'inaccessibilité', isHeader: true, centered: true),
               ],
             ),
             ...exclusions.asMap().entries.map((entry) {
@@ -266,6 +357,7 @@ class Q18PerimetreBuilder {
       ),
       pw.SizedBox(height: 6),
       pw.Table(
+        defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
         border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.4),
         columnWidths: const {
           0: pw.FixedColumnWidth(24),
@@ -274,10 +366,11 @@ class Q18PerimetreBuilder {
         },
         children: [
           pw.TableRow(
+            repeat: true,
             decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
             children: [
               PdfReportStyles.cell('N°', isHeader: true, centered: true),
-              PdfReportStyles.cell('Document', isHeader: true, centered: false),
+              PdfReportStyles.cell('Document', isHeader: true, centered: true),
               PdfReportStyles.cell('Disponibilité sur site', isHeader: true, centered: true),
             ],
           ),
@@ -303,44 +396,30 @@ class Q18PerimetreBuilder {
                 ),
                 pw.Container(
                   padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+                  alignment: pw.Alignment.centerLeft,
                   child: pw.Text(
                     doc.titre,
                     style: pw.TextStyle(font: fontRegular, fontSize: 8.0, color: PdfColors.black),
                   ),
                 ),
                 pw.Container(
+                  color: hasCustom
+                      ? const PdfColor.fromInt(0xFFF1F5F9)
+                      : (isDispo
+                          ? PdfReportStyles.conformeColor
+                          : PdfReportStyles.nonConformeColor),
                   padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 5),
                   alignment: pw.Alignment.center,
-                  child: pw.Container(
-                    padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: pw.BoxDecoration(
+                  child: pw.Text(
+                    hasCustom ? doc.statutCustom! : (isDispo ? 'Oui' : 'Non'),
+                    style: pw.TextStyle(
+                      font: fontBold,
+                      fontSize: 8.0,
                       color: hasCustom
-                          ? const PdfColor.fromInt(0xFFF1F5F9)
-                          : (isDispo
-                              ? const PdfColor.fromInt(0xFFDCFCE7)
-                              : const PdfColor.fromInt(0xFFFEE2E2)),
-                      borderRadius: const pw.BorderRadius.all(pw.Radius.circular(3)),
-                      border: pw.Border.all(
-                        color: hasCustom
-                            ? const PdfColor.fromInt(0xFFCBD5E1)
-                            : (isDispo
-                                ? const PdfColor.fromInt(0xFF86EFAC)
-                                : const PdfColor.fromInt(0xFFFCA5A5)),
-                        width: 0.5,
-                      ),
+                          ? const PdfColor.fromInt(0xFF475569)
+                          : PdfColors.black,
                     ),
-                    child: pw.Text(
-                      hasCustom ? doc.statutCustom! : (isDispo ? 'Oui' : 'Non'),
-                      style: pw.TextStyle(
-                        font: fontBold,
-                        fontSize: 7.5,
-                        color: hasCustom
-                            ? const PdfColor.fromInt(0xFF475569)
-                            : (isDispo
-                                ? const PdfColor.fromInt(0xFF15803D)
-                                : const PdfColor.fromInt(0xFFB91C1C)),
-                      ),
-                    ),
+                    textAlign: pw.TextAlign.center,
                   ),
                 ),
               ],
@@ -351,4 +430,16 @@ class Q18PerimetreBuilder {
       pw.SizedBox(height: 14),
     ];
   }
+}
+
+class _Q18PerimetreRepereGroup {
+  final String repere;
+  final List<Q18PerimetreItem> items;
+  _Q18PerimetreRepereGroup({required this.repere, required this.items});
+}
+
+class _Q18PerimetreZoneGroup {
+  final String zone;
+  final List<_Q18PerimetreRepereGroup> repereGroups;
+  _Q18PerimetreZoneGroup({required this.zone, required this.repereGroups});
 }

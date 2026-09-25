@@ -23,7 +23,7 @@ class Q18RegulatoryBuilder {
         text: 'Le présent rapport constitue le compte rendu de la mission de vérification périodique Q18 réalisée conformément au référentiel APSAD D18. Cette mission a pour objectif d\'identifier les dangers d\'incendie ou d\'explosion susceptibles d\'être liés à l\'installation électrique du site, en complément des vérifications réglementaires en vigueur.',
         style: pw.TextStyle(font: fontRegular, fontSize: 8.5, color: PdfColors.black, lineSpacing: 1.2),
       ),
-      pw.SizedBox(height: 4),
+      pw.SizedBox(height: 2),
       pw.Paragraph(
         text: 'Cette vérification ne se substitue pas aux vérifications réglementaires obligatoires ni aux contrôles requis par d\'autres réglementations applicables (sécurité incendie ERP/ICPE, etc.). Elle constitue une démarche complémentaire de prévention destinée notamment à l\'information de l\'assureur du site.',
         style: pw.TextStyle(font: fontRegular, fontSize: 8.5, color: PdfColors.black, lineSpacing: 1.2),
@@ -67,7 +67,7 @@ class Q18RegulatoryBuilder {
             decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
             children: [
               PdfReportStyles.cell('N°', isHeader: true, centered: true),
-              PdfReportStyles.cell('Textes réglementaires et normes applicables', isHeader: true, centered: false),
+              PdfReportStyles.cell('Textes réglementaires et normes applicables', isHeader: true, centered: true),
             ],
           ),
           ...textes.asMap().entries.map((entry) {
@@ -173,8 +173,8 @@ class Q18RegulatoryBuilder {
           pw.TableRow(
             decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
             children: [
-              PdfReportStyles.cell('Éléments à vérifier', isHeader: true, centered: false),
-              PdfReportStyles.cell('Point de contrôle', isHeader: true, centered: false),
+              PdfReportStyles.cell('Éléments à vérifier', isHeader: true, centered: true),
+              PdfReportStyles.cell('Point de contrôle', isHeader: true, centered: true),
             ],
           ),
           ...methodologieRows.asMap().entries.map((entry) {
@@ -268,9 +268,9 @@ class Q18RegulatoryBuilder {
           pw.TableRow(
             decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
             children: [
-              PdfReportStyles.cell('Niveau', isHeader: true, centered: false),
-              PdfReportStyles.cell('Critères de qualification', isHeader: true, centered: false),
-              PdfReportStyles.cell('Traitement attendu', isHeader: true, centered: false),
+              PdfReportStyles.cell('Niveau', isHeader: true, centered: true),
+              PdfReportStyles.cell('Critères de qualification', isHeader: true, centered: true),
+              PdfReportStyles.cell('Traitement attendu', isHeader: true, centered: true),
             ],
           ),
           ...echelles.asMap().entries.map((entry) {
@@ -417,8 +417,8 @@ class Q18RegulatoryBuilder {
           pw.TableRow(
             decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
             children: [
-              PdfReportStyles.cell('Type de danger', isHeader: true, centered: false),
-              PdfReportStyles.cell('Description type', isHeader: true, centered: false),
+              PdfReportStyles.cell('Type de danger', isHeader: true, centered: true),
+              PdfReportStyles.cell('Description type', isHeader: true, centered: true),
               PdfReportStyles.cell('Niveau habituel', isHeader: true, centered: true),
             ],
           ),

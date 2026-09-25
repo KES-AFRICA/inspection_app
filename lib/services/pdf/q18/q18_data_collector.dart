@@ -656,7 +656,6 @@ class Q18DataCollector {
         index: 4,
         titre: 'Rapport Q18 précédent, le cas échéant',
         isDisponible: hasQ18Precedent,
-        statutCustom: 'Non applicable',
       ),
       Q18DocumentConsulteItem(
         index: 5,
