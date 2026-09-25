@@ -167,6 +167,9 @@ class Mission extends HiveObject {
   @HiveField(53)
   String? recepteurTelephone;
 
+  @HiveField(54, defaultValue: false)
+  bool docRapportQ18;
+
   Mission({
     required this.id,
     required this.nomClient,
@@ -198,6 +201,7 @@ class Mission extends HiveObject {
     this.docRapportEtudeFoudre = false,
     this.docRegistreSecurite = false,
     this.docRapportDerniereVerif = false,
+    this.docRapportQ18 = false,
     required this.createdAt,
     required this.updatedAt,
     required this.status,
@@ -285,6 +289,7 @@ class Mission extends HiveObject {
       docRapportEtudeFoudre: json['doc_rapport_etude_foudre'] ?? false,
       docRegistreSecurite: json['doc_registre_securite'] ?? false,
       docRapportDerniereVerif: json['doc_rapport_derniere_verif'] ?? false,
+      docRapportQ18: json['doc_rapport_q18'] ?? false,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
           : DateTime.now(),
@@ -358,6 +363,7 @@ class Mission extends HiveObject {
       'doc_rapport_etude_foudre': docRapportEtudeFoudre,
       'doc_registre_securite': docRegistreSecurite,
       'doc_rapport_derniere_verif': docRapportDerniereVerif,
+      'doc_rapport_q18': docRapportQ18,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
       'status': status,

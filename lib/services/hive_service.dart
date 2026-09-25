@@ -681,6 +681,9 @@ static Future<bool> updateDocumentStatus({
       case 'doc_rapport_derniere_verif':
         mission.docRapportDerniereVerif = value;
         break;
+      case 'doc_rapport_q18':
+        mission.docRapportQ18 = value;
+        break;
       case 'doc_autre':
         mission.docAutre = value;
         break;
@@ -756,6 +759,9 @@ static Future<bool> updateMultipleDocuments({
           break;
         case 'doc_rapport_derniere_verif':
           mission.docRapportDerniereVerif = value;
+          break;
+        case 'doc_rapport_q18':
+          mission.docRapportQ18 = value;
           break;
         case 'doc_autre':
           mission.docAutre = value;

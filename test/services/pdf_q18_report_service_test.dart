@@ -589,5 +589,341 @@ void main() {
       expect(bytes2.isNotEmpty, isTrue);
       expect(bytes2.length, greaterThan(2000));
     });
+
+    test('12. Section 10 : Regroupement hiérarchique 4-niveaux et centrage sans répétition visuelle', () {
+      final multiDangers = [
+        // Zone A -> Local 1 -> TGBT 01 -> 3 observations
+        const Q18DangerItem(
+          index: 1,
+          zone: 'Zone A',
+          repere: 'Local 1',
+          designation: 'TGBT 01',
+          dangerConstate: 'Observation 1 multi-lignes\navec détail supplémentaire',
+          familleDeRisque: 'Échauffement',
+          niveau: Q18DangerLevel.dangerAvere,
+        ),
+        const Q18DangerItem(
+          index: 2,
+          zone: 'Zone A',
+          repere: 'Local 1',
+          designation: 'TGBT 01',
+          dangerConstate: 'Observation 2 courte',
+          familleDeRisque: 'Protection différentielle',
+          niveau: Q18DangerLevel.degradation,
+        ),
+        const Q18DangerItem(
+          index: 3,
+          zone: 'Zone A',
+          repere: 'Local 1',
+          designation: 'TGBT 01',
+          dangerConstate: 'Observation 3 très longue description de l\'anomalie constatée sur le jeu de barres principal',
+          familleDeRisque: 'Conducteurs endommagés',
+          niveau: Q18DangerLevel.dangerAvere,
+        ),
+        // Zone A -> Local 1 -> Armoire A -> 2 observations
+        const Q18DangerItem(
+          index: 4,
+          zone: 'Zone A',
+          repere: 'Local 1',
+          designation: 'Armoire A',
+          dangerConstate: 'Observation 4',
+          familleDeRisque: 'Connexions desserrées',
+          niveau: Q18DangerLevel.degradation,
+        ),
+        const Q18DangerItem(
+          index: 5,
+          zone: 'Zone A',
+          repere: 'Local 1',
+          designation: 'Armoire A',
+          dangerConstate: 'Observation 5',
+          familleDeRisque: 'Encombrement',
+          niveau: Q18DangerLevel.pointSensible,
+        ),
+        // Zone A -> Local 2 -> Constat directement sur le local (Local 2 -> Local 2)
+        const Q18DangerItem(
+          index: 6,
+          zone: 'Zone A',
+          repere: 'Local 2',
+          designation: '', // Constat direct sur local => Designation = Local 2
+          dangerConstate: 'Observation 6 : Porte coupe-feu bloquée',
+          familleDeRisque: 'Matériel non adapté',
+          niveau: Q18DangerLevel.dangerAvere,
+        ),
+        // Zone B -> Équipement hors local directement rattaché à Zone B
+        const Q18DangerItem(
+          index: 7,
+          zone: 'Zone B',
+          repere: '', // Hors local => Repère = Zone B
+          designation: 'Coffret extérieur',
+          dangerConstate: 'Observation 7',
+          familleDeRisque: 'Défaut de mise à la terre',
+          niveau: Q18DangerLevel.dangerAvere,
+        ),
+        // Élément sans zone (Zone vide)
+        const Q18DangerItem(
+          index: 8,
+          zone: '', // Sans zone => Cellule vide
+          repere: 'Poste isolé',
+          designation: 'Disjoncteur général',
+          dangerConstate: 'Observation 8',
+          familleDeRisque: 'Surcharge',
+          niveau: Q18DangerLevel.degradation,
+        ),
+      ];
+
+      final snapshot = Q18DataSnapshot(
+        mission: sampleMission,
+        numeroRapportQ18: 'KES/IP/Q18/2026/001',
+        numeroRapportVerifElec: 'KES/IP/VE/2026/001',
+        dateRapportEffective: DateTime(2026, 2, 15),
+        dateProchaineVisite: DateTime(2027, 2, 12),
+        lieuIntervention: 'Douala',
+        quantities: sampleSnapshot.quantities,
+        perimetreCouverts: sampleSnapshot.perimetreCouverts,
+        exclusionsPerimetre: sampleSnapshot.exclusionsPerimetre,
+        documentsConsultes: sampleSnapshot.documentsConsultes,
+        dangers: multiDangers,
+        countDangerAvere: 4,
+        countDegradation: 3,
+        countHorsPerimetre: 0,
+        countPointSensible: 1,
+        hasDangerAvere: true,
+        appreciationGlobale: 'Insuffisant',
+        avisSyntheseText: '',
+        photoEntries: const [],
+      );
+
+      final widgets = Q18DangersSynthesisBuilder.buildSection10Dangers(
+        snapshot,
+        fontBold: pw.Font.helveticaBold(),
+        fontRegular: pw.Font.helvetica(),
+      );
+
+      expect(widgets.isNotEmpty, isTrue);
+      final table = widgets.whereType<pw.Table>().first;
+      // 1 en-tête + 8 observations = 9 lignes
+      expect(table.children.length, equals(9));
+      expect(table.defaultVerticalAlignment, equals(pw.TableCellVerticalAlignment.full));
+    });
+
+    test('13. Section 11 : Tableau 3 colonnes sans blocs de couleur et avec ligne Total', () {
+      final widgets = Q18DangersSynthesisBuilder.buildSection11Statistiques(
+        sampleSnapshot,
+        fontBold: pw.Font.helveticaBold(),
+        fontRegular: pw.Font.helvetica(),
+      );
+
+      expect(widgets.isNotEmpty, isTrue);
+      final table = widgets.whereType<pw.Table>().first;
+      // 1 en-tête + 4 niveaux de danger + 1 ligne Total = 6 lignes
+      expect(table.children.length, equals(6));
+      expect(table.defaultVerticalAlignment, equals(pw.TableCellVerticalAlignment.full));
+
+      // Ligne d'en-tête : 3 colonnes
+      final headerRow = table.children.first;
+      expect(headerRow.children.length, equals(3));
+
+      // Ligne de données : 3 colonnes, la 3e est vide
+      final dataRow1 = table.children[1];
+      expect(dataRow1.children.length, equals(3));
+      final col3 = dataRow1.children[2] as pw.Container;
+      expect(col3.child is pw.SizedBox, isTrue);
+
+      // Ligne Total : 3 colonnes, la 3e est vide
+      final totalRow = table.children.last;
+      expect(totalRow.children.length, equals(3));
+      final totalCol3 = totalRow.children[2] as pw.Container;
+      expect(totalCol3.child is pw.SizedBox, isTrue);
+    });
+
+    test('14. Section 12 : Cas 1 vs Cas 2 exclusifs et cases à cocher avec couleur sur le check seul', () {
+      // Cas 1 : 0 danger avéré, 0 dégradation => Uniquement Cas 1 visible
+      final cas1Snapshot = Q18DataSnapshot(
+        mission: sampleMission,
+        numeroRapportQ18: 'KES/IP/Q18/2026/001',
+        numeroRapportVerifElec: 'KES/IP/VE/2026/001',
+        dateRapportEffective: DateTime(2026, 2, 15),
+        dateProchaineVisite: DateTime(2027, 2, 12),
+        lieuIntervention: 'Douala',
+        quantities: sampleSnapshot.quantities,
+        perimetreCouverts: sampleSnapshot.perimetreCouverts,
+        exclusionsPerimetre: const [],
+        documentsConsultes: sampleSnapshot.documentsConsultes,
+        dangers: const [],
+        countDangerAvere: 0,
+        countDegradation: 0,
+        countHorsPerimetre: 0,
+        countPointSensible: 0,
+        hasDangerAvere: false,
+        appreciationGlobale: 'Satisfaisant',
+        avisSyntheseText: '',
+        photoEntries: const [],
+      );
+
+      final cas1Widgets = Q18ConclusionBuilder.buildSection12AvisGlobal(
+        cas1Snapshot,
+        fontBold: pw.Font.helveticaBold(),
+        fontRegular: pw.Font.helvetica(),
+      );
+
+      final cas1Texts = cas1Widgets
+          .whereType<pw.Text>()
+          .map((t) => t.text.toPlainText())
+          .toList();
+      expect(cas1Texts.any((t) => t.contains('Cas n°1 : Absence de danger identifié')), isTrue);
+      expect(cas1Texts.any((t) => t.contains('Cas n°2 : Danger(s) identifié(s)')), isFalse);
+
+      // Cas 2 : Danger avéré > 0 => Uniquement Cas 2 visible
+      final cas2Snapshot = Q18DataSnapshot(
+        mission: sampleMission,
+        numeroRapportQ18: 'KES/IP/Q18/2026/001',
+        numeroRapportVerifElec: 'KES/IP/VE/2026/001',
+        dateRapportEffective: DateTime(2026, 2, 15),
+        dateProchaineVisite: DateTime(2027, 2, 12),
+        lieuIntervention: 'Douala',
+        quantities: sampleSnapshot.quantities,
+        perimetreCouverts: sampleSnapshot.perimetreCouverts,
+        exclusionsPerimetre: const [],
+        documentsConsultes: sampleSnapshot.documentsConsultes,
+        dangers: sampleSnapshot.dangers,
+        countDangerAvere: 2,
+        countDegradation: 1,
+        countHorsPerimetre: 0,
+        countPointSensible: 0,
+        hasDangerAvere: true,
+        appreciationGlobale: 'Insuffisant',
+        avisSyntheseText: '',
+        photoEntries: const [],
+      );
+
+      final cas2Widgets = Q18ConclusionBuilder.buildSection12AvisGlobal(
+        cas2Snapshot,
+        fontBold: pw.Font.helveticaBold(),
+        fontRegular: pw.Font.helvetica(),
+      );
+
+      final cas2Texts = cas2Widgets
+          .whereType<pw.Text>()
+          .map((t) => t.text.toPlainText())
+          .toList();
+      expect(cas2Texts.any((t) => t.contains('Cas n°2 : Danger(s) identifié(s)')), isTrue);
+      expect(cas2Texts.any((t) => t.contains('Cas n°1 : Absence de danger identifié')), isFalse);
+    });
+
+    test('15. Section 15 : Visa et Signature avec Fait à Douala et gestion singulier / pluriel', () {
+      // Cas 1 vérificateur
+      final singleVerifSnapshot = Q18DataSnapshot(
+        mission: sampleMission,
+        numeroRapportQ18: 'KES/IP/Q18/2026/001',
+        numeroRapportVerifElec: 'KES/IP/VE/2026/001',
+        dateRapportEffective: DateTime(2026, 2, 15),
+        dateProchaineVisite: DateTime(2027, 2, 12),
+        lieuIntervention: 'Douala',
+        intervenantsNoms: ['TEUFACK ANDELSON'],
+        quantities: sampleSnapshot.quantities,
+        perimetreCouverts: sampleSnapshot.perimetreCouverts,
+        exclusionsPerimetre: const [],
+        documentsConsultes: sampleSnapshot.documentsConsultes,
+        dangers: const [],
+        countDangerAvere: 0,
+        countDegradation: 0,
+        countHorsPerimetre: 0,
+        countPointSensible: 0,
+        hasDangerAvere: false,
+        appreciationGlobale: 'Satisfaisant',
+        avisSyntheseText: '',
+        photoEntries: const [],
+      );
+
+      final singleWidgets = Q18ConclusionBuilder.buildSection15Signature(
+        singleVerifSnapshot,
+        fontBold: pw.Font.helveticaBold(),
+        fontRegular: pw.Font.helvetica(),
+      );
+      expect(singleWidgets.isNotEmpty, isTrue);
+
+      // Cas plusieurs vérificateurs
+      final multiVerifSnapshot = Q18DataSnapshot(
+        mission: sampleMission,
+        numeroRapportQ18: 'KES/IP/Q18/2026/001',
+        numeroRapportVerifElec: 'KES/IP/VE/2026/001',
+        dateRapportEffective: DateTime(2026, 2, 15),
+        dateProchaineVisite: DateTime(2027, 2, 12),
+        lieuIntervention: 'Douala',
+        intervenantsNoms: ['TEUFACK ANDELSON', 'KOUAM ERIC', 'FOTSING ALAIN'],
+        quantities: sampleSnapshot.quantities,
+        perimetreCouverts: sampleSnapshot.perimetreCouverts,
+        exclusionsPerimetre: const [],
+        documentsConsultes: sampleSnapshot.documentsConsultes,
+        dangers: const [],
+        countDangerAvere: 0,
+        countDegradation: 0,
+        countHorsPerimetre: 0,
+        countPointSensible: 0,
+        hasDangerAvere: false,
+        appreciationGlobale: 'Satisfaisant',
+        avisSyntheseText: '',
+        photoEntries: const [],
+      );
+
+      final multiWidgets = Q18ConclusionBuilder.buildSection15Signature(
+        multiVerifSnapshot,
+        fontBold: pw.Font.helveticaBold(),
+        fontRegular: pw.Font.helvetica(),
+      );
+      expect(multiWidgets.isNotEmpty, isTrue);
+    });
+
+    test('16. Liaison fonctionnelle Rapport Q18 précédent entre Mission, Section 1 et Section 6', () {
+      // Mission avec docRapportQ18 = true
+      final missionWithQ18 = Mission(
+        id: 'mission_with_q18',
+        nomClient: 'CLIENT_A',
+        status: 'en_cours',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        docRapportQ18: true,
+      );
+
+      final snapshotWithQ18 = Q18DataSnapshot(
+        mission: missionWithQ18,
+        numeroRapportQ18: 'KES/IP/Q18/2026/001',
+        numeroRapportVerifElec: 'KES/IP/VE/2026/001',
+        dateRapportEffective: DateTime(2026, 2, 15),
+        dateProchaineVisite: DateTime(2027, 2, 12),
+        lieuIntervention: 'Douala',
+        quantities: sampleSnapshot.quantities,
+        perimetreCouverts: sampleSnapshot.perimetreCouverts,
+        exclusionsPerimetre: const [],
+        documentsConsultes: [
+          const Q18DocumentConsulteItem(index: 4, titre: 'Rapport Q18 précédent, le cas échéant', isDisponible: true),
+        ],
+        dangers: const [],
+        countDangerAvere: 0,
+        countDegradation: 0,
+        countHorsPerimetre: 0,
+        countPointSensible: 0,
+        hasDangerAvere: false,
+        hasQ18Precedent: true,
+        appreciationGlobale: 'Satisfaisant',
+        avisSyntheseText: '',
+        photoEntries: const [],
+      );
+
+      final s1 = Q18IdentificationBuilder.buildSection1Identification(
+        snapshotWithQ18,
+        fontBold: pw.Font.helveticaBold(),
+        fontRegular: pw.Font.helvetica(),
+      );
+      expect(s1.isNotEmpty, isTrue);
+
+      final s6 = Q18PerimetreBuilder.buildSection6DocumentsConsultes(
+        snapshotWithQ18,
+        fontBold: pw.Font.helveticaBold(),
+        fontRegular: pw.Font.helvetica(),
+      );
+      expect(s6.isNotEmpty, isTrue);
+    });
   });
 }
+

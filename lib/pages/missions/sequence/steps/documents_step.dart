@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
-import 'package:inspec_app/services/hive_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:inspec_app/features/mission/presentation/providers/mission_detail_provider.dart';
 
@@ -37,6 +36,7 @@ class _DocumentsStepState extends ConsumerState<DocumentsStep> {
     {'field': 'doc_rapport_analyse_foudre', 'title': 'Rapport d\'analyse risque foudre'},
     {'field': 'doc_rapport_etude_foudre', 'title': 'Rapport d\'étude technique foudre'},
     {'field': 'doc_registre_securite', 'title': 'Registre de sécurité (si applicable)'},
+    {'field': 'doc_rapport_q18', 'title': 'Rapport Q18 précédent (le cas échéant)'},
   ];
 
   @override
@@ -178,6 +178,7 @@ class _DocumentsStepState extends ConsumerState<DocumentsStep> {
         'doc_rapport_etude_foudre': mission.docRapportEtudeFoudre,
         'doc_registre_securite': mission.docRegistreSecurite,
         'doc_rapport_derniere_verif': mission.docRapportDerniereVerif,
+        'doc_rapport_q18': mission.docRapportQ18,
         'doc_autre': mission.docAutre,
       }
     });
@@ -324,6 +325,7 @@ class _DocumentsStepState extends ConsumerState<DocumentsStep> {
       case 'doc_rapport_etude_foudre': return mission.docRapportEtudeFoudre;
       case 'doc_registre_securite': return mission.docRegistreSecurite;
       case 'doc_rapport_derniere_verif': return mission.docRapportDerniereVerif;
+      case 'doc_rapport_q18': return mission.docRapportQ18;
       case 'doc_autre': return mission.docAutre;
       default: return false;
     }

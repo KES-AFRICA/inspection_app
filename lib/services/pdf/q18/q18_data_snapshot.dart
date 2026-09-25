@@ -171,6 +171,7 @@ class Q18DataSnapshot {
 
   // Avis global & Conclusion (Section 12)
   final bool hasDangerAvere;
+  final bool hasQ18Precedent;
   final String appreciationGlobale; // 'Satisfaisant', 'Acceptable', 'Insuffisant'
   final String avisSyntheseText;
 
@@ -207,6 +208,7 @@ class Q18DataSnapshot {
     required this.countHorsPerimetre,
     required this.countPointSensible,
     required this.hasDangerAvere,
+    this.hasQ18Precedent = false,
     required this.appreciationGlobale,
     required this.avisSyntheseText,
     required this.photoEntries,

@@ -113,8 +113,10 @@ class Q18DataCollector {
     // 3. Périmètre et exclusions pour la Section 5
     final perimetreData = _collectPerimetre(audit);
 
-    // 4. Documents consultés pour la Section 6
-    final documentsConsultes = _collectDocumentsConsultes(mission, renseignements, description);
+    // 4. Documents consultés pour la Section 6 (SSOT : docRapportQ18 ou autresDocuments)
+    final bool hasQ18Precedent = mission.docRapportQ18 ||
+        mission.autresDocuments.any((d) => d.toLowerCase().contains('q18'));
+    final documentsConsultes = _collectDocumentsConsultes(mission, renseignements, description, hasQ18Precedent: hasQ18Precedent);
 
 
     // 5. Synthèse des dangers constatés pour la Section 10 & 11
@@ -244,6 +246,7 @@ class Q18DataCollector {
       countHorsPerimetre: countHorsPerimetre,
       countPointSensible: countPointSensible,
       hasDangerAvere: hasDangerAvere,
+      hasQ18Precedent: hasQ18Precedent,
       appreciationGlobale: appreciation,
       avisSyntheseText: avisSynthese,
       photoEntries: photoEntries,
@@ -616,8 +619,9 @@ class Q18DataCollector {
   static List<Q18DocumentConsulteItem> _collectDocumentsConsultes(
     Mission mission,
     RenseignementsGeneraux? rens,
-    DescriptionInstallations? desc,
-  ) {
+    DescriptionInstallations? desc, {
+    required bool hasQ18Precedent,
+  }) {
     // 1. Schémas unifilaires et de distribution de l'installation électrique
     final bool hasSchemas = mission.docSchemasUnifilaires;
 
@@ -627,8 +631,7 @@ class Q18DataCollector {
     // 3. Rapport de la dernière vérification réglementaire
     final bool hasDernierRapport = mission.docRapportDerniereVerif;
 
-    // 4. Rapport Q18 précédent, le cas échéant (Non applicable)
-    const bool hasQ18Precedent = false;
+    // 4. Rapport Q18 précédent, le cas échéant (dérivé de la source de vérité unique)
 
     // 5. Plans des locaux avec classement des zones à risque (ATEX, poussières, etc.)
     final bool hasPlansAtex = mission.docPlanLocauxRisques;

@@ -58,7 +58,10 @@ class Q18IdentificationBuilder {
       _IdentificationRowData(label: data.dateVisiteLabel, value: data.dateVisiteValue),
       _IdentificationRowData(label: 'Date d\'émission du rapport', value: dateEmission),
       _IdentificationRowData(label: 'Type de mission', value: data.typeMission),
-      _IdentificationRowData(label: 'N° du rapport Q18 précédent', value: 'Non applicable'),
+      _IdentificationRowData(
+        label: 'N° du rapport Q18 précédent',
+        value: data.hasQ18Precedent ? 'Disponible sur site' : 'Non applicable',
+      ),
       _IdentificationRowData(
         label: 'N° du rapport de vérification de conformité des installations électriques',
         value: data.numeroRapportVerifElec,

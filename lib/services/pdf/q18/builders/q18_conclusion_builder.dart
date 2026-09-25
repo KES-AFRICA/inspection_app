@@ -7,200 +7,166 @@ import 'package:inspec_app/services/pdf/pdf_report_styles.dart';
 import 'package:inspec_app/services/pdf/q18/q18_data_snapshot.dart';
 
 /// Builder responsable de la construction des Sections 12, 13, 14 et 15 du Rapport Q18 :
-/// - Section 12 : Avis global et conclusion
+/// - Section 12 : Avis global et conclusion (Cas 1 / Cas 2 exclusifs, cases à cocher sobres)
 /// - Section 13 : Compte rendu de levée des dangers
 /// - Section 14 : Prochaine échéance de vérification
-/// - Section 15 : Signature et cachet du vérificateur
+/// - Section 15 : Visa et signature du/des vérificateur(s) agréé(s) (Fait à Douala)
 class Q18ConclusionBuilder {
-  /// Section 12 : Avis global et conclusion
+  /// Section 12 : Avis global et conclusion de la vérification
+  ///
+  /// Règle fondamentale :
+  /// - Détection déterministe entre Cas 1 (0 danger avéré ET 0 dégradation) et Cas 2.
+  /// - Un SEUL cas affiché, aucun résidu ou bloc vide de l'autre cas.
+  /// - Synthèse du vérificateur sobre avec 3 cases à cocher, couleur portée
+  ///   uniquement par le check sélectionné (vert, orange, rouge).
   static List<pw.Widget> buildSection12AvisGlobal(
     Q18DataSnapshot data, {
     required pw.Font fontBold,
     required pw.Font fontRegular,
   }) {
-    final hasDangerAvere = data.hasDangerAvere;
+    final bool isCas1 = data.countDangerAvere == 0 && data.countDegradation == 0;
     final appreciation = data.appreciationGlobale;
 
-    pw.Widget buildCheckbox(bool isChecked, String label, {bool isRed = false}) {
-      return pw.Row(
-        crossAxisAlignment: pw.CrossAxisAlignment.center,
-        children: [
-          pw.Container(
-            width: 12,
-            height: 12,
-            decoration: pw.BoxDecoration(
-              color: isChecked ? (isRed ? PdfColor.fromInt(0xFFC00000) : PdfReportStyles.accentColor) : PdfColors.white,
-              border: pw.TableBorder.all(
-                color: isChecked ? (isRed ? PdfColor.fromInt(0xFFC00000) : PdfReportStyles.accentColor) : PdfReportStyles.borderColor,
-                width: 1.0,
+    pw.Widget buildCheckItem(bool isChecked, String label, {required PdfColor checkedColor}) {
+      return pw.Padding(
+        padding: const pw.EdgeInsets.symmetric(vertical: 3.0),
+        child: pw.Row(
+          crossAxisAlignment: pw.CrossAxisAlignment.center,
+          children: [
+            pw.Container(
+              width: 11,
+              height: 11,
+              decoration: pw.BoxDecoration(
+                border: pw.TableBorder.all(
+                  color: isChecked ? checkedColor : PdfColors.grey600,
+                  width: isChecked ? 1.0 : 0.8,
+                ),
+                borderRadius: const pw.BorderRadius.all(pw.Radius.circular(2)),
               ),
-              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(2)),
+              alignment: pw.Alignment.center,
+              child: isChecked
+                  ? pw.Text(
+                      'X',
+                      style: pw.TextStyle(
+                        font: fontBold,
+                        fontSize: 7.5,
+                        color: checkedColor,
+                      ),
+                    )
+                  : null,
             ),
-            alignment: pw.Alignment.center,
-            child: isChecked
-                ? pw.Text(
-                    'X',
-                    style: pw.TextStyle(
-                      font: fontBold,
-                      fontSize: 8.0,
-                      color: PdfColors.white,
-                    ),
-                  )
-                : null,
-          ),
-          pw.SizedBox(width: 8),
-          pw.Expanded(
-            child: pw.Text(
-              label,
-              style: pw.TextStyle(
-                font: isChecked ? fontBold : fontRegular,
-                fontSize: 8.5,
-                color: isChecked && isRed ? PdfColor.fromInt(0xFFC00000) : PdfColors.black,
+            pw.SizedBox(width: 8),
+            pw.Expanded(
+              child: pw.Text(
+                label,
+                style: pw.TextStyle(
+                  font: isChecked ? fontBold : fontRegular,
+                  fontSize: 8.5,
+                  color: PdfColors.black,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       );
     }
 
     return [
       PdfReportStyles.sectionBox('12. AVIS GLOBAL ET CONCLUSION DE LA VÉRIFICATION', fontBold: fontBold),
       pw.SizedBox(height: 6),
-      pw.Container(
-        padding: const pw.EdgeInsets.all(8),
-        decoration: pw.BoxDecoration(
-          color: hasDangerAvere ? PdfReportStyles.priorite3Color : PdfReportStyles.conformeColor,
-          border: pw.TableBorder.all(
-            color: hasDangerAvere ? PdfColor.fromInt(0xFFC00000) : PdfColors.green800,
-            width: 0.5,
-          ),
-          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(3)),
+      pw.Paragraph(
+        text: 'À l\'issue de la mission de vérification des installations électriques, réalisée conformément au périmètre défini, les observations, essais et contrôles effectués ont permis d\'évaluer l\'état général des installations au regard des risques d\'incendie et d\'explosion d\'origine électrique.',
+        style: pw.TextStyle(font: fontRegular, fontSize: 8.5, color: PdfColors.black, lineSpacing: 1.2),
+      ),
+      pw.SizedBox(height: 6),
+
+      // Cas exclusif 1 OU Cas 2
+      if (isCas1) ...[
+        pw.Text(
+          'Cas n°1 : Absence de danger identifié',
+          style: pw.TextStyle(font: fontBold, fontSize: 9.0, color: PdfColor.fromInt(0xFF15803D)),
         ),
-        child: pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.Text(
-              'CONCLUSION AU REGARD DU RÉFÉRENTIEL APSAD D18 :',
-              style: pw.TextStyle(
-                font: fontBold,
-                fontSize: 8.5,
-                color: hasDangerAvere ? PdfColor.fromInt(0xFFC00000) : PdfColors.green900,
-              ),
-            ),
-            pw.SizedBox(height: 6),
-            buildCheckbox(
-              !hasDangerAvere,
-              'CAS 1 : Les installations électriques vérifiées ne présentent pas de danger avéré d\'incendie ou d\'explosion au jour de la visite.',
-            ),
-            pw.SizedBox(height: 6),
-            buildCheckbox(
-              hasDangerAvere,
-              'CAS 2 : Les installations électriques vérifiées présentent des dangers avérés d\'incendie ou d\'explosion (se reporter à la Section 10).',
-              isRed: true,
-            ),
-          ],
+        pw.SizedBox(height: 4),
+        pw.Paragraph(
+          text: 'Les vérifications réalisées n\'ont pas mis en évidence de danger avéré susceptible de compromettre la sécurité des personnes, des biens ou la continuité d\'exploitation au regard du risque d\'incendie ou d\'explosion d\'origine électrique.',
+          style: pw.TextStyle(font: fontRegular, fontSize: 8.5, color: PdfColors.black, lineSpacing: 1.2),
         ),
+        pw.SizedBox(height: 3),
+        pw.Paragraph(
+          text: 'L\'installation présente un niveau de sécurité satisfaisant dans le périmètre de la mission. Il est néanmoins recommandé de poursuivre les opérations de maintenance préventive, les vérifications réglementaires périodiques ainsi que les contrôles thermographiques afin de maintenir ce niveau de sécurité dans le temps.',
+          style: pw.TextStyle(font: fontRegular, fontSize: 8.5, color: PdfColors.black, lineSpacing: 1.2),
+        ),
+      ] else ...[
+        pw.Text(
+          'Cas n°2 : Danger(s) identifié(s)',
+          style: pw.TextStyle(font: fontBold, fontSize: 9.0, color: PdfColor.fromInt(0xFFC00000)),
+        ),
+        pw.SizedBox(height: 4),
+        pw.Paragraph(
+          text: 'Les vérifications réalisées ont mis en évidence un ou plusieurs dangers susceptibles d\'accroître le risque d\'incendie ou d\'explosion d\'origine électrique (au total ${data.countDangerAvere} danger(s) avéré(s) et ${data.countDegradation} dégradation(s) relevé(s)).',
+          style: pw.TextStyle(font: fontRegular, fontSize: 8.5, color: PdfColors.black, lineSpacing: 1.2),
+        ),
+        pw.SizedBox(height: 3),
+        pw.Paragraph(
+          text: 'Ces anomalies nécessitent la mise en œuvre de mesures correctives afin de rétablir un niveau de sécurité conforme aux exigences réglementaires et aux règles de l\'art.',
+          style: pw.TextStyle(font: fontRegular, fontSize: 8.5, color: PdfColors.black, lineSpacing: 1.2),
+        ),
+        pw.SizedBox(height: 3),
+        pw.Paragraph(
+          text: 'Il y a lieu de procéder aux travaux de mise en conformité des installations électriques conformément aux recommandations formulées dans le présent rapport.',
+          style: pw.TextStyle(font: fontRegular, fontSize: 8.5, color: PdfColors.black, lineSpacing: 1.2),
+        ),
+        pw.SizedBox(height: 3),
+        pw.Paragraph(
+          text: 'La priorité des actions devra être définie en fonction de la criticité des anomalies identifiées, les situations présentant un danger immédiat devant faire l\'objet d\'une intervention sans délai.',
+          style: pw.TextStyle(font: fontRegular, fontSize: 8.5, color: PdfColors.black, lineSpacing: 1.2),
+        ),
+      ],
+
+      pw.SizedBox(height: 8),
+
+      // Synthèse du vérificateur
+      pw.Text(
+        'Synthèse du vérificateur',
+        style: pw.TextStyle(font: fontBold, fontSize: 9.0, color: PdfReportStyles.headerColor),
+      ),
+      pw.SizedBox(height: 4),
+      pw.Text(
+        'L\'état général des installations électriques est évalué comme :',
+        style: pw.TextStyle(font: fontRegular, fontSize: 8.5, color: PdfColors.black),
+      ),
+      pw.SizedBox(height: 4),
+      buildCheckItem(
+        appreciation == 'Satisfaisant',
+        'Satisfaisant - Aucun danger avéré identifié.',
+        checkedColor: const PdfColor.fromInt(0xFF15803D),
+      ),
+      buildCheckItem(
+        appreciation == 'Acceptable',
+        'Acceptable sous réserve de la levée des anomalies relevées.',
+        checkedColor: const PdfColor.fromInt(0xFFED7D31),
+      ),
+      buildCheckItem(
+        appreciation == 'Insuffisant',
+        'Insuffisant - Présence de dangers nécessitant des actions correctives prioritaires.',
+        checkedColor: const PdfColor.fromInt(0xFFC00000),
       ),
       pw.SizedBox(height: 8),
-      pw.Container(
-        padding: const pw.EdgeInsets.all(8),
-        decoration: pw.BoxDecoration(
-          color: PdfReportStyles.tableRowAlt,
-          border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.4),
-          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(3)),
-        ),
-        child: pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.Text(
-              'Niveau d\'appréciation synthétique de l\'installation :',
-              style: pw.TextStyle(font: fontBold, fontSize: 8.5, color: PdfReportStyles.headerColor),
-            ),
-            pw.SizedBox(height: 6),
-            pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
-              children: [
-                buildAppreciationPill('Satisfaisant', appreciation == 'Satisfaisant', fontBold),
-                buildAppreciationPill('Acceptable', appreciation == 'Acceptable', fontBold),
-                buildAppreciationPill('Insuffisant', appreciation == 'Insuffisant', fontBold),
-              ],
-            ),
-            pw.SizedBox(height: 8),
-            pw.Text(
-              'Synthèse opérationnelle :',
-              style: pw.TextStyle(font: fontBold, fontSize: 8.0, color: PdfColors.black),
-            ),
-            pw.SizedBox(height: 3),
-            pw.Text(
-              data.avisSyntheseText,
-              style: pw.TextStyle(font: fontRegular, fontSize: 8.0, color: PdfColors.black, lineSpacing: 1.2),
-            ),
-          ],
-        ),
+      pw.Paragraph(
+        text: 'Le présent avis est formulé sur la base des constatations effectuées lors de la vérification et dans les limites du périmètre de la mission. Il appartient au propriétaire ou à l\'exploitant des installations de mettre en œuvre les actions correctives nécessaires et d\'assurer le maintien en conformité des installations électriques.',
+        style: pw.TextStyle(font: fontRegular, fontSize: 8.0, color: PdfColors.grey800, lineSpacing: 1.2),
       ),
       pw.SizedBox(height: 12),
     ];
   }
 
-  static pw.Widget buildAppreciationPill(String label, bool isSelected, pw.Font fontBold) {
-    PdfColor bgColor = PdfColors.grey200;
-    PdfColor textColor = PdfColors.grey700;
-    PdfColor borderColor = PdfColors.grey400;
-
-    if (isSelected) {
-      if (label == 'Satisfaisant') {
-        bgColor = PdfColor.fromInt(0xFFE8F5E9);
-        textColor = PdfColor.fromInt(0xFF2E7D32);
-        borderColor = PdfColor.fromInt(0xFF4CAF50);
-      } else if (label == 'Acceptable') {
-        bgColor = PdfColor.fromInt(0xFFFFF3E0);
-        textColor = PdfColor.fromInt(0xFFE65100);
-        borderColor = PdfColor.fromInt(0xFFFF9800);
-      } else {
-        bgColor = PdfColor.fromInt(0xFFFFEBEE);
-        textColor = PdfColor.fromInt(0xFFC00000);
-        borderColor = PdfColor.fromInt(0xFFF44336);
-      }
-    }
-
-    return pw.Container(
-      padding: const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-      decoration: pw.BoxDecoration(
-        color: bgColor,
-        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(12)),
-        border: pw.TableBorder.all(color: borderColor, width: isSelected ? 1.0 : 0.4),
-      ),
-      child: pw.Row(
-        mainAxisSize: pw.MainAxisSize.min,
-        children: [
-          if (isSelected) ...[
-            pw.Container(
-              width: 8,
-              height: 8,
-              margin: const pw.EdgeInsets.only(right: 5),
-              decoration: pw.BoxDecoration(color: textColor, shape: pw.BoxShape.circle),
-            ),
-          ],
-          pw.Text(
-            label,
-            style: pw.TextStyle(
-              font: fontBold,
-              fontSize: 8.0,
-              color: textColor,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Section 13 : Compte rendu de levée des dangers (Vérifications antérieures)
+  /// Section 13 : Compte rendu de levée des dangers (le cas échéant)
   static List<pw.Widget> buildSection13LeveeDangers({
     required pw.Font fontBold,
     required pw.Font fontRegular,
   }) {
     return [
-      PdfReportStyles.sectionBox('13. COMPTE RENDU DE LEVÉE DES DANGERS ANTÉRIEURS', fontBold: fontBold),
+      PdfReportStyles.sectionBox('13. COMPTE RENDU DE LEVÉE DES DANGERS (LE CAS ÉCHÉANT)', fontBold: fontBold),
       pw.SizedBox(height: 6),
       pw.Container(
         padding: const pw.EdgeInsets.all(8),
@@ -271,7 +237,13 @@ class Q18ConclusionBuilder {
     ];
   }
 
-  /// Section 15 : Signature du vérificateur
+  /// Section 15 : Visa et signature du/des vérificateur(s) agréé(s)
+  ///
+  /// Conforme au document de référence :
+  /// - Lieu fixe : Douala
+  /// - Date dynamique : date de génération (data.dateRapportEffective)
+  /// - Vérificateurs réels dynamiques (gestion singulier / pluriel)
+  /// - Zone de signature sobre et professionnelle
   static List<pw.Widget> buildSection15Signature(
     Q18DataSnapshot data, {
     required pw.Font fontBold,
@@ -279,87 +251,90 @@ class Q18ConclusionBuilder {
   }) {
     final dateFormat = DateFormat('dd/MM/yyyy');
     final dateStr = dateFormat.format(data.dateRapportEffective);
-    final lieu = data.lieuIntervention;
 
-    final verificateur = data.currentUser;
-    final nomVerificateur = (verificateur != null &&
-            '${verificateur.prenom} ${verificateur.nom}'.trim().isNotEmpty)
-        ? '${verificateur.prenom} ${verificateur.nom}'.trim()
-        : 'L\'Inspecteur Technique';
+    // Résolution dynamique des vérificateurs (JSA SSOT / mission)
+    final verifs = data.intervenantsNoms
+        .where((n) => n.trim().isNotEmpty && n.trim().toLowerCase() != 'non spécifié')
+        .toList();
 
-    const titreVerificateur = 'Ingénieur Contrôleur Technique Électrique';
+    final List<String> listVerificateurs;
+    if (verifs.isNotEmpty) {
+      listVerificateurs = verifs;
+    } else {
+      final currentUser = data.currentUser;
+      final currentNom = (currentUser != null && '${currentUser.prenom} ${currentUser.nom}'.trim().isNotEmpty)
+          ? '${currentUser.prenom} ${currentUser.nom}'.trim().toUpperCase()
+          : 'L\'INSPECTEUR TECHNIQUE';
+      listVerificateurs = [currentNom];
+    }
+
+    final bool isPluriel = listVerificateurs.length > 1;
+    final sectionTitle = isPluriel
+        ? '15. VISA ET SIGNATURE DES VÉRIFICATEURS AGRÉÉS'
+        : '15. VISA ET SIGNATURE DU VÉRIFICATEUR AGRÉÉ';
 
     return [
-      PdfReportStyles.sectionBox('15. VISA ET SIGNATURE DU VÉRIFICATEUR AGRÉÉ', fontBold: fontBold),
-      pw.SizedBox(height: 6),
-      pw.Table(
-        border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.4),
-        columnWidths: const {
-          0: pw.FlexColumnWidth(5.0),
-          1: pw.FlexColumnWidth(5.0),
-        },
-        children: [
-          pw.TableRow(
-            decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
-            children: [
-              PdfReportStyles.cell('Détails de l\'intervention', isHeader: true, centered: false),
-              PdfReportStyles.cell('Cachet et signature de l\'organisme', isHeader: true, centered: false),
-            ],
-          ),
-          pw.TableRow(
-            children: [
-              pw.Container(
-                padding: const pw.EdgeInsets.all(10),
-                child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    pw.Text('Fait à : $lieu', style: pw.TextStyle(font: fontBold, fontSize: 8.5)),
-                    pw.SizedBox(height: 3),
-                    pw.Text('Le : $dateStr', style: pw.TextStyle(font: fontBold, fontSize: 8.5)),
-                    pw.SizedBox(height: 8),
-                    pw.Text('Vérificateur : $nomVerificateur',
-                        style: pw.TextStyle(font: fontBold, fontSize: 8.5, color: PdfReportStyles.headerColor)),
-                    pw.SizedBox(height: 2),
-                    pw.Text('Qualité : $titreVerificateur',
-                        style: pw.TextStyle(font: fontRegular, fontSize: 8.0, color: PdfColors.grey800)),
-                    pw.SizedBox(height: 6),
-                    pw.Text('Organisme : KES INSPECTIONS AND PROJECTS',
-                        style: pw.TextStyle(font: fontBold, fontSize: 8.0, color: PdfReportStyles.headerColor)),
-                  ],
-                ),
-              ),
-              pw.Container(
-                height: 90,
-                padding: const pw.EdgeInsets.all(8),
-                alignment: pw.Alignment.center,
-                child: pw.Column(
-                  mainAxisAlignment: pw.MainAxisAlignment.center,
-                  children: [
-                    pw.Text(
-                      'Cachet officiel & Signature',
-                      style: pw.TextStyle(font: fontRegular, fontSize: 7.5, color: PdfColors.grey600),
-                    ),
-                    pw.SizedBox(height: 4),
-                    pw.Container(
-                      width: 140,
-                      height: 50,
-                      decoration: pw.BoxDecoration(
-                        border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5, style: pw.BorderStyle.dashed),
-                      ),
-                      alignment: pw.Alignment.center,
-                      child: pw.Text(
-                        'Visa KES',
-                        style: pw.TextStyle(font: fontBold, fontSize: 8.0, color: PdfColors.grey400),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
+      PdfReportStyles.sectionBox(sectionTitle, fontBold: fontBold),
+      pw.SizedBox(height: 10),
+
+      // Fait à Douala, le [date]
+      pw.Text(
+        'Fait à Douala, le $dateStr',
+        style: pw.TextStyle(font: fontBold, fontSize: 9.0, color: PdfColors.black),
       ),
-      pw.SizedBox(height: 12),
+      pw.SizedBox(height: 14),
+
+      // Liste des vérificateurs et signatures
+      pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: listVerificateurs.map((nomVerif) {
+          return pw.Expanded(
+            child: pw.Container(
+              margin: const pw.EdgeInsets.only(right: 12),
+              padding: const pw.EdgeInsets.all(8),
+              decoration: pw.BoxDecoration(
+                border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.4),
+                borderRadius: const pw.BorderRadius.all(pw.Radius.circular(3)),
+                color: PdfReportStyles.tableRowAlt,
+              ),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(
+                    isPluriel ? 'Vérificateur :' : 'Nom du vérificateur :',
+                    style: pw.TextStyle(font: fontRegular, fontSize: 8.0, color: PdfColors.grey700),
+                  ),
+                  pw.SizedBox(height: 2),
+                  pw.Text(
+                    nomVerif,
+                    style: pw.TextStyle(font: fontBold, fontSize: 8.5, color: PdfReportStyles.headerColor),
+                  ),
+                  pw.SizedBox(height: 10),
+                  pw.Text(
+                    'Signature :',
+                    style: pw.TextStyle(font: fontRegular, fontSize: 8.0, color: PdfColors.grey700),
+                  ),
+                  pw.SizedBox(height: 4),
+                  pw.Container(
+                    height: 55,
+                    decoration: pw.BoxDecoration(
+                      border: pw.TableBorder.all(
+                        color: PdfColors.grey400,
+                        width: 0.5,
+                        style: pw.BorderStyle.dashed,
+                      ),
+                      color: PdfColors.white,
+                    ),
+                    alignment: pw.Alignment.center,
+                  ),
+                ],
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+      pw.SizedBox(height: 14),
     ];
   }
 }

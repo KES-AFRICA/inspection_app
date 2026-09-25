@@ -411,7 +411,7 @@ class Q18PerimetreBuilder {
                   padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 5),
                   alignment: pw.Alignment.center,
                   child: pw.Text(
-                    hasCustom ? doc.statutCustom! : (isDispo ? 'Oui' : 'Non'),
+                    hasCustom ? doc.statutCustom! : (isDispo ? 'Disponible' : 'Non'),
                     style: pw.TextStyle(
                       font: fontBold,
                       fontSize: 8.0,

@@ -3930,9 +3930,9 @@
     "semantic_hash": ""
   },
   "lib/services/pdf/q18/builders/q18_perimetre_builder.dart": {
-    "mtime": 1790332371.6916888,
-    "seen": 1790333104.6943872,
-    "ast_hash": "e3daf03b92b7b692bd95bcf045ab1b7e",
+    "mtime": 1790335206.1721623,
+    "seen": 1790335400.9341846,
+    "ast_hash": "3f2f45a9dd3cdd5849c2ecf4dcf939e2",
     "semantic_hash": ""
   },
   "lib/services/pdf/q18/builders/q18_photos_builder.dart": {
@@ -3942,9 +3942,9 @@
     "semantic_hash": ""
   },
   "lib/services/pdf/q18/builders/q18_regulatory_builder.dart": {
-    "mtime": 1790332140.2363684,
-    "seen": 1790333104.69439,
-    "ast_hash": "ffa6495fe67a75db6089596462a751e1",
+    "mtime": 1790335247.9562874,
+    "seen": 1790335400.9341881,
+    "ast_hash": "332de2b3f17a65d3962cf03cf7c008b7",
     "semantic_hash": ""
   },
   "lib/services/pdf/q18/pdf_q18_report_service.dart": {
@@ -3954,9 +3954,9 @@
     "semantic_hash": ""
   },
   "lib/services/pdf/q18/q18_data_collector.dart": {
-    "mtime": 1790332667.0242796,
-    "seen": 1790333104.6943927,
-    "ast_hash": "d8787f02975555df5aa95f7272e5ddc1",
+    "mtime": 1790335168.5463312,
+    "seen": 1790335400.9341915,
+    "ast_hash": "bd1aadedc42ad4110e32b20bd1339895",
     "semantic_hash": ""
   },
   "lib/services/pdf/q18/q18_data_snapshot.dart": {
@@ -3966,9 +3966,9 @@
     "semantic_hash": ""
   },
   "test/services/pdf_q18_report_service_test.dart": {
-    "mtime": 1790332930.88095,
-    "seen": 1790333104.6947627,
-    "ast_hash": "d634e8a0ca5975ca63f3d29dea9633d0",
+    "mtime": 1790335342.4401488,
+    "seen": 1790335400.9344919,
+    "ast_hash": "2b6a591c2560c05b12578baa92f2f484",
     "semantic_hash": ""
   },
   "PROJECT_MEMORY.md": {

@@ -5,9 +5,28 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:inspec_app/services/pdf/pdf_report_styles.dart';
 import 'package:inspec_app/services/pdf/q18/q18_data_snapshot.dart';
 
+/// Groupes hiérarchiques pour la Section 10 (Zone -> Repère -> Désignation -> Observations)
+class _Q18DangerDesignationGroup {
+  final String designation;
+  final List<Q18DangerItem> items;
+  _Q18DangerDesignationGroup({required this.designation, required this.items});
+}
+
+class _Q18DangerRepereGroup {
+  final String repere;
+  final List<_Q18DangerDesignationGroup> designationGroups;
+  _Q18DangerRepereGroup({required this.repere, required this.designationGroups});
+}
+
+class _Q18DangerZoneGroup {
+  final String zone;
+  final List<_Q18DangerRepereGroup> repereGroups;
+  _Q18DangerZoneGroup({required this.zone, required this.repereGroups});
+}
+
 /// Builder responsable de la construction des Sections 10 et 11 du Rapport Q18 :
-/// - Section 10 : Synthèse des dangers constatés
-/// - Section 11 : Récapitulatif statistique
+/// - Section 10 : Synthèse des dangers constatés (regroupement hiérarchique 4-niveaux)
+/// - Section 11 : Récapitulatif statistique (3 colonnes sans blocs colorés)
 class Q18DangersSynthesisBuilder {
   /// Section 10 : Synthèse des dangers constatés
   static List<pw.Widget> buildSection10Dangers(
@@ -17,10 +36,10 @@ class Q18DangersSynthesisBuilder {
   }) {
     final dangers = data.dangers;
 
-    return [
-      PdfReportStyles.sectionBox('10. SYNTHÈSE DES DANGERS CONSTATÉS (RÉFÉRENTIEL APSAD D18)', fontBold: fontBold),
-      pw.SizedBox(height: 6),
-      if (dangers.isEmpty)
+    if (dangers.isEmpty) {
+      return [
+        PdfReportStyles.sectionBox('10. SYNTHÈSE DES DANGERS CONSTATÉS', fontBold: fontBold),
+        pw.SizedBox(height: 6),
         pw.Container(
           padding: const pw.EdgeInsets.all(8),
           decoration: pw.BoxDecoration(
@@ -52,42 +71,206 @@ class Q18DangersSynthesisBuilder {
               ),
             ],
           ),
-        )
-      else
-        pw.Table(
-          border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.4),
-          columnWidths: const {
-            0: pw.FixedColumnWidth(18), // N°
-            1: pw.FlexColumnWidth(1.8), // Zone
-            2: pw.FlexColumnWidth(1.6), // Repère
-            3: pw.FlexColumnWidth(1.8), // Désignation
-            4: pw.FlexColumnWidth(3.8), // Danger constaté
-            5: pw.FlexColumnWidth(1.8), // Famille de risque
-            6: pw.FlexColumnWidth(1.7), // Niveau
-          },
-          children: [
-            pw.TableRow(
-              decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
-              children: [
-                PdfReportStyles.cell('N°', isHeader: true, centered: true),
-                PdfReportStyles.cell('Zone / Bâtiment', isHeader: true, centered: false),
-                PdfReportStyles.cell('Repère', isHeader: true, centered: false),
-                PdfReportStyles.cell('Désignation', isHeader: true, centered: false),
-                PdfReportStyles.cell('Danger constaté / Observation', isHeader: true, centered: false),
-                PdfReportStyles.cell('Famille de risque', isHeader: true, centered: false),
-                PdfReportStyles.cell('Niveau D18', isHeader: true, centered: true),
-              ],
-            ),
-            ...dangers.map((item) {
-              final isAlt = item.index.isOdd;
-              final badgeColors = _getBadgeColors(item.niveau);
+        ),
+        pw.SizedBox(height: 12),
+      ];
+    }
 
-              return pw.TableRow(
-                decoration: pw.BoxDecoration(
-                  color: isAlt ? PdfReportStyles.tableRowAlt : PdfColors.white,
-                ),
+    // Construction de la structure hiérarchique :
+    // ZONE -> REPÈRE -> DÉSIGNATION -> OBSERVATIONS
+    final zoneGroupsMap = <String, Map<String, Map<String, List<Q18DangerItem>>>>{};
+
+    for (final item in dangers) {
+      final rawZone = item.zone.trim();
+      final zone = (rawZone == 'N/A' ||
+              rawZone == 'Non renseigné' ||
+              rawZone == 'Inconnu' ||
+              rawZone == 'Sans zone' ||
+              rawZone == '-')
+          ? ''
+          : rawZone;
+
+      final rawRepere = item.repere.trim();
+      final isRepereEmpty = rawRepere.isEmpty ||
+          rawRepere == 'N/A' ||
+          rawRepere == 'Sans local' ||
+          rawRepere == 'Hors local' ||
+          rawRepere == '-';
+      final repere = !isRepereEmpty ? rawRepere : (zone.isNotEmpty ? zone : '');
+
+      final rawDesig = item.designation.trim();
+      final isDesigEmpty = rawDesig.isEmpty || rawDesig == 'N/A' || rawDesig == '-';
+      final designation = !isDesigEmpty ? rawDesig : (repere.isNotEmpty ? repere : (zone.isNotEmpty ? zone : ''));
+
+      zoneGroupsMap
+          .putIfAbsent(zone, () => <String, Map<String, List<Q18DangerItem>>>{})
+          .putIfAbsent(repere, () => <String, List<Q18DangerItem>>{})
+          .putIfAbsent(designation, () => <Q18DangerItem>[])
+          .add(item);
+    }
+
+    final zoneGroups = zoneGroupsMap.entries.map((zEntry) {
+      final repereGroups = zEntry.value.entries.map((rEntry) {
+        final desigGroups = rEntry.value.entries.map((dEntry) {
+          return _Q18DangerDesignationGroup(
+            designation: dEntry.key,
+            items: dEntry.value,
+          );
+        }).toList();
+        return _Q18DangerRepereGroup(
+          repere: rEntry.key,
+          designationGroups: desigGroups,
+        );
+      }).toList();
+      return _Q18DangerZoneGroup(
+        zone: zEntry.key,
+        repereGroups: repereGroups,
+      );
+    }).toList();
+
+    // Construction des lignes du tableau unifié
+    final allTableRows = <pw.TableRow>[
+      pw.TableRow(
+        repeat: true,
+        decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
+        children: [
+          PdfReportStyles.cell('Zone', isHeader: true, centered: true, fontBold: fontBold),
+          PdfReportStyles.cell('Repère', isHeader: true, centered: true, fontBold: fontBold),
+          PdfReportStyles.cell('Désignation', isHeader: true, centered: true, fontBold: fontBold),
+          PdfReportStyles.cell('N°', isHeader: true, centered: true, fontBold: fontBold),
+          PdfReportStyles.cell('Danger constaté / Observation', isHeader: true, centered: true, fontBold: fontBold),
+          PdfReportStyles.cell('Famille de risque', isHeader: true, centered: true, fontBold: fontBold),
+          PdfReportStyles.cell('Niveau D18', isHeader: true, centered: true, fontBold: fontBold),
+        ],
+      ),
+    ];
+
+    int globalRowIndex = 0;
+
+    for (final zoneGroup in zoneGroups) {
+      final totalZoneItems = zoneGroup.repereGroups.fold<int>(
+        0,
+        (sum, rg) => sum + rg.designationGroups.fold<int>(0, (s, dg) => s + dg.items.length),
+      );
+      int currentZoneItemIdx = 0;
+
+      for (final repereGroup in zoneGroup.repereGroups) {
+        final repereCount = repereGroup.designationGroups.fold<int>(
+          0,
+          (sum, dg) => sum + dg.items.length,
+        );
+        int currentRepereItemIdx = 0;
+
+        for (final desigGroup in repereGroup.designationGroups) {
+          final desigCount = desigGroup.items.length;
+
+          for (int itemIdx = 0; itemIdx < desigGroup.items.length; itemIdx++) {
+            final item = desigGroup.items[itemIdx];
+            final isStartOfZone = currentZoneItemIdx == 0;
+            final isEndOfZone = currentZoneItemIdx == totalZoneItems - 1;
+            final isStartOfRepere = currentRepereItemIdx == 0;
+            final isEndOfRepere = currentRepereItemIdx == repereCount - 1;
+            final isStartOfDesig = itemIdx == 0;
+            final isEndOfDesig = itemIdx == desigCount - 1;
+
+            final isAlt = globalRowIndex.isOdd;
+            final rowBg = isAlt ? PdfReportStyles.tableRowAlt : PdfColors.white;
+
+            final zoneBorder = pw.Border(
+              top: isStartOfZone
+                  ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                  : pw.BorderSide.none,
+              bottom: isEndOfZone
+                  ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                  : pw.BorderSide.none,
+            );
+
+            final repereBorder = pw.Border(
+              top: isStartOfZone
+                  ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                  : (isStartOfRepere
+                      ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 0.8)
+                      : pw.BorderSide.none),
+              bottom: isEndOfZone
+                  ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                  : (isEndOfRepere
+                      ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 0.8)
+                      : pw.BorderSide.none),
+            );
+
+            final desigBorder = pw.Border(
+              top: isStartOfZone
+                  ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                  : (isStartOfRepere
+                      ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 0.8)
+                      : (isStartOfDesig
+                          ? const pw.BorderSide(color: PdfColor.fromInt(0xFF64748B), width: 0.6)
+                          : pw.BorderSide.none)),
+              bottom: isEndOfZone
+                  ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                  : (isEndOfRepere
+                      ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 0.8)
+                      : (isEndOfDesig
+                          ? const pw.BorderSide(color: PdfColor.fromInt(0xFF64748B), width: 0.6)
+                          : pw.BorderSide.none)),
+            );
+
+            final itemBorder = pw.Border(
+              top: isStartOfZone
+                  ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                  : (isStartOfRepere
+                      ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 0.8)
+                      : (isStartOfDesig
+                          ? const pw.BorderSide(color: PdfColor.fromInt(0xFF64748B), width: 0.6)
+                          : pw.BorderSide.none)),
+              bottom: isEndOfZone
+                  ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                  : (isEndOfRepere
+                      ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 0.8)
+                      : (isEndOfDesig
+                          ? const pw.BorderSide(color: PdfColor.fromInt(0xFF64748B), width: 0.6)
+                          : const pw.BorderSide(color: PdfColor.fromInt(0xFFCBD5E1), width: 0.4))),
+            );
+
+            final badgeColors = _getBadgeColors(item.niveau);
+
+            allTableRows.add(
+              pw.TableRow(
+                decoration: pw.BoxDecoration(color: rowBg),
                 children: [
+                  // Cellule 0 : Zone (Groupée)
+                  PdfReportStyles.buildGroupedCellWidget(
+                    currentIndex: currentZoneItemIdx,
+                    totalRows: totalZoneItems,
+                    text: zoneGroup.zone,
+                    style: pw.TextStyle(font: fontBold, fontSize: 7.8, color: PdfColors.black),
+                    border: zoneBorder,
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                  ),
+
+                  // Cellule 1 : Repère (Groupé)
+                  PdfReportStyles.buildGroupedCellWidget(
+                    currentIndex: currentRepereItemIdx,
+                    totalRows: repereCount,
+                    text: repereGroup.repere,
+                    style: pw.TextStyle(font: fontBold, fontSize: 7.8, color: PdfColors.black),
+                    border: repereBorder,
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                  ),
+
+                  // Cellule 2 : Désignation (Groupée)
+                  PdfReportStyles.buildGroupedCellWidget(
+                    currentIndex: itemIdx,
+                    totalRows: desigCount,
+                    text: desigGroup.designation,
+                    style: pw.TextStyle(font: fontBold, fontSize: 7.8, color: PdfReportStyles.headerColor),
+                    border: desigBorder,
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                  ),
+
+                  // Cellule 3 : N°
                   pw.Container(
+                    decoration: pw.BoxDecoration(border: itemBorder),
                     padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 4),
                     alignment: pw.Alignment.center,
                     child: pw.Text(
@@ -100,42 +283,32 @@ class Q18DangersSynthesisBuilder {
                       textAlign: pw.TextAlign.center,
                     ),
                   ),
+
+                  // Cellule 4 : Danger constaté / Observation
                   pw.Container(
-                    padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                    child: pw.Text(
-                      item.zone,
-                      style: pw.TextStyle(font: fontBold, fontSize: 7.5, color: PdfColors.black),
-                    ),
-                  ),
-                  pw.Container(
-                    padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                    child: pw.Text(
-                      item.repere,
-                      style: pw.TextStyle(font: fontRegular, fontSize: 7.5, color: PdfColors.black),
-                    ),
-                  ),
-                  pw.Container(
-                    padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                    child: pw.Text(
-                      item.designation,
-                      style: pw.TextStyle(font: fontRegular, fontSize: 7.5, color: PdfColors.black),
-                    ),
-                  ),
-                  pw.Container(
+                    decoration: pw.BoxDecoration(border: itemBorder),
                     padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+                    alignment: pw.Alignment.centerLeft,
                     child: pw.Text(
                       item.dangerConstate,
                       style: pw.TextStyle(font: fontRegular, fontSize: 7.5, color: PdfColors.black),
                     ),
                   ),
+
+                  // Cellule 5 : Famille de risque
                   pw.Container(
+                    decoration: pw.BoxDecoration(border: itemBorder),
                     padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                    alignment: pw.Alignment.centerLeft,
                     child: pw.Text(
                       item.familleDeRisque,
                       style: pw.TextStyle(font: fontRegular, fontSize: 7.5, color: PdfReportStyles.darkGrey),
                     ),
                   ),
+
+                  // Cellule 6 : Niveau D18 (Badge)
                   pw.Container(
+                    decoration: pw.BoxDecoration(border: itemBorder),
                     padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
                     alignment: pw.Alignment.center,
                     child: pw.Container(
@@ -157,15 +330,54 @@ class Q18DangersSynthesisBuilder {
                     ),
                   ),
                 ],
-              );
-            }),
-          ],
-        ),
+              ),
+            );
+
+            currentZoneItemIdx++;
+            currentRepereItemIdx++;
+            globalRowIndex++;
+          }
+        }
+      }
+    }
+
+    return [
+      PdfReportStyles.sectionBox('10. SYNTHÈSE DES DANGERS CONSTATÉS', fontBold: fontBold),
+      pw.SizedBox(height: 6),
+      pw.Paragraph(
+        text: 'Les dangers identifiés lors de la vérification sont répertoriés dans le tableau ci-dessous, avec leur localisation, une description et le niveau de gravité retenu, ainsi que l\'action corrective recommandée :',
+        style: pw.TextStyle(font: fontRegular, fontSize: 8.5, color: PdfColors.black),
+      ),
+      pw.SizedBox(height: 6),
+      pw.Table(
+        defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
+        border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.4),
+        columnWidths: const {
+          0: pw.FlexColumnWidth(1.8), // Zone
+          1: pw.FlexColumnWidth(1.6), // Repère
+          2: pw.FlexColumnWidth(1.8), // Désignation
+          3: pw.FixedColumnWidth(18), // N°
+          4: pw.FlexColumnWidth(3.8), // Danger constaté
+          5: pw.FlexColumnWidth(1.8), // Famille de risque
+          6: pw.FlexColumnWidth(1.7), // Niveau D18
+        },
+        children: allTableRows,
+      ),
+      pw.SizedBox(height: 4),
+      pw.Text(
+        'Niveaux de danger : Danger avéré (risque d\'incendie ou d\'explosion identifié nécessitant une action) / Dégradation (anomalie à surveiller ou corriger sans urgence immédiate) / Non conforme réglementaire hors périmètre APSAD (à signaler pour information).',
+        style: pw.TextStyle(font: fontRegular, fontSize: 7.0, color: PdfColors.grey700),
+      ),
       pw.SizedBox(height: 12),
     ];
   }
 
   /// Section 11 : Récapitulatif statistique des dangers
+  ///
+  /// Structure exacte conforme au référentiel Q18 :
+  /// 3 colonnes : Niveau de danger | Nombre constaté | Dont levés depuis le rapport précédent
+  /// Blocs de couleur supprimés dans la colonne 1 (texte sobre).
+  /// Colonne 3 laissée vide sans invention de données.
   static List<pw.Widget> buildSection11Statistiques(
     Q18DataSnapshot data, {
     required pw.Font fontBold,
@@ -174,59 +386,59 @@ class Q18DangersSynthesisBuilder {
     final total = data.dangers.length;
 
     final statsRows = [
-      ['Danger avéré (Risque direct et immédiat)', '${data.countDangerAvere}', PdfColor.fromInt(0xFFC00000)],
-      ['Dégradation (Risque d\'aggravation différé)', '${data.countDegradation}', PdfColor.fromInt(0xFFED7D31)],
-      ['Non-conformité hors périmètre APSAD', '${data.countHorsPerimetre}', PdfColor.fromInt(0xFF70AD47)],
-      ['Point sensible / Observation', '${data.countPointSensible}', PdfColor.fromInt(0xFF41719C)],
+      ['Danger avéré', '${data.countDangerAvere}'],
+      ['Dégradation', '${data.countDegradation}'],
+      ['Non-conformité hors périmètre APSAD', '${data.countHorsPerimetre}'],
+      ['Point sensible / observation', '${data.countPointSensible}'],
     ];
 
     return [
       PdfReportStyles.sectionBox('11. RÉCAPITULATIF STATISTIQUE DES DANGERS', fontBold: fontBold),
       pw.SizedBox(height: 6),
+      pw.Paragraph(
+        text: 'Ce tableau offre une vue d\'ensemble du nombre de dangers constatés par niveau, à des fins de suivi dans le temps :',
+        style: pw.TextStyle(font: fontRegular, fontSize: 8.5, color: PdfColors.black),
+      ),
+      pw.SizedBox(height: 6),
       pw.Table(
+        defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
         border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.4),
         columnWidths: const {
-          0: pw.FlexColumnWidth(7.5),
+          0: pw.FlexColumnWidth(4.5),
           1: pw.FlexColumnWidth(2.5),
+          2: pw.FlexColumnWidth(3.0),
         },
         children: [
           pw.TableRow(
+            repeat: true,
             decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
             children: [
-              PdfReportStyles.cell('Classification D18 des constats', isHeader: true, centered: false),
-              PdfReportStyles.cell('Nombre constaté', isHeader: true, centered: true),
+              PdfReportStyles.cell('Niveau de danger', isHeader: true, centered: false, fontBold: fontBold),
+              PdfReportStyles.cell('Nombre constaté', isHeader: true, centered: true, fontBold: fontBold),
+              PdfReportStyles.cell('Dont levés depuis le rapport précédent', isHeader: true, centered: true, fontBold: fontBold),
             ],
           ),
-          ...statsRows.map((entry) {
-            final label = entry[0] as String;
-            final count = entry[1] as String;
-            final color = entry[2] as PdfColor;
+          ...statsRows.asMap().entries.map((entry) {
+            final idx = entry.key;
+            final label = entry.value[0];
+            final count = entry.value[1];
+            final isAlt = idx.isOdd;
+
             return pw.TableRow(
+              decoration: pw.BoxDecoration(
+                color: isAlt ? PdfReportStyles.tableRowAlt : PdfColors.white,
+              ),
               children: [
                 pw.Container(
                   padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
-                  child: pw.Row(
-                    children: [
-                      pw.Container(
-                        width: 8,
-                        height: 8,
-                        margin: const pw.EdgeInsets.only(right: 6),
-                        decoration: pw.BoxDecoration(
-                          color: color,
-                          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(2)),
-                        ),
-                      ),
-                      pw.Expanded(
-                        child: pw.Text(
-                          label,
-                          style: pw.TextStyle(
-                            font: fontBold,
-                            fontSize: 8.0,
-                            color: PdfReportStyles.headerColor,
-                          ),
-                        ),
-                      ),
-                    ],
+                  alignment: pw.Alignment.centerLeft,
+                  child: pw.Text(
+                    label,
+                    style: pw.TextStyle(
+                      font: fontBold,
+                      fontSize: 8.0,
+                      color: PdfColors.black,
+                    ),
                   ),
                 ),
                 pw.Container(
@@ -237,10 +449,15 @@ class Q18DangersSynthesisBuilder {
                     style: pw.TextStyle(
                       font: fontBold,
                       fontSize: 8.5,
-                      color: count != '0' ? color : PdfColors.black,
+                      color: PdfColors.black,
                     ),
                     textAlign: pw.TextAlign.center,
                   ),
+                ),
+                pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+                  alignment: pw.Alignment.center,
+                  child: pw.SizedBox(),
                 ),
               ],
             );
@@ -251,8 +468,9 @@ class Q18DangersSynthesisBuilder {
             children: [
               pw.Container(
                 padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+                alignment: pw.Alignment.centerLeft,
                 child: pw.Text(
-                  'TOTAL GÉNÉRAL DES ANOMALIES IDENTIFIÉES',
+                  'Total',
                   style: pw.TextStyle(
                     font: fontBold,
                     fontSize: 8.5,
@@ -272,6 +490,11 @@ class Q18DangersSynthesisBuilder {
                   ),
                   textAlign: pw.TextAlign.center,
                 ),
+              ),
+              pw.Container(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+                alignment: pw.Alignment.center,
+                child: pw.SizedBox(),
               ),
             ],
           ),

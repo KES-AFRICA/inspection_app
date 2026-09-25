@@ -30,7 +30,7 @@ class MissionAdapter extends TypeAdapter<Mission> {
       accompagnateurs: (fields[5] as List?)?.cast<String>(),
       verificateurs: (fields[6] as List?)
           ?.map((dynamic e) => (e as Map).cast<String, dynamic>())
-          ?.toList(),
+          .toList(),
       dgResponsable: fields[7] as String?,
       dateIntervention: fields[8] as DateTime?,
       dateRapport: fields[9] as DateTime?,
@@ -72,13 +72,14 @@ class MissionAdapter extends TypeAdapter<Mission> {
       recepteurFonction: fields[51] as String?,
       recepteurEmail: fields[52] as String?,
       recepteurTelephone: fields[53] as String?,
+      docRapportQ18: fields[54] == null ? false : fields[54] as bool,
     )..renseignementsGenerauxId = fields[34] as String?;
   }
 
   @override
   void write(BinaryWriter writer, Mission obj) {
     writer
-      ..writeByte(54)
+      ..writeByte(55)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -186,7 +187,9 @@ class MissionAdapter extends TypeAdapter<Mission> {
       ..writeByte(52)
       ..write(obj.recepteurEmail)
       ..writeByte(53)
-      ..write(obj.recepteurTelephone);
+      ..write(obj.recepteurTelephone)
+      ..writeByte(54)
+      ..write(obj.docRapportQ18);
   }
 
   @override

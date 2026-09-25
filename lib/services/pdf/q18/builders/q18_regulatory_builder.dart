@@ -407,6 +407,7 @@ class Q18RegulatoryBuilder {
       ),
       pw.SizedBox(height: 6),
       pw.Table(
+        defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
         border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.4),
         columnWidths: const {
           0: pw.FlexColumnWidth(2.8),
@@ -415,11 +416,12 @@ class Q18RegulatoryBuilder {
         },
         children: [
           pw.TableRow(
+            repeat: true,
             decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
             children: [
-              PdfReportStyles.cell('Type de danger', isHeader: true, centered: true),
-              PdfReportStyles.cell('Description type', isHeader: true, centered: true),
-              PdfReportStyles.cell('Niveau habituel', isHeader: true, centered: true),
+              PdfReportStyles.cell('Type de danger', isHeader: true, centered: true, fontBold: fontBold),
+              PdfReportStyles.cell('Description type', isHeader: true, centered: true, fontBold: fontBold),
+              PdfReportStyles.cell('Niveau habituel', isHeader: true, centered: true, fontBold: fontBold),
             ],
           ),
           ...dangersTypes.asMap().entries.map((entry) {

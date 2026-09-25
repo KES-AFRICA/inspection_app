@@ -179,6 +179,13 @@ class MissionDocumentsSection extends StatelessWidget {
               Icons.history_outlined,
               'doc_rapport_derniere_verif',
             ),
+            _buildDocumentItem(
+              context,
+              'Rapport Q18 précédent',
+              mission.docRapportQ18,
+              Icons.assignment_outlined,
+              'doc_rapport_q18',
+            ),
              _buildDocumentItem(
               context,
               'Autre Document',
