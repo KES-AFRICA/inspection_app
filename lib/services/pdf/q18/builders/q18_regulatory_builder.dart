@@ -23,7 +23,7 @@ class Q18RegulatoryBuilder {
         text: 'La présente mission a pour objet la vérification des installations électriques au regard des risques d\'incendie et d\'explosion, conformément aux prescriptions du Traité d\'évaluation du risque APSAD D18 et aux référentiels réglementaires en vigueur.',
         style: pw.TextStyle(font: fontRegular, fontSize: 8.5, color: PdfColors.black, lineSpacing: 1.2),
       ),
-      pw.SizedBox(height: 4),
+      pw.SizedBox(height: 2),
       pw.Paragraph(
         text: 'Elle s\'inscrit dans le cadre de la prévention des risques professionnels et de la préservation du patrimoine industriel et tertiaire contre les sinistres d\'origine électrique. Le présent compte-rendu Q18 rend compte des constats relevés lors de la visite sur site et permet aux exploitants ainsi qu\'aux assureurs d\'apprécier le niveau de sécurité réel des installations examinées.',
         style: pw.TextStyle(font: fontRegular, fontSize: 8.5, color: PdfColors.black, lineSpacing: 1.2),

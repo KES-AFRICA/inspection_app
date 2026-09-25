@@ -11,7 +11,8 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/services/cancellation_token.dart';
 import 'package:inspec_app/services/hive_service.dart';
-import 'package:inspec_app/services/pdf/pdf_report_styles.dart';
+import 'package:inspec_app/services/pdf/pdf_report_service.dart';
+import 'package:inspec_app/services/pdf/builders/pdf_cover_builder.dart';
 import 'package:inspec_app/services/pdf/q18/builders/q18_conclusion_builder.dart';
 import 'package:inspec_app/services/pdf/q18/builders/q18_dangers_synthesis_builder.dart';
 import 'package:inspec_app/services/pdf/q18/builders/q18_identification_builder.dart';
@@ -71,6 +72,8 @@ class PdfQ18ReportService {
     // 2. Chargement des polices et assets graphiques
     onProgress?.call(0.25, 'Chargement de la typographie et des ressources...');
     final fonts = await _loadFonts();
+    PdfReportStyles.fontRegular = fonts.regular;
+    PdfReportStyles.fontBold = fonts.bold;
     final assets = await _loadAssets();
 
     // 3. Passe 1 : Calcul de la pagination exacte (nombre total de pages)
@@ -148,6 +151,7 @@ class PdfQ18ReportService {
 
     pdf.addPage(
       pw.MultiPage(
+        maxPages: 10000,
         pageTheme: innerPageTheme,
         header: (ctx) => PdfReportStyles.buildPageHeaderWidget(
           logoKesImage: assets.logoKes,
@@ -341,13 +345,18 @@ class PdfQ18ReportService {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        // En-tête : Logo KES
+        // ── En-tête supérieur : Logo KES (gauche) & Référence Q18 (droite) ──
         pw.Row(
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
             if (logoKesImage != null)
-              pw.Image(logoKesImage, width: 160, height: 60, fit: pw.BoxFit.contain)
+              pw.Image(
+                logoKesImage,
+                width: 170,
+                height: 62,
+                fit: pw.BoxFit.contain,
+              )
             else
               pw.Text(
                 'KES INSPECTIONS & PROJECTS',
@@ -381,132 +390,145 @@ class PdfQ18ReportService {
             ),
           ],
         ),
-        pw.SizedBox(height: 50),
-        // Bandeau Titre Principal
-        pw.Container(
-          width: double.infinity,
-          padding: const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          decoration: pw.BoxDecoration(
-            color: PdfReportStyles.headerColor,
-            borderRadius: const pw.BorderRadius.all(pw.Radius.circular(3)),
-          ),
-          child: pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Text(
-                'RAPPORT Q18',
-                style: pw.TextStyle(
-                  font: fontBold,
-                  fontSize: 18,
-                  color: PdfColors.white,
-                  letterSpacing: 1.0,
-                ),
-              ),
-              pw.SizedBox(height: 6),
-              pw.Text(
-                'COMPTE RENDU DE VÉRIFICATION DES INSTALLATIONS ÉLECTRIQUES',
-                style: pw.TextStyle(
-                  font: fontBold,
-                  fontSize: 10,
-                  color: PdfColor.fromInt(0xFFFFF2CC),
-                ),
-              ),
-              pw.SizedBox(height: 3),
-              pw.Text(
-                'AU REGARD DU RISQUE D\'INCENDIE ET D\'EXPLOSION (RÉFÉRENTIEL APSAD D18)',
-                style: pw.TextStyle(
-                  font: fontRegular,
-                  fontSize: 8,
-                  color: PdfColors.white,
-                ),
-              ),
-            ],
-          ),
-        ),
-        pw.SizedBox(height: 40),
-        // Bloc d'identification de l'établissement
-        pw.Container(
-          padding: const pw.EdgeInsets.all(12),
-          decoration: pw.BoxDecoration(
-            color: PdfReportStyles.tableRowAlt,
-            border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.5),
-            borderRadius: const pw.BorderRadius.all(pw.Radius.circular(3)),
-          ),
-          child: pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Text(
-                'ÉTABLISSEMENT AUDITÉ',
-                style: pw.TextStyle(
-                  font: fontBold,
-                  fontSize: 9,
-                  color: PdfReportStyles.accentColor,
-                ),
-              ),
-              pw.SizedBox(height: 6),
-              pw.Text(
-                clientName,
-                style: pw.TextStyle(
-                  font: fontBold,
-                  fontSize: 13,
-                  color: PdfReportStyles.headerColor,
-                ),
-              ),
-              pw.SizedBox(height: 4),
-              pw.Text(
-                'Site : $siteName',
-                style: pw.TextStyle(font: fontBold, fontSize: 10, color: PdfColors.black),
-              ),
-              if (data.lieuIntervention.isNotEmpty) ...[
-                pw.SizedBox(height: 3),
+
+        pw.Spacer(flex: 1),
+
+        // ── Titre principal : Centré au cœur de la loupe du filigrane, en AccentColor ──
+        pw.Center(
+          child: pw.ConstrainedBox(
+            constraints: const pw.BoxConstraints(maxWidth: 450),
+            child: pw.Column(
+              mainAxisSize: pw.MainAxisSize.min,
+              crossAxisAlignment: pw.CrossAxisAlignment.center,
+              children: [
                 pw.Text(
-                  'Localisation : ${data.lieuIntervention}',
-                  style: pw.TextStyle(font: fontRegular, fontSize: 8.5, color: PdfColors.grey800),
-                ),
-              ],
-            ],
-          ),
-        ),
-        pw.Spacer(),
-        // Informations d'intervention et conclusion synthétique
-        pw.Container(
-          padding: const pw.EdgeInsets.all(10),
-          decoration: pw.BoxDecoration(
-            color: data.hasDangerAvere ? PdfReportStyles.priorite3Color : PdfReportStyles.conformeColor,
-            border: pw.TableBorder.all(
-              color: data.hasDangerAvere ? PdfColor.fromInt(0xFFC00000) : PdfColors.green800,
-              width: 0.5,
-            ),
-            borderRadius: const pw.BorderRadius.all(pw.Radius.circular(3)),
-          ),
-          child: pw.Row(
-            children: [
-              pw.Container(
-                width: 10,
-                height: 10,
-                decoration: pw.BoxDecoration(
-                  color: data.hasDangerAvere ? PdfColor.fromInt(0xFFC00000) : PdfColors.green800,
-                  shape: pw.BoxShape.circle,
-                ),
-              ),
-              pw.SizedBox(width: 8),
-              pw.Expanded(
-                child: pw.Text(
-                  data.hasDangerAvere
-                      ? 'AVIS GLOBAL : CAS 2 - Dangers avérés d\'incendie / explosion constatés'
-                      : 'AVIS GLOBAL : CAS 1 - Aucun danger avéré d\'incendie / explosion constaté',
+                  'RAPPORT Q18',
                   style: pw.TextStyle(
                     font: fontBold,
-                    fontSize: 8.5,
-                    color: data.hasDangerAvere ? PdfColor.fromInt(0xFFC00000) : PdfColors.green900,
+                    fontSize: 24,
+                    color: PdfReportStyles.accentColor,
+                    letterSpacing: 1.0,
                   ),
+                  textAlign: pw.TextAlign.center,
                 ),
-              ),
-            ],
+                pw.SizedBox(height: 14),
+                pw.Text(
+                  'Compte rendu de vérification des installations électriques',
+                  style: pw.TextStyle(
+                    font: fontBold,
+                    fontSize: 14,
+                    color: PdfReportStyles.accentColor,
+                  ),
+                  textAlign: pw.TextAlign.center,
+                ),
+                pw.SizedBox(height: 12),
+                pw.Text(
+                  'Établi selon le référentiel APSAD D18 (prévention des risques d\'incendie et d\'explosion), à la suite de la mission de vérification de conformité des installations électriques',
+                  style: pw.TextStyle(
+                    font: fontRegular,
+                    fontSize: 10,
+                    color: PdfReportStyles.accentColor,
+                    lineSpacing: 1.5,
+                  ),
+                  textAlign: pw.TextAlign.center,
+                ),
+              ],
+            ),
           ),
+        ),
+
+        pw.Spacer(flex: 1),
+
+        // ── Bloc inférieur : Tableau d'identification de l'établissement audité en bas juste en haut du pied de page ──
+        pw.Table(
+          border: pw.TableBorder.all(color: PdfColors.black, width: 0.8),
+          defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
+          columnWidths: const {
+            0: pw.FlexColumnWidth(1.2),
+            1: pw.FlexColumnWidth(1.0),
+            2: pw.FlexColumnWidth(1.0),
+          },
+          children: [
+            // Ligne d'en-tête (en accentColor)
+            pw.TableRow(
+              children: [
+                _buildCoverTableHeaderCell('ÉTABLISSEMENT AUDITÉ', fontBold: fontBold),
+                _buildCoverTableHeaderCell('SITE', fontBold: fontBold),
+                _buildCoverTableHeaderCell('LOCALISATION', fontBold: fontBold),
+              ],
+            ),
+            // Ligne des données (en accentColor)
+            pw.TableRow(
+              children: [
+                _buildCoverTableDataCell(
+                  clientName,
+                  fontBold: fontBold,
+                  fontRegular: fontRegular,
+                  isBold: true,
+                ),
+                _buildCoverTableDataCell(
+                  siteName,
+                  fontBold: fontBold,
+                  fontRegular: fontRegular,
+                  isBold: true,
+                ),
+                _buildCoverTableDataCell(
+                  data.lieuIntervention.isNotEmpty ? data.lieuIntervention : siteName,
+                  fontBold: fontBold,
+                  fontRegular: fontRegular,
+                  isBold: false,
+                ),
+              ],
+            ),
+          ],
         ),
         pw.SizedBox(height: 25),
       ],
+    );
+  }
+
+  static pw.Widget _buildCoverTableHeaderCell(
+    String text, {
+    required pw.Font fontBold,
+    double height = 24.0,
+  }) {
+    return pw.Container(
+      height: height,
+      padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      alignment: pw.Alignment.center,
+      child: pw.Text(
+        text,
+        style: pw.TextStyle(
+          font: fontBold,
+          fontSize: 8.0,
+          color: PdfReportStyles.accentColor,
+        ),
+        textAlign: pw.TextAlign.center,
+      ),
+    );
+  }
+
+  static pw.Widget _buildCoverTableDataCell(
+    String text, {
+    required pw.Font fontBold,
+    required pw.Font fontRegular,
+    bool isBold = false,
+    double height = 46.0,
+    double fontSize = 8.5,
+  }) {
+    return pw.Container(
+      height: height,
+      padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      alignment: pw.Alignment.center,
+      child: pw.Text(
+        text,
+        style: pw.TextStyle(
+          font: isBold ? fontBold : fontRegular,
+          fontSize: fontSize,
+          color: PdfReportStyles.accentColor,
+        ),
+        textAlign: pw.TextAlign.center,
+      ),
     );
   }
 
@@ -534,11 +556,13 @@ class PdfQ18ReportService {
     pw.MemoryImage? watermark;
 
     try {
-      final logoBytes = await rootBundle.load('assets/images/kes_logo.png');
+      final logoBytes = await rootBundle.load('assets/images/logo.png');
       if (logoBytes.lengthInBytes > 0) {
         logoKes = pw.MemoryImage(logoBytes.buffer.asUint8List());
       }
     } catch (_) {}
+
+    logoKes ??= PdfReportService.logoKesImage ?? PdfCoverBuilder.logoKesImage;
 
     try {
       final wmBytes = await rootBundle.load('assets/images/filigranne_image.png');

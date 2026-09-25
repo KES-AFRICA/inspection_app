@@ -422,5 +422,29 @@ void main() {
       final headerStr = String.fromCharCodes(bytes.sublist(0, 5));
       expect(headerStr, equals('%PDF-'));
     });
+
+    test('10. MultiPage avec plus de 20 pages sans TooManyPagesException', () async {
+      final pdf = pw.Document();
+      pdf.addPage(
+        pw.MultiPage(
+          maxPages: 10000,
+          pageTheme: PdfReportStyles.buildInnerPageTheme(
+            fontRegular: pw.Font.helvetica(),
+            fontBold: pw.Font.helveticaBold(),
+            showWatermark: false,
+          ),
+          build: (ctx) => [
+            for (int i = 0; i < 30; i++) ...[
+              pw.Text('Page $i'),
+              if (i < 29) pw.NewPage(),
+            ],
+          ],
+        ),
+      );
+
+      final bytes = await pdf.save();
+      expect(pdf.document.pdfPageList.pages.length, equals(30));
+      expect(bytes.isNotEmpty, isTrue);
+    });
   });
 }
