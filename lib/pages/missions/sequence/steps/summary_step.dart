@@ -15,6 +15,7 @@ import 'package:inspec_app/services/sequence_progress_service.dart';
 import 'package:inspec_app/services/pdf/pdf_report_service.dart';
 import 'package:inspec_app/services/word_report_service.dart';
 import 'package:inspec_app/services/excel/excel_report_service.dart';
+import 'package:inspec_app/services/pdf/q18/pdf_q18_report_service.dart';
 import 'package:inspec_app/services/hive_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
@@ -47,12 +48,15 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
   File? _pdfFile;
   File? _wordFile;
   File? _excelFile;
+  File? _q18File;
   String? _pdfFileName;
   String? _wordFileName;
   String? _excelFileName;
+  String? _q18FileName;
   bool _showPdfPreview = false;
   bool _showWordPreview = false;
   bool _showExcelPreview = false;
+  bool _showQ18Preview = false;
   DateTime? _dateRapport;
 
   @override
@@ -237,6 +241,12 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
             _excelFileName = report.fileName;
             _showExcelPreview = true;
           });
+        } else if (report.reportType == 'q18') {
+          setState(() {
+            _q18File = file;
+            _q18FileName = report.fileName;
+            _showQ18Preview = true;
+          });
         }
       }
     }
@@ -270,6 +280,18 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
                 widget.mission.nomClient,
                 nomSite: widget.mission.nomSite,
               );
+      } else if (reportType == 'q18') {
+        file = await PdfQ18ReportService.generateMissionReport(
+          widget.mission.id,
+          cancellationToken: loaderController.cancellationToken,
+          onProgress: (progress, statusMessage) {
+            if (loaderController.isCancelled) {
+              throw Exception('Génération annulée par l\'utilisateur');
+            }
+            loaderController.updateProgress(progress, statusMessage);
+          },
+        );
+        fileName = path.basename(file.path);
       } else {
         file = await PdfReportService.generateMissionReport(
           widget.mission.id,
@@ -322,6 +344,10 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
               _excelFile = savedFile;
               _excelFileName = fileName;
               _showExcelPreview = true;
+            } else if (reportType == 'q18') {
+              _q18File = savedFile;
+              _q18FileName = fileName;
+              _showQ18Preview = true;
             } else {
               _wordFile = savedFile;
               _wordFileName = fileName;
@@ -432,6 +458,26 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
                 _generateReport('excel');
               },
             ),
+            const Divider(height: 0),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(Icons.local_fire_department, color: Colors.orange.shade800),
+              ),
+              title: const Text('Q18', style: TextStyle(fontWeight: FontWeight.w600)),
+              subtitle: const Text(
+                'Rapport des risques d\'incendie et d\'explosion (APSAD D18)',
+              ),
+              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+              onTap: () {
+                Navigator.pop(context);
+                _generateReport('q18');
+              },
+            ),
             const SizedBox(height: 12),
           ],
         ),
@@ -444,7 +490,7 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
       _showExcelPreviewUnavailableDialog();
       return;
     }
-    if (reportType != 'pdf') {
+    if (reportType != 'pdf' && reportType != 'q18') {
       _showWordPreviewUnavailableDialog();
       return;
     }
@@ -699,7 +745,7 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
       if (await canLaunchUrl(mailtoUri)) {
         await launchUrl(mailtoUri);
       } else {
-        final fileToSend = _pdfFile ?? _wordFile ?? _excelFile;
+        final fileToSend = _pdfFile ?? _wordFile ?? _excelFile ?? _q18File;
         if (fileToSend != null) {
           await Share.shareXFiles(
             [XFile(fileToSend.path)],
@@ -747,10 +793,11 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
     return 7;
   }
 
-  bool get hasAnyReport => _showPdfPreview || _showWordPreview || _showExcelPreview;
+  bool get hasAnyReport => _showPdfPreview || _showWordPreview || _showExcelPreview || _showQ18Preview;
   bool get hasPdf => _showPdfPreview && _pdfFile != null;
   bool get hasWord => _showWordPreview && _wordFile != null;
   bool get hasExcel => _showExcelPreview && _excelFile != null;
+  bool get hasQ18 => _showQ18Preview && _q18File != null;
 
   // ============================================================
   // VERSION OPTIMISÉE DE LA CARTE RAPPORT (COMPACTE)
@@ -765,6 +812,7 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
   }) {
     final cleanFileName = fileName?.split('/').last ?? 'Rapport généré';
     final isPdf = reportType == 'pdf';
+    final isQ18 = reportType == 'q18';
     final isExcel = reportType == 'excel' || reportType == 'xlsx';
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -800,9 +848,11 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
                         gradient: LinearGradient(
                           colors: isPdf
                               ? [Colors.red.shade600, Colors.red.shade400]
-                              : (isExcel
-                                  ? [Colors.green.shade700, Colors.green.shade500]
-                                  : [Colors.blue.shade600, Colors.blue.shade400]),
+                              : (isQ18
+                                  ? [Colors.orange.shade700, Colors.deepOrange.shade500]
+                                  : (isExcel
+                                      ? [Colors.green.shade700, Colors.green.shade500]
+                                      : [Colors.blue.shade600, Colors.blue.shade400])),
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
@@ -817,7 +867,7 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
                       ),
                       child: Center(
                         child: Text(
-                          isPdf ? 'PDF' : (isExcel ? 'XLSX' : 'DOCX'),
+                          isPdf ? 'PDF' : (isQ18 ? 'Q18' : (isExcel ? 'XLSX' : 'DOCX')),
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w900,
@@ -951,6 +1001,16 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
         reportType: 'excel',
         icon: Icons.table_chart,
         color: Colors.green,
+      ));
+    }
+
+    if (hasQ18) {
+      reports.add(_buildReportCard(
+        file: _q18File!,
+        fileName: _q18FileName,
+        reportType: 'q18',
+        icon: Icons.local_fire_department,
+        color: Colors.deepOrange,
       ));
     }
     
