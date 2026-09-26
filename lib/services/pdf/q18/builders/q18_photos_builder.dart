@@ -60,10 +60,11 @@ class Q18PhotosBuilder {
       for (int i = 0; i < currentChunk.length; i += 2) {
         final photo1 = currentChunk[i];
         final photo2 = (i + 1 < currentChunk.length) ? currentChunk[i + 1] : null;
+        final isLastRowInChunk = (i + 2 >= currentChunk.length);
 
         widgets.add(
           pw.Padding(
-            padding: const pw.EdgeInsets.only(bottom: 8),
+            padding: pw.EdgeInsets.only(bottom: isLastRowInChunk ? 0 : 7),
             child: pw.Row(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
@@ -86,7 +87,7 @@ class Q18PhotosBuilder {
     return widgets;
   }
 
-  /// Carte photo calibrée aux dimensions strictement identiques (hauteur totale 180pt)
+  /// Carte photo calibrée aux dimensions optimales pour occuper harmonieusement toute la hauteur de la page A4 (hauteur totale 214pt)
   static pw.Widget _buildPhotoCard(
     PdfPhotoEntry entry, {
     required pw.Font fontBold,
@@ -108,7 +109,7 @@ class Q18PhotosBuilder {
     final badgeLabel = entry.badgeLabel ?? 'Danger';
 
     return pw.Container(
-      height: 180,
+      height: 214,
       decoration: pw.BoxDecoration(
         color: PdfColors.white,
         border: pw.Border.all(color: PdfReportStyles.borderColor, width: 0.5),
@@ -153,9 +154,9 @@ class Q18PhotosBuilder {
               ],
             ),
           ),
-          // 2. Corps de l'image : Hauteur fixe 115pt
+          // 2. Corps de l'image : Hauteur agrandie à 148pt
           pw.Container(
-            height: 115,
+            height: 148,
             color: PdfColors.grey200,
             alignment: pw.Alignment.center,
             child: image != null
@@ -165,9 +166,9 @@ class Q18PhotosBuilder {
                     style: pw.TextStyle(font: fontRegular, fontSize: 7.5, color: PdfColors.grey600),
                   ),
           ),
-          // 3. Pied de carte : Légende / Description : Hauteur fixe 45pt
+          // 3. Pied de carte : Légende / Description : Hauteur 46pt
           pw.Container(
-            height: 45,
+            height: 46,
             padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             color: PdfReportStyles.tableRowAlt,
             child: pw.Text(

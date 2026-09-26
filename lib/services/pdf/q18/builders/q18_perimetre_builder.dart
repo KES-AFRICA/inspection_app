@@ -241,14 +241,14 @@ class Q18PerimetreBuilder {
           );
         }(),
       ],
+      pw.NewPage(),
       pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          pw.SizedBox(height: 10),
           trackedPages != null
               ? PageTracker(key: 'q18_s5_2', registry: trackedPages, offset: pageOffset, child: subTitle52)
               : subTitle52,
-          pw.SizedBox(height: 4),
+          pw.SizedBox(height: 6),
 
           pw.Paragraph(
             text: 'Exclusions éventuelles du périmètre (locaux non visités, installations non accessibles, parties d\'installation exclues contractuellement) :',

@@ -417,7 +417,7 @@ class Q18DangersSynthesisBuilder {
                 children: [
                   PdfReportStyles.cell('Niveau de danger', isHeader: true, centered: false, fontBold: fontBold),
                   PdfReportStyles.cell('Nombre constaté', isHeader: true, centered: true, fontBold: fontBold),
-                  PdfReportStyles.cell('Dont levés depuis le rapport précédent', isHeader: true, centered: true, fontBold: fontBold),
+                  PdfReportStyles.cell('Levés depuis le rapport précédent', isHeader: true, centered: true, fontBold: fontBold),
                 ],
               ),
               ...statsRows.asMap().entries.map((entry) {

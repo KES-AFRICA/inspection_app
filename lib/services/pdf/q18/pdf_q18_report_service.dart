@@ -455,7 +455,8 @@ class PdfQ18ReportService {
             ),
           );
 
-          // Section 6 : Documents et éléments consultés
+          // Section 6 : Documents et éléments consultés (commence sur la page suivante, avec Section 7)
+          widgets.add(pw.NewPage());
           widgets.addAll(
             _trackList(
               Q18PerimetreBuilder.buildSection6DocumentsConsultes(
@@ -469,9 +470,7 @@ class PdfQ18ReportService {
             ),
           );
 
-          widgets.add(pw.NewPage());
-
-          // Section 7 : Méthodologie et points de contrôle
+          // Section 7 : Méthodologie et points de contrôle (sur la même page que Section 6)
           widgets.addAll(
             _trackList(
               Q18RegulatoryBuilder.buildSection7Methodologie(
@@ -484,7 +483,8 @@ class PdfQ18ReportService {
             ),
           );
 
-          // Section 8 : Échelle de classification des dangers
+          // Section 8 : Échelle de classification des dangers (sur la page suivante, avec Section 9)
+          widgets.add(pw.NewPage());
           widgets.addAll(
             _trackList(
               Q18RegulatoryBuilder.buildSection8ClassificationDangers(
@@ -497,8 +497,7 @@ class PdfQ18ReportService {
             ),
           );
 
-          // Section 9 : Typologie des dangers les plus courants (démarre sur une nouvelle page)
-          widgets.add(pw.NewPage());
+          // Section 9 : Typologie des dangers les plus courants (sur la même page que Section 8)
           widgets.addAll(
             _trackList(
               Q18RegulatoryBuilder.buildSection9TypologieDangers(
@@ -558,7 +557,8 @@ class PdfQ18ReportService {
             ),
           );
 
-          // Section 13 : Compte rendu de levée des dangers
+          // Section 13 : Compte rendu de levée des dangers (démarre sur une nouvelle page)
+          widgets.add(pw.NewPage());
           widgets.addAll(
             _trackList(
               Q18ConclusionBuilder.buildSection13LeveeDangers(
@@ -695,10 +695,10 @@ class PdfQ18ReportService {
 
         pw.Spacer(flex: 1),
 
-        // ── Titre principal : Calibré pour tenir strictement au centre de la loupe sans jamais toucher le cercle externe gris ──
+        // ── Titre principal : Calibré pour déborder du cercle blanc central sans jamais toucher le cercle externe gris de la loupe ──
         pw.Center(
           child: pw.ConstrainedBox(
-            constraints: const pw.BoxConstraints(maxWidth: 245),
+            constraints: const pw.BoxConstraints(maxWidth: 285),
             child: pw.Column(
               mainAxisSize: pw.MainAxisSize.min,
               crossAxisAlignment: pw.CrossAxisAlignment.center,
@@ -707,7 +707,7 @@ class PdfQ18ReportService {
                   'RAPPORT Q18',
                   style: pw.TextStyle(
                     font: fontBold,
-                    fontSize: 20,
+                    fontSize: 22,
                     color: PdfReportStyles.accentColor,
                     letterSpacing: 1.0,
                   ),
@@ -718,9 +718,9 @@ class PdfQ18ReportService {
                   'Compte rendu de vérification\ndes installations électriques',
                   style: pw.TextStyle(
                     font: fontBold,
-                    fontSize: 11,
+                    fontSize: 12,
                     color: PdfReportStyles.accentColor,
-                    lineSpacing: 1.15,
+                    lineSpacing: 1.2,
                   ),
                   textAlign: pw.TextAlign.center,
                 ),
@@ -729,9 +729,9 @@ class PdfQ18ReportService {
                   'Établi selon le référentiel APSAD D18 (prévention des risques d\'incendie et d\'explosion), à la suite de la mission de vérification de conformité des installations électriques',
                   style: pw.TextStyle(
                     font: fontRegular,
-                    fontSize: 7.8,
+                    fontSize: 8.2,
                     color: PdfReportStyles.accentColor,
-                    lineSpacing: 1.2,
+                    lineSpacing: 1.25,
                   ),
                   textAlign: pw.TextAlign.center,
                 ),
