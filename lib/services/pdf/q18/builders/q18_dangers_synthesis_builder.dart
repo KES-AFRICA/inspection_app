@@ -293,27 +293,19 @@ class Q18DangersSynthesisBuilder {
                     ),
                   ),
 
-                  // Cellule 5 : Niveau D18 (Badge)
+                  // Cellule 5 : Niveau D18 (coloration sur toute la case)
                   pw.Container(
-                    decoration: pw.BoxDecoration(color: rowBg, border: itemBorder),
-                    padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
+                    decoration: pw.BoxDecoration(color: badgeColors.bg, border: itemBorder),
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                     alignment: pw.Alignment.center,
-                    child: pw.Container(
-                      padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                      decoration: pw.BoxDecoration(
-                        color: badgeColors.bg,
-                        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(2)),
-                        border: pw.Border.all(color: badgeColors.border, width: 0.3),
+                    child: pw.Text(
+                      item.niveau.label,
+                      style: pw.TextStyle(
+                        font: fontBold,
+                        fontSize: 7.2,
+                        color: badgeColors.text,
                       ),
-                      child: pw.Text(
-                        item.niveau.label,
-                        style: pw.TextStyle(
-                          font: fontBold,
-                          fontSize: 6.8,
-                          color: badgeColors.text,
-                        ),
-                        textAlign: pw.TextAlign.center,
-                      ),
+                      textAlign: pw.TextAlign.center,
                     ),
                   ),
                 ],
