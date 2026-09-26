@@ -3,6 +3,7 @@
 import 'dart:io';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:inspec_app/components/safe_file_image.dart';
 import 'package:inspec_app/services/pdf/builders/pdf_photos_schemas_builder.dart';
 import 'package:inspec_app/services/pdf/pdf_report_styles.dart';
 
@@ -15,6 +16,8 @@ class Q18PhotosBuilder {
     List<PdfPhotoEntry> photos, {
     required pw.Font fontBold,
     required pw.Font fontRegular,
+    Map<String, pw.MemoryImage>? photoImages,
+    bool isPreflight = false,
   }) {
     final widgets = <pw.Widget>[];
 
@@ -69,12 +72,24 @@ class Q18PhotosBuilder {
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
                 pw.Expanded(
-                  child: _buildPhotoCard(photo1, fontBold: fontBold, fontRegular: fontRegular),
+                  child: _buildPhotoCard(
+                    photo1,
+                    fontBold: fontBold,
+                    fontRegular: fontRegular,
+                    photoImages: photoImages,
+                    isPreflight: isPreflight,
+                  ),
                 ),
                 pw.SizedBox(width: 10),
                 pw.Expanded(
                   child: photo2 != null
-                      ? _buildPhotoCard(photo2, fontBold: fontBold, fontRegular: fontRegular)
+                      ? _buildPhotoCard(
+                          photo2,
+                          fontBold: fontBold,
+                          fontRegular: fontRegular,
+                          photoImages: photoImages,
+                          isPreflight: isPreflight,
+                        )
                       : pw.SizedBox(),
                 ),
               ],
@@ -92,17 +107,28 @@ class Q18PhotosBuilder {
     PdfPhotoEntry entry, {
     required pw.Font fontBold,
     required pw.Font fontRegular,
+    Map<String, pw.MemoryImage>? photoImages,
+    bool isPreflight = false,
   }) {
     pw.MemoryImage? image;
-    try {
-      final file = File(entry.filePath);
-      if (file.existsSync()) {
-        final bytes = file.readAsBytesSync();
-        if (bytes.isNotEmpty) {
-          image = pw.MemoryImage(bytes);
-        }
+    if (!isPreflight) {
+      if (photoImages != null && photoImages.containsKey(entry.filePath)) {
+        image = photoImages[entry.filePath];
+      } else if (photoImages != null && photoImages.containsKey(entry.filePath.trim())) {
+        image = photoImages[entry.filePath.trim()];
+      } else {
+        try {
+          final resolvedPath = AppImageUtils.resolvePathSync(entry.filePath) ?? entry.filePath;
+          final file = File(resolvedPath);
+          if (file.existsSync()) {
+            final bytes = file.readAsBytesSync();
+            if (bytes.isNotEmpty) {
+              image = pw.MemoryImage(bytes);
+            }
+          }
+        } catch (_) {}
       }
-    } catch (_) {}
+    }
 
     final badgeBg = entry.badgeBgColor ?? PdfColor.fromInt(0xFFC00000);
     final badgeText = entry.badgeTextColor ?? PdfColors.white;

@@ -1,5 +1,7 @@
 // test/services/pdf_q18_report_service_test.dart
 
+import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pdf/widgets.dart' as pw;
 
@@ -966,6 +968,68 @@ void main() {
       expect(json['centrale_photovoltaique'], equals('sans_objet'));
       final fromJsonMission = Mission.fromJson(json);
       expect(fromJsonMission.centralePhotovoltaique, equals('sans_objet'));
+    });
+
+    test('18. Optimisation Section 16 : Preflight Zero-Load et injection des photos compressées', () {
+      final samplePhotos = [
+        PdfPhotoEntry(
+          filePath: 'non_existent_1.jpg',
+          description: 'Câble détérioré',
+          repere: 'TGBT-01',
+          isObservation: true,
+          badgeLabel: 'Danger avéré',
+        ),
+        PdfPhotoEntry(
+          filePath: 'non_existent_2.jpg',
+          description: 'Absence d\'obturateur',
+          repere: 'TD-02',
+          isObservation: true,
+          badgeLabel: 'Dégradation',
+        ),
+      ];
+
+      // 1. Passe Preflight (Zero-Load) : aucune image en mémoire
+      final preflightWidgets = Q18PhotosBuilder.buildSection16Photos(
+        samplePhotos,
+        fontBold: pw.Font.helveticaBold(),
+        fontRegular: pw.Font.helvetica(),
+        isPreflight: true,
+      );
+      expect(preflightWidgets.isNotEmpty, isTrue);
+
+      // 2. Passe Rendu (avec Map d'images compressées)
+      final dummyCompressedBytes = Uint8List.fromList([
+        0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00, 0x01,
+        0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0xFF, 0xDB, 0x00, 0x43,
+        0x00, 0x08, 0x06, 0x06, 0x07, 0x06, 0x05, 0x08, 0x07, 0x07, 0x07, 0x09,
+        0x09, 0x08, 0x0A, 0x0C, 0x14, 0x0D, 0x0C, 0x0B, 0x0B, 0x0C, 0x19, 0x12,
+        0x13, 0x0F, 0x14, 0x1D, 0x1A, 0x1F, 0x1E, 0x1D, 0x1A, 0x1C, 0x1C, 0x20,
+        0x24, 0x2E, 0x27, 0x20, 0x22, 0x2C, 0x23, 0x1C, 0x1C, 0x28, 0x37, 0x29,
+        0x2C, 0x30, 0x31, 0x34, 0x34, 0x34, 0x1F, 0x27, 0x39, 0x3D, 0x38, 0x32,
+        0x3C, 0x2E, 0x33, 0x34, 0x32, 0xFF, 0xC0, 0x00, 0x0B, 0x08, 0x00, 0x01,
+        0x00, 0x01, 0x01, 0x01, 0x11, 0x00, 0xFF, 0xC4, 0x00, 0x1F, 0x00, 0x00,
+        0x01, 0x05, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+        0x09, 0x0A, 0x0B, 0xFF, 0xDA, 0x00, 0x08, 0x01, 0x01, 0x00, 0x00, 0x3F,
+        0x00, 0xBF, 0x00, 0xFF, 0xD9
+      ]);
+      final compressedMemImage = pw.MemoryImage(dummyCompressedBytes);
+      final photoImagesMap = <String, pw.MemoryImage>{
+        'non_existent_1.jpg': compressedMemImage,
+        'non_existent_2.jpg': compressedMemImage,
+      };
+
+      final renderWidgets = Q18PhotosBuilder.buildSection16Photos(
+        samplePhotos,
+        fontBold: pw.Font.helveticaBold(),
+        fontRegular: pw.Font.helvetica(),
+        photoImages: photoImagesMap,
+        isPreflight: false,
+      );
+      expect(renderWidgets.isNotEmpty, isTrue);
+
+      // Structure et nombre d'éléments identiques entre Preflight et Rendu final
+      expect(renderWidgets.length, equals(preflightWidgets.length));
     });
   });
 }
