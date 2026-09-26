@@ -128,7 +128,7 @@ class Q18DangersSynthesisBuilder {
       );
     }).toList();
 
-    // Construction des lignes du tableau unifié
+    // Construction des lignes du tableau unifié (6 colonnes : Zone, Repère, Désignation, Danger constaté, Famille, Niveau)
     final allTableRows = <pw.TableRow>[
       pw.TableRow(
         repeat: true,
@@ -137,7 +137,6 @@ class Q18DangersSynthesisBuilder {
           PdfReportStyles.cell('Zone', isHeader: true, centered: true, fontBold: fontBold),
           PdfReportStyles.cell('Repère', isHeader: true, centered: true, fontBold: fontBold),
           PdfReportStyles.cell('Désignation', isHeader: true, centered: true, fontBold: fontBold),
-          PdfReportStyles.cell('N°', isHeader: true, centered: true, fontBold: fontBold),
           PdfReportStyles.cell('Danger constaté / Observation', isHeader: true, centered: true, fontBold: fontBold),
           PdfReportStyles.cell('Famille de risque', isHeader: true, centered: true, fontBold: fontBold),
           PdfReportStyles.cell('Niveau D18', isHeader: true, centered: true, fontBold: fontBold),
@@ -268,23 +267,7 @@ class Q18DangersSynthesisBuilder {
                     padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                   ),
 
-                  // Cellule 3 : N°
-                  pw.Container(
-                    decoration: pw.BoxDecoration(border: itemBorder),
-                    padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 4),
-                    alignment: pw.Alignment.center,
-                    child: pw.Text(
-                      '${item.index}',
-                      style: pw.TextStyle(
-                        font: fontBold,
-                        fontSize: 7.5,
-                        color: PdfReportStyles.headerColor,
-                      ),
-                      textAlign: pw.TextAlign.center,
-                    ),
-                  ),
-
-                  // Cellule 4 : Danger constaté / Observation
+                  // Cellule 3 : Danger constaté / Observation
                   pw.Container(
                     decoration: pw.BoxDecoration(border: itemBorder),
                     padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
@@ -295,7 +278,7 @@ class Q18DangersSynthesisBuilder {
                     ),
                   ),
 
-                  // Cellule 5 : Famille de risque
+                  // Cellule 4 : Famille de risque
                   pw.Container(
                     decoration: pw.BoxDecoration(border: itemBorder),
                     padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
@@ -306,7 +289,7 @@ class Q18DangersSynthesisBuilder {
                     ),
                   ),
 
-                  // Cellule 6 : Niveau D18 (Badge)
+                  // Cellule 5 : Niveau D18 (Badge)
                   pw.Container(
                     decoration: pw.BoxDecoration(border: itemBorder),
                     padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
@@ -342,24 +325,28 @@ class Q18DangersSynthesisBuilder {
     }
 
     return [
-      PdfReportStyles.sectionBox('10. SYNTHÈSE DES DANGERS CONSTATÉS', fontBold: fontBold),
-      pw.SizedBox(height: 6),
-      pw.Paragraph(
-        text: 'Les dangers identifiés lors de la vérification sont répertoriés dans le tableau ci-dessous, avec leur localisation, une description et le niveau de gravité retenu, ainsi que l\'action corrective recommandée :',
-        style: pw.TextStyle(font: fontRegular, fontSize: 8.5, color: PdfColors.black),
+      pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          PdfReportStyles.sectionBox('10. SYNTHÈSE DES DANGERS CONSTATÉS', fontBold: fontBold),
+          pw.SizedBox(height: 6),
+          pw.Paragraph(
+            text: 'Les dangers identifiés lors de la vérification sont répertoriés dans le tableau ci-dessous, avec leur localisation, une description et le niveau de gravité retenu, ainsi que l\'action corrective recommandée :',
+            style: pw.TextStyle(font: fontRegular, fontSize: 8.5, color: PdfColors.black),
+          ),
+          pw.SizedBox(height: 6),
+        ],
       ),
-      pw.SizedBox(height: 6),
       pw.Table(
         defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
         border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.4),
         columnWidths: const {
           0: pw.FlexColumnWidth(1.8), // Zone
-          1: pw.FlexColumnWidth(1.6), // Repère
-          2: pw.FlexColumnWidth(1.8), // Désignation
-          3: pw.FixedColumnWidth(18), // N°
-          4: pw.FlexColumnWidth(3.8), // Danger constaté
-          5: pw.FlexColumnWidth(1.8), // Famille de risque
-          6: pw.FlexColumnWidth(1.7), // Niveau D18
+          1: pw.FlexColumnWidth(1.8), // Repère
+          2: pw.FlexColumnWidth(2.0), // Désignation
+          3: pw.FlexColumnWidth(4.2), // Danger constaté / Observation
+          4: pw.FlexColumnWidth(2.0), // Famille de risque
+          5: pw.FlexColumnWidth(1.6), // Niveau D18
         },
         children: allTableRows,
       ),
@@ -378,6 +365,7 @@ class Q18DangersSynthesisBuilder {
   /// 3 colonnes : Niveau de danger | Nombre constaté | Dont levés depuis le rapport précédent
   /// Blocs de couleur supprimés dans la colonne 1 (texte sobre).
   /// Colonne 3 laissée vide sans invention de données.
+  /// Règle 26 : Titre, intro et tableau groupés dans un même bloc logique Column.
   static List<pw.Widget> buildSection11Statistiques(
     Q18DataSnapshot data, {
     required pw.Font fontBold,
@@ -393,114 +381,119 @@ class Q18DangersSynthesisBuilder {
     ];
 
     return [
-      PdfReportStyles.sectionBox('11. RÉCAPITULATIF STATISTIQUE DES DANGERS', fontBold: fontBold),
-      pw.SizedBox(height: 6),
-      pw.Paragraph(
-        text: 'Ce tableau offre une vue d\'ensemble du nombre de dangers constatés par niveau, à des fins de suivi dans le temps :',
-        style: pw.TextStyle(font: fontRegular, fontSize: 8.5, color: PdfColors.black),
-      ),
-      pw.SizedBox(height: 6),
-      pw.Table(
-        defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
-        border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.4),
-        columnWidths: const {
-          0: pw.FlexColumnWidth(4.5),
-          1: pw.FlexColumnWidth(2.5),
-          2: pw.FlexColumnWidth(3.0),
-        },
+      pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          pw.TableRow(
-            repeat: true,
-            decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
-            children: [
-              PdfReportStyles.cell('Niveau de danger', isHeader: true, centered: false, fontBold: fontBold),
-              PdfReportStyles.cell('Nombre constaté', isHeader: true, centered: true, fontBold: fontBold),
-              PdfReportStyles.cell('Dont levés depuis le rapport précédent', isHeader: true, centered: true, fontBold: fontBold),
-            ],
+          PdfReportStyles.sectionBox('11. RÉCAPITULATIF STATISTIQUE DES DANGERS', fontBold: fontBold),
+          pw.SizedBox(height: 6),
+          pw.Paragraph(
+            text: 'Ce tableau offre une vue d\'ensemble du nombre de dangers constatés par niveau, à des fins de suivi dans le temps :',
+            style: pw.TextStyle(font: fontRegular, fontSize: 8.5, color: PdfColors.black),
           ),
-          ...statsRows.asMap().entries.map((entry) {
-            final idx = entry.key;
-            final label = entry.value[0];
-            final count = entry.value[1];
-            final isAlt = idx.isOdd;
+          pw.SizedBox(height: 6),
+          pw.Table(
+            defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
+            border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.4),
+            columnWidths: const {
+              0: pw.FlexColumnWidth(4.5),
+              1: pw.FlexColumnWidth(2.5),
+              2: pw.FlexColumnWidth(3.0),
+            },
+            children: [
+              pw.TableRow(
+                repeat: true,
+                decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
+                children: [
+                  PdfReportStyles.cell('Niveau de danger', isHeader: true, centered: false, fontBold: fontBold),
+                  PdfReportStyles.cell('Nombre constaté', isHeader: true, centered: true, fontBold: fontBold),
+                  PdfReportStyles.cell('Dont levés depuis le rapport précédent', isHeader: true, centered: true, fontBold: fontBold),
+                ],
+              ),
+              ...statsRows.asMap().entries.map((entry) {
+                final idx = entry.key;
+                final label = entry.value[0];
+                final count = entry.value[1];
+                final isAlt = idx.isOdd;
 
-            return pw.TableRow(
-              decoration: pw.BoxDecoration(
-                color: isAlt ? PdfReportStyles.tableRowAlt : PdfColors.white,
-              ),
-              children: [
-                pw.Container(
-                  padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
-                  alignment: pw.Alignment.centerLeft,
-                  child: pw.Text(
-                    label,
-                    style: pw.TextStyle(
-                      font: fontBold,
-                      fontSize: 8.0,
-                      color: PdfColors.black,
+                return pw.TableRow(
+                  decoration: pw.BoxDecoration(
+                    color: isAlt ? PdfReportStyles.tableRowAlt : PdfColors.white,
+                  ),
+                  children: [
+                    pw.Container(
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+                      alignment: pw.Alignment.centerLeft,
+                      child: pw.Text(
+                        label,
+                        style: pw.TextStyle(
+                          font: fontBold,
+                          fontSize: 8.0,
+                          color: PdfColors.black,
+                        ),
+                      ),
+                    ),
+                    pw.Container(
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+                      alignment: pw.Alignment.center,
+                      child: pw.Text(
+                        count,
+                        style: pw.TextStyle(
+                          font: fontBold,
+                          fontSize: 8.5,
+                          color: PdfColors.black,
+                        ),
+                        textAlign: pw.TextAlign.center,
+                      ),
+                    ),
+                    pw.Container(
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+                      alignment: pw.Alignment.center,
+                      child: pw.SizedBox(),
+                    ),
+                  ],
+                );
+              }),
+              // Ligne Total
+              pw.TableRow(
+                decoration: pw.BoxDecoration(color: PdfReportStyles.lightBlue),
+                children: [
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+                    alignment: pw.Alignment.centerLeft,
+                    child: pw.Text(
+                      'Total',
+                      style: pw.TextStyle(
+                        font: fontBold,
+                        fontSize: 8.5,
+                        color: PdfReportStyles.headerColor,
+                      ),
                     ),
                   ),
-                ),
-                pw.Container(
-                  padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
-                  alignment: pw.Alignment.center,
-                  child: pw.Text(
-                    count,
-                    style: pw.TextStyle(
-                      font: fontBold,
-                      fontSize: 8.5,
-                      color: PdfColors.black,
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+                    alignment: pw.Alignment.center,
+                    child: pw.Text(
+                      '$total',
+                      style: pw.TextStyle(
+                        font: fontBold,
+                        fontSize: 9.0,
+                        color: PdfReportStyles.headerColor,
+                      ),
+                      textAlign: pw.TextAlign.center,
                     ),
-                    textAlign: pw.TextAlign.center,
                   ),
-                ),
-                pw.Container(
-                  padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
-                  alignment: pw.Alignment.center,
-                  child: pw.SizedBox(),
-                ),
-              ],
-            );
-          }),
-          // Ligne Total
-          pw.TableRow(
-            decoration: pw.BoxDecoration(color: PdfReportStyles.lightBlue),
-            children: [
-              pw.Container(
-                padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
-                alignment: pw.Alignment.centerLeft,
-                child: pw.Text(
-                  'Total',
-                  style: pw.TextStyle(
-                    font: fontBold,
-                    fontSize: 8.5,
-                    color: PdfReportStyles.headerColor,
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+                    alignment: pw.Alignment.center,
+                    child: pw.SizedBox(),
                   ),
-                ),
-              ),
-              pw.Container(
-                padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
-                alignment: pw.Alignment.center,
-                child: pw.Text(
-                  '$total',
-                  style: pw.TextStyle(
-                    font: fontBold,
-                    fontSize: 9.0,
-                    color: PdfReportStyles.headerColor,
-                  ),
-                  textAlign: pw.TextAlign.center,
-                ),
-              ),
-              pw.Container(
-                padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
-                alignment: pw.Alignment.center,
-                child: pw.SizedBox(),
+                ],
               ),
             ],
           ),
+          pw.SizedBox(height: 12),
         ],
       ),
-      pw.SizedBox(height: 12),
     ];
   }
 

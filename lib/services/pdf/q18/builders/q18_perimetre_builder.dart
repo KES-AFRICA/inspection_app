@@ -88,7 +88,7 @@ class Q18PerimetreBuilder {
               children: [
                 PdfReportStyles.cell('Zone', isHeader: true, centered: true),
                 PdfReportStyles.cell('Repère', isHeader: true, centered: true),
-                PdfReportStyles.cell('Équipements', isHeader: true, centered: true),
+                PdfReportStyles.cell('Désignation', isHeader: true, centered: true),
                 PdfReportStyles.cell('Couvert par la mission', isHeader: true, centered: true),
               ],
             ),

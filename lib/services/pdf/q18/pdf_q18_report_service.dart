@@ -13,6 +13,7 @@ import 'package:inspec_app/services/cancellation_token.dart';
 import 'package:inspec_app/services/hive_service.dart';
 import 'package:inspec_app/services/pdf/pdf_report_service.dart';
 import 'package:inspec_app/services/pdf/builders/pdf_cover_builder.dart';
+import 'package:inspec_app/services/pdf/builders/pdf_final_page_builder.dart';
 import 'package:inspec_app/services/pdf/builders/pdf_sommaire_builder.dart';
 import 'package:inspec_app/services/pdf/q18/builders/q18_conclusion_builder.dart';
 import 'package:inspec_app/services/pdf/q18/builders/q18_dangers_synthesis_builder.dart';
@@ -210,7 +211,7 @@ class PdfQ18ReportService {
         isUppercase: true,
       ),
       SommaireEntry(
-        titre: "11. RÉCAPITULATIF STATISTIQUE",
+        titre: "11. RÉCAPITULATIF STATISTIQUE DES DANGERS",
         key: 'q18_s11',
         level: 0,
         isBold: true,
@@ -238,7 +239,7 @@ class PdfQ18ReportService {
         isUppercase: true,
       ),
       SommaireEntry(
-        titre: "15. SIGNATURE DU VÉRIFICATEUR",
+        titre: "15. VISA ET SIGNATURE DES VÉRIFICATEURS AGRÉÉS",
         key: 'q18_s15',
         level: 0,
         isBold: true,
@@ -249,7 +250,7 @@ class PdfQ18ReportService {
     if (data.photoEntries.isNotEmpty) {
       entries.add(
         SommaireEntry(
-          titre: "16. PLANCHE PHOTOGRAPHIQUE",
+          titre: "16. PLANCHE PHOTOGRAPHIQUE DES CONSTATS",
           key: 'q18_s16',
           level: 0,
           isBold: true,
@@ -284,7 +285,7 @@ class PdfQ18ReportService {
   static pw.Document buildDocumentForTesting({
     required Q18DataSnapshot data,
     required ({pw.Font regular, pw.Font bold}) fonts,
-    required ({pw.MemoryImage? logoKes, pw.MemoryImage? watermark}) assets,
+    required ({pw.MemoryImage? logoKes, pw.MemoryImage? watermark, pw.MemoryImage? watermarkWhite}) assets,
     required int? overrideTotalPages,
     Map<String, int>? trackedPages,
   }) => _buildDocument(
@@ -298,10 +299,17 @@ class PdfQ18ReportService {
   static pw.Document _buildDocument({
     required Q18DataSnapshot data,
     required ({pw.Font regular, pw.Font bold}) fonts,
-    required ({pw.MemoryImage? logoKes, pw.MemoryImage? watermark}) assets,
+    required ({pw.MemoryImage? logoKes, pw.MemoryImage? watermark, pw.MemoryImage? watermarkWhite}) assets,
     required int? overrideTotalPages,
     Map<String, int>? trackedPages,
   }) {
+    // Configuration de la quatrième de couverture institutionnelle
+    PdfFinalPageBuilder.fontRegular = fonts.regular;
+    PdfFinalPageBuilder.fontBold = fonts.bold;
+    if (assets.watermarkWhite != null) {
+      PdfFinalPageBuilder.watermarkWhiteImage = assets.watermarkWhite;
+    }
+
     final pdf = pw.Document(
       title: 'Rapport Q18 - ${data.mission.nomClient}',
       author: 'KES INSPECTIONS AND PROJECTS',
@@ -575,7 +583,8 @@ class PdfQ18ReportService {
             ),
           );
 
-          // Section 15 : Signature du vérificateur
+          // Section 15 : Visa et signature des vérificateurs agréés (toujours sur une nouvelle page)
+          widgets.add(pw.NewPage());
           widgets.addAll(
             _trackList(
               Q18ConclusionBuilder.buildSection15Signature(
@@ -610,6 +619,9 @@ class PdfQ18ReportService {
         },
       ),
     );
+
+    // ── DERNIÈRE PAGE DU RAPPORT : QUATRIÈME DE COUVERTURE INSTITUTIONNELLE KES ──
+    pdf.addPage(PdfFinalPageBuilder.buildPage());
 
     return pdf;
   }
@@ -839,9 +851,10 @@ class PdfQ18ReportService {
     }
   }
 
-  static Future<({pw.MemoryImage? logoKes, pw.MemoryImage? watermark})> _loadAssets() async {
+  static Future<({pw.MemoryImage? logoKes, pw.MemoryImage? watermark, pw.MemoryImage? watermarkWhite})> _loadAssets() async {
     pw.MemoryImage? logoKes;
     pw.MemoryImage? watermark;
+    pw.MemoryImage? watermarkWhite;
 
     try {
       final logoBytes = await rootBundle.load('assets/images/logo.png');
@@ -859,6 +872,13 @@ class PdfQ18ReportService {
       }
     } catch (_) {}
 
-    return (logoKes: logoKes, watermark: watermark);
+    try {
+      final wmWhiteBytes = await rootBundle.load('assets/images/filigranne_white.png');
+      if (wmWhiteBytes.lengthInBytes > 0) {
+        watermarkWhite = pw.MemoryImage(wmWhiteBytes.buffer.asUint8List());
+      }
+    } catch (_) {}
+
+    return (logoKes: logoKes, watermark: watermark, watermarkWhite: watermarkWhite);
   }
 }

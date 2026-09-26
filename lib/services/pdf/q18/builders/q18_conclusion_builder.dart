@@ -80,10 +80,10 @@ class Q18ConclusionBuilder {
       ),
       pw.SizedBox(height: 6),
 
-      // Cas exclusif 1 OU Cas 2
+      // Cas exclusif 1 OU Cas 2 (Règle 27 & 28 : Ne pas afficher "Cas n°1 :" ou "Cas n°2 :")
       if (isCas1) ...[
         pw.Text(
-          'Cas n°1 : Absence de danger identifié',
+          'Absence de danger identifié',
           style: pw.TextStyle(font: fontBold, fontSize: 9.0, color: PdfColor.fromInt(0xFF15803D)),
         ),
         pw.SizedBox(height: 4),
@@ -98,7 +98,7 @@ class Q18ConclusionBuilder {
         ),
       ] else ...[
         pw.Text(
-          'Cas n°2 : Danger(s) identifié(s)',
+          'Danger(s) identifié(s)',
           style: pw.TextStyle(font: fontBold, fontSize: 9.0, color: PdfColor.fromInt(0xFFC00000)),
         ),
         pw.SizedBox(height: 4),
@@ -160,36 +160,44 @@ class Q18ConclusionBuilder {
     ];
   }
 
-  /// Section 13 : Compte rendu de levée des dangers (le cas échéant)
+  /// Section 13 : Compte rendu de levée des dangers (Règle 30 : suppression de "le cas échéant")
+  /// Règle 29 : Bloc logique indissociable.
   static List<pw.Widget> buildSection13LeveeDangers({
     required pw.Font fontBold,
     required pw.Font fontRegular,
   }) {
     return [
-      PdfReportStyles.sectionBox('13. COMPTE RENDU DE LEVÉE DES DANGERS (LE CAS ÉCHÉANT)', fontBold: fontBold),
-      pw.SizedBox(height: 6),
-      pw.Container(
-        padding: const pw.EdgeInsets.all(8),
-        decoration: pw.BoxDecoration(
-          color: PdfReportStyles.tableRowAlt,
-          border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.4),
-          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(3)),
-        ),
-        child: pw.Text(
-          'Sans objet (Première vérification au titre du traité APSAD D18 ou absence de réserve antérieure formalisée).',
-          style: pw.TextStyle(
-            font: fontRegular,
-            fontSize: 8.0,
-            color: PdfColors.black,
-            fontStyle: pw.FontStyle.italic,
+      pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          PdfReportStyles.sectionBox('13. COMPTE RENDU DE LEVÉE DES DANGERS', fontBold: fontBold),
+          pw.SizedBox(height: 6),
+          pw.Container(
+            width: double.infinity,
+            padding: const pw.EdgeInsets.all(8),
+            decoration: pw.BoxDecoration(
+              color: PdfReportStyles.tableRowAlt,
+              border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.4),
+              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(3)),
+            ),
+            child: pw.Text(
+              'Sans objet (Première vérification au titre du traité APSAD D18 ou absence de réserve antérieure formalisée).',
+              style: pw.TextStyle(
+                font: fontRegular,
+                fontSize: 8.0,
+                color: PdfColors.black,
+                fontStyle: pw.FontStyle.italic,
+              ),
+            ),
           ),
-        ),
+          pw.SizedBox(height: 12),
+        ],
       ),
-      pw.SizedBox(height: 12),
     ];
   }
 
   /// Section 14 : Prochaine échéance de vérification
+  /// Règle 29 : Bloc logique indissociable.
   static List<pw.Widget> buildSection14ProchaineEcheance(
     Q18DataSnapshot data, {
     required pw.Font fontBold,
@@ -199,51 +207,58 @@ class Q18ConclusionBuilder {
     final dateStr = dateFormat.format(data.dateProchaineVisite);
 
     return [
-      PdfReportStyles.sectionBox('14. PROCHAINE ÉCHÉANCE DE VÉRIFICATION PÉRIODIQUE', fontBold: fontBold),
-      pw.SizedBox(height: 6),
-      pw.Container(
-        padding: const pw.EdgeInsets.all(8),
-        decoration: pw.BoxDecoration(
-          color: PdfReportStyles.lightBlue,
-          border: pw.TableBorder.all(color: PdfReportStyles.accentColor, width: 0.5),
-          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(3)),
-        ),
-        child: pw.Row(
-          children: [
-            pw.Expanded(
-              child: pw.RichText(
-                text: pw.TextSpan(
-                  style: pw.TextStyle(font: fontRegular, fontSize: 8.5, color: PdfColors.black),
-                  children: [
-                    const pw.TextSpan(
-                      text: 'Conformément aux exigences du référentiel APSAD D18, la périodicité de contrôle des installations électriques est annuelle.\n\n',
-                    ),
-                    pw.TextSpan(
-                      text: 'DATE BUTOIR DE LA PROCHAINE VÉRIFICATION : ',
-                      style: pw.TextStyle(font: fontBold, color: PdfReportStyles.headerColor),
-                    ),
-                    pw.TextSpan(
-                      text: dateStr,
-                      style: pw.TextStyle(font: fontBold, color: PdfColor.fromInt(0xFFC00000), fontSize: 9.5),
-                    ),
-                  ],
-                ),
-              ),
+      pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          PdfReportStyles.sectionBox('14. PROCHAINE ÉCHÉANCE DE VÉRIFICATION PÉRIODIQUE', fontBold: fontBold),
+          pw.SizedBox(height: 6),
+          pw.Container(
+            width: double.infinity,
+            padding: const pw.EdgeInsets.all(8),
+            decoration: pw.BoxDecoration(
+              color: PdfReportStyles.lightBlue,
+              border: pw.TableBorder.all(color: PdfReportStyles.accentColor, width: 0.5),
+              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(3)),
             ),
-          ],
-        ),
+            child: pw.Row(
+              children: [
+                pw.Expanded(
+                  child: pw.RichText(
+                    text: pw.TextSpan(
+                      style: pw.TextStyle(font: fontRegular, fontSize: 8.5, color: PdfColors.black),
+                      children: [
+                        const pw.TextSpan(
+                          text: 'Conformément aux exigences du référentiel APSAD D18, la périodicité de contrôle des installations électriques est annuelle.\n\n',
+                        ),
+                        pw.TextSpan(
+                          text: 'DATE BUTOIR DE LA PROCHAINE VÉRIFICATION : ',
+                          style: pw.TextStyle(font: fontBold, color: PdfReportStyles.headerColor),
+                        ),
+                        pw.TextSpan(
+                          text: dateStr,
+                          style: pw.TextStyle(font: fontBold, color: PdfColor.fromInt(0xFFC00000), fontSize: 9.5),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          pw.SizedBox(height: 12),
+        ],
       ),
-      pw.SizedBox(height: 12),
     ];
   }
 
   /// Section 15 : Visa et signature du/des vérificateur(s) agréé(s)
   ///
-  /// Conforme au document de référence :
+  /// Conforme au document de référence (Règles 31-34) :
+  /// - Titre exact : 15. VISA ET SIGNATURE DES VÉRIFICATEURS AGRÉÉS (ou DU VÉRIFICATEUR AGRÉÉ)
   /// - Lieu fixe : Douala
   /// - Date dynamique : date de génération (data.dateRapportEffective)
   /// - Vérificateurs réels dynamiques (gestion singulier / pluriel)
-  /// - Zone de signature sobre et professionnelle
+  /// - Zone de signature sobre, centrée, équilibrée et professionnelle
   static List<pw.Widget> buildSection15Signature(
     Q18DataSnapshot data, {
     required pw.Font fontBold,
@@ -274,67 +289,73 @@ class Q18ConclusionBuilder {
         : '15. VISA ET SIGNATURE DU VÉRIFICATEUR AGRÉÉ';
 
     return [
-      PdfReportStyles.sectionBox(sectionTitle, fontBold: fontBold),
-      pw.SizedBox(height: 10),
-
-      // Fait à Douala, le [date]
-      pw.Text(
-        'Fait à Douala, le $dateStr',
-        style: pw.TextStyle(font: fontBold, fontSize: 9.0, color: PdfColors.black),
-      ),
-      pw.SizedBox(height: 14),
-
-      // Liste des vérificateurs et signatures
-      pw.Row(
-        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+      pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: listVerificateurs.map((nomVerif) {
-          return pw.Expanded(
-            child: pw.Container(
-              margin: const pw.EdgeInsets.only(right: 12),
-              padding: const pw.EdgeInsets.all(8),
-              decoration: pw.BoxDecoration(
-                border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.4),
-                borderRadius: const pw.BorderRadius.all(pw.Radius.circular(3)),
-                color: PdfReportStyles.tableRowAlt,
-              ),
-              child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                children: [
-                  pw.Text(
-                    isPluriel ? 'Vérificateur :' : 'Nom du vérificateur :',
-                    style: pw.TextStyle(font: fontRegular, fontSize: 8.0, color: PdfColors.grey700),
+        children: [
+          PdfReportStyles.sectionBox(sectionTitle, fontBold: fontBold),
+          pw.SizedBox(height: 16),
+
+          // Fait à Douala, le [date]
+          pw.Text(
+            'Fait à Douala, le $dateStr',
+            style: pw.TextStyle(font: fontBold, fontSize: 9.5, color: PdfColors.black),
+          ),
+          pw.SizedBox(height: 18),
+
+          // Liste des vérificateurs et signatures
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: listVerificateurs.map((nomVerif) {
+              return pw.Expanded(
+                child: pw.Container(
+                  margin: const pw.EdgeInsets.only(right: 12),
+                  padding: const pw.EdgeInsets.all(12),
+                  decoration: pw.BoxDecoration(
+                    border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.5),
+                    borderRadius: const pw.BorderRadius.all(pw.Radius.circular(3)),
+                    color: PdfReportStyles.tableRowAlt,
                   ),
-                  pw.SizedBox(height: 2),
-                  pw.Text(
-                    nomVerif,
-                    style: pw.TextStyle(font: fontBold, fontSize: 8.5, color: PdfReportStyles.headerColor),
-                  ),
-                  pw.SizedBox(height: 10),
-                  pw.Text(
-                    'Signature :',
-                    style: pw.TextStyle(font: fontRegular, fontSize: 8.0, color: PdfColors.grey700),
-                  ),
-                  pw.SizedBox(height: 4),
-                  pw.Container(
-                    height: 55,
-                    decoration: pw.BoxDecoration(
-                      border: pw.TableBorder.all(
-                        color: PdfColors.grey400,
-                        width: 0.5,
-                        style: pw.BorderStyle.dashed,
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text(
+                        isPluriel ? 'Vérificateur :' : 'Nom du vérificateur :',
+                        style: pw.TextStyle(font: fontRegular, fontSize: 8.5, color: PdfColors.grey700),
                       ),
-                      color: PdfColors.white,
-                    ),
-                    alignment: pw.Alignment.center,
+                      pw.SizedBox(height: 4),
+                      pw.Text(
+                        nomVerif,
+                        style: pw.TextStyle(font: fontBold, fontSize: 9.5, color: PdfReportStyles.headerColor),
+                      ),
+                      pw.SizedBox(height: 14),
+                      pw.Text(
+                        'Signature et visa :',
+                        style: pw.TextStyle(font: fontRegular, fontSize: 8.5, color: PdfColors.grey700),
+                      ),
+                      pw.SizedBox(height: 6),
+                      pw.Container(
+                        height: 80,
+                        decoration: pw.BoxDecoration(
+                          border: pw.TableBorder.all(
+                            color: PdfColors.grey400,
+                            width: 0.6,
+                            style: pw.BorderStyle.dashed,
+                          ),
+                          color: PdfColors.white,
+                          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(2)),
+                        ),
+                        alignment: pw.Alignment.center,
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
-          );
-        }).toList(),
+                ),
+              );
+            }).toList(),
+          ),
+          pw.SizedBox(height: 18),
+        ],
       ),
-      pw.SizedBox(height: 14),
     ];
   }
 }

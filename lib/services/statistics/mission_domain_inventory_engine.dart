@@ -847,6 +847,8 @@ class MissionDomainInventoryEngine {
             missionId: missionId,
             tensionDomain: TensionDomain.mt,
             origin: originNom,
+            parentZone: parentZone,
+            parentLocal: local.nom,
             objectType: 'Local MT',
             objectName: local.nom,
             tableName: 'Dispositions constructives',
@@ -878,6 +880,8 @@ class MissionDomainInventoryEngine {
             missionId: missionId,
             tensionDomain: TensionDomain.mt,
             origin: originNom,
+            parentZone: parentZone,
+            parentLocal: local.nom,
             objectType: 'Local MT',
             objectName: local.nom,
             tableName: 'Conditions d\'exploitation',
@@ -1005,6 +1009,8 @@ class MissionDomainInventoryEngine {
               missionId: missionId,
               tensionDomain: TensionDomain.bt,
               origin: originNom,
+              parentZone: parentZone,
+              parentLocal: local.nom,
               objectType: typeObjetName,
               objectName: local.nom,
               tableName: 'Dispositions constructives',
@@ -1038,6 +1044,8 @@ class MissionDomainInventoryEngine {
               missionId: missionId,
               tensionDomain: TensionDomain.bt,
               origin: originNom,
+              parentZone: parentZone,
+              parentLocal: local.nom,
               objectType: typeObjetName,
               objectName: local.nom,
               tableName: 'Conditions d\'exploitation',
@@ -1128,7 +1136,10 @@ class MissionDomainInventoryEngine {
     if (visitedCellules.contains(cellHash)) return;
     visitedCellules.add(cellHash);
 
-    final itemLabel = 'Cellule ${celluleIndex + 1} (${cellule.fonction})';
+    final celluleName = (cellule.nom != null && cellule.nom!.trim().isNotEmpty)
+        ? cellule.nom!.trim()
+        : 'Cellule ${celluleIndex + 1}';
+    final itemLabel = celluleName;
     final instance = DomainEntityInstance(
       instanceId: 'cellule_$cellHash',
       category: DomainObjectType.celluleMT,
@@ -1154,8 +1165,10 @@ class MissionDomainInventoryEngine {
             missionId: missionId,
             tensionDomain: TensionDomain.mt,
             origin: originNom,
+            parentZone: parentZone,
+            parentLocal: parentLocal,
             objectType: 'Cellule MT',
-            objectName: itemLabel,
+            objectName: celluleName,
             tableName: 'Tableau Cellule',
             verificationPoint: el.elementControle,
             observationText: el.observation?.isNotEmpty == true ? el.observation! : el.elementControle,
@@ -1189,7 +1202,10 @@ class MissionDomainInventoryEngine {
     if (visitedTransfos.contains(transfoHash)) return;
     visitedTransfos.add(transfoHash);
 
-    final itemLabel = 'Transformateur ${transfoIndex + 1}';
+    final transfoName = (transfo.nom != null && transfo.nom!.trim().isNotEmpty)
+        ? transfo.nom!.trim()
+        : 'Transformateur ${transfoIndex + 1}';
+    final itemLabel = transfoName;
     final instance = DomainEntityInstance(
       instanceId: 'transfo_$transfoHash',
       category: DomainObjectType.transformateurMTBT,
@@ -1215,8 +1231,10 @@ class MissionDomainInventoryEngine {
             missionId: missionId,
             tensionDomain: TensionDomain.mt,
             origin: originNom,
+            parentZone: parentZone,
+            parentLocal: parentLocal,
             objectType: 'Transformateur MT/BT',
-            objectName: itemLabel,
+            objectName: transfoName,
             tableName: 'Tableau Transformateur',
             verificationPoint: el.elementControle,
             observationText: el.observation?.isNotEmpty == true ? el.observation! : el.elementControle,
@@ -1300,6 +1318,8 @@ class MissionDomainInventoryEngine {
                 missionId: missionId,
                 tensionDomain: tensionDomain,
                 origin: originNom,
+                parentZone: parentZone,
+                parentLocal: parentLocal,
                 objectType: category.normalizedObjectType,
                 objectName: coffret.nom,
                 objectRepere: coffretRepere,
@@ -1323,6 +1343,8 @@ class MissionDomainInventoryEngine {
               missionId: missionId,
               tensionDomain: tensionDomain,
               origin: originNom,
+              parentZone: parentZone,
+              parentLocal: parentLocal,
               objectType: category.normalizedObjectType,
               objectName: coffret.nom,
               objectRepere: coffretRepere,
@@ -1357,6 +1379,8 @@ class MissionDomainInventoryEngine {
               missionId: missionId,
               tensionDomain: tensionDomain,
               origin: originNom,
+              parentZone: parentZone,
+              parentLocal: parentLocal,
               objectType: category.normalizedObjectType,
               objectName: '${coffret.nom} (Parafoudre)',
               objectRepere: coffretRepere,

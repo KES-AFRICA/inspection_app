@@ -26,6 +26,8 @@ class AuditFinding {
   // Localisation & Contexte
   final TensionDomain tensionDomain; // Domaine de tension (MT vs BT)
   final String origin;           // "Local MT", "Local BT", "Zone MT", "Zone BT", "Groupe Électrogène", "Foudre"
+  final String? parentZone;      // Nom de la zone parente (ex: "Zone 1", "Zone Broyage")
+  final String? parentLocal;     // Nom du local parent (ex: "Local TGBT", "Local Transfo")
   final String objectType;       // "Local MT", "Local BT", "Cellule MT", "Transformateur MT/BT", "Coffret", "Armoire", "TGBT", "Inverseur", "Foudre"
   final String objectName;       // Nom de l'équipement ou du local
   final String? objectRepere;    // Repère équipement ou numéro de série
@@ -46,6 +48,8 @@ class AuditFinding {
     required this.missionId,
     required this.tensionDomain,
     required this.origin,
+    this.parentZone,
+    this.parentLocal,
     required this.objectType,
     required this.objectName,
     this.objectRepere,

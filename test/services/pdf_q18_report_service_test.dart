@@ -537,6 +537,7 @@ void main() {
       final assets = (
         logoKes: null as pw.MemoryImage?,
         watermark: null as pw.MemoryImage?,
+        watermarkWhite: null as pw.MemoryImage?,
       );
 
       // Passe 1 : peuplement de trackedPages
@@ -714,7 +715,9 @@ void main() {
       );
 
       expect(widgets.isNotEmpty, isTrue);
-      final table = widgets.whereType<pw.Table>().first;
+      final table = widgets.whereType<pw.Table>().isNotEmpty
+          ? widgets.whereType<pw.Table>().first
+          : widgets.whereType<pw.Column>().first.children.whereType<pw.Table>().first;
       // 1 en-tête + 4 niveaux de danger + 1 ligne Total = 6 lignes
       expect(table.children.length, equals(6));
       expect(table.defaultVerticalAlignment, equals(pw.TableCellVerticalAlignment.full));
@@ -770,8 +773,9 @@ void main() {
           .whereType<pw.Text>()
           .map((t) => t.text.toPlainText())
           .toList();
-      expect(cas1Texts.any((t) => t.contains('Cas n°1 : Absence de danger identifié')), isTrue);
-      expect(cas1Texts.any((t) => t.contains('Cas n°2 : Danger(s) identifié(s)')), isFalse);
+      expect(cas1Texts.any((t) => t.contains('Absence de danger identifié')), isTrue);
+      expect(cas1Texts.any((t) => t.contains('Cas n°1 :')), isFalse);
+      expect(cas1Texts.any((t) => t.contains('Danger(s) identifié(s)')), isFalse);
 
       // Cas 2 : Danger avéré > 0 => Uniquement Cas 2 visible
       final cas2Snapshot = Q18DataSnapshot(
@@ -806,8 +810,9 @@ void main() {
           .whereType<pw.Text>()
           .map((t) => t.text.toPlainText())
           .toList();
-      expect(cas2Texts.any((t) => t.contains('Cas n°2 : Danger(s) identifié(s)')), isTrue);
-      expect(cas2Texts.any((t) => t.contains('Cas n°1 : Absence de danger identifié')), isFalse);
+      expect(cas2Texts.any((t) => t.contains('Danger(s) identifié(s)')), isTrue);
+      expect(cas2Texts.any((t) => t.contains('Cas n°2 :')), isFalse);
+      expect(cas2Texts.any((t) => t.contains('Absence de danger identifié')), isFalse);
     });
 
     test('15. Section 15 : Visa et Signature avec Fait à Douala et gestion singulier / pluriel', () {

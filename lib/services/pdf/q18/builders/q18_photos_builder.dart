@@ -15,7 +15,7 @@ class Q18PhotosBuilder {
     required pw.Font fontRegular,
   }) {
     final widgets = <pw.Widget>[
-      PdfReportStyles.sectionBox('16. PLANCHE PHOTOGRAPHIQUE DES CONSTATS (APSAD D18)', fontBold: fontBold),
+      PdfReportStyles.sectionBox('16. PLANCHE PHOTOGRAPHIQUE DES CONSTATS', fontBold: fontBold),
       pw.SizedBox(height: 8),
     ];
 
@@ -50,14 +50,14 @@ class Q18PhotosBuilder {
     for (final pair in pairs) {
       widgets.add(
         pw.Padding(
-          padding: const pw.EdgeInsets.only(bottom: 10),
+          padding: const pw.EdgeInsets.only(bottom: 12),
           child: pw.Row(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
               pw.Expanded(
                 child: _buildPhotoCard(pair[0], fontBold: fontBold, fontRegular: fontRegular),
               ),
-              pw.SizedBox(width: 10),
+              pw.SizedBox(width: 12),
               if (pair.length > 1)
                 pw.Expanded(
                   child: _buildPhotoCard(pair[1], fontBold: fontBold, fontRegular: fontRegular),
@@ -73,6 +73,10 @@ class Q18PhotosBuilder {
     return widgets;
   }
 
+  /// Carte photo optimisée (Règles 39-42) :
+  /// - Utilisation accrue de la surface de la page (image 185pt)
+  /// - Hauteur dynamique en fonction de la longueur réelle de l'observation (aucune coupure ni troncature)
+  /// - Présentation dense, soignée et professionnelle
   static pw.Widget _buildPhotoCard(
     PdfPhotoEntry entry, {
     required pw.Font fontBold,
@@ -94,7 +98,6 @@ class Q18PhotosBuilder {
     final badgeLabel = entry.badgeLabel ?? 'Danger';
 
     return pw.Container(
-      height: 180,
       decoration: pw.BoxDecoration(
         color: PdfColors.white,
         border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.5),
@@ -102,16 +105,17 @@ class Q18PhotosBuilder {
       ),
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+        mainAxisSize: pw.MainAxisSize.min,
         children: [
           // En-tête de la carte photo : Badge de danger + Repère
           pw.Container(
-            padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+            padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 4.5),
             color: PdfReportStyles.headerColor,
             child: pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
                 pw.Container(
-                  padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                   decoration: pw.BoxDecoration(
                     color: badgeBg,
                     borderRadius: const pw.BorderRadius.all(pw.Radius.circular(2)),
@@ -120,7 +124,7 @@ class Q18PhotosBuilder {
                     badgeLabel.toUpperCase(),
                     style: pw.TextStyle(
                       font: fontBold,
-                      fontSize: 6.5,
+                      fontSize: 6.8,
                       color: badgeText,
                     ),
                   ),
@@ -130,40 +134,37 @@ class Q18PhotosBuilder {
                     entry.repere!.trim(),
                     style: pw.TextStyle(
                       font: fontBold,
-                      fontSize: 7.0,
+                      fontSize: 7.5,
                       color: PdfColors.amber,
                     ),
                   ),
               ],
             ),
           ),
-          // Corps de l'image
-          pw.Expanded(
+          // Corps de l'image (Hauteur généreuse pour valoriser le visuel)
+          pw.Container(
+            height: 185,
+            color: PdfColors.grey200,
+            alignment: pw.Alignment.center,
             child: image != null
-                ? pw.Container(
-                    color: PdfColors.grey200,
-                    child: pw.Image(image, fit: pw.BoxFit.cover),
-                  )
-                : pw.Container(
-                    color: PdfColors.grey100,
-                    alignment: pw.Alignment.center,
-                    child: pw.Text(
-                      'Photographie non disponible',
-                      style: pw.TextStyle(font: fontRegular, fontSize: 7.0, color: PdfColors.grey600),
-                    ),
+                ? pw.Image(image, fit: pw.BoxFit.cover)
+                : pw.Text(
+                    'Photographie non disponible',
+                    style: pw.TextStyle(font: fontRegular, fontSize: 7.5, color: PdfColors.grey600),
                   ),
           ),
-          // Pied de carte : Légende / Description
+          // Pied de carte : Légende / Description (Hauteur dynamique sans troncature)
           pw.Container(
-            padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+            width: double.infinity,
+            padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             color: PdfReportStyles.tableRowAlt,
             child: pw.Text(
               entry.description,
-              maxLines: 2,
               style: pw.TextStyle(
                 font: fontRegular,
-                fontSize: 7.0,
+                fontSize: 7.5,
                 color: PdfColors.black,
+                lineSpacing: 1.2,
               ),
             ),
           ),

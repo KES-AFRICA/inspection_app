@@ -153,9 +153,44 @@ class Q18DataCollector {
         verificationPoint: finding.verificationPoint,
       );
 
-      final zoneName = finding.origin;
-      final repName = finding.objectRepere ?? finding.objectName;
-      final equipName = finding.objectName;
+      // Règle 16 : Zone (Nom réel de la zone, laisser vide si local hors zone)
+      final String zoneName = (finding.parentZone != null && finding.parentZone!.trim().isNotEmpty)
+          ? finding.parentZone!.trim()
+          : '';
+
+      // Règle 17 : Repère (Nom réel du local, ou nom de la zone si équipement directement rattaché à une zone)
+      final String repName;
+      if (finding.parentLocal != null && finding.parentLocal!.trim().isNotEmpty) {
+        repName = finding.parentLocal!.trim();
+      } else if (finding.objectType == 'Local MT' ||
+          finding.objectType == 'Local BT' ||
+          finding.objectType == 'Groupe Électrogène') {
+        repName = finding.objectName.trim();
+      } else if (zoneName.isNotEmpty) {
+        repName = zoneName;
+      } else {
+        repName = finding.objectRepere?.trim().isNotEmpty == true
+            ? finding.objectRepere!.trim()
+            : (finding.objectName.trim().isNotEmpty ? finding.objectName.trim() : '-');
+      }
+
+      // Règle 18 : Désignation (Nom de l'équipement, "Disposition constructive" ou "Conditions d'exploitation" pour un local)
+      final String equipName;
+      final isLocalFinding = finding.objectType == 'Local MT' ||
+          finding.objectType == 'Local BT' ||
+          finding.objectType == 'Groupe Électrogène';
+      if (isLocalFinding) {
+        final tbl = finding.tableName.toLowerCase();
+        if (tbl.contains('exploitation')) {
+          equipName = 'Conditions d\'exploitation';
+        } else {
+          equipName = 'Disposition constructive';
+        }
+      } else if (finding.objectType == 'Zone MT' || finding.objectType == 'Zone BT') {
+        equipName = zoneName.isNotEmpty ? zoneName : 'Zone';
+      } else {
+        equipName = finding.objectName.trim();
+      }
 
       dangers.add(
         Q18DangerItem(
@@ -172,7 +207,7 @@ class Q18DataCollector {
         ),
       );
 
-      // Collecte des photos associées pour la planche photographique (Section 16)
+      // Collecte des photos associées pour la planche photographique (Section 16 - Règles 35-38)
       if (finding.photos.isNotEmpty) {
         for (final photoPath in finding.photos) {
           if (photoPath.trim().isNotEmpty) {
@@ -509,61 +544,89 @@ class Q18DataCollector {
     if (audit != null) {
       // 1. Moyenne tension locaux
       for (final l in audit.moyenneTensionLocaux) {
-        final eqList = <String>[];
-        for (final c in l.cellules) {
+        final lName = l.nom.trim().isNotEmpty ? l.nom.trim() : 'Local MT';
+        bool hasEquipment = false;
+
+        for (var cIdx = 0; cIdx < l.cellules.length; cIdx++) {
+          final c = l.cellules[cIdx];
           final cName = (c.nom != null && c.nom!.trim().isNotEmpty)
               ? c.nom!.trim()
-              : (c.fonction.trim().isNotEmpty ? c.fonction.trim() : 'Cellule MT');
-          eqList.add(cName);
+              : 'Cellule ${cIdx + 1}';
+          couverts.add(
+            Q18PerimetreItem(
+              zone: 'Poste MT',
+              repere: lName,
+              equipements: cName,
+              isCouvert: true,
+            ),
+          );
+          hasEquipment = true;
         }
-        for (final t in l.transformateurs) {
-          final puiss = t.puissanceAssignee.trim().isNotEmpty ? ' (${t.puissanceAssignee.trim()} kVA)' : '';
+
+        for (var tIdx = 0; tIdx < l.transformateurs.length; tIdx++) {
+          final t = l.transformateurs[tIdx];
           final tName = (t.nom != null && t.nom!.trim().isNotEmpty)
               ? t.nom!.trim()
-              : (t.typeTransformateur.trim().isNotEmpty ? t.typeTransformateur.trim() : 'Transformateur');
-          eqList.add('$tName$puiss');
-        }
-        for (final c in l.coffrets) {
-          eqList.add(c.nom.trim().isNotEmpty ? c.nom.trim() : 'Coffret MT');
+              : 'Transformateur ${tIdx + 1}';
+          final puiss = t.puissanceAssignee.trim().isNotEmpty ? ' (${t.puissanceAssignee.trim()} kVA)' : '';
+          couverts.add(
+            Q18PerimetreItem(
+              zone: 'Poste MT',
+              repere: lName,
+              equipements: '$tName$puiss',
+              isCouvert: true,
+            ),
+          );
+          hasEquipment = true;
         }
 
-        couverts.add(
-          Q18PerimetreItem(
-            zone: 'Poste MT',
-            repere: l.nom.trim().isNotEmpty ? l.nom.trim() : 'Local MT',
-            equipements: eqList.isNotEmpty ? eqList.join(', ') : 'Installations MT',
-            isCouvert: true,
-          ),
-        );
-
         for (final c in l.coffrets) {
-          if (!c.accessible) {
+          final cName = c.nom.trim().isNotEmpty ? c.nom.trim() : 'Coffret MT';
+          if (c.accessible) {
+            couverts.add(
+              Q18PerimetreItem(
+                zone: 'Poste MT',
+                repere: lName,
+                equipements: cName,
+                isCouvert: true,
+              ),
+            );
+            hasEquipment = true;
+          } else {
             exclusions.add(
               Q18PerimetreItem(
                 zone: 'Poste MT',
-                repere: c.repere?.trim().isNotEmpty == true ? c.repere!.trim() : l.nom.trim(),
-                equipements: c.nom.trim().isNotEmpty ? c.nom.trim() : 'Coffret MT',
+                repere: lName,
+                equipements: cName,
                 isCouvert: false,
                 motifExclusion: 'Inaccessible lors de la visite',
               ),
             );
           }
         }
+
+        if (!hasEquipment) {
+          couverts.add(
+            Q18PerimetreItem(
+              zone: 'Poste MT',
+              repere: lName,
+              equipements: 'Installations MT',
+              isCouvert: true,
+            ),
+          );
+        }
       }
 
-      // 2. Basse tension zones
-      for (final z in audit.basseTensionZones) {
-        final zName = z.nom.trim().isNotEmpty ? z.nom.trim() : 'Zone BT';
-
-        for (final c in z.coffretsDirects) {
-          final cName = c.nom.trim().isNotEmpty ? c.nom.trim() : 'Armoire / Coffret BT';
-          final cRep = c.repere?.trim().isNotEmpty == true ? c.repere!.trim() : 'Général';
-
+      // 2. Moyenne tension zones (si configurées)
+      for (final z in audit.moyenneTensionZones) {
+        final zName = z.nom.trim().isNotEmpty ? z.nom.trim() : 'Zone MT';
+        for (final c in z.coffrets) {
+          final cName = c.nom.trim().isNotEmpty ? c.nom.trim() : 'Coffret MT';
           if (c.accessible) {
             couverts.add(
               Q18PerimetreItem(
                 zone: zName,
-                repere: cRep,
+                repere: zName,
                 equipements: cName,
                 isCouvert: true,
               ),
@@ -572,7 +635,66 @@ class Q18DataCollector {
             exclusions.add(
               Q18PerimetreItem(
                 zone: zName,
-                repere: cRep,
+                repere: zName,
+                equipements: cName,
+                isCouvert: false,
+                motifExclusion: 'Inaccessible lors de la visite',
+              ),
+            );
+          }
+        }
+        for (final l in z.locaux) {
+          final lName = l.nom.trim().isNotEmpty ? l.nom.trim() : 'Local MT';
+          bool hasEq = false;
+          for (var cIdx = 0; cIdx < l.cellules.length; cIdx++) {
+            final c = l.cellules[cIdx];
+            final cName = (c.nom != null && c.nom!.trim().isNotEmpty) ? c.nom!.trim() : 'Cellule ${cIdx + 1}';
+            couverts.add(Q18PerimetreItem(zone: zName, repere: lName, equipements: cName, isCouvert: true));
+            hasEq = true;
+          }
+          for (var tIdx = 0; tIdx < l.transformateurs.length; tIdx++) {
+            final t = l.transformateurs[tIdx];
+            final tName = (t.nom != null && t.nom!.trim().isNotEmpty) ? t.nom!.trim() : 'Transformateur ${tIdx + 1}';
+            final puiss = t.puissanceAssignee.trim().isNotEmpty ? ' (${t.puissanceAssignee.trim()} kVA)' : '';
+            couverts.add(Q18PerimetreItem(zone: zName, repere: lName, equipements: '$tName$puiss', isCouvert: true));
+            hasEq = true;
+          }
+          for (final c in l.coffrets) {
+            final cName = c.nom.trim().isNotEmpty ? c.nom.trim() : 'Coffret MT';
+            if (c.accessible) {
+              couverts.add(Q18PerimetreItem(zone: zName, repere: lName, equipements: cName, isCouvert: true));
+              hasEq = true;
+            } else {
+              exclusions.add(Q18PerimetreItem(zone: zName, repere: lName, equipements: cName, isCouvert: false, motifExclusion: 'Inaccessible lors de la visite'));
+            }
+          }
+          if (!hasEq) {
+            couverts.add(Q18PerimetreItem(zone: zName, repere: lName, equipements: 'Installations MT', isCouvert: true));
+          }
+        }
+      }
+
+      // 3. Basse tension zones
+      for (final z in audit.basseTensionZones) {
+        final zName = z.nom.trim().isNotEmpty ? z.nom.trim() : 'Zone BT';
+
+        for (final c in z.coffretsDirects) {
+          final cName = c.nom.trim().isNotEmpty ? c.nom.trim() : 'Équipement BT';
+          // Règle 17 : équipement directement rattaché à une zone sans local -> repère = nom de la zone
+          if (c.accessible) {
+            couverts.add(
+              Q18PerimetreItem(
+                zone: zName,
+                repere: zName,
+                equipements: cName,
+                isCouvert: true,
+              ),
+            );
+          } else {
+            exclusions.add(
+              Q18PerimetreItem(
+                zone: zName,
+                repere: zName,
                 equipements: cName,
                 isCouvert: false,
                 motifExclusion: 'Inaccessible lors de la visite',
@@ -583,31 +705,41 @@ class Q18DataCollector {
 
         for (final l in z.locaux) {
           final lName = l.nom.trim().isNotEmpty ? l.nom.trim() : 'Local BT';
-          final eqList = <String>[];
+          bool hasLocalEq = false;
           for (final c in l.coffrets) {
+            final cName = c.nom.trim().isNotEmpty ? c.nom.trim() : 'Équipement BT';
             if (c.accessible) {
-              eqList.add(c.nom.trim().isNotEmpty ? c.nom.trim() : 'Équipement BT');
+              couverts.add(
+                Q18PerimetreItem(
+                  zone: zName,
+                  repere: lName,
+                  equipements: cName,
+                  isCouvert: true,
+                ),
+              );
+              hasLocalEq = true;
             } else {
               exclusions.add(
                 Q18PerimetreItem(
                   zone: zName,
-                  repere: c.repere?.trim().isNotEmpty == true ? c.repere!.trim() : lName,
-                  equipements: c.nom.trim().isNotEmpty ? c.nom.trim() : 'Équipement BT',
+                  repere: lName,
+                  equipements: cName,
                   isCouvert: false,
                   motifExclusion: 'Inaccessible lors de la visite',
                 ),
               );
             }
           }
-
-          couverts.add(
-            Q18PerimetreItem(
-              zone: zName,
-              repere: lName,
-              equipements: eqList.isNotEmpty ? eqList.join(', ') : 'Installations BT',
-              isCouvert: true,
-            ),
-          );
+          if (!hasLocalEq) {
+            couverts.add(
+              Q18PerimetreItem(
+                zone: zName,
+                repere: lName,
+                equipements: 'Installations BT',
+                isCouvert: true,
+              ),
+            );
+          }
         }
       }
     }
