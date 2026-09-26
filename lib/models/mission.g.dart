@@ -73,13 +73,14 @@ class MissionAdapter extends TypeAdapter<Mission> {
       recepteurEmail: fields[52] as String?,
       recepteurTelephone: fields[53] as String?,
       docRapportQ18: fields[54] == null ? false : fields[54] as bool,
+      centralePhotovoltaique: fields[55] == null ? 'sans_objet' : fields[55] as String?,
     )..renseignementsGenerauxId = fields[34] as String?;
   }
 
   @override
   void write(BinaryWriter writer, Mission obj) {
     writer
-      ..writeByte(55)
+      ..writeByte(56)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -189,7 +190,9 @@ class MissionAdapter extends TypeAdapter<Mission> {
       ..writeByte(53)
       ..write(obj.recepteurTelephone)
       ..writeByte(54)
-      ..write(obj.docRapportQ18);
+      ..write(obj.docRapportQ18)
+      ..writeByte(55)
+      ..write(obj.centralePhotovoltaique);
   }
 
   @override

@@ -23,6 +23,7 @@ class SchemaStep extends ConsumerStatefulWidget {
 
 class _SchemaStepState extends ConsumerState<SchemaStep> {
   String? _selectedOption;
+  String _selectedPhotovoltaique = 'sans_objet';
   bool _isFirstLoad = true;
   bool _hasAttemptedNext = false;
 
@@ -40,6 +41,9 @@ class _SchemaStepState extends ConsumerState<SchemaStep> {
       if (savedData != null && savedData is Map<String, dynamic>) {
         setState(() {
           _selectedOption = savedData['schema_option'];
+          if (savedData['centrale_photovoltaique'] != null) {
+            _selectedPhotovoltaique = savedData['centrale_photovoltaique'];
+          }
         });
       }
     } catch (e) {
@@ -50,10 +54,9 @@ class _SchemaStepState extends ConsumerState<SchemaStep> {
   }
 
   Future<void> _saveData() async {
-    if (_selectedOption == null) return;
-    
-    final data = {
-      'schema_option': _selectedOption,
+    final data = <String, dynamic>{
+      if (_selectedOption != null) 'schema_option': _selectedOption,
+      'centrale_photovoltaique': _selectedPhotovoltaique,
     };
     
     // Sauvegarder dans SequenceProgressService
@@ -62,15 +65,28 @@ class _SchemaStepState extends ConsumerState<SchemaStep> {
     
     // Sauvegarder dans la mission (persistant) via le notifier Riverpod
     final notifier = ref.read(missionDetailProvider(widget.mission.id).notifier);
-    await notifier.updateSchemaOption(_selectedOption!);
+    if (_selectedOption != null) {
+      await notifier.updateSchemaOption(_selectedOption!);
+    }
+    await notifier.updateCentralePhotovoltaique(_selectedPhotovoltaique);
     
-    // Marquer l'étape comme complétée
-    await SequenceProgressService.markStepCompleted(widget.mission.id, 5);
+    // Marquer l'étape comme complétée si schéma est sélectionné
+    if (_selectedOption != null) {
+      await SequenceProgressService.markStepCompleted(widget.mission.id, 5);
+    }
   }
 
   void _handleOptionSelected(String? value) {
     setState(() {
       _selectedOption = value;
+    });
+    _saveData();
+  }
+
+  void _handlePhotovoltaiqueSelected(String? value) {
+    if (value == null) return;
+    setState(() {
+      _selectedPhotovoltaique = value;
     });
     _saveData();
   }
@@ -88,6 +104,7 @@ class _SchemaStepState extends ConsumerState<SchemaStep> {
       data: (mission) {
         if (_isFirstLoad) {
           _selectedOption = mission.schemaOption;
+          _selectedPhotovoltaique = mission.centralePhotovoltaique ?? 'sans_objet';
           if (_selectedOption == null) {
             _loadFallbackOption();
           }
@@ -198,10 +215,77 @@ class _SchemaStepState extends ConsumerState<SchemaStep> {
                   ),
                 ),
               ),
+
+            const SizedBox(height: 28),
+            
+            const Text(
+              'Présence d\'une centrale photovoltaïque ?',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            ),
+            
+            const SizedBox(height: 16),
+            
+            Card(
+              child: Column(
+                children: [
+                  RadioListTile<String>(
+                    title: const Text(
+                      'Oui',
+                      style: TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    value: 'oui',
+                    groupValue: _selectedPhotovoltaique,
+                    onChanged: _handlePhotovoltaiqueSelected,
+                    activeColor: Colors.green,
+                    tileColor: _selectedPhotovoltaique == 'oui' 
+                        ? Colors.green.withOpacity(0.1) 
+                        : null,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  const Divider(height: 0),
+                  RadioListTile<String>(
+                    title: const Text(
+                      'Non',
+                      style: TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    value: 'non',
+                    groupValue: _selectedPhotovoltaique,
+                    onChanged: _handlePhotovoltaiqueSelected,
+                    activeColor: Colors.red,
+                    tileColor: _selectedPhotovoltaique == 'non' 
+                        ? Colors.red.withOpacity(0.1) 
+                        : null,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  const Divider(height: 0),
+                  RadioListTile<String>(
+                    title: const Text(
+                      'Sans objet',
+                      style: TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    value: 'sans_objet',
+                    groupValue: _selectedPhotovoltaique,
+                    onChanged: _handlePhotovoltaiqueSelected,
+                    activeColor: AppTheme.primaryBlue,
+                    tileColor: _selectedPhotovoltaique == 'sans_objet' 
+                        ? AppTheme.primaryBlue.withOpacity(0.1) 
+                        : null,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
     );
+
       },
     );
   }

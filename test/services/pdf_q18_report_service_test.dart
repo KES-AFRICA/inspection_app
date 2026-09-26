@@ -930,6 +930,43 @@ void main() {
       );
       expect(s6.isNotEmpty, isTrue);
     });
+
+    test('17. Prise en charge de la centrale photovoltaïque (Oui / Non / Sans objet par défaut)', () {
+      final missionDefaut = Mission(
+        id: 'test_pv_default',
+        nomClient: 'Client PV',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        status: 'en_cours',
+      );
+      expect(missionDefaut.centralePhotovoltaique, equals('sans_objet'));
+
+      final missionOui = Mission(
+        id: 'test_pv_oui',
+        nomClient: 'Client PV',
+        centralePhotovoltaique: 'oui',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        status: 'en_cours',
+      );
+      expect(missionOui.centralePhotovoltaique, equals('oui'));
+
+      final missionNon = Mission(
+        id: 'test_pv_non',
+        nomClient: 'Client PV',
+        centralePhotovoltaique: 'non',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        status: 'en_cours',
+      );
+      expect(missionNon.centralePhotovoltaique, equals('non'));
+
+      // Test de sérialisation JSON
+      final json = missionDefaut.toJson();
+      expect(json['centrale_photovoltaique'], equals('sans_objet'));
+      final fromJsonMission = Mission.fromJson(json);
+      expect(fromJsonMission.centralePhotovoltaique, equals('sans_objet'));
+    });
   });
 }
 

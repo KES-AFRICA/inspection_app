@@ -170,6 +170,9 @@ class Mission extends HiveObject {
   @HiveField(54, defaultValue: false)
   bool docRapportQ18;
 
+  @HiveField(55, defaultValue: 'sans_objet')
+  String? centralePhotovoltaique;
+
   Mission({
     required this.id,
     required this.nomClient,
@@ -202,6 +205,7 @@ class Mission extends HiveObject {
     this.docRegistreSecurite = false,
     this.docRapportDerniereVerif = false,
     this.docRapportQ18 = false,
+    this.centralePhotovoltaique = 'sans_objet',
     required this.createdAt,
     required this.updatedAt,
     required this.status,
@@ -327,6 +331,7 @@ class Mission extends HiveObject {
       recepteurFonction: json['recepteur_fonction'] ?? json['recepteurFonction'],
       recepteurEmail: json['recepteur_email'] ?? json['recepteurEmail'],
       recepteurTelephone: json['recepteur_telephone'] ?? json['recepteurTelephone'],
+      centralePhotovoltaique: json['centrale_photovoltaique'] ?? 'sans_objet',
     );
   }
 
@@ -386,6 +391,7 @@ class Mission extends HiveObject {
       'recepteur_fonction': recepteurFonction,
       'recepteur_email': recepteurEmail,
       'recepteur_telephone': recepteurTelephone,
+      'centrale_photovoltaique': centralePhotovoltaique ?? 'sans_objet',
     };
   }
 

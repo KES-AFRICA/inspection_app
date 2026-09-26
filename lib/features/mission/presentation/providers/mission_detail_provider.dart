@@ -118,6 +118,20 @@ class MissionDetailNotifier extends StateNotifier<AsyncValue<Mission>> {
     }
   }
 
+  Future<void> updateCentralePhotovoltaique(String option) async {
+    final current = state.value;
+    if (current == null) return;
+
+    try {
+      current.centralePhotovoltaique = option;
+      current.updatedAt = DateTime.now();
+      await current.save();
+      state = AsyncValue.data(current);
+    } catch (e, stackTrace) {
+      state = AsyncValue.error(e, stackTrace);
+    }
+  }
+
   Future<bool> addDocumentPersonnalise(String documentName) async {
     final current = state.value;
     if (current == null) return false;

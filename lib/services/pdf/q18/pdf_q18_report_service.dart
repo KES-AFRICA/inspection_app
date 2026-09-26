@@ -62,6 +62,7 @@ class PdfQ18ReportService {
   }) async {
     cancellationToken?.throwIfCancelled();
     onProgress?.call(0.05, 'Initialisation des données de la mission...');
+    await Future.delayed(const Duration(milliseconds: 30));
 
     final mission = HiveService.getMissionById(missionId);
     if (mission == null) {
@@ -70,10 +71,12 @@ class PdfQ18ReportService {
 
     // 1. Collecte pure et snapshot certifié
     onProgress?.call(0.15, 'Collecte et classification des dangers Q18...');
+    await Future.delayed(const Duration(milliseconds: 30));
     final data = Q18DataCollector.collect(missionId);
 
     // 2. Chargement des polices et assets graphiques
     onProgress?.call(0.25, 'Chargement de la typographie et des ressources...');
+    await Future.delayed(const Duration(milliseconds: 30));
     final fonts = await _loadFonts();
     PdfReportStyles.fontRegular = fonts.regular;
     PdfReportStyles.fontBold = fonts.bold;
@@ -81,6 +84,7 @@ class PdfQ18ReportService {
 
     // 3. Passe 1 : Calcul de la pagination exacte (nombre total de pages)
     onProgress?.call(0.40, 'Mise en page préliminaire (Passe 1)...');
+    await Future.delayed(const Duration(milliseconds: 30));
     final trackedPages = <String, int>{};
     final pass1Doc = _buildDocument(
       data: data,
@@ -96,6 +100,7 @@ class PdfQ18ReportService {
 
     // 4. Passe 2 : Rendu final avec numérotation absolue (Page X / N) et Sommaire résolu
     onProgress?.call(0.70, 'Génération du livrable définitif (Passe 2 : $totalPages pages)...');
+    await Future.delayed(const Duration(milliseconds: 30));
     final pass2Doc = _buildDocument(
       data: data,
       fonts: fonts,
@@ -108,12 +113,14 @@ class PdfQ18ReportService {
 
     // 5. Sauvegarde sur le disque
     onProgress?.call(0.90, 'Écriture du fichier PDF certifié...');
+    await Future.delayed(const Duration(milliseconds: 30));
     final dir = outputDir ?? await getApplicationDocumentsDirectory();
     final fileName = buildQ18ReportFileName(mission);
     final outputFile = File(path.join(dir.path, fileName));
     await outputFile.writeAsBytes(finalPdfBytes, flush: true);
 
     onProgress?.call(1.0, 'Rapport Q18 finalisé avec succès ($totalPages pages).');
+    await Future.delayed(const Duration(milliseconds: 30));
     return outputFile;
   }
 

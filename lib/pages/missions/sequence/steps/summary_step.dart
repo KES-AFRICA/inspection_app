@@ -264,7 +264,7 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
     );
 
     // Céder la main à l'Event Loop UI pour peindre immédiatement la 1ère frame du dialogue
-    await Future.delayed(Duration.zero);
+    await Future.delayed(const Duration(milliseconds: 150));
 
     try {
       File? file;
@@ -419,7 +419,11 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
               trailing: const Icon(Icons.arrow_forward_ios, size: 16),
               onTap: () {
                 Navigator.pop(context);
-                _generateReport('pdf');
+                Future.delayed(const Duration(milliseconds: 100), () {
+                  if (mounted) {
+                    _generateReport('pdf');
+                  }
+                });
               },
             ),
             const Divider(height: 0),
@@ -437,7 +441,11 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
               trailing: const Icon(Icons.arrow_forward_ios, size: 16),
               onTap: () {
                 Navigator.pop(context);
-                _generateReport('word');
+                Future.delayed(const Duration(milliseconds: 100), () {
+                  if (mounted) {
+                    _generateReport('word');
+                  }
+                });
               },
             ),
             const Divider(height: 0),
@@ -455,7 +463,11 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
               trailing: const Icon(Icons.arrow_forward_ios, size: 16),
               onTap: () {
                 Navigator.pop(context);
-                _generateReport('excel');
+                Future.delayed(const Duration(milliseconds: 100), () {
+                  if (mounted) {
+                    _generateReport('excel');
+                  }
+                });
               },
             ),
             const Divider(height: 0),
@@ -475,7 +487,11 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
               trailing: const Icon(Icons.arrow_forward_ios, size: 16),
               onTap: () {
                 Navigator.pop(context);
-                _generateReport('q18');
+                Future.delayed(const Duration(milliseconds: 100), () {
+                  if (mounted) {
+                    _generateReport('q18');
+                  }
+                });
               },
             ),
             const SizedBox(height: 12),

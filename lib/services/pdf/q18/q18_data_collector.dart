@@ -108,7 +108,7 @@ class Q18DataCollector {
             : 'Vérification périodique');
 
     // 2. Inventaire des installations pour la Section 4
-    final quantities = _collectQuantities(audit, description, foudre);
+    final quantities = _collectQuantities(mission, audit, description, foudre);
 
     // 3. Périmètre et exclusions pour la Section 5
     final perimetreData = _collectPerimetre(audit);
@@ -375,6 +375,7 @@ class Q18DataCollector {
 
   /// Collecte les quantités réelles des installations pour la Section 4.
   static Q18InstallationsQuantities _collectQuantities(
+    Mission? mission,
     AuditInstallationsElectriques? audit,
     DescriptionInstallations? desc,
     List<Foudre>? foudre,
@@ -554,8 +555,15 @@ class Q18DataCollector {
       presenceParafoudreTGBT: formatParaRatio(paraTGBTPresent, paraTGBTTotal),
       presenceParafoudreArmoire: formatParaRatio(paraArmoirePresent, paraArmoireTotal),
       presenceParafoudreCoffret: formatParaRatio(paraCoffretPresent, paraCoffretTotal),
-      presenceCentralePhotovoltaique: 'Non renseigné',
+      presenceCentralePhotovoltaique: _formatPhotovoltaiqueText(mission?.centralePhotovoltaique),
     );
+  }
+
+  static String _formatPhotovoltaiqueText(String? option) {
+    final opt = (option ?? 'sans_objet').trim().toLowerCase();
+    if (opt == 'oui') return 'Oui';
+    if (opt == 'non') return 'Non';
+    return 'Sans objet';
   }
 
   /// Collecte le périmètre d'audit et les exclusions (Section 5).
