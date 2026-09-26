@@ -274,7 +274,7 @@ class Q18ConclusionBuilder {
             '15. VISA ET SIGNATURE DES VÉRIFICATEURS AGRÉÉS',
             fontBold: fontBold,
           ),
-          pw.SizedBox(height: 200),
+          pw.SizedBox(height: 260),
           pw.Center(
             child: pw.Column(
               mainAxisAlignment: pw.MainAxisAlignment.center,

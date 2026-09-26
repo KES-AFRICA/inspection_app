@@ -180,17 +180,18 @@ class Q18PerimetreBuilder {
                         padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                       ),
 
-                      // Cellule 2 : Équipements
+                      // Cellule 2 : Équipements (Désignation)
                       pw.Container(
                         decoration: pw.BoxDecoration(
                           color: bg,
                           border: itemBorder,
                         ),
                         padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
-                        alignment: pw.Alignment.centerLeft,
+                        alignment: pw.Alignment.center,
                         child: pw.Text(
                           item.equipements.isNotEmpty ? item.equipements : '-',
                           style: pw.TextStyle(font: fontRegular, fontSize: 8.0, color: PdfColors.black),
+                          textAlign: pw.TextAlign.center,
                         ),
                       ),
 

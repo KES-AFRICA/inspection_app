@@ -361,11 +361,6 @@ class Q18DangersSynthesisBuilder {
         },
         children: allTableRows,
       ),
-      pw.SizedBox(height: 4),
-      pw.Text(
-        'Niveaux de danger : Danger avéré (risque d\'incendie ou d\'explosion identifié nécessitant une action) / Dégradation (anomalie à surveiller ou corriger sans urgence immédiate) / Non conforme réglementaire hors périmètre APSAD (à signaler pour information).',
-        style: pw.TextStyle(font: fontRegular, fontSize: 7.0, color: PdfColors.grey700),
-      ),
       pw.SizedBox(height: 12),
     ];
   }
@@ -415,7 +410,7 @@ class Q18DangersSynthesisBuilder {
                 repeat: true,
                 decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
                 children: [
-                  PdfReportStyles.cell('Niveau de danger', isHeader: true, centered: false, fontBold: fontBold),
+                  PdfReportStyles.cell('Niveau de danger', isHeader: true, centered: true, fontBold: fontBold),
                   PdfReportStyles.cell('Nombre constaté', isHeader: true, centered: true, fontBold: fontBold),
                   PdfReportStyles.cell('Levés depuis le rapport précédent', isHeader: true, centered: true, fontBold: fontBold),
                 ],

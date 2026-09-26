@@ -81,8 +81,8 @@ class Q18IdentificationBuilder {
           pw.TableRow(
             decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
             children: [
-              PdfReportStyles.cell('Information', isHeader: true, centered: false),
-              PdfReportStyles.cell('Valeur', isHeader: true, centered: false),
+              PdfReportStyles.cell('Information', isHeader: true, centered: true),
+              PdfReportStyles.cell('Valeur', isHeader: true, centered: true),
             ],
           ),
           ...rows.asMap().entries.map((entry) {
@@ -126,7 +126,7 @@ class Q18IdentificationBuilder {
           }),
         ],
       ),
-      pw.SizedBox(height: 14),
+      pw.SizedBox(height: 12),
     ];
   }
 
@@ -186,7 +186,7 @@ class Q18IdentificationBuilder {
         q.presenceParatonnerre ? 'Présent' : 'Absent',
       ],
       ['Protection Foudre & Parafoudres', 'Parafoudre - Inverseur', q.presenceParafoudreInverseur],
-      ['Protection Foudre & Parafoudres', 'Parafoudre - TGBT', q.presenceParafoudreTGBT],
+      ['Protection Foudre & Parafoudre', 'Parafoudre - TGBT', q.presenceParafoudreTGBT],
       ['Protection Foudre & Parafoudres', 'Parafoudre - Armoire', q.presenceParafoudreArmoire],
       ['Protection Foudre & Parafoudres', 'Parafoudre - Coffret', q.presenceParafoudreCoffret],
       // 5. Centrale Photovoltaïque (intacte)
@@ -213,8 +213,8 @@ class Q18IdentificationBuilder {
           pw.TableRow(
             decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
             children: [
-              PdfReportStyles.cell('Rubrique', isHeader: true, centered: false),
-              PdfReportStyles.cell('Informations', isHeader: true, centered: false),
+              PdfReportStyles.cell('Rubrique', isHeader: true, centered: true),
+              PdfReportStyles.cell('Informations', isHeader: true, centered: true),
             ],
           ),
           ...siteRows.asMap().entries.map((entry) {
@@ -270,8 +270,8 @@ class Q18IdentificationBuilder {
           pw.TableRow(
             decoration: pw.BoxDecoration(color: PdfReportStyles.accentColor),
             children: [
-              PdfReportStyles.cell('Domaine / Sous-ensemble', isHeader: true, centered: false),
-              PdfReportStyles.cell('Équipement / Ouvrage', isHeader: true, centered: false),
+              PdfReportStyles.cell('Domaine / Sous-ensemble', isHeader: true, centered: true),
+              PdfReportStyles.cell('Équipement / Ouvrage', isHeader: true, centered: true),
               PdfReportStyles.cell('Quantité / Statut', isHeader: true, centered: true),
             ],
           ),
