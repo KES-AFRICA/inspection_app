@@ -288,74 +288,105 @@ class Q18ConclusionBuilder {
         ? '15. VISA ET SIGNATURE DES VÉRIFICATEURS AGRÉÉS'
         : '15. VISA ET SIGNATURE DU VÉRIFICATEUR AGRÉÉ';
 
+    final double cardWidth = listVerificateurs.length == 1
+        ? 240.0
+        : (listVerificateurs.length == 2 ? 230.0 : 155.0);
+
     return [
       pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
           PdfReportStyles.sectionBox(sectionTitle, fontBold: fontBold),
-          pw.SizedBox(height: 16),
+          pw.SizedBox(height: 20),
 
-          // Fait à Douala, le [date]
-          pw.Text(
-            'Fait à Douala, le $dateStr',
-            style: pw.TextStyle(font: fontBold, fontSize: 9.5, color: PdfColors.black),
+          // Fait à Douala, le [date] (Centré avec précision)
+          pw.Center(
+            child: pw.Text(
+              'Fait à Douala, le $dateStr',
+              style: pw.TextStyle(font: fontBold, fontSize: 10, color: PdfColors.black),
+            ),
           ),
-          pw.SizedBox(height: 18),
+          pw.SizedBox(height: 20),
 
-          // Liste des vérificateurs et signatures
-          pw.Row(
-            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: listVerificateurs.map((nomVerif) {
-              return pw.Expanded(
-                child: pw.Container(
-                  margin: const pw.EdgeInsets.only(right: 12),
-                  padding: const pw.EdgeInsets.all(12),
-                  decoration: pw.BoxDecoration(
-                    border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.5),
-                    borderRadius: const pw.BorderRadius.all(pw.Radius.circular(3)),
-                    color: PdfReportStyles.tableRowAlt,
-                  ),
-                  child: pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      pw.Text(
-                        isPluriel ? 'Vérificateur :' : 'Nom du vérificateur :',
-                        style: pw.TextStyle(font: fontRegular, fontSize: 8.5, color: PdfColors.grey700),
-                      ),
-                      pw.SizedBox(height: 4),
-                      pw.Text(
-                        nomVerif,
-                        style: pw.TextStyle(font: fontBold, fontSize: 9.5, color: PdfReportStyles.headerColor),
-                      ),
-                      pw.SizedBox(height: 14),
-                      pw.Text(
-                        'Signature et visa :',
-                        style: pw.TextStyle(font: fontRegular, fontSize: 8.5, color: PdfColors.grey700),
-                      ),
-                      pw.SizedBox(height: 6),
-                      pw.Container(
-                        height: 80,
-                        decoration: pw.BoxDecoration(
-                          border: pw.TableBorder.all(
-                            color: PdfColors.grey400,
-                            width: 0.6,
-                            style: pw.BorderStyle.dashed,
-                          ),
-                          color: PdfColors.white,
-                          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(2)),
-                        ),
-                        alignment: pw.Alignment.center,
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }).toList(),
+          // Liste des vérificateurs et signatures (Centrés et de dimensions identiques)
+          pw.Align(
+            alignment: pw.Alignment.center,
+            child: pw.Wrap(
+              alignment: pw.WrapAlignment.center,
+              crossAxisAlignment: pw.WrapCrossAlignment.center,
+              spacing: 16,
+              runSpacing: 16,
+              children: listVerificateurs.map((nomVerif) {
+                return _buildVerificateurCard(
+                  nomVerif,
+                  width: cardWidth,
+                  isPluriel: isPluriel,
+                  fontBold: fontBold,
+                  fontRegular: fontRegular,
+                );
+              }).toList(),
+            ),
           ),
           pw.SizedBox(height: 18),
         ],
       ),
     ];
+  }
+
+  static pw.Widget _buildVerificateurCard(
+    String nomVerif, {
+    required double width,
+    required bool isPluriel,
+    required pw.Font fontBold,
+    required pw.Font fontRegular,
+  }) {
+    return pw.Container(
+      width: width,
+      padding: const pw.EdgeInsets.all(12),
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: PdfReportStyles.borderColor, width: 0.5),
+        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(3)),
+        color: PdfReportStyles.tableRowAlt,
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        mainAxisSize: pw.MainAxisSize.min,
+        children: [
+          pw.Text(
+            isPluriel ? 'Vérificateur :' : 'Nom du vérificateur :',
+            style: pw.TextStyle(font: fontRegular, fontSize: 8.5, color: PdfColors.grey700),
+          ),
+          pw.SizedBox(height: 4),
+          pw.Container(
+            height: 24,
+            alignment: pw.Alignment.topLeft,
+            child: pw.Text(
+              nomVerif,
+              maxLines: 2,
+              style: pw.TextStyle(font: fontBold, fontSize: 9.5, color: PdfReportStyles.headerColor),
+            ),
+          ),
+          pw.SizedBox(height: 12),
+          pw.Text(
+            'Signature et visa :',
+            style: pw.TextStyle(font: fontRegular, fontSize: 8.5, color: PdfColors.grey700),
+          ),
+          pw.SizedBox(height: 6),
+          pw.Container(
+            height: 80,
+            decoration: pw.BoxDecoration(
+              border: pw.Border.all(
+                color: PdfColors.grey400,
+                width: 0.6,
+                style: pw.BorderStyle.dashed,
+              ),
+              color: PdfColors.white,
+              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(2)),
+            ),
+            alignment: pw.Alignment.center,
+          ),
+        ],
+      ),
+    );
   }
 }

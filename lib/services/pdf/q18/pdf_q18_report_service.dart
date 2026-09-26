@@ -497,7 +497,8 @@ class PdfQ18ReportService {
             ),
           );
 
-          // Section 9 : Typologie des dangers les plus courants
+          // Section 9 : Typologie des dangers les plus courants (démarre sur une nouvelle page)
+          widgets.add(pw.NewPage());
           widgets.addAll(
             _trackList(
               Q18RegulatoryBuilder.buildSection9TypologieDangers(
@@ -526,7 +527,8 @@ class PdfQ18ReportService {
             ),
           );
 
-          // Section 11 : Récapitulatif statistique
+          // Section 11 : Récapitulatif statistique des dangers (démarre sur une nouvelle page)
+          widgets.add(pw.NewPage());
           widgets.addAll(
             _trackList(
               Q18DangersSynthesisBuilder.buildSection11Statistiques(
@@ -693,10 +695,10 @@ class PdfQ18ReportService {
 
         pw.Spacer(flex: 1),
 
-        // ── Titre principal : Centré au cœur de la loupe du filigrane, en AccentColor ──
+        // ── Titre principal : Calibré pour tenir strictement au centre de la loupe sans jamais toucher le cercle externe gris ──
         pw.Center(
           child: pw.ConstrainedBox(
-            constraints: const pw.BoxConstraints(maxWidth: 450),
+            constraints: const pw.BoxConstraints(maxWidth: 245),
             child: pw.Column(
               mainAxisSize: pw.MainAxisSize.min,
               crossAxisAlignment: pw.CrossAxisAlignment.center,
@@ -705,30 +707,31 @@ class PdfQ18ReportService {
                   'RAPPORT Q18',
                   style: pw.TextStyle(
                     font: fontBold,
-                    fontSize: 24,
+                    fontSize: 20,
                     color: PdfReportStyles.accentColor,
                     letterSpacing: 1.0,
                   ),
                   textAlign: pw.TextAlign.center,
                 ),
-                pw.SizedBox(height: 14),
+                pw.SizedBox(height: 8),
                 pw.Text(
-                  'Compte rendu de vérification des installations électriques',
+                  'Compte rendu de vérification\ndes installations électriques',
                   style: pw.TextStyle(
                     font: fontBold,
-                    fontSize: 14,
+                    fontSize: 11,
                     color: PdfReportStyles.accentColor,
+                    lineSpacing: 1.15,
                   ),
                   textAlign: pw.TextAlign.center,
                 ),
-                pw.SizedBox(height: 12),
+                pw.SizedBox(height: 8),
                 pw.Text(
                   'Établi selon le référentiel APSAD D18 (prévention des risques d\'incendie et d\'explosion), à la suite de la mission de vérification de conformité des installations électriques',
                   style: pw.TextStyle(
                     font: fontRegular,
-                    fontSize: 10,
+                    fontSize: 7.8,
                     color: PdfReportStyles.accentColor,
-                    lineSpacing: 1.5,
+                    lineSpacing: 1.2,
                   ),
                   textAlign: pw.TextAlign.center,
                 ),

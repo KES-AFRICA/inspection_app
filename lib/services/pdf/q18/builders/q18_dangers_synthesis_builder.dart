@@ -165,12 +165,13 @@ class Q18DangersSynthesisBuilder {
 
           for (int itemIdx = 0; itemIdx < desigGroup.items.length; itemIdx++) {
             final item = desigGroup.items[itemIdx];
-            final isStartOfZone = currentZoneItemIdx == 0;
-            final isEndOfZone = currentZoneItemIdx == totalZoneItems - 1;
-            final isStartOfRepere = currentRepereItemIdx == 0;
-            final isEndOfRepere = currentRepereItemIdx == repereCount - 1;
-            final isStartOfDesig = itemIdx == 0;
-            final isEndOfDesig = itemIdx == desigCount - 1;
+            final idx = globalRowIndex;
+            final isStartOfZone = (currentZoneItemIdx == 0 && idx > 0);
+            final isEndOfZone = (currentZoneItemIdx == totalZoneItems - 1);
+            final isStartOfRepere = (currentRepereItemIdx == 0 && currentZoneItemIdx > 0);
+            final isEndOfRepere = (currentRepereItemIdx == repereCount - 1);
+            final isStartOfDesig = (itemIdx == 0 && currentRepereItemIdx > 0);
+            final isEndOfDesig = (itemIdx == desigCount - 1);
 
             final isAlt = globalRowIndex.isOdd;
             final rowBg = isAlt ? PdfReportStyles.tableRowAlt : PdfColors.white;
@@ -237,39 +238,42 @@ class Q18DangersSynthesisBuilder {
               pw.TableRow(
                 decoration: pw.BoxDecoration(color: rowBg),
                 children: [
-                  // Cellule 0 : Zone (Groupée)
+                  // Cellule 0 : Zone (Groupée sans coupure interne)
                   PdfReportStyles.buildGroupedCellWidget(
                     currentIndex: currentZoneItemIdx,
                     totalRows: totalZoneItems,
                     text: zoneGroup.zone,
-                    style: pw.TextStyle(font: fontBold, fontSize: 7.8, color: PdfColors.black),
+                    style: pw.TextStyle(font: fontBold, fontSize: 8.0, color: PdfColors.black),
                     border: zoneBorder,
+                    decorationColor: PdfColors.white,
                     padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                   ),
 
-                  // Cellule 1 : Repère (Groupé)
+                  // Cellule 1 : Repère (Groupé sans coupure interne)
                   PdfReportStyles.buildGroupedCellWidget(
                     currentIndex: currentRepereItemIdx,
                     totalRows: repereCount,
                     text: repereGroup.repere,
-                    style: pw.TextStyle(font: fontBold, fontSize: 7.8, color: PdfColors.black),
+                    style: pw.TextStyle(font: fontBold, fontSize: 8.0, color: PdfColors.black),
                     border: repereBorder,
+                    decorationColor: PdfColors.white,
                     padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                   ),
 
-                  // Cellule 2 : Désignation (Groupée)
+                  // Cellule 2 : Désignation (Groupée sans coupure interne)
                   PdfReportStyles.buildGroupedCellWidget(
                     currentIndex: itemIdx,
                     totalRows: desigCount,
                     text: desigGroup.designation,
-                    style: pw.TextStyle(font: fontBold, fontSize: 7.8, color: PdfReportStyles.headerColor),
+                    style: pw.TextStyle(font: fontBold, fontSize: 8.0, color: PdfReportStyles.headerColor),
                     border: desigBorder,
+                    decorationColor: PdfColors.white,
                     padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                   ),
 
                   // Cellule 3 : Danger constaté / Observation
                   pw.Container(
-                    decoration: pw.BoxDecoration(border: itemBorder),
+                    decoration: pw.BoxDecoration(color: rowBg, border: itemBorder),
                     padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
                     alignment: pw.Alignment.centerLeft,
                     child: pw.Text(
@@ -280,7 +284,7 @@ class Q18DangersSynthesisBuilder {
 
                   // Cellule 4 : Famille de risque
                   pw.Container(
-                    decoration: pw.BoxDecoration(border: itemBorder),
+                    decoration: pw.BoxDecoration(color: rowBg, border: itemBorder),
                     padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                     alignment: pw.Alignment.centerLeft,
                     child: pw.Text(
@@ -291,7 +295,7 @@ class Q18DangersSynthesisBuilder {
 
                   // Cellule 5 : Niveau D18 (Badge)
                   pw.Container(
-                    decoration: pw.BoxDecoration(border: itemBorder),
+                    decoration: pw.BoxDecoration(color: rowBg, border: itemBorder),
                     padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
                     alignment: pw.Alignment.center,
                     child: pw.Container(
@@ -299,7 +303,7 @@ class Q18DangersSynthesisBuilder {
                       decoration: pw.BoxDecoration(
                         color: badgeColors.bg,
                         borderRadius: const pw.BorderRadius.all(pw.Radius.circular(2)),
-                        border: pw.TableBorder.all(color: badgeColors.border, width: 0.3),
+                        border: pw.Border.all(color: badgeColors.border, width: 0.3),
                       ),
                       child: pw.Text(
                         item.niveau.label,
@@ -339,7 +343,14 @@ class Q18DangersSynthesisBuilder {
       ),
       pw.Table(
         defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
-        border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.4),
+        border: const pw.TableBorder(
+          left: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+          right: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+          top: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+          bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+          verticalInside: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+          horizontalInside: pw.BorderSide.none,
+        ),
         columnWidths: const {
           0: pw.FlexColumnWidth(1.8), // Zone
           1: pw.FlexColumnWidth(1.8), // Repère

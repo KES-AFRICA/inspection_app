@@ -9,23 +9,24 @@ import 'package:inspec_app/services/pdf/pdf_report_styles.dart';
 /// Builder responsable de la Section 16 : Planche photographique des constats Q18
 class Q18PhotosBuilder {
   /// Construit les pages de la planche photographique des constats
+  /// - Exactement 6 images par page (2 colonnes x 3 lignes)
+  /// - Cartes d'images rigoureusement identiques en dimensions (hauteur et largeur constantes)
   static List<pw.Widget> buildSection16Photos(
     List<PdfPhotoEntry> photos, {
     required pw.Font fontBold,
     required pw.Font fontRegular,
   }) {
-    final widgets = <pw.Widget>[
-      PdfReportStyles.sectionBox('16. PLANCHE PHOTOGRAPHIQUE DES CONSTATS', fontBold: fontBold),
-      pw.SizedBox(height: 8),
-    ];
+    final widgets = <pw.Widget>[];
 
     if (photos.isEmpty) {
+      widgets.add(PdfReportStyles.sectionBox('16. PLANCHE PHOTOGRAPHIQUE DES CONSTATS', fontBold: fontBold));
+      widgets.add(pw.SizedBox(height: 8));
       widgets.add(
         pw.Container(
           padding: const pw.EdgeInsets.all(12),
           decoration: pw.BoxDecoration(
             color: PdfReportStyles.conformeColor,
-            border: pw.TableBorder.all(color: PdfColors.green700, width: 0.5),
+            border: pw.Border.all(color: PdfColors.green700, width: 0.5),
             borderRadius: const pw.BorderRadius.all(pw.Radius.circular(3)),
           ),
           child: pw.Text(
@@ -37,46 +38,55 @@ class Q18PhotosBuilder {
       return widgets;
     }
 
-    // Regroupement par paires de photos pour affichage en grille (2 par ligne)
-    final pairs = <List<PdfPhotoEntry>>[];
-    for (int i = 0; i < photos.length; i += 2) {
-      if (i + 1 < photos.length) {
-        pairs.add([photos[i], photos[i + 1]]);
-      } else {
-        pairs.add([photos[i]]);
-      }
+    // Découpage strict par lots de 6 photos par page (2 colonnes x 3 lignes)
+    final chunks = <List<PdfPhotoEntry>>[];
+    for (int i = 0; i < photos.length; i += 6) {
+      final end = (i + 6 > photos.length) ? photos.length : i + 6;
+      chunks.add(photos.sublist(i, end));
     }
 
-    for (final pair in pairs) {
-      widgets.add(
-        pw.Padding(
-          padding: const pw.EdgeInsets.only(bottom: 12),
-          child: pw.Row(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Expanded(
-                child: _buildPhotoCard(pair[0], fontBold: fontBold, fontRegular: fontRegular),
-              ),
-              pw.SizedBox(width: 12),
-              if (pair.length > 1)
+    for (int chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
+      if (chunkIndex > 0) {
+        // Nouvelle page pour chaque lot de 6 photos
+        widgets.add(pw.NewPage());
+      } else {
+        // En-tête de section sur la première page de photos
+        widgets.add(PdfReportStyles.sectionBox('16. PLANCHE PHOTOGRAPHIQUE DES CONSTATS', fontBold: fontBold));
+        widgets.add(pw.SizedBox(height: 6));
+      }
+
+      final currentChunk = chunks[chunkIndex];
+      // Paires de 2 photos par ligne (jusqu'à 3 lignes par page)
+      for (int i = 0; i < currentChunk.length; i += 2) {
+        final photo1 = currentChunk[i];
+        final photo2 = (i + 1 < currentChunk.length) ? currentChunk[i + 1] : null;
+
+        widgets.add(
+          pw.Padding(
+            padding: const pw.EdgeInsets.only(bottom: 8),
+            child: pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
                 pw.Expanded(
-                  child: _buildPhotoCard(pair[1], fontBold: fontBold, fontRegular: fontRegular),
-                )
-              else
-                pw.Expanded(child: pw.SizedBox()),
-            ],
+                  child: _buildPhotoCard(photo1, fontBold: fontBold, fontRegular: fontRegular),
+                ),
+                pw.SizedBox(width: 10),
+                pw.Expanded(
+                  child: photo2 != null
+                      ? _buildPhotoCard(photo2, fontBold: fontBold, fontRegular: fontRegular)
+                      : pw.SizedBox(),
+                ),
+              ],
+            ),
           ),
-        ),
-      );
+        );
+      }
     }
 
     return widgets;
   }
 
-  /// Carte photo optimisée (Règles 39-42) :
-  /// - Utilisation accrue de la surface de la page (image 185pt)
-  /// - Hauteur dynamique en fonction de la longueur réelle de l'observation (aucune coupure ni troncature)
-  /// - Présentation dense, soignée et professionnelle
+  /// Carte photo calibrée aux dimensions strictement identiques (hauteur totale 180pt)
   static pw.Widget _buildPhotoCard(
     PdfPhotoEntry entry, {
     required pw.Font fontBold,
@@ -98,24 +108,26 @@ class Q18PhotosBuilder {
     final badgeLabel = entry.badgeLabel ?? 'Danger';
 
     return pw.Container(
+      height: 180,
       decoration: pw.BoxDecoration(
         color: PdfColors.white,
-        border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.5),
+        border: pw.Border.all(color: PdfReportStyles.borderColor, width: 0.5),
         borderRadius: const pw.BorderRadius.all(pw.Radius.circular(3)),
       ),
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.stretch,
-        mainAxisSize: pw.MainAxisSize.min,
         children: [
-          // En-tête de la carte photo : Badge de danger + Repère
+          // 1. En-tête de la carte photo : Hauteur fixe 20pt
           pw.Container(
-            padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 4.5),
+            height: 20,
+            padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             color: PdfReportStyles.headerColor,
             child: pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: pw.CrossAxisAlignment.center,
               children: [
                 pw.Container(
-                  padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
                   decoration: pw.BoxDecoration(
                     color: badgeBg,
                     borderRadius: const pw.BorderRadius.all(pw.Radius.circular(2)),
@@ -141,9 +153,9 @@ class Q18PhotosBuilder {
               ],
             ),
           ),
-          // Corps de l'image (Hauteur généreuse pour valoriser le visuel)
+          // 2. Corps de l'image : Hauteur fixe 115pt
           pw.Container(
-            height: 185,
+            height: 115,
             color: PdfColors.grey200,
             alignment: pw.Alignment.center,
             child: image != null
@@ -153,18 +165,20 @@ class Q18PhotosBuilder {
                     style: pw.TextStyle(font: fontRegular, fontSize: 7.5, color: PdfColors.grey600),
                   ),
           ),
-          // Pied de carte : Légende / Description (Hauteur dynamique sans troncature)
+          // 3. Pied de carte : Légende / Description : Hauteur fixe 45pt
           pw.Container(
-            width: double.infinity,
-            padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            height: 45,
+            padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             color: PdfReportStyles.tableRowAlt,
             child: pw.Text(
               entry.description,
+              maxLines: 3,
+              overflow: pw.TextOverflow.clip,
               style: pw.TextStyle(
                 font: fontRegular,
-                fontSize: 7.5,
+                fontSize: 7.2,
                 color: PdfColors.black,
-                lineSpacing: 1.2,
+                lineSpacing: 1.15,
               ),
             ),
           ),

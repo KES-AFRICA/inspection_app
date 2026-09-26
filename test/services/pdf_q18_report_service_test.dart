@@ -311,7 +311,8 @@ void main() {
       );
       expect(s5Empty.isNotEmpty, isTrue);
       final hasSansObjet = s5Empty.any(
-        (w) => w is pw.Padding && w.child is pw.Text && (w.child as pw.Text).text.toPlainText().contains('- Sans Objet'),
+        (w) => (w is pw.Padding && w.child is pw.Text && (w.child as pw.Text).text.toPlainText().contains('- Sans Objet')) ||
+               (w is pw.Column && w.children.any((c) => c is pw.Padding && c.child is pw.Text && (c.child as pw.Text).text.toPlainText().contains('- Sans Objet'))),
       );
       expect(hasSansObjet, isTrue);
 

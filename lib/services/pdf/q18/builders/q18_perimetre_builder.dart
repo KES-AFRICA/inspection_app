@@ -241,102 +241,107 @@ class Q18PerimetreBuilder {
           );
         }(),
       ],
-      pw.SizedBox(height: 10),
-      trackedPages != null
-          ? PageTracker(key: 'q18_s5_2', registry: trackedPages, offset: pageOffset, child: subTitle52)
-          : subTitle52,
-      pw.SizedBox(height: 4),
+      pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.SizedBox(height: 10),
+          trackedPages != null
+              ? PageTracker(key: 'q18_s5_2', registry: trackedPages, offset: pageOffset, child: subTitle52)
+              : subTitle52,
+          pw.SizedBox(height: 4),
 
-      pw.Paragraph(
-        text: 'Exclusions éventuelles du périmètre (locaux non visités, installations non accessibles, parties d\'installation exclues contractuellement) :',
-        style: pw.TextStyle(font: fontRegular, fontSize: 8.5, color: PdfColors.black),
-      ),
-      pw.SizedBox(height: 4),
-      if (exclusions.isEmpty)
-        pw.Padding(
-          padding: const pw.EdgeInsets.only(left: 4, top: 2),
-          child: pw.Text(
-            '- Sans Objet',
+          pw.Paragraph(
+            text: 'Exclusions éventuelles du périmètre (locaux non visités, installations non accessibles, parties d\'installation exclues contractuellement) :',
             style: pw.TextStyle(font: fontRegular, fontSize: 8.5, color: PdfColors.black),
           ),
-        )
-      else
-        pw.Table(
-          border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.4),
-          columnWidths: const {
-            0: pw.FlexColumnWidth(2.6),
-            1: pw.FlexColumnWidth(2.6),
-            2: pw.FlexColumnWidth(2.8),
-            3: pw.FlexColumnWidth(2.0),
-          },
-          children: [
-            pw.TableRow(
-              decoration: pw.BoxDecoration(color: PdfColor.fromInt(0xFFC00000)),
+          pw.SizedBox(height: 4),
+          if (exclusions.isEmpty)
+            pw.Padding(
+              padding: const pw.EdgeInsets.only(left: 4, top: 2),
+              child: pw.Text(
+                '- Sans Objet',
+                style: pw.TextStyle(font: fontRegular, fontSize: 8.5, color: PdfColors.black),
+              ),
+            )
+          else
+            pw.Table(
+              border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.4),
+              columnWidths: const {
+                0: pw.FlexColumnWidth(2.6),
+                1: pw.FlexColumnWidth(2.6),
+                2: pw.FlexColumnWidth(2.8),
+                3: pw.FlexColumnWidth(2.0),
+              },
               children: [
-                PdfReportStyles.cell('Zone', isHeader: true, centered: true),
-                PdfReportStyles.cell('Repère', isHeader: true, centered: true),
-                PdfReportStyles.cell('Équipements non vérifiés', isHeader: true, centered: true),
-                PdfReportStyles.cell('Motif d\'inaccessibilité', isHeader: true, centered: true),
+                pw.TableRow(
+                  decoration: pw.BoxDecoration(color: PdfColor.fromInt(0xFFC00000)),
+                  children: [
+                    PdfReportStyles.cell('Zone', isHeader: true, centered: true),
+                    PdfReportStyles.cell('Repère', isHeader: true, centered: true),
+                    PdfReportStyles.cell('Équipements non vérifiés', isHeader: true, centered: true),
+                    PdfReportStyles.cell('Motif d\'inaccessibilité', isHeader: true, centered: true),
+                  ],
+                ),
+                ...exclusions.asMap().entries.map((entry) {
+                  final idx = entry.key;
+                  final item = entry.value;
+                  return pw.TableRow(
+                    decoration: pw.BoxDecoration(
+                      color: idx.isOdd ? PdfReportStyles.tableRowAlt : PdfColors.white,
+                    ),
+                    children: [
+                      pw.Container(
+                        padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+                        child: pw.Text(
+                          item.zone,
+                          style: pw.TextStyle(
+                            font: fontBold,
+                            fontSize: 8.0,
+                            color: PdfColors.black,
+                          ),
+                        ),
+                      ),
+                      pw.Container(
+                        padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+                        child: pw.Text(
+                          item.repere,
+                          style: pw.TextStyle(
+                            font: fontRegular,
+                            fontSize: 8.0,
+                            color: PdfColors.black,
+                          ),
+                        ),
+                      ),
+                      pw.Container(
+                        padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+                        child: pw.Text(
+                          item.equipements,
+                          style: pw.TextStyle(
+                            font: fontRegular,
+                            fontSize: 8.0,
+                            color: PdfColors.black,
+                          ),
+                        ),
+                      ),
+                      pw.Container(
+                        padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+                        child: pw.Text(
+                          item.motifExclusion.isNotEmpty ? item.motifExclusion : 'Inaccessible lors de la visite',
+                          style: pw.TextStyle(
+                            font: fontRegular,
+                            fontSize: 8.0,
+                            color: PdfColors.red900,
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                }),
               ],
             ),
-            ...exclusions.asMap().entries.map((entry) {
-              final idx = entry.key;
-              final item = entry.value;
-              return pw.TableRow(
-                decoration: pw.BoxDecoration(
-                  color: idx.isOdd ? PdfReportStyles.tableRowAlt : PdfColors.white,
-                ),
-                children: [
-                  pw.Container(
-                    padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
-                    child: pw.Text(
-                      item.zone,
-                      style: pw.TextStyle(
-                        font: fontBold,
-                        fontSize: 8.0,
-                        color: PdfColors.black,
-                      ),
-                    ),
-                  ),
-                  pw.Container(
-                    padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
-                    child: pw.Text(
-                      item.repere,
-                      style: pw.TextStyle(
-                        font: fontRegular,
-                        fontSize: 8.0,
-                        color: PdfColors.black,
-                      ),
-                    ),
-                  ),
-                  pw.Container(
-                    padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
-                    child: pw.Text(
-                      item.equipements,
-                      style: pw.TextStyle(
-                        font: fontRegular,
-                        fontSize: 8.0,
-                        color: PdfColors.black,
-                      ),
-                    ),
-                  ),
-                  pw.Container(
-                    padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
-                    child: pw.Text(
-                      item.motifExclusion.isNotEmpty ? item.motifExclusion : 'Inaccessible lors de la visite',
-                      style: pw.TextStyle(
-                        font: fontRegular,
-                        fontSize: 8.0,
-                        color: PdfColors.red900,
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            }),
-          ],
-        ),
-      pw.SizedBox(height: 14),
+          pw.SizedBox(height: 14),
+        ],
+      ),
     ];
   }
 

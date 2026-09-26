@@ -132,6 +132,11 @@ class Q18DataCollector {
 
     int dangerIndex = 1;
     for (final finding in pertinentFindings) {
+      // Les observations directement rattachées à une zone ne sont pas introduites dans le tableau 10
+      if (finding.objectType == 'Zone MT' || finding.objectType == 'Zone BT') {
+        continue;
+      }
+
       final niveau = _mapFindingToQ18Level(finding);
       switch (niveau) {
         case Q18DangerLevel.dangerAvere:
@@ -153,10 +158,21 @@ class Q18DataCollector {
         verificationPoint: finding.verificationPoint,
       );
 
-      // Règle 16 : Zone (Nom réel de la zone, laisser vide si local hors zone)
-      final String zoneName = (finding.parentZone != null && finding.parentZone!.trim().isNotEmpty)
+      // Règle 16 : Zone (Nom réel de la zone, ou 'Poste MT' / 'Zone BT' si hors zone)
+      String zoneName = (finding.parentZone != null && finding.parentZone!.trim().isNotEmpty)
           ? finding.parentZone!.trim()
           : '';
+
+      if (zoneName.isEmpty) {
+        if (finding.tensionDomain == TensionDomain.mt ||
+            finding.objectType == 'Local MT' ||
+            finding.objectType == 'Cellule MT' ||
+            finding.objectType == 'Transformateur MT/BT') {
+          zoneName = 'Poste MT';
+        } else {
+          zoneName = 'Zone BT';
+        }
+      }
 
       // Règle 17 : Repère (Nom réel du local, ou nom de la zone si équipement directement rattaché à une zone)
       final String repName;
@@ -174,7 +190,7 @@ class Q18DataCollector {
             : (finding.objectName.trim().isNotEmpty ? finding.objectName.trim() : '-');
       }
 
-      // Règle 18 : Désignation (Nom de l'équipement, "Disposition constructive" ou "Conditions d'exploitation" pour un local)
+      // Règle 18 : Désignation (Nom de l'équipement, "Dispositions constructives" ou "Conditions d'exploitation" pour un local)
       final String equipName;
       final isLocalFinding = finding.objectType == 'Local MT' ||
           finding.objectType == 'Local BT' ||
@@ -184,12 +200,20 @@ class Q18DataCollector {
         if (tbl.contains('exploitation')) {
           equipName = 'Conditions d\'exploitation';
         } else {
-          equipName = 'Disposition constructive';
+          equipName = 'Dispositions constructives';
         }
-      } else if (finding.objectType == 'Zone MT' || finding.objectType == 'Zone BT') {
-        equipName = zoneName.isNotEmpty ? zoneName : 'Zone';
       } else {
-        equipName = finding.objectName.trim();
+        final objName = finding.objectName.trim();
+        final objRep = finding.objectRepere?.trim() ?? '';
+        if (objName.isNotEmpty && objRep.isNotEmpty && objName.toLowerCase() != objRep.toLowerCase() && repName.toLowerCase() != objRep.toLowerCase()) {
+          equipName = '$objName ($objRep)';
+        } else if (objName.isNotEmpty) {
+          equipName = objName;
+        } else if (objRep.isNotEmpty) {
+          equipName = objRep;
+        } else {
+          equipName = 'Équipement';
+        }
       }
 
       dangers.add(
